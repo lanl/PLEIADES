@@ -21,5 +21,6 @@ with SAMMY, please see the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
 
 **PLEIADES** is distributed as open-source software under an MIT License, with LANL open source approval (reference O4722). Please see LICENSE for more details.
 
-**Acknowledgement**  
+Acknowledgement  
+===============
 This work was supported by the U.S. Department of Energy, Office of Nuclear Energy under DOE Idaho Operations Office Contract DE-AC07- 051D14517 as part of the Nuclear Science User Facilities.”
