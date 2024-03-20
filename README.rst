@@ -19,3 +19,4 @@ PLEIADES' user documentation
 This is a Python package that sets up, executes, and analyzes, SAMMY runs. If you are unfamiliar 
 with SAMMY, please see the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
 
+**PLEIADES** is distributed as open-source software under an MIT License, with LANL open source approval (reference O4722). Please see LICENSE for more details.
