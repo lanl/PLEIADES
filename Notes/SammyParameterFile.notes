@@ -1,0 +1,151 @@
+The PARameter file contains initial values for all those parameters that are to be varied, as well as others that may be held fixed or treated as propagated-uncertainty parameters
+
+Various types of data can be included in the PARameter file. These are organized into “cardsets,” with each card set consisting of one or more lines of information. Most card sets begin with a header line and end with a blank line.
+
+"Card set 1" contains resonance parameters, ending in a blank line.
+"Card set 2" contains a single number, called FUDGE, which is the “fudge factor” by which a parameter may multiplied to give the initial uncertainty for that parameter. This option is used only if the parameter’s uncertainty is not specified elsewhere.
+"Card set 3" gives values for parameters of the external R-function. Two alternate formats are available for this.
+"Card set 4" gives values for some broadening (and other) parameters.
+"Card set 5" gives values of “unused” parameters, that is, of those data-reduction parameters that are not directly affected by the data set to be analyzed but that are coupled via the covariance matrix to other parameters that are directly affected.
+"Card set 6" gives values for normalization and background parameters.
+"Card set 7" contains values for the two channel radii (as used for potential scattering and for penetrability and shift factor). 
+"Card set 8" gives names and values for data reduction parameters
+"Card set 9" gives values of parameters for the Oak Ridge resolution function (ORR)
+"Card set 10" contains isotopic mass and abundance values, as described in Section III.E.2 of the SAMMY manual.
+"Card set 11" contains values for miscellaneous parameters, described in various locations
+throughout the SAMMY manual.
+"Card set 12" provides parameter values for paramagnetic cross sections; see Section III.E.4 of the SAMMY manual.
+"Card set 13" contains values for parameters of the background functions described in Section III.E.3.a of the SAMMY manual.
+"Card set 14" gives parameters of the RPI resolution function (Section III.C.3).
+"Card set 15" provides values for l- and isotope-dependent detector efficiencies (Section III.E.5).
+"Card set 16" gives input for the numerical user-defined resolution function. This is described in more detail in Section III.C.5.
+
+Note that each card set in the PAR file (except for card sets 1 and 2) begins with an alphanumeric description of what follows.
+
+For including Quantum numbers in PARameter file please see Table VI B.3. in the SAMMY manual. 
+Which follows as the following lines:
+
+[1st line] PARTIcle pair definitions (first five characters required)
+[following lines] Card set 4 from the INPut file (Table VI.A.1),
+[blank line]
+[following line] SPIN GROUPs (first ten characters required)
+[following lines] Card set 10.2 from INPut file
+[blank line]
+[following line] RESONances are listed next (first five characters required)
+The remainder of the file is identical to original PARameter file (starting with card set 1)
+
+Here are the formats for each card:
+Note:   The two numbers in the first column (labeled “C:L”) represent the card set number (before the colon) and the line number within that card set (after the colon).
+Note:   Numbers in the second column (labeled “P, T”) indicate position number within the line. Letters indicate format type: integer format (“I”, which implies a number without a decimal point and requires that the number be in the right-most columns), real format (“F”, which requires a number with a decimal point), or alphanumeric (“A”, which can be numbers or letters or symbols).
+
+Card 1 -
+    Line 1: 
+        1-11 columns, F "E_lambda"       # Resonance energy E_lambda (eV)
+        12-22 columns, F "Γ_gamma"       # Capture width (milli-eV)
+        23-33 columns, F "Γ_c1"          # Particle width for channel 1 (milli-eV)
+        34-44 columns, F "Γ_c2"          # Particle width for channel 2 (milli-eV)
+        45-55 columns, F "Γ_c3"          # Particle width for channel 3 (milli-eV)
+        56-57 columns, I "IS_E"          # Vary E_lambda? 0 = no, 1 = yes, 3 = PUP
+        58-59 columns, I "ISγ"           # Vary Γ_gamma? 0 = no, 1 = yes, 3 = PUP
+        60-61 columns, I "ISc1"          # Vary Γ_c1? 0 = no, 1 = yes, 3 = PUP
+        62-63 columns, I "ISc2"          # Vary Γ_c2? 0 = no, 1 = yes, 3 = PUP
+        64-65 columns, I "ISc3"          # Vary Γ_c3? 0 = no, 1 = yes, 3 = PUP
+        66-67 columns, I "IGROUP"        # Quantum numbers for this resonance are those of group number IGROUP (card set 10.1 or 10.2 in Table VIA.1)
+        68-80 columns, F "X"
+
+    Line 2: 
+        Note: This line is present only if X < 0 on the preceding line
+        1-11 columns, F "Γc4"        # Particle width for channel 4 (milli-eV)
+        12-22 columns, F "Γc5"       # Width for ch 5 (milli-eV)
+        23-33 columns, F "Γc6"       # Width for ch 6 (milli-eV)
+        34-44 columns, F 'Γc7'       # Width for ch 7 (milli-eV)
+        45-55 columns, F "Γc8"       # Width for ch 8 (milli-eV)
+        56-57 columns, I "ISc4"      # Vary Γc4? 0 = no, 1 = yes, 3 = PUP
+        58-59 columns, I "ISc5"      # Vary Γc5? 0 = no, 1 = yes, 3 = PUP
+        60-61 columns, I "ISc6"      # Vary Γc6? 0 = no, 1 = yes, 3 = PUP
+        62-63 columns, I "ISc7"      # Vary Γc7? 0 = no, 1 = yes, 3 = PUP
+        64-65 columns, I "ISc8"      # Vary Γc8? 0 = no, 1 = yes, 3 = PUP
+        66-67 columns, I "IGROUP"    # must be same as previous line
+    
+    Line 3, 4, etc: 
+        Note: Repeat line 2 as needed, until all non-zero channel widths have been defined.
+
+    Line 4+n: 
+        Note: Repeat previous lines groups as many times as needed, until all resonances are specified
+    
+    Line "last":
+        Blank line
+
+Card 2 - 
+    Line 1: 
+        1-11 columns, "F"       #Fudge Fudge = initial relative uncertainty for varied parameters whose initial uncertainty is not specified elsewhere. (Default = 0.1)
+
+Card 3 - 
+    Note: Skipping for now. 
+
+Card 4 - 
+    Note: This starts with a header line of “BROADening parameters may be varied”
+    Line 1: 
+        1-80 columns, A "WHAT"            # “BROADening parameters may be varied”
+
+    Line 2: 
+        1-10 columns, F "CRFN"        # Matching radius (F) In many cases this value is overruled (e.g., card set 7 or 7a).
+        11-20 columns, F "TEMP"       # Effective temperature of the sample (K)
+        21-30 columns, F "THICK"      # Sample thickness (atoms/barn)
+        31-40 columns, F "DELTAL"     # Spread in flight-path length (m) (See Section III.C.1.a)
+        41-50 columns, F "DELTAG"     # The absolute value of DELTAG is the fullwidth at half max of aGaussian resolutionfunction whose variance is equivalent to that of the square pulse (μs). See Section III.C.1.a for details.
+        51-60 columns, F "DELTAE"   # e-folding width of exponential resolution function (μs)
+        61-62 columns, I "Icrfn"    # Flag to vary CRFN parameter; values -2, 0, and 1 may be used, but -1 and 3 may not
+        63-64 columns, I "Itemp"    # Flag to vary TEMP parameter;
+        65-66 columns, I "Ithick"   # Flag to vary THICK parameter;
+        67-68 columns, I "Ideltal"  # Flag to vary DELTAL parameter;
+        69-70 columns, I "Ideltag"  # Flag to vary DELTAG parameter;
+        71-72 columns, I "Ideltae"  # Flag to vary DELTAE parameter;
+
+    Line 3: 
+        Note: This line is optional, unless additional parameters are given on subsequent lines. If this line is absent, prior uncertainties are set to FUDGE × value of parameter.
+        1-10 columns, F "dCRFN"     # Uncertainty on CRFN
+        11-20 columns, F "dTEMP"    # Uncertainty on TEMP
+        21-30 columns, F "dTHICK"   # Uncertainty on THICK
+        31-40 columns, F "dDELTAL"  # Uncertainty on DELTAL
+        41-50 columns, F "dDELTAG"  # Uncertainty on DELTAG
+        51-60 columns, F "dDELTAE"  # Uncertainty on DELTAE
+
+    Line 4: 
+        Note: Skipping for now. 
+    
+    Line 5: 
+        Note: Skipping for now. 
+
+    Line "Last":
+        Blank line
+
+Card 5 - 
+    Note: Skipping for now. 
+
+Card 6 - 
+    Note: This card starts with a header line of “NORMAlization and background are next”
+    Line 1: 1-80 columns, A "WHAT" “NORMAlization and background are next”
+    
+    Line 2: 
+        1-10 columns, F "ANORM"   # a = normalization (dimensionless) Value ~ 1 
+        11-20 columns, F "BACKA"  # Ba = constant background (dimensionless if data are transmission, barns if c.s.)
+        21-30 columns, F "BACKB"  # Bb = background proportional to1 E or linear in time ( eV or barns× eV )
+        31-40 columns, F "BACKC"  # Bc = background proportional to E or linear in inverse time (1 eV orbarns eV )
+        41-50 columns, F "BACKD"  # Bd = coefficient for exponential background (dimensionless or barns)
+        51-60 columns, F "BACKF"  # Bf = exponential decay constant ( eV )
+        61-62 columns, I "Ianorm" # Flag for these parameters: -1, 0, 1, or 3
+        63-64 columns, I "Ibacka" # Flag for these parameters: -1, 0, 1, or 3
+        65-66 columns, I "Ibackb" # Flag for these parameters: -1, 0, 1, or 3
+        67-68 columns, I "Ibackc" # Flag for these parameters: -1, 0, 1, or 3
+        69-70 columns, I "Ibackd" # Flag for these parameters: -1, 0, 1, or 3
+        71-72 columns, I "Ibackf" # Flag for these parameters: -1, 0, 1, or 3
+    
+    Line 3: 
+        Note: This line is optional for angleintegrated data but not for angular distributions. When the line is omitted, the uncertainty is assumed to be FUDGE × value of parameter.
+        1-10 columns, F "Danorm"      #uncertainty on ANORM
+        11-20 columns, F "Dbacka"     #uncertainty on BACKA
+        21-30 columns, F "Dbackb"     #uncertainty on BACKB
+        31-40 columns, F "Dbackc"     #uncertainty on BACKC
+        41-50 columns, F "Dbackd"     #uncertainty on BACKD
+        51-60 columns, F "Dbackf"     #uncertainty on BACKF

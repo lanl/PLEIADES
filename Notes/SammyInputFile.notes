@@ -1,0 +1,110 @@
+Max Number of Columns in the fortran input file = 80
+
+Data input types 
+“A” can be numbers or letters or symbols
+“F” requires a number with a decimal point
+“I” implies a number without a decimal point like an integer and requires that the number be in the right-most columns
+
+Classes: 
+Card 1 -
+    Line 1: 
+        1-80 columns, A "TITLE"
+Card 2 - 
+    Line 1: 
+        01-10 columns, A "ELMNT"; 
+        11-20 columns, F "AW"; 
+        21-30 columns, F "EMIN"; 
+        31-40 columns, F "EMAX"; 
+        41-45 columns, I "NEPNTS"; 
+        46-50 columns, I "ITMAX"; 
+        51-52 columns, I "ICORR"; 
+        53-55 columns, I "NXTRA"; 
+        56-57 columns, I "IPTDOP"; 
+        59-60 columns, I "IPTWID"; 
+        61-70 columns, I "IXXCHN"; 
+        71-72 columns, I "NDIGIT"; 
+        73-74 columns, I "IDROPP"; 
+        75-80 columns, I "MATNUM"
+Card 3 - 
+    Note:   Each command is its own line. This is followed by a blank line.
+    Lines: various command statements. 
+
+Card 4 - 
+    Note:   This card set is present only when the phrase  “KEY WORD PARTICLE PAir 
+            definitions are given” occurs in card set 3 above
+    Line 1:
+        [FILL IN LATER]
+
+Card 5 - 
+    Line 1: 
+        01-10 columns, F "TEMP";
+        11-20 columns, F "DIST";
+        21-30 columns, F "DELTAL";
+        31-40 columns, F "DELTAE";
+        41-50 columns, F "DELTAG";
+        51-60 columns, F "DELTTT";
+        61-70 columns, F "ELOWBR";
+
+Card 6 - 
+    Note:   This card set is included only if DELTAG < 0 in card set 5.
+    Line 1: 
+        01-10 columns, F "DELTAB"   # Minimum channel width for  interval from EMIN to EMAX  (μs)
+        11-15 columns, I "NCF"      # Number of crunch boundaries (energy intervals)
+    Line 2:
+        01-10 columns, F "BCF(I)"   # maximum energy for this crunch factor (read in order of increasing energy) (eV)
+        11-20 columns, F "CF(I)"    # crunch factors (integer units of DELTAB)
+
+Card 7 - 
+    Line 1: 
+        01-10 columns, F "CRFN"     # Channel radius (fermi)
+        11-20 columns, F "THICK"    # Sample thickness (atoms/barn)
+        21-30 columns, F "DCOVA"    # Constant term in data covariance (default = 0.0)
+        31-40 columns, F "DCOVB"    # Linear term in data covariance (default = 0.0)
+        41-50 columns, F "VMIN"     # Minimum absolute uncertainty (standard deviation) on experimental data
+        
+Card 8 - 
+    Note:   Line 1 will contain a "command" string that represents the type
+            of data, which must begin in first column on the line. Only those 
+            characters in CAPITAL letters are required. Lines 2 and greater 
+            are not needed unless "DIFFErential elastic cross sections" or 
+            "DIFFERENTIAL REaction" is selected.
+    Line 1: 
+        1-80 columns, A "CROSS"
+    Line 2-N: 
+
+Card 9 -  
+    Note:   No longer used. 
+
+Card 10.1 - 
+    Note:   It is no longer necessary to have “USE NEW SPIN GROUP Format” in 
+            card set 3 in order to use this alternative; card set 10.1 is now 
+            the default.
+            Line 2 is repeated for a total of (NENT + NEXT) lines!
+            Line 1 followed by multiple line 2s is repeated for all spin groups
+    Line 1: 
+        1-3 column, I "JJ"              # Spin group number: 1,2,3, ...
+        5 column, A "EXCL"              # Flag to exclude this spin group from calculation of cross section
+        6-10 column, I "NENT(JJ)"       # Number of entrance channels (must be > 0)
+        11-15 column, I "NEXT(JJ)"      # Number of exit channels, excluding those that are also entrance channels (can be zero)
+        16-20 column, F "SPINJ(JJ)"     # Integer or half-integer spin for resonances in group JJ
+        21-30 column, F "ABNDNC(JJ)"    # Isotopic abundance for this spin group (These values may be overwritten in the PARameter file)
+        31-35 column, F "SPINI"         # Ground-state spin for the nuclide (i.e., for the target particle)
+        35-80 column, A "Comments"      # Use this to state which nuclei is covered by this spin group!
+
+    Line 2: 
+        4-5, I "N"              # Channel number (One line is needed for each channel!)
+        6-8, I "KZ1(N,JJ)"      # Charge number Z1 for the first particle in this channel
+        10, I "LPENT(N,JJ)"     # Is SAMMY to calculate the penetrability for channel N, spin group JJ?
+        11-13, I "KZ2(N,JJ)"    # Charge number Z2 for the second particle in this channel
+        15, I "ISHIFT(N,JJ)"    # 1 if calculate shift; 0 Otherwise
+        18, I "IFEXCL"          # 1 if exclude this channel from final-state calculation for reaction cross section; 0 if include
+        19-20, I "LSPIN"        # Orbital angular momentum for channel
+        21-30, F "CHSPIN(N,JJ)" # Channel spin (integer or halfinteger, sign implies parity)
+        31-40, F "ENBND(N,JJ)"  # Boundary condition (eV). Used only if ISHIFT = 1
+        41-50, F "ECHAN(N,JJ)"  # Excitation energy of residual nucleus in an inelastic channel (eV)
+        51-55, F "RDEFF(N,JJ)"  # Effective radius (fermi)
+        56-60, F "RDTRU(N,JJ)"  # True radius (fermi) (Value may be overwritten in the PARameter file.)
+        61-70, F "EMM1(N,JJ)"   # Mass of first particle in this channel (that is, of the target nuclide, in the case of an incident channel) (amu)
+        71-80, F "EMM2(N,JJ)"   # Mass of second particle in the channel (that is, of the neutron or other incident particle, for entrance channels) (amu)
+
+    

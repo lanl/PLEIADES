@@ -1,0 +1,14 @@
+LST FILE for plotting
+Column 1: Energy (Units are as specified by input command. If not specified, then units are eV if appropriate, otherwise keV.)
+Column 2: Experimental cross section (barns)
+Column 3: Absolute uncertainty in experimental cross section (barns)
+Column 4: Zeroth-order theoretical cross section as evaluated by SAMMY (barns)
+Column 5: Final theoretical cross section as evaluated by SAMMY (barns)
+Column 6: Experimental transmission (dimensionless)
+Column 7: Absolute uncertainty in experimental transmission
+Column 8: Zeroth-order theoretical transmission as evaluated by SAMMY
+Column 9: Final theoretical transmission as evaluated by SAMMY
+Column 10: Theoretical uncertainty on section 4 if data were total cross section, or on section 8 if data were transmission
+Column 11: Theoretical uncertainty on section 5 or section 9
+Column 12: Adjusted energy initially, when t0 and L0 are to be varied. See Section III.E.8 of this manual.
+Column 13: Adjusted energy

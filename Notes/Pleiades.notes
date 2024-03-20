@@ -1,0 +1,42 @@
+General structure of git repo
+
+[PLEIADES]
+docs/
+    - Makefile
+    - _build/
+    - api.rst
+    - conf.py
+    - examples.rst
+    - generated
+    - index.rst
+    - make.bat
+    - requirements.in
+    - requirements.txt
+    - source/
+        - modules.rst 
+        - pleiades.rst
+    - usage.rst
+notes/
+examples/
+    - makeSammyInput/
+        - makeInputFile.py
+    - plotOutput/
+        - plotSammyLST.py
+    - plotCrossSections/
+        - plotXS.py
+    - plotTransmission/
+        - plotTrans.py
+nucDataLibs/
+    - isotopeInfo/
+        - isotopes.info
+        - mass.mas20
+    - xSections/
+        - [cross-section files for each isotope]
+pleiades/
+    - __pycache__
+    - __init__.py
+    - sammyInput.py 
+    - sammyPlotter.py 
+    - nucData.py
+    - simData.py
+
