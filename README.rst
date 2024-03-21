@@ -1,5 +1,5 @@
 .. image:: ./images/PLEIADES.jpg
-   :alt: **PLEIADES:** Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY. 
+   :alt: **PLEIADES:** Python Library Extensions for Isotopic Analysis via Detailed Examination of SAMMY. 
    :align: center
 
 
