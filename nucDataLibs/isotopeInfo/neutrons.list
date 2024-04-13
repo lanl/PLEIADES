@@ -1,0 +1,561 @@
+----------------------------------------------------------------------------
+  #     Material Lab.       Date       Authors                           MAT
+----------------------------------------------------------------------------
+   1)  0 - N - 1 LANL       EVAL-APR16 HALE, PARIS                        25
+   2)   1-H -  1 LANL       EVAL-JUL16 G.M.Hale                          125
+   3)   1-H -  2 LANL       EVAL-FEB97 P.G.Young,G.M.Hale,M.B.Chadwick   128
+   4)   1-H -  3 LANL       EVAL-NOV01 G.M.Hale                          131
+   5)   2-He-  3 LANL       EVAL-MAY90 G.Hale,D.Dodder,P.Young           225
+   6)   2-He-  4 LANL       EVAL-SEP10 Hale                              228
+   7)   3-Li-  6 LANL       EVAL-JAN17 G.M. Hale                         325
+   8)   3-Li-  7 LANL       EVAL-AUG88 P.G.Young                         328
+   9)   4-Be-  7 LANL       EVAL-JUN16 I.Thompson, P.R.Page              419
+  10)   4-Be-  9 LLNL,LANL  EVAL-OCT09 G.HALE,PERKINS ET AL,FRANKLE      425
+  11)   5-B - 10 LANL       EVAL-FEB17 G.M.Hale                          525
+  12)   5-B - 11 LANL       EVAL-MAY89 P.G.Young                         528
+  13)   6-C - 12 LANL,ORNL  EVAL-AUG15 G.M. Hale, P.G. Young, C.Y. Fu    625
+  14)   6-C - 13 LANL,      EVAL-AUG15 G.M. Hale, M.W. Paris             628
+  15)   7-N - 14 LANL       EVAL-JUN97 M.B.Chadwick,P.G.Young            725
+  16)   7-N - 15 LANL       EVAL-SEP83 E.Arthur,P.Young,G.Hale           728
+  17)   8-O - 16 LANL       EVAL-DEC16 Hale,Paris,Young,Chadwick         825
+  18)   8-O - 17 BNL        EVAL-JAN78 B.A.Magurno                       828
+  19)   8-O - 18  IPPE      EVAL-NOV05 M.N.NIKOLAEV                      831
+  20)   9-F - 19 CNDC,ORNL  EVAL-OCT03 Z.X.Zhao,C.Y.Fu,D.C.Larson, Leal+ 925
+  21)  10-Ne- 20  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       1025
+  22)  10-Ne- 21  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       1028
+  23)  10-Ne- 22  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       1031
+  24)  11-Na- 22 NEA        RCOM-JUN83 Scientific Co-ordination Group   1122
+  25)  11-Na- 23 ORNL       EVAL-DEC77 D.C.Larson                       1125
+  26)  12-Mg- 24 DEC,NEDAC  EVAL-MAR87 M.Hatchya(DEC),T.Asami(NEDAC)    1225
+  27)  12-Mg- 25 DEC,NEDAC  EVAL-MAR87 M.Hatchya(DEC),T.Asami(NEDAC)    1228
+  28)  12-Mg- 26 DEC,NEDAC  EVAL-MAR87 M.Hatchya(DEC),T.Asami(NEDAC)    1231
+  29)  13-Al- 26M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1323
+  30)  13-Al- 27 LANL,ORNL  EVAL-FEB01 M.B.Chadwick+,Derrien+           1325
+  31)  14-Si- 28 LANL,ORNL  EVAL-DEC02 M.B.Chadwick,P.G.Young,D.Hetrick 1425
+  32)  14-Si- 29 LANL,ORNL  EVAL-JUN97 M.B.Chadwick,P.G.Young,D.Hetrick 1428
+  33)  14-Si- 30 LANL,ORNL  EVAL-JUN97 M.B.Chadwick,P.G.Young,D.Hetrick 1431
+  34)  14-Si- 31  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1434
+  35)  14-Si- 32  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1437
+  36)  15-P - 31 LANL,LLNL  EVAL-DEC97 M.Chadwick,P.Young,R.Howerton    1525
+  37)  16-S - 32 FUJI E.C.  EVAL-MAY87 H.Nakamura                       1625
+  38)  16-S - 33 FUJI E.C.  EVAL-MAY87 H.Nakamura                       1628
+  39)  16-S - 34 FUJI E.C.  EVAL-MAY87 H.Nakamura                       1631
+  40)  16-S - 35  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1634
+  41)  16-S - 36 FUJI E.C.  EVAL-MAY87 H.Nakamura                       1637
+  42)  17-Cl- 35 ORNL,LANL  EVAL-OCT03 Sayer,Guber,Leal,Larson,Young+   1725
+  43)  17-Cl- 36  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1728
+  44)  17-Cl- 37 ORNL,LANL  EVAL-OCT03 Sayer,Guber,Leal,Larson,Young+   1731
+  45)  18-Ar- 36 NEA        EVAL-JUN83 Scientific Co-ordination Group   1825
+  46)  18-Ar- 37  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       1828
+  47)  18-Ar- 38 NEA        EVAL-JUN83 Scientific Co-ordination Group   1831
+  48)  18-Ar- 39  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 1834
+  49)  18-Ar- 40 LANL       EVAL-Nov12 T.Kawano                         1837
+  50)  18-Ar- 41  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       1840
+  51)  19-K - 39 ORNL       EVAL-OCT08 R.SAYER,K.GUBER,L.LEAL,N.LARSON  1925
+  52)  19-K - 40 FUJI E.C.  EVAL-MAY87 H.Nakamura                       1928
+  53)  19-K - 41 ORNL       EVAL-OCT08 R.SAYER,K.GUBER,L.LEAL,N.LARSON  1931
+  54)  20-Ca- 40 ORNL       EVAL-AUG16 M.T. Pigni, D. Wiarda, K. Guber  2025
+  55)  20-Ca- 41  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 2028
+  56)  20-Ca- 42 NRG        EVAL-OCT04 A.J. Koning                      2031
+  57)  20-Ca- 43 NRG        EVAL-OCT04 A.J. Koning                      2034
+  58)  20-Ca- 44 NRG        EVAL-OCT04 A.J. Koning                      2037
+  59)  20-Ca- 45  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       2040
+  60)  20-Ca- 46 NRG        EVAL-OCT04 A.J. Koning                      2043
+  61)  20-Ca- 47  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       2046
+  62)  20-Ca- 48 NRG        EVAL-OCT04 A.J. Koning                      2049
+  63)  21-Sc- 45 ANL,LLNL   EVAL-JUL92 A.B.Smith,R.J.Howerton           2125
+  64)  22-Ti- 46 LANL       EVAL-Feb09 T.Kawano, L. Leal, A.Kahler      2225
+  65)  22-Ti- 47 LANL       EVAL-Feb09 T.Kawano, L. Leal, A.Kahler      2228
+  66)  22-Ti- 48 LANL,ORNL  EVAL-Aug10 T.Kawano, L.Leal, A.Kahler       2231
+  67)  22-Ti- 49 LANL       EVAL-Feb09 T.Kawano, L. Leal, A.Kahler      2234
+  68)  22-Ti- 50 LANL       EVAL-Feb09 T.Kawano, L. Leal, A.Kahler      2237
+  69)  23-V - 49  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 2322
+  70)  23-V - 50 JAEA       EVAL-Mar10 N.Iwamoto                        2325
+  71)  23-V - 51 LANL       EVAL-Jan11 T.Kawano                         2328
+  72)  24-Cr- 50 LANL,ORNL  EVAL-OCT97 S.Chiba,M.Chadwick,D.Hetrick     2425
+  73)  24-Cr- 51  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       2428
+  74)  24-Cr- 52 LANL,ORNL  EVAL-OCT97 S.Chiba,M.Chadwick,D.Hetrick     2431
+  75)  24-Cr- 53 LANL,ORNL  EVAL-OCT97 S.Chiba,M.Chadwick,K.Shibata     2434
+  76)  24-Cr- 54 LANL,ORNL  EVAL-OCT97 S.Chiba,M.Chadwick,D.Hetrick     2437
+  77)  25-Mn- 54  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       2522
+  78)  25-Mn- 55 IAEA       Eval-Feb11 IAEA Evaluation Consortium       2525
+  79)  26-Fe- 54 CIELO      EVAL-DEC17 Nobre, Brown, Herman, Arcilla+   2625
+  80)  26-Fe- 55  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       2628
+  81)  26-Fe- 56 CIELO      EVAL-DEC17   CIELO Collaboration            2631
+  82)  26-Fe- 57 CIELO      EVAL-Oct16 Brown,Nobre,Herman,Leal,Trkov,+  2634
+  83)  26-Fe- 58 CIELO      EVAL-Oct16 Nobre,Herman,Leal,Trkov,Brown,...2637
+  84)  27-Co- 58 BNL        EVAL-MAY11  Mughabghab, BNL, Kim, KAERI+    2722
+  85)  27-Co- 58MNEA        RCOM-JUN82 Scientific Co-ordination Group   2723
+  86)  27-Co- 59 LANL,ORNL  EVAL-JAN16 T.Kawano,G.Desaussure+           2725
+  87)  28-Ni- 58 LANL,ORNL  EVAL-Aug12 T.Kawano,A.Kahler,L.Leal         2825
+  88)  28-Ni- 59 LANL       EVAL-Oct12 T.Kawano,A.Kahler                2828
+  89)  28-Ni- 60 LANL,ORNL  EVAL-Oct12 T.Kawano,A.Kahler,L.Leal         2831
+  90)  28-Ni- 61 LANL,BNL   EVAL-Oct12 T.Kawano,A.Kahler,A.Trkov        2834
+  91)  28-Ni- 62 LANL,BNL   EVAL-Oct12 T.Kawano, A.Kahler, A.Trkov      2837
+  92)  28-Ni- 63  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 2840
+  93)  28-Ni- 64 LANL,BNL   EVAL-Oct12 T.Kawano, A.Kahler, A.Trkov      2843
+  94)  29-Cu- 63 LANL,ORNL  EVAL-FEB98 A.Koning,M.Chadwick,Hetrick      2925
+  95)  29-Cu- 64  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 2928
+  96)  29-Cu- 65 LANL,ORNL  EVAL-FEB98 A.Koning,M.Chadwick,Hetrick      2931
+  97)  30-Zn- 64 JAEA       EVAL-Dec09 N.Iwamoto                        3025
+  98)  30-Zn- 65 JAEA       EVAL-Dec09 N.Iwamoto                        3028
+  99)  30-Zn- 66 JAEA       EVAL-Dec09 N.Iwamoto                        3031
+ 100)  30-Zn- 67 JAEA       EVAL-Dec09 N.Iwamoto                        3034
+ 101)  30-Zn- 68 JAEA       EVAL-Dec09 N.Iwamoto                        3037
+ 102)  30-Zn- 69  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3040
+ 103)  30-Zn- 70 JAEA       EVAL-Dec09 N.Iwamoto                        3043
+ 104)  31-Ga- 69 KHI,BNL    EVAL-JAN05 T.Watanabe, Mughabghab           3125
+ 105)  31-Ga- 70  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3128
+ 106)  31-Ga- 71 CNDC       EVAL-OCT98 Song-Bai Zhang,B.S.Yu,Z.J.Zhang  3131
+ 107)  32-Ge- 70 BNL,JAERI  EVAL-AUG04 Iwamoto,Herman,Mughabghab+       3225
+ 108)  32-Ge- 71  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3228
+ 109)  32-Ge- 72 BNL,JAERI  EVAL-AUG04 Iwamoto,Herman,Mughabghab+       3231
+ 110)  32-Ge- 73 BNL,JAERI  EVAL-AUG04 Iwamoto,Herman,Mughabghab+       3234
+ 111)  32-Ge- 74 BNL,JAERI  EVAL-AUG04 Iwamoto,Herman,Mughabghab+       3237
+ 112)  32-Ge- 75  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3240
+ 113)  32-Ge- 76 BNL,JAERI  EVAL-AUG04 Iwamoto,Herman,Mughabghab+       3243
+ 114)  33-As- 73  LANL      EVAL-MAR10 T. Kawano                        3319
+ 115)  33-As- 74 LANL       EVAL-OCT16 T.Kawano, D.Brown, S.Mughabghab  3322
+ 116)  33-As- 75 LANL       EVAL-MAR10 T.Kawano                         3325
+ 117)  34-Se- 74 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3425
+ 118)  34-Se- 75  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       3428
+ 119)  34-Se- 76 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3431
+ 120)  34-Se- 77 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3434
+ 121)  34-Se- 78 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3437
+ 122)  34-Se- 79 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3440
+ 123)  34-Se- 80 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3443
+ 124)  34-Se- 81  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3446
+ 125)  34-Se- 82 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       3449
+ 126)  35-Br- 79 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3525
+ 127)  35-Br- 80  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3528
+ 128)  35-Br- 81 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       3531
+ 129)  36-Kr- 78 LANL       EVAL-Oct16 T. Kawano                        3625
+ 130)  36-Kr- 79  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3628
+ 131)  36-Kr- 80 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3631
+ 132)  36-Kr- 81  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       3634
+ 133)  36-Kr- 82 JNDC,BNL   EVAL-FEB05 JNDC FPND W.G., Mughabghab       3637
+ 134)  36-Kr- 83 CNDC       EVAL-JUN99 You-Xiang Zhuang, Chong-Hai Cai  3640
+ 135)  36-Kr- 84 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       3643
+ 136)  36-Kr- 85 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     3646
+ 137)  36-Kr- 86 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       3649
+ 138)  37-Rb- 85 JNDC       EVAL-MAR90 JNDC FPND WG + S.F. Mughabghab   3725
+ 139)  37-Rb- 86 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     3728
+ 140)  37-Rb- 87 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3731
+ 141)  38-Sr- 84 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     3825
+ 142)  38-Sr- 85  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 3828
+ 143)  38-Sr- 86 JNDC,BNL   EVAL-FEB05 JNDC FPND W.G., Mughabghab       3831
+ 144)  38-Sr- 87 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3834
+ 145)  38-Sr- 88 CNDC,BNL   EVAL-FEB05 Zhuang,Cai, Mughabghab           3837
+ 146)  38-Sr- 89 CNDC       EVAL-SEP01 Yin-Lu Han,C.H.Cai,Y.X.Zhuang    3840
+ 147)  38-Sr- 90 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3843
+ 148)  39-Y - 89 BNL-LANL   EVAL-AUG06 Rochman,Chadwick,Herman,Kawano+  3925
+ 149)  39-Y - 90 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     3928
+ 150)  39-Y - 91 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        3931
+ 151)  40-Zr- 90 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4025
+ 152)  40-Zr- 91 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4028
+ 153)  40-Zr- 92 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4031
+ 154)  40-Zr- 93 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4034
+ 155)  40-Zr- 94 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4037
+ 156)  40-Zr- 95 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4040
+ 157)  40-Zr- 96 BNL,KAERI+ EVAL-SEP11 H.I.Kim, S.Mughabghab, R.Capote  4043
+ 158)  41-Nb- 93 LANL,ANL   EVAL-DEC97 M.Chadwick,P.Young,D.L.Smith     4125
+ 159)  41-Nb- 94 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4128
+ 160)  41-Nb- 95 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4131
+ 161)  42-Mo- 92            EVAL-MAY 2011   S. F. MUGHABGHAB+ JENDL3.3  4225
+ 162)  42-Mo- 93  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       4228
+ 163)  42-Mo- 94 JNDC,BNL   EVAL-FEB05 JNDC FPND W.G., Mughabghab       4231
+ 164)  42-Mo- 95 BNL,KAERI  EVAL-DEC10 Kim,Herman, Mughabghab+          4234
+ 165)  42-Mo- 96 JNDC       EVAL-AUG89 JNDC FP Nuclear Data W.G.        4237
+ 166)  42-Mo- 97 JNDC,BNL   EVAL-FEB05 JNDC FPND W.G., Mughabghab       4240
+ 167)  42-Mo- 98 JNDC       EVAL-AUG89 JNDC FP Nuclear Data W.G.        4243
+ 168)  42-Mo- 99 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4246
+ 169)  42-Mo-100 CNDC       EVAL-AUG00 Chong-Hai Cai and Qi-Chang Liang 4249
+ 170)  43-Tc- 98  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       4322
+ 171)  43-Tc- 99 BNL-LANL   EVAL-MAY06 Herman,Oblozinsky,Mughabghab+    4325
+ 172)  44-Ru- 96 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4425
+ 173)  44-Ru- 97  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       4428
+ 174)  44-Ru- 98 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4431
+ 175)  44-Ru- 99 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4434
+ 176)  44-Ru-100 JNDC,BNL   EVAL-MAR05 JNDC FPND W.G., Mughabghab       4437
+ 177)  44-Ru-101 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Mughabghab+        4440
+ 178)  44-Ru-102 CNDC,BNL   EVAL-FEB05 Qi-Chang Liang+, Mughabghab      4443
+ 179)  44-Ru-103 CNDC,BNL   EVAL-FEB05 Z.G.Ge+, Mughabghab              4446
+ 180)  44-Ru-104 CNDC       EVAL-JUN99 Z.J.Zhang,Q.C.Liang,Q.Shen,X.Sun 4449
+ 181)  44-Ru-105 CNDC       EVAL-JUN00 Qi-Chang Liang,Z.J.Zhang,X.Q.Sun 4452
+ 182)  44-Ru-106 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4455
+ 183)  45-Rh-103 BNL,KAERI  EVAL-FEB06 Mughabghab,Kim,Herman,Oblozinsky 4525
+ 184)  45-Rh-104  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4528
+ 185)  45-Rh-105 JNDC       EVAL-MAR90 JNDC FP NUCLEAR DATA W.G.        4531
+ 186)  46-Pd-102 LANL,BNL   EVAL-Mar05 P. G. Young, Mughabghab          4625
+ 187)  46-Pd-103  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4628
+ 188)  46-Pd-104 LANL,BNL   EVAL-MAR05 P. G. Young, Mughabghab          4631
+ 189)  46-Pd-105 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Mughabghab+        4634
+ 190)  46-Pd-106 LANL,BNL   EVAL-MAR05 P.G.Young, Mughabghab            4637
+ 191)  46-Pd-107 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        4640
+ 192)  46-Pd-108 LANL,BNL   EVAL-MAR05 P.G.Young, Mughabghab            4643
+ 193)  46-Pd-109  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4646
+ 194)  46-Pd-110 LANL,BNL   EVAL-MAR05 P.G.Young, Mughabghab            4649
+ 195)  47-Ag-107 JAERI,BNL  EVAL-MAR05 Liu+, Mughabghab                 4725
+ 196)  47-Ag-108  NNDC, BNL EVAL-Aug17    G. Nobre, D. Brown, M. Herman 4728
+ 197)  47-Ag-109 BNL,KAERI  EVAL-FEB06 Mughabghab,Kim,Herman,Oblozinsky 4731
+ 198)  47-Ag-110MJNDC,BNL   EVAL-MAR05 JNDC FPND W.G., Mughabghab       4735
+ 199)  47-Ag-111 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     4737
+ 200)  47-Ag-112  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4740
+ 201)  47-Ag-113  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4743
+ 202)  47-Ag-114  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4746
+ 203)  47-Ag-115  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4749
+ 204)  47-Ag-116  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4752
+ 205)  47-Ag-117  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4755
+ 206)  47-Ag-118M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4759
+ 207)  48-Cd-106 IRMM,JNDC  EVAL-OCT10 I.Sirakov,S.Kopecky+,JNDC FPND WG4825
+ 208)  48-Cd-107  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4828
+ 209)  48-Cd-108 IRMM,UA,ANLEVAL-OCT10 I.Sirakov,S.Kopecky+,J.McCabe+   4831
+ 210)  48-Cd-109  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       4834
+ 211)  48-Cd-110 IRMM,UA,ANLEVAL-OCT10 I.Sirakov,S.Kopecky+,J.McCabe+   4837
+ 212)  48-Cd-111 IRMM,JNDC  EVAL-OCT10 I.Sirakov,S.Kopecky+,JNDC FPND WG4840
+ 213)  48-Cd-112 IRMM,UA,ANLEVAL-OCT10 I.Sirakov,S.Kopecky+,J.McCabe+   4843
+ 214)  48-Cd-113 BNL, CNDL  EVAL-MAR05    Mughabghab, J.W.Zhao+,        4846
+ 215)  48-Cd-114 IRMM,UA,ANLEVAL-OCT10 I.Sirakov,S.Kopecky+,J.McCabe+   4849
+ 216)  48-Cd-115MBNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     4853
+ 217)  48-Cd-116 IRMM,UA,ANLEVAL-OCT10 I.Sirakov,S.Kopecky+,J.McCabe+   4855
+ 218)  49-In-113 JNDC,BNL   EVAL-MAR05 JNDC FPND W.G., Mughabghab       4925
+ 219)  49-In-114  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 4928
+ 220)  49-In-115 JNDC,BNL   EVAL-MAR05 JNDC FPND W.G., Mughabghab       4931
+ 221)  50-Sn-112 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5025
+ 222)  50-Sn-113 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5028
+ 223)  50-Sn-114 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5031
+ 224)  50-Sn-115 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5034
+ 225)  50-Sn-116 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5037
+ 226)  50-Sn-117 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5040
+ 227)  50-Sn-118 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5043
+ 228)  50-Sn-119 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5046
+ 229)  50-Sn-120 JNDC,BNL   EVAL-DEC04 Mughabghab, Kawano               5049
+ 230)  50-Sn-121M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5053
+ 231)  50-Sn-122 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5055
+ 232)  50-Sn-123 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5058
+ 233)  50-Sn-124 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5061
+ 234)  50-Sn-125 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5064
+ 235)  50-Sn-126 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5067
+ 236)  51-Sb-121 CNDC,BNL   EVAL-DEC04 Zhao+, Mughabghab                5125
+ 237)  51-Sb-122  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5128
+ 238)  51-Sb-123 CNDC,BNL   EVAL-DEC04 Zhang+, Mughabghab               5131
+ 239)  51-Sb-124 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5134
+ 240)  51-Sb-125 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5137
+ 241)  51-Sb-126 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5140
+ 242)  52-Te-120 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5225
+ 243)  52-Te-121  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5228
+ 244)  52-Te-121M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5229
+ 245)  52-Te-122 JNDC,BNL   EVAL-MAR90 JNDC FPND W.G., Mughabghab       5231
+ 246)  52-Te-123 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5234
+ 247)  52-Te-124 JNDC,BNL   EVAL-DEC04 JNFP W.G., Mughabhab             5237
+ 248)  52-Te-125 JNDC,BNL   EVAL-Dec04 JNDC FPND W.G., Mughabghab       5240
+ 249)  52-Te-126 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5243
+ 250)  52-Te-127MJNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5247
+ 251)  52-Te-128 JNDC,BNL   EVAL-DEC04 JNDC FPND W.G., Mughabghab       5249
+ 252)  52-Te-129MJNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5253
+ 253)  52-Te-130 CNDC       EVAL-DEC04 W.N.Su+, Mughabghab              5255
+ 254)  52-Te-131  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5258
+ 255)  52-Te-131M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5259
+ 256)  52-Te-132 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5261
+ 257)  53-I -127 LANL,BNL   EVAL-JAN05 Young, MacFarlane, Mughabghab    5325
+ 258)  53-I -128  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5328
+ 259)  53-I -129 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5331
+ 260)  53-I -130 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5334
+ 261)  53-I -131 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5337
+ 262)  53-I -132  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5340
+ 263)  53-I -132M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5341
+ 264)  53-I -133  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5343
+ 265)  53-I -134  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5346
+ 266)  53-I -135 CNDC,BNL   EVAL-JAN05 Q.Shen,X.Sun,Z.Zhang,W.Su,J.Zhao 5349
+ 267)  54-Xe-123 LLNL       EVAL-Jan11 W.E. Ormand and N.C. Summers     5422
+ 268)  54-Xe-124 LANL       EVAL-Oct16 T. Kawano                        5425
+ 269)  54-Xe-125  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5428
+ 270)  54-Xe-126 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5431
+ 271)  54-Xe-127  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5434
+ 272)  54-Xe-128 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5437
+ 273)  54-Xe-129 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5440
+ 274)  54-Xe-130 BNL        EVAL-JAN05 M.R.Bhat+, Mughabghab            5443
+ 275)  54-Xe-131 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Mughabghab+        5446
+ 276)  54-Xe-132 CNDC,BNL   EVAL-JAN05 B.S.Yu+, Mughabghab              5449
+ 277)  54-Xe-133 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5452
+ 278)  54-Xe-134 CNDC,BNL   EVAL-JAN05 B.S.Yu+, Mughabghab              5455
+ 279)  54-Xe-135 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5458
+ 280)  54-Xe-136 CNDC,BNL   EVAL-JAN05 Q.B.Shen+, Mughabghab            5461
+ 281)  55-Cs-133 BNL,KAERI  EVAL-FEB06  Mughabghab,Kim,Herman,+         5525
+ 282)  55-Cs-134 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5528
+ 283)  55-Cs-135 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5531
+ 284)  55-Cs-136 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5534
+ 285)  55-Cs-137 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5537
+ 286)  56-Ba-130 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5625
+ 287)  56-Ba-131  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5628
+ 288)  56-Ba-132 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5631
+ 289)  56-Ba-133 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5634
+ 290)  56-Ba-134 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5637
+ 291)  56-Ba-135 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5640
+ 292)  56-Ba-136 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5643
+ 293)  56-Ba-137 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5646
+ 294)  56-Ba-138 CNDC,BNL   EVAL-JAN05 W.N.Su+, Mughabghab              5649
+ 295)  56-Ba-139  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5652
+ 296)  56-Ba-140 NEA        EVAL-JUL82 H.Gruppelaar,E.Menapace          5655
+ 297)  57-La-138 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5725
+ 298)  57-La-139 CNDC,BNL   EVAL-JAN05 J.W.Zhao+, Mughabghab            5728
+ 299)  57-La-140 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5731
+ 300)  58-Ce-136 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5825
+ 301)  58-Ce-137  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5828
+ 302)  58-Ce-137M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 5829
+ 303)  58-Ce-138 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5831
+ 304)  58-Ce-139 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5834
+ 305)  58-Ce-140 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5837
+ 306)  58-Ce-141 CNDC,BNL   EVAL-JAN05 Zhang+, Mughabghab               5840
+ 307)  58-Ce-142 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5843
+ 308)  58-Ce-143 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5846
+ 309)  58-Ce-144 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        5849
+ 310)  59-Pr-141 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 5925
+ 311)  59-Pr-142 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     5928
+ 312)  59-Pr-143 JNDC,BNl   EVAL-JAN05 JNDC FPND W.G., Mughabghab       5931
+ 313)  60-Nd-142 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6025
+ 314)  60-Nd-143 BNL,KAERI  EVAL-FEB06 Kim,Herman,Chang,Mughabghab+     6028
+ 315)  60-Nd-144 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6031
+ 316)  60-Nd-145 BNL,KAERI  EVAL-FEB06 Mughabghab,Kim,Herman,Oblozinsky 6034
+ 317)  60-Nd-146 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6037
+ 318)  60-Nd-147 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6040
+ 319)  60-Nd-148 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6043
+ 320)  60-Nd-149  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6046
+ 321)  60-Nd-150 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6049
+ 322)  61-Pm-143  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       6137
+ 323)  61-Pm-144  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       6140
+ 324)  61-Pm-145  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       6143
+ 325)  61-Pm-146  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6146
+ 326)  61-Pm-147 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        6149
+ 327)  61-Pm-148 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        6152
+ 328)  61-Pm-148MCNDC       EVAL-SEP01 You-Xiang Zhuang, Qing-Biao Shen 6153
+ 329)  61-Pm-149 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        6155
+ 330)  61-Pm-150  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6158
+ 331)  61-Pm-151 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     6161
+ 332)  62-Sm-144 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6225
+ 333)  62-Sm-145  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       6228
+ 334)  62-Sm-146  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6231
+ 335)  62-Sm-147 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6234
+ 336)  62-Sm-148 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6237
+ 337)  62-Sm-149 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6240
+ 338)  62-Sm-150 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6243
+ 339)  62-Sm-151 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6246
+ 340)  62-Sm-152 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6249
+ 341)  62-Sm-153 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6252
+ 342)  62-Sm-154 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6255
+ 343)  63-Eu-151 CNDC,BNL   EVAL-JAN05 Ge+, Mughabghab                  6325
+ 344)  63-Eu-152 JNDC,ORNL  EVAL-MAR05 JNDC FPND W.G., R.Q.Wright       6328
+ 345)  63-Eu-153 BNL,KAERI  EVAL-Sep02 Mughabghab,Oblozinsky,Herman+    6331
+ 346)  63-Eu-154 CNDC,BNL   EVAL-JAN05 Ge+, Mughabghab                  6334
+ 347)  63-Eu-155 CNDC       EVAL-FEB99 You-Xiang Zhuang and Zhi-Gang Ge 6337
+ 348)  63-Eu-156 JNDC       EVAL-MAR90 JNDC FP Nuclear Data W.G.        6340
+ 349)  63-Eu-157 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     6343
+ 350)  64-Gd-152 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6425
+ 351)  64-Gd-153 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6428
+ 352)  64-Gd-154 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6431
+ 353)  64-Gd-155 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6434
+ 354)  64-Gd-156 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6437
+ 355)  64-Gd-157 BNL,ORNL+  EVAL-SEP11  Mughabghab,Rochman,Leal,Kawano+ 6440
+ 356)  64-Gd-158 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6443
+ 357)  64-Gd-159  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6446
+ 358)  64-Gd-160 BNL,ORNL+  EVAL-APR06 Rochman,Mughabghab,Leal,Kawano+  6449
+ 359)  65-Tb-158  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6522
+ 360)  65-Tb-159 JNDC,BNL   EVAL-JAN05 JNDC FPND W.G., Mughabghab       6525
+ 361)  65-Tb-160 BNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     6528
+ 362)  65-Tb-161  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6531
+ 363)  66-Dy-154 JAEA       EVAL-Nov09 N.Iwamoto                        6619
+ 364)  66-Dy-155  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6622
+ 365)  66-Dy-156 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6625
+ 366)  66-Dy-157  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6628
+ 367)  66-Dy-158 BNL,KAERI  EVAL-FEB06 Kim,Mughabghab,Herman,Oblozinsky 6631
+ 368)  66-Dy-159 JAEA       EVAL-Nov09 N.Iwamoto                        6634
+ 369)  66-Dy-160 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Oblozinsky         6637
+ 370)  66-Dy-161 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Oblozinsky         6640
+ 371)  66-Dy-162 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Oblozinsky         6643
+ 372)  66-Dy-163 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Oblozinsky         6646
+ 373)  66-Dy-164 BNL,KAERI  EVAL-FEB06 Kim,Herman,Oh,Oblozinsky         6649
+ 374)  67-Ho-165 LANL,BNL   EVAL-JAN05 P.G.Young+, Mughabghab           6725
+ 375)  67-Ho-166MBNL        EVAL-MAR06 Herman,Oblozinsky,Mughabghab     6729
+ 376)  68-Er-162 TIT        EVAL-SEP00 A.K.M. Harun-Ar-Rashid+          6825
+ 377)  68-Er-163  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6828
+ 378)  68-Er-164 TIT        EVAL-SEP00 A.K.M. Harun-Ar-Rashid+          6831
+ 379)  68-Er-165  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6834
+ 380)  68-Er-166 TIT,BNL    EVAL-JAN05 Harun-Ar-Rashid+, Mughabghab     6837
+ 381)  68-Er-167 TIT,BNL    EVAL-JAN05 Harun-Ar-Rashid+, Mughabghab     6840
+ 382)  68-Er-168 TIT,BNL    EVAL-JAN05 Harun-Ar-Rashid+, Mughabghab     6843
+ 383)  68-Er-169  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6846
+ 384)  68-Er-170 TIT,BNL    EVAL-JAN05 Harun-Ar-Rashid+, Mughabghab     6849
+ 385)  69-Tm-168 BNL        EVAL-OCT11 G.P.A.Nobre, A.Palumbo, et al.   6922
+ 386)  69-Tm-169 BNL        EVAL-OCT11 G.P.A.Nobre, A.Palumbo, et al.   6925
+ 387)  69-Tm-170 BNL        EVAL-OCT11 G.P.A.Nobre, A.Palumbo, et al.   6928
+ 388)  69-Tm-171  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 6931
+ 389)  70-Yb-168 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7025
+ 390)  70-Yb-169  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7028
+ 391)  70-Yb-170 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7031
+ 392)  70-Yb-171 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7034
+ 393)  70-Yb-172 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7037
+ 394)  70-Yb-173 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7040
+ 395)  70-Yb-174 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7043
+ 396)  70-Yb-175  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7046
+ 397)  70-Yb-176 JAEA       EVAL-FEB10 S.Kunieda, A.Ichihara, K.Shibata+7049
+ 398)  71-Lu-175 ORNL,BNW   EVAL-MAR98 R.Q. Wright, Leonard-Stewart     7125
+ 399)  71-Lu-176 ORNL,BNW   EVAL-MAR98 R.Q. Wright, Leonard-Stewart     7128
+ 400)  72-Hf-174 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7225
+ 401)  72-Hf-175  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7228
+ 402)  72-Hf-176 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7231
+ 403)  72-Hf-177 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7234
+ 404)  72-Hf-178 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7237
+ 405)  72-Hf-179 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7240
+ 406)  72-Hf-180 ORNL/LANL  EVAL-OCT16 R.Q. Wright, T. Kawano           7243
+ 407)  72-Hf-181 JAEA       EVAL-JUL09 K. Shibata (JAEA)                7246
+ 408)  72-Hf-182 JAEA       EVAL-JUL09 K. Shibata (JAEA)                7249
+ 409)  73-Ta-180 LLNL       EVAL-Jan11 I.J. Thompson and N.C. Summers   7325
+ 410)  73-Ta-181 LLNL       EVAL-Jan11 I.J. Thompson and N.C. Summers   7328
+ 411)  73-Ta-182 AI         EVAL-APR71 J.Otter,C.Dunford and E.Ottewitte7331
+ 412)  74-W -180 IAEA       Eval090806                                  7425
+ 413)  74-W -181  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7428
+ 414)  74-W -182 IAEA       Eval090806                                  7431
+ 415)  74-W -183 IAEA       EVAL-AUG14                                  7434
+ 416)  74-W -184 IAEA       Eval090806                                  7437
+ 417)  74-W -185  NNDC, BNL EVAL-Aug17    G. Nobre, D. Brown, M. Herman 7440
+ 418)  74-W -186 IAEA       Eval090806                                  7443
+ 419)  75-Re-185 LLNL       EVAL-Jan11 I.J. Thompson and N.C. Summers   7525
+ 420)  75-Re-186M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7529
+ 421)  75-Re-187 LLNL       EVAL-Jan11 I.J. Thompson and N.C. Summers   7531
+ 422)  76-Os-184 JAEA       EVAL-Jan10 N.Iwamoto                        7625
+ 423)  76-Os-185  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7628
+ 424)  76-Os-186 JAEA       EVAL-Jan10 N.Iwamoto                        7631
+ 425)  76-Os-187 JAEA       EVAL-Jan10 N.Iwamoto                        7634
+ 426)  76-Os-188 JAEA       EVAL-Jan10 N.Iwamoto                        7637
+ 427)  76-Os-189 JAEA       EVAL-Jan10 N.Iwamoto                        7640
+ 428)  76-Os-190 JAEA       EVAL-Jan10 N.Iwamoto                        7643
+ 429)  76-Os-191  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7646
+ 430)  76-Os-192 JAEA       EVAL-Jan10 N.Iwamoto                        7649
+ 431)  77-Ir-191 LANL-BNL   EVAL-AUG06 Talou,Kawano,Chadwick,Rochman+   7725
+ 432)  77-Ir-192  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7728
+ 433)  77-Ir-193 LANL,BNL   EVAL-AUG06 Rochman,Chadwick,Talou,Kawano+   7731
+ 434)  77-Ir-194M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 7735
+ 435)  78-Pt-190  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7825
+ 436)  78-Pt-191  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7828
+ 437)  78-Pt-192  NRG       EVAL-AUG17 A.J. Koning and D. Rochman       7831
+ 438)  78-Pt-193  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7834
+ 439)  78-Pt-194  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7837
+ 440)  78-Pt-195  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7840
+ 441)  78-Pt-196  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7843
+ 442)  78-Pt-197  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7846
+ 443)  78-Pt-198  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       7849
+ 444)  79-Au-197 IRMM,LANL  EVAL-SEP13 I.Sirakov,S.Kopecky+, P.G.Young  7925
+ 445)  80-Hg-196 LANL       EVAL-FEB98 S.Chiba, M.Chadwick,P.Young      8025
+ 446)  80-Hg-197  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 8028
+ 447)  80-Hg-197M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 8029
+ 448)  80-Hg-198 LANL       EVAL-OCT04 M.Chadwick,S.Chiba,P.Young       8031
+ 449)  80-Hg-199 LANL       EVAL-OCT04 S.Chiba, M.Chadwick,P.Young      8034
+ 450)  80-Hg-200 LANL       EVAL-OCT04 M.Chadwick,S.Chiba,P.Young       8037
+ 451)  80-Hg-201 LANL       EVAL-OCT04 S.Chiba,M.Chadwick,P.Young       8040
+ 452)  80-Hg-202 LANL       EVAL-OCT04 M.Chadwick,S.Chiba,P.Young       8043
+ 453)  80-Hg-203  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       8046
+ 454)  80-Hg-204 LANL       EVAL-OCT05 S.Chiba,M.Chadwick,P.Young       8049
+ 455)  81-Tl-203 BNL        EVAL-Oct11                                  8125
+ 456)  81-Tl-204  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       8128
+ 457)  81-Tl-205 BNL        EVAL-Oct11                                  8131
+ 458)  82-Pb-204 NRG        EVAL-DEC04 A.J. Koning                      8225
+ 459)  82-Pb-205  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       8228
+ 460)  82-Pb-206 NRG        EVAL-DEC04 A.J. Koning                      8231
+ 461)  82-Pb-207 NRG        EVAL-DEC04 A.J. Koning                      8234
+ 462)  82-Pb-208 LANL,ORNL  EVAL-AUG06 M.B.Chadwick, P.G.Young, C.Y.Fu  8237
+ 463)  83-Bi-209 LANL,ANL   EVAL-JUL98 M.Chadwick,P.Young,A.Smith       8325
+ 464)  83-Bi-210M NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 8329
+ 465)  84-Po-208  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       8431
+ 466)  84-Po-209  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 8434
+ 467)  84-Po-210  NRG       EVAL-DEC15 A.J. Koning and D. Rochman       8437
+ 468)  88-Ra-223 TIT        EVAL-AUG88 N.Takagi                         8825
+ 469)  88-Ra-224 TIT        EVAL-AUG88 N.Takagi                         8828
+ 470)  88-Ra-225 TIT        EVAL-AUG88 N.Takagi                         8831
+ 471)  88-Ra-226 TIT        EVAL-AUG88 N.Takagi                         8834
+ 472)  89-Ac-225 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    8925
+ 473)  89-Ac-226 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    8928
+ 474)  89-Ac-227 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    8931
+ 475)  90-Th-227 JAEA+      EVAL-JAN10 O.Iwamoto, T.Nakagawa, et al.    9025
+ 476)  90-Th-228 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9028
+ 477)  90-Th-229 JAEA+      EVAL-JAN10 O.Iwamoto, T.Nakagawa, et al.    9031
+ 478)  90-Th-230 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9034
+ 479)  90-Th-231 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9037
+ 480)  90-Th-232 IAEA       Eval-Feb06 CRP/Th-U Co-ordinator A. Trkov   9040
+ 481)  90-Th-233 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9043
+ 482)  90-Th-234 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9046
+ 483)  91-Pa-229 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9125
+ 484)  91-Pa-230 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9128
+ 485)  91-Pa-231 IAEA       EVAL-FEB06 CRP/Th-U Co-ordinator A. Trkov   9131
+ 486)  91-Pa-232 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9134
+ 487)  91-Pa-233 IAEA       Eval-Mar06 CRP/Th-U Co-ordinator A. Trkov   9137
+ 488)  92-U -230 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9213
+ 489)  92-U -231 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9216
+ 490)  92-U -232 JAEA+      EVAL-JAN10 O.Iwamoto, T.Nakagawa, et al.    9219
+ 491)  92-U -233 JAEA+      EVAL-JAN10 O.Iwamoto,N.Otuka,S.Chiba,et al. 9222
+ 492)  92-U -234 ORNL,LANL+ EVAL-APR06 Young,Kawano,Chadwick,MacFarlane 9225
+ 493)  92-U -235 IAEA       EVAL-NOV17 IAEA CIELO Collaboration         9228
+ 494)  92-U -236 LANL       EVAL-FEB05 Young,Chadwick,MacFarlane+       9231
+ 495)  92-U -237 LANL       EVAL-FEB09 P.G.Young, M.B.Chadwick          9234
+ 496)  92-U -238 IAEA       EVAL-DEC14 IAEA Consortium                  9237
+ 497)  92-U -239 LLNL       EVAL-AUG11 Thompson,Brown,Younes,Trkov      9240
+ 498)  92-U -240 LANL       EVAL-FEB05 Young,Chadwick,MacFarlane+       9243
+ 499)  92-U -241 LANL       EVAL-FEB05 P.G.Young, M.B.Chadwick          9246
+ 500)  93-Np-234 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9337
+ 501)  93-Np-235 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,+           9340
+ 502)  93-Np-236 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,K.Furutaka,+9343
+ 503)  93-Np-236M LANL      EVAL-JAN17 T. Kawano, P.Talou               9344
+ 504)  93-Np-237 LANL       EVAL-MAR06 P.Young,E.Arthur,F.Mann,T.Kawano 9346
+ 505)  93-Np-238 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,K.Furutaka,+9349
+ 506)  93-Np-239 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,+           9352
+ 507)  94-Pu-236 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9428
+ 508)  94-Pu-237 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa+            9431
+ 509)  94-Pu-238 LANL       EVAL-SEP10 YOUNG,TALOU,KAWANO,KAHLER,CHADWIC9434
+ 510)  94-Pu-239 LANL       EVAL-DEC17             LANL, ORNL, et al.   9437
+ 511)  94-Pu-240 LANL       EVAL-SEP09 YOUNG,TALOU,CHADWICK,KAHLER,KAWAN9440
+ 512)  94-Pu-241 ORNL       EVAL-OCT03 L.Weston,R.Wright,H.Derrien +    9443
+ 513)  94-Pu-242 BNL+JAEA   EVAL-AUG11 S.F. MUGHABGHAB + O.Iwamoto,etal 9446
+ 514)  94-Pu-243 SRL,LLNL   EVAL-JUL76 Benjamin,McCrosson,Howerton      9449
+ 515)  94-Pu-244 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, +         9452
+ 516)  94-Pu-245  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 9455
+ 517)  94-Pu-246 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9458
+ 518)  95-Am-240 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9540
+ 519)  95-Am-241 LANL       EVAL-Oct10 T.Kawano,M.B.Chadwick            9543
+ 520)  95-Am-242 LANL       EVAL-DEC04 Talou,Young,Kawano               9546
+ 521)  95-Am-242M LANL      EVAL-SEP05 Talou,Young,Kawano               9547
+ 522)  95-Am-243 LANL,BNL   EVAL-JUL11 S.F. Mughabghab,P.G.Young, Talou 9549
+ 523)  95-Am-244 JAERI      EVAL-MAR88 T.Nakagawa                       9552
+ 524)  95-Am-244MJAERI      EVAL-MAR88 T.Nakagawa                       9553
+ 525)  96-Cm-240 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9625
+ 526)  96-Cm-241 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9628
+ 527)  96-Cm-242 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa+   9631
+ 528)  96-Cm-243 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa,+  9634
+ 529)  96-Cm-244 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa+   9637
+ 530)  96-Cm-245 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa,+  9640
+ 531)  96-Cm-246 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa,+  9643
+ 532)  96-Cm-247 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9646
+ 533)  96-Cm-248 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,T.Ohsawa+   9649
+ 534)  96-Cm-249 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9652
+ 535)  96-Cm-250 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9655
+ 536)  97-Bk-245 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9740
+ 537)  97-Bk-246 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9743
+ 538)  97-Bk-247 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9746
+ 539)  97-Bk-248 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9749
+ 540)  97-Bk-249 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,+           9752
+ 541)  97-Bk-250 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9755
+ 542)  98-Cf-246 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9843
+ 543)  98-Cf-247  NNDC, BNL EVAL-Jul17    G. Nobre, D. Brown, M. Herman 9846
+ 544)  98-Cf-248 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9849
+ 545)  98-Cf-249 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,+           9852
+ 546)  98-Cf-250 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,+           9855
+ 547)  98-Cf-251 JAEA+      EVAL-JAN10 O.Iwamoto,T.Nakagawa,+           9858
+ 548)  98-Cf-252 JAEA+      EVAL-FEB10 O.Iwamoto,T.Nakagawa,+           9861
+ 549)  98-Cf-253 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9864
+ 550)  98-Cf-254 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9867
+ 551)  99-Es-251 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9911
+ 552)  99-Es-252 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9912
+ 553)  99-Es-253 JAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9913
+ 554)  99-Es-254 JAEA+      EVAL-JAN10 O.Iwamoto, T.Nakagawa, et al.    9914
+ 555)  99-Es-254MJAEA+      EVAL-FEB10 O.Iwamoto, T.Nakagawa, et al.    9915
+ 556)  99-Es-255 JAEA+      EVAL-DEC07 O.Iwamoto, T.Nakagawa, et al.    9916
+ 557) 100-Fm-255 JAEA+      EVAL-JAN10 O.Iwamoto, T.Nakagawa, et al.    9936
+----------------------------------------------------------------------------
