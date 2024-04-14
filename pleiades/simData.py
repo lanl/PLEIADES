@@ -177,7 +177,7 @@ def load_isotopes_from_config(config_file, verbose=False):
     return isotopes
 
   
-def write_transmission_data(energy_data, transmission_data, output_file, include_error=False, verbose=False):
+def write_transmission_data_twenty(energy_data, transmission_data, output_file, include_error=False, verbose=False):
     """Write the transmission data to a file in the format: energy (eV), transmission (0-1) with SAMMY's twenty character format.
 
     Args:
@@ -199,4 +199,41 @@ def write_transmission_data(energy_data, transmission_data, output_file, include
                 f.write(f"{energy_str}{transmission_str}{transmission_error_str}\n")
             else:
                 f.write(f"{energy_str}{transmission_str}\n")    # Write the data to the file
+
+
+  
+def write_transmission_data_json(isotopes, energy_data, transmission_data, output_file, include_error=False, verbose=False):
+    """Write the transmission data to a json file with the following info: 
+        {
+            "isotopeInfo": {
+            "isotopeNames": ["iso_1", "iso_2", "iso_3"],
+            "arealDensities": [den_1, den_2, den_3]  
+            },
+            "data": {
+                "trasmission": [t_0,t_1,t_2,t_3,....t_k],
+                "neutron energies": [ne_0,ne_1,ne_2,ne_3,...ne_k]
+            }
+        }
+    Args:
+        isotope (isotope class): isotope class containing isotope info like name and areal density
+        transmission_data (array): List of tuples containing the energy and transmission data
+        output_file (string): Path to the output file
+        include_error (bool, optional): Include an error column. Defaults to False.
+        verbose (bool, optional): Print verbose output. Defaults to False.
+    """
+    
+    # Create the dictionary structure for JSON
+    data_structure = {
+        "isotopeInfo": {
+            "isotopeNames": [isotope.name for isotope in isotopes],
+            "arealDensities": [isotope.thickness for isotope in isotopes]
+        },
+        "data": {
+            "transmission": transmission_data,
+            "neutronEnergies": energy_data
+        }
+    }
+
+    print(data_structure)
+
 

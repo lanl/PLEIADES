@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pleiades.simData as psd
 
+
 def main(config_file='config.ini', energy_min=1, energy_max=100, energy_points=10000, write_output=False):
     
     # Read the isotope config file
@@ -44,7 +45,7 @@ def main(config_file='config.ini', energy_min=1, energy_max=100, energy_points=1
         output_file_name = config_file.split(".")[0]+".twenty"
         
         # Write the transmission data to a file, do not include error. 
-        psd.write_transmission_data(grid_energies,combined_transmission,output_file_name, include_error=True, verbose=True)
+        psd.write_transmission_data_twenty(grid_energies,combined_transmission,output_file_name, include_error=True, verbose=True)
     
 
 
