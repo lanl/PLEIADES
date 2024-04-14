@@ -108,7 +108,7 @@ def get_info(isotopic_str):
     # Extract the element and its atomic number from the isotopic string
     match = re.match(r'([A-Za-z]+)[-_]?(\d+)', isotopic_str)
     if match:
-        element_name = match.group(1)
+        element_name = match.group(1).capitalize()
         atomic_number = int(match.group(2))
     else:
         element_name = ""
@@ -116,7 +116,7 @@ def get_info(isotopic_str):
 
     return element_name, atomic_number
 
-def get_mass_from_ame(isotopic_str: str='U-238')->float:
+def get_mass_from_ame(isotopic_str: str='U-238',verbose_level: int=0)->float:
     """Returns the atomic mass from AME tables according to the isotope name (E.g. Eu-153)
 
     Args:
@@ -135,6 +135,9 @@ def get_mass_from_ame(isotopic_str: str='U-238')->float:
 
 
     element, atomic_number = get_info(isotopic_str)
+
+    if verbose_level > 0: print(f"looking for isotope: {element}-{atomic_number}")
+    
     # Load the file into a list of lines
     nucelar_masses_file = PWD.parent / "nucDataLibs/isotopeInfo/mass.mas20"
     
@@ -155,6 +158,7 @@ def get_mass_from_ame(isotopic_str: str='U-238')->float:
         if len(possible_isotopes_data_list) == 0:
             # raise ValueError("No data found for {} in {}".format(isotopic_str, nucelar_masses_file))
             return None 
+        
         # If we found more than one isotope, then we need to find the correct one. 
         else:
             for iso in possible_isotopes_data_list:

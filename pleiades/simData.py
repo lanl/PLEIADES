@@ -3,6 +3,7 @@ import configparser
 import numpy as np
 from scipy.interpolate import interp1d
 import pleiades.nucData as pnd
+import json
 
 AVOGADRO = 6.02214076E23    # Avogadro's number
 CM2_TO_BARN = 1E24          # Conversion factor from cm2 to barns
@@ -59,7 +60,7 @@ def create_transmission(energy_grid, isotope):
     return transmission
 
 
-def parse_xs_file(file_location, isotope_name):
+def parse_xs_file(file_location, isotope_name, verbose_level=0):
     """ Parse the cross-section file and return the data for the isotope.
 
     Args:
@@ -72,16 +73,24 @@ def parse_xs_file(file_location, isotope_name):
     Returns:
         xs_data: List of tuples containing the energy and cross-section data
     """
-    
+
+    # Need to do some formatting to make searching for the isotope easy.
+    element, atomic_number = pnd.get_info(isotope_name)
+    isotope_handle = str(f"{element}-{atomic_number}")
+
+    if verbose_level>0: print(f"[parse_xs_file] -> Looking for {isotope_handle}")
+
+    # Create cross-section data container
     xs_data = []
+
+    # Set search flags
     isotope_xs_found = False
     capture_data = False
-    
     
     with open(file_location, 'r') as f:
         for line in f:
             # If we find the name of the isotope
-            if isotope_name.upper() in line:
+            if isotope_handle.upper() in line:
                 isotope_xs_found = True
             # If we have found the isotope, then look for the "#data..." marker
             if isotope_xs_found:
@@ -119,9 +128,10 @@ class Isotope:
         self.density_unit = density_unit
         self.xs_data = []  # Array to hold xs data
     
-    def load_xs_data(self):
+    def load_xs_data(self, verbose_level=0):
         """Load cross-section data from file."""
-        self.xs_data = parse_xs_file(self.xs_file_location, self.name)
+        if verbose_level>1: print(f"[load_xs_data] -> loading xs file for {self.name}")
+        self.xs_data = parse_xs_file(self.xs_file_location, self.name, verbose_level=0)
         if not self.xs_data:
             raise ValueError(f"No data loaded for {self.name} from {self.xs_file_location}")
     
@@ -222,6 +232,10 @@ def write_transmission_data_json(isotopes, energy_data, transmission_data, outpu
         verbose (bool, optional): Print verbose output. Defaults to False.
     """
     
+    # Check if transmission data contains numpy arrays and convert them to lists
+    energy_data = [item[0].tolist() if isinstance(item[0], np.ndarray) else item[0] for item in transmission_data]
+    transmission_data = [item[1].tolist() if isinstance(item[1], np.ndarray) else item[1] for item in transmission_data]
+
     # Create the dictionary structure for JSON
     data_structure = {
         "isotopeInfo": {
@@ -234,6 +248,11 @@ def write_transmission_data_json(isotopes, energy_data, transmission_data, outpu
         }
     }
 
-    print(data_structure)
+    # Write the JSON data to a file
+    with open(output_file, 'w') as file:
+        json.dump(data_structure, file, indent=4)
+
+    if verbose:
+        print(f"Data written to {output_file} successfully.")
 
 
