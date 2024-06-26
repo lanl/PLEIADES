@@ -12,6 +12,7 @@ class ParFile:
     def __init__(self,filename: str="Ar_40.par", 
                       name: str="auto",
                       weight: float = 1.,
+                      fixed_weight: bool = False,
                       emin: float = 0.001,
                       emax: float = 100) -> None:
         """
@@ -23,6 +24,7 @@ class ParFile:
                                 "none" will keep the original name (PPair1 usually)
                                otherwise, reaction name will be renamed according to 'name'
             - weight (float): the weight/abundance of the isotope in the target
+            - fixed_weight (bool): if True the weight will be fixed when defining a compound
             - emin (float): minimum energy [eV] to include in par file, default 1 meV
             - emax (float): maximum energy [eV] to include in par file, default 100 eV
         """
@@ -31,6 +33,7 @@ class ParFile:
         self.name = name
         self.emin = emin
         self.emax = emax
+        self.fixed_weight = fixed_weight
 
         self.data = {}
         self.data["info"] = {}
@@ -316,6 +319,9 @@ class ParFile:
                 - filename (string): the par file name to write to
         """
         self.filename = pathlib.Path(filename)
+        import os
+
+        os.makedirs(self.filename.parent,exist_ok=True)
         
         if not self.data:
             raise RuntimeError("self.data is emtpy, please run the self.read() method first")
@@ -481,6 +487,7 @@ class ParFile:
 
             # update isotopic_masses
             compound.data["isotopic_masses"].update(isotope.data["isotopic_masses"])
+
 
             # update info
             isotopes = compound.data["info"]["isotopes"] + isotope.data["info"]["isotopes"]
@@ -805,6 +812,7 @@ class Update():
     def isotopic_weight(self) -> None:
         """Update the isotopic weight in the spin_group data
         """
+        # update the weights only if the weight is not fixed.
         for group in self.parent.data["spin_group"]:
             group[0]["isotopic_abundance"] = f"{f'{self.parent.weight:.7f}':>9}"[:9]
 
@@ -829,6 +837,27 @@ class Update():
                         "vary_abundance":"1".ljust(5),
                         "spin_groups":sg_formatted}
             self.parent.data["isotopic_masses"][self.parent.name] = iso_dict
+
+    def define_as_element(self,name:str,weight:float=1.) -> None:
+        from numpy import average
+        spin_groups = [f"{group[0]['group_number'].strip():>5}" for group in self.parent.data["spin_group"]]
+            
+        sg_formatted = "".join(spin_groups[:8]).ljust(43)
+        L = (len(spin_groups) - 8)//15 if len(spin_groups)>8 else -1 # number of extra lines needed
+        for l in range(0,L+1):
+            sg_formatted += "-1\n" + "".join(spin_groups[8+15*l:8+15*(l+1)]).ljust(78)
+
+        aw = [float(i["mass_b"]) for i in self.parent.data["particle_pairs"]]
+        weights = [float(self.parent.data["isotopic_masses"][i]["abundance"]) for i in self.parent.data["isotopic_masses"]]
+        aw = average(aw,weights=weights)
+
+        iso_dict = {"atomic_mass":f'{aw:>9}'[:9],
+                    "abundance":f"{f'{weight:.7f}':>9}"[:9],
+                    "abundance_uncertainty":f"{f'':>9}",
+                    "vary_abundance":"1".ljust(5),
+                    "spin_groups":sg_formatted}
+        self.parent.data["isotopic_masses"] = {}
+        self.parent.data["isotopic_masses"][name] = iso_dict
 
     def toggle_vary_abundances(self,vary:bool =False) -> None:
         """toggles the vary flag on all abundances

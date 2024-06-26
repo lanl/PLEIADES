@@ -266,8 +266,8 @@ class LptFile:
         """
         self.register_new_stats("normalization","   NORMALIZATION", 1, "float(line[1:12])")
         self.register_new_stats("constant_bg","   NORMALIZATION", 1, "float(line[18:29])")
-        self.register_new_stats("one_over_v_bg","   NORMALIZATION", 1, "float(line[35:46])")
-        self.register_new_stats("sqrt_energy_bg","   NORMALIZATION", 1, "float(line[52:63])")
+        self.register_new_stats("one_over_v_bg","   NORMALIZATION", 1, "float(line[34:46])")
+        self.register_new_stats("sqrt_energy_bg","   NORMALIZATION", 1, "float(line[51:63])")
         self.register_new_stats("exponential_bg","    BCKG*EXP(.)", 1, "float(line[1:12])")
         self.register_new_stats("exp_decay_bg","    BCKG*EXP(.)", 1, "float(line[18:29])")
 

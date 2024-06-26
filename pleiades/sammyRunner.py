@@ -69,24 +69,28 @@ def run(archivename: str="example",
     os.system(run_command) 
     os.chdir(pwd)
 
-    # Define the files to move
-    files_to_move = ['SAMMY.PAR', 'SAMMY.LST', 'SAMMY.LPT', 'SAMMY.IO']
+    # move files
 
-    # Move files
-    for file in files_to_move:
-        source = archive_path / file
-        destination = archive_path / f'results/{archivename}.{file.split(".")[-1]}'
-        
-        if pathlib.Path(source).exists():
-            shutil.move(source, destination)
-        else:
-            print(f"File {source} does not exist.")
-
-    # remove SAM*.*
-    filelist = glob.glob(f"{archive_path}/SAM*")
-    for f in filelist:
-        os.remove(f)
-    
+    try:
+        shutil.move(archivepath /'SAMMY.LST', archivepath / f'results/{archivename}.lst')
+    except FileNotFoundError:
+        print("lst file is not found")
+    try:
+        shutil.move(archivepath /'SAMMY.LPT', archivepath / f'results/{archivename}.lpt')
+    except FileNotFoundError:
+        print("lpt file is not found")
+    try:
+        shutil.move(archivepath /'SAMMY.IO', archivepath / f'results/{archivename}.io')
+    except FileNotFoundError:
+        print("io file is not found")
+    try:
+        shutil.move(archivepath /'SAMMY.PAR', archivepath / f'results/{archivename}.par')
+        # remove SAM*.*
+        filelist = glob.glob(f"{archivepath}/SAM*")
+        for f in filelist:
+            os.remove(f)
+    except FileNotFoundError:
+        print("par file is not found")
     return
 
 
