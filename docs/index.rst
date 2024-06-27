@@ -8,9 +8,12 @@ Welcome to pleiades's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Documentation:
 
-
+   overview
+   installation
+   usage
+   examples
 
 Indices and tables
 ==================

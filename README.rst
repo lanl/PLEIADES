@@ -18,6 +18,8 @@ PLEIADES' user documentation
 This is a Python package that sets up, executes, and analyzes, SAMMY runs. If you are unfamiliar with
 SAMMY, please see the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
 
+The user documentation can be found at `Read the Docs <https://pleiades-sammy.readthedocs.io/en/latest/>`_.
+
 Installation
 ============
 
