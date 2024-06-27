@@ -7,6 +7,19 @@ import pandas
 
 
 class lptResults:
+    """ Class to parse and extract results from a SAMMY LPT file.
+        Note: This class is similar to LptFile. But it includes the 
+        ability to catch multiple iteration blocks and extract results. 
+        This class is designed to work with SAMMY LPT files that contain 
+        multiple SAMMY fit iterations. 
+        
+        Example:
+        >>> from pleiades import sammyOutput
+        >>> lpt_results = sammyOutput.lptResults("path/to/file.lpt")
+        >>> print(lpt_results._results["General"])
+        >>> print(lpt_results._results["Iteration Results"][0])
+    """
+    
     def __init__(self,filename: str) -> None:
         """
         Initializes the class with the filename to be parsed and prepares the results structure.
@@ -183,6 +196,11 @@ class lptResults:
 
 
 class LptFile:
+    """Class to read and parse an LPT output file.
+
+    Returns:
+        _type_: _description_
+    """
     # utilities to read and parse an LPT output file
 
     def __init__(self,filename: str) -> None:
