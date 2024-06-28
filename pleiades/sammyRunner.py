@@ -95,7 +95,7 @@ def run(archivename: str="example",
     return
 
 
-def run_endf(archivename: str="example",inpfile: str = "") -> None:
+def run_endf(run_handle: str="",working_dir: str="", inpfile: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
@@ -103,38 +103,49 @@ def run_endf(archivename: str="example",inpfile: str = "") -> None:
     - archive path name will be deducd from input name
 
     Args:
+        run_handle (str): run or handle name. This is what will be used for the dat and par file names
+        working_dir (str): working directory name
         inpfile (str): input file name
+        verbose_level (int): verbosity level
     """    
+    
+    if verbose_level > 0: print("Running SAMMY to create a par file from an ENDF file")
+    
+    # Set the working directory path
+    working_dir_path = pathlib.Path(working_dir)
+    
+    # create an results folder within the working directory
+    # We will be moving all the SAMMY results to this dir. 
+    os.makedirs(working_dir_path,exist_ok=True)
+    os.makedirs(working_dir_path / "results",exist_ok=True)
+    sammy_results_path = working_dir_path / "results"
 
-    inpfile= pathlib.Path(inpfile)
-    archivename = pathlib.Path(inpfile.stem)
-
+    # Need to create a fake data file with only Emin and Emax data points
     # read the input file to get the Emin and Emax:
     with open(inpfile) as fid:
-        next(fid)
-        Emin, Emax = next(fid).split()[2:4]
-
-    archive_path = pathlib.Path("archive") / archivename
-
-    # create an archive directory
-    os.makedirs(archive_path,exist_ok=True)
-    os.makedirs(archive_path / "results",exist_ok=True)
-
-
-    # copy files into archive
-    shutil.copy(inpfile, archive_path / archivename.with_suffix(".inp"))
-    inpfile = archivename.with_suffix(".inp")
+        next(fid)           # The first line is the isotope name
+        line = next(fid)    # Read the second line with Emin and Emax
+        Emin = line[20:30].strip()  # Extract Emin using character positions and strip spaces
+        Emax = line[30:40].strip()  # Extract Emax using character positions and strip spaces
+        if verbose_level > 1:
+            print(f"Emin: {Emin}, Emax: {Emax}")
     
-
-
-
-    # write a fake datafile with two entries of Emin and Emax
-    with open(archive_path / f'{archivename}.dat',"w") as fid:
+    # Creating the name of the data file based on the input file name
+    data_file_name = run_handle + "_ENDF-dummy.dat"
+    
+    # open the data file and write the Emin and Emax
+    with open(working_dir_path / data_file_name, "w") as fid:
         fid.write(f"{Emax} 0 0\n")
         fid.write(f"{Emin} 0 0\n")
-    
-    datafile = f'{archivename}.dat'
 
+    # Print info if desired
+    if verbose_level > 0:
+        print(f"Working directory: {working_dir_path}")
+        print(f"Input file used: {inpfile}")
+        print(f"Data file used: {data_file_name}")
+        print(f"Results will be saved in: {sammy_results_path}")
+    
+    '''
     endffile = pathlib.Path(__file__).parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
     try:
         os.symlink(endffile,archive_path / 'res_endf8.endf')
@@ -170,4 +181,7 @@ def run_endf(archivename: str="example",inpfile: str = "") -> None:
     for f in filelist:
         os.remove(f)
 
+    '''
+    
     return
+    
