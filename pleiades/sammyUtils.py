@@ -195,13 +195,16 @@ def sammy_par_from_endf(isotope: str = "U-238",
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
     
-    # Need to set the commands for the SAMMY running with ENDF files.
-    inp.data["Card3"]['commands'] = 'TWENTY, DO NOT SOLVE BAYES EQUATIONS, INPUT IS ENDF/B FILE'
+    #TODO: Need to figure out a better way to deal with commands in card3.
+    # Resetting the commands for running SAMMY to generate output par files based on ENDF.
+    inp.data["Card3"]['commands'] = 'TWENTY,DO NOT SOLVE BAYES EQUATIONS,INPUT IS ENDF/B FILE'
     
+    # Print the input data structure if desired
     if verbose_level > 1: print(inp.data)
     
     # Create a run name or handle based on the isotope name
     sammy_run_handle = isotope.replace("-", "").replace("_", "")
+    sammy_input_file_name = sammy_run_handle + ".inp"
     
     # Check if archive is True and create the .archive directory if it doesn't exist
     if archive:
@@ -217,13 +220,13 @@ def sammy_par_from_endf(isotope: str = "U-238",
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # Create a SAMMY input file in the output directory
-        sammy_input_file = output_dir / (sammy_run_handle + ".inp")
+        sammy_input_file = output_dir / (sammy_input_file_name)
         print(sammy_input_file)
         
     else:
         # determine the current working directory
         output_dir = Path.cwd()
-        sammy_input_file = output_dir / (sammy_run_handle + ".inp")
+        sammy_input_file = output_dir / (sammy_input_file_name)
         print(sammy_input_file)
 
     # Write the SAMMY input file to the specified location. 
@@ -232,7 +235,7 @@ def sammy_par_from_endf(isotope: str = "U-238",
     # Run SAMMY with ENDF data to generate .par file
     sammyRunner.run_endf(run_handle = sammy_run_handle, 
                          working_dir=output_dir,
-                         input_file=sammy_input_file,
+                         input_file=sammy_input_file_name,
                          verbose_level=verbose_level)
     
 

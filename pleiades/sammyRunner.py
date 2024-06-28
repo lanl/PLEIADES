@@ -128,7 +128,7 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
     # Need to create a fake data file with only Emin and Emax data points
     # read the input file to get the Emin and Emax:
     if verbose_level > 0: print(f"Using input file: {input_file}")
-    with open(input_file) as fid:
+    with open(working_dir_path / input_file) as fid:
         next(fid)           # The first line is the isotope name
         line = next(fid)    # Read the second line with Emin and Emax
         Emin = line[20:30].strip()  # Extract Emin using character positions and strip spaces
@@ -169,17 +169,19 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
     sammy_run_command = textwrap.dedent(f"""\
     sammy <<EOF
     {input_file}
-    {endf_file}
-    {data_file}
+    res_endf8.endf
+    {data_file_name}
 
     EOF""")
     
     if verbose_level > 0: print(sammy_run_command)
-        
+    
+    # Change directories to the working dir
+    os.chdir(working_dir_path)
     # Open the output file in write mode
-    with open(output_file, "w") as output_file:
+    with open(output_file_name, "w") as output:
         # Run the command and redirect output and error to the file
-        subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output_file, stderr=subprocess.STDOUT)
+        subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
     
     '''
     pwd = pathlib.Path.cwd()
