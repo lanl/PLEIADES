@@ -145,10 +145,10 @@ class InputFile:
         # set default for each parameter three entries specify the default value, type, and width
         self._default_data = dict(
             Card1={
-                'title': ('GENERAL TITLE FOR SAMMY RUN',str,80) # title
+                'title': ('DEFAULT TITLE FOR SAMMY INPUT',str,80) # title
                   },
             Card2={
-                'elmnt': ('Si_28',str,10),    # Element name. Defaults to None.
+                'elmnt': ('H_1',str,10),    # Element name. Defaults to None.
                 'aw':     ('auto',float,10),  # Atomic weight in amu. Defaults to 0.
                 'emin':   ('0.001',float,10), # Minimum energy. Defaults to 0.
                 'emax':   ('100.',float,10),  # Maximum energy. Defaults to 0.
