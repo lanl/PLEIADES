@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-
+import pathlib
 from pathlib import Path
 
 import pandas
@@ -166,25 +166,24 @@ def save_transmission_spectrum(
 
 
 
-def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.72) -> None:
+def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.72, archive: bool = False, archive_dir: str = ".archive/", verbose_level: int = 0) -> None:
     """
     Generates a SAMMY input file and runs SAMMY with ENDF data to produce a `.par` file
-    for the specified isotope.
+    for the specified isotope. 
 
     This function creates a SAMMY input file based on a configuration file, modifies relevant
     cards for the target isotope, saves the input file, and then runs SAMMY with ENDF data
     to generate the corresponding `.par` file.
 
     Args:
-        isotope (str, optional): The isotope name (e.g., "U-238"). Defaults to "U-238".
-        flight_path_length (float, optional): The flight path length in meters. Defaults to 10.72.
+        isotope (str, optional): string of isotope name. Defaults to "U-238".
+        flight_path_length (float, optional): Flight path lenght in meters. Defaults to 10.72.
+        archive (bool, optional): Flag for storing sammy files. Defaults to False.
+        archive_dir (str, optional): string of path for archiving SAMMY files. Defaults to hidden dir ".archive/".
+        verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
     """
-
-    # Load configuration from a separate file (recommended)
-    import nucDataLibs
-    sammy_files = Path(nucDataLibs.__file__).parent / "sammyFiles"
-    config_file = sammy_files / "config_Eu_151.ini" # Replace with your actual configuration file path
-    inp = sammyInput.InputFile(config_file)
+    
+    inp = sammyInput.InputFile()
 
     # Update input data with isotope-specific information
     inp.data["Card2"]["elmnt"] = isotope
@@ -193,15 +192,27 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
     inp.data["Card5"]["deltag"] = 0.001
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
+    
+    # Check if archive is True and create the .archive directory if it doesn't exist
+    if archive:
+        archive_path = pathlib.Path(archive_dir)
+        archive_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create a directory in the archive_path that corresponds to the isotope name
+        output_dir = archive_path / Path(isotope.replace("-", "").replace("_", ""))
+        
+        # Create a SAMMY input file in the output directory
+        sammy_input_file = output_dir.with_suffix(".inp")
+        
+    else:
+        sammy_input_file = Path(isotope.replace("-", "").replace("_", "") + ".inp")    
 
-    # Create output filename with proper extension
-    output_filename = sammy_files / Path(isotope.replace("-", "").replace("_", ""))
-    inp.process().write(output_filename.with_suffix(".inp"))
+    
+    inp.process().write(sammy_input_file)
 
     # Run SAMMY with ENDF data to generate .par file
-    sammyRunner.run_endf(inpfile=output_filename.with_suffix(".inp"))
-
-
+    #sammyRunner.run_endf(inpfile=output_filename.with_suffix(".inp"))
+    
 
 def run_sammy_fit(archivename: str="UMo",
                   abundances: dict={"U238":0.7,"U235":0.3},
