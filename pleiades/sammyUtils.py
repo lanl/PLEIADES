@@ -164,7 +164,11 @@ def save_transmission_spectrum(
         )
         plt.show()  # Explicitly show the plot
 
-def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.72, archive: bool = False, archive_dir: str = ".archive/", verbose_level: int = 0) -> None:
+def sammy_par_from_endf(isotope: str = "U-238", 
+                        flight_path_length: float = 10.72, 
+                        archive: bool = False, 
+                        archive_dir: str = ".archive/", 
+                        verbose_level: int = 0) -> None:
     """
     Generates a SAMMY input file and runs SAMMY with ENDF data to produce a `.par` file
     for the specified isotope. 
@@ -223,7 +227,7 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
     # Run SAMMY with ENDF data to generate .par file
     sammyRunner.run_endf(run_handle = sammy_run_handle, 
                          working_dir=output_dir,
-                         inpfile=sammy_input_file,
+                         input_file=sammy_input_file,
                          verbose_level=verbose_level)
     
 
