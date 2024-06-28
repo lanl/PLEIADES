@@ -8,36 +8,52 @@ class InputFile:
     """ InputFile class for the Sammy input file.
     """
 
-    def __init__(self, config_file: str, auto_update: bool = True) -> None:
-        """Reads an .ini config file to create a structured SAMMY inp file
+    def __init__(self, config_file: str = None, auto_update: bool = True, verbose_level: int = 0) -> None:
+        """ Reads an .ini config file to create a structured SAMMY inp file
+            If a string is not given for the config_file, the default values will be used
+            and a default SAMMY input file will be created.
 
         Args:
             - config_file (str): config file name
             - auto_update (bool): True will replace atomic mass and values set to "auto" 
+            - verbose_level (int): 0: no print, 1: print general info, 2: print data
         """
-        # read config file
-        self._config = configparser.ConfigParser()
-        self._config.read(config_file)
-
-        # turn the configparser object into a dict of dicts data-structure
-        self._config_data = {section:dict(self._config[section]) for section in self._config.sections()}
         
-        # TODO: right now Card10 is not required 
-        # since we are specifing spin group data in the par file
-        # so I'm just ignoring this part of config file right now        
-        with suppress(KeyError): del self._config_data["Card10"] 
-
-        # populate the default database at self.data
+        # Create a database and populate with default parameters
         self._set_default_params()
-
-        # update the defaults with config file data
-        self._update_default_params_with_config()
-
-        # populate the database of predefined commands 
         self._set_predefined_commands()
+        
+        # If config file is given, read the file and update the default parameters 
+        if config_file is not None:
+            
+            if verbose_level > 0:
+                print(f"Reading SAMMY input config file: {config_file}")
+            
+            # read the config file using configparser
+            self._config = configparser.ConfigParser()
+            self._config.read(config_file)
+            
+            # turn the configparser object into a dict of dicts data-structure
+            self._config_data = {section:dict(self._config[section]) for section in self._config.sections()}
+            
+            # TODO: right now Card10 is not required 
+            # since we are specifing spin group data in the par file
+            # so I'm just ignoring this part of config file right now        
+            with suppress(KeyError): del self._config_data["Card10"] 
+            
+            # update the defaults with config file data
+            self._update_default_params_with_config()
+        
+        else:
+            if verbose_level > 0:
+                print("No config file given. Using default parameters.")
 
         # update auto values
         self._update_and_calculate_values(auto_update=auto_update)
+
+        # Print out final data if verbose level is greater than 1
+        if verbose_level > 1:
+            print(f"Config data: {self._config_data}")
 
         return
 
