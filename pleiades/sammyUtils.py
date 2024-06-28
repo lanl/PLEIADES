@@ -193,19 +193,30 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
     
+    isotope_name = isotope.replace("-", "").replace("_", "")
+    
     # Check if archive is True and create the .archive directory if it doesn't exist
     if archive:
         archive_path = pathlib.Path(archive_dir)
         archive_path.mkdir(parents=True, exist_ok=True)
+        if verbose_level > 0:
+            print(f"Archive directory created at {archive_path}")
         
         # Create a directory in the archive_path that corresponds to the isotope name
         output_dir = archive_path / Path(isotope.replace("-", "").replace("_", ""))
         
+        # add new output directory to the archive_path
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         # Create a SAMMY input file in the output directory
-        sammy_input_file = output_dir.with_suffix(".inp")
+        sammy_input_file = output_dir / (isotope_name + ".inp")
+        print(sammy_input_file)
         
     else:
-        sammy_input_file = Path(isotope.replace("-", "").replace("_", "") + ".inp")    
+        # determine the current working directory
+        output_dir = Path.cwd()
+        sammy_input_file = output_dir / (isotope_name + ".inp")
+        print(sammy_input_file)
 
     
     inp.process().write(sammy_input_file)
