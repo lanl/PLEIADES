@@ -164,7 +164,7 @@ def save_transmission_spectrum(
         )
         plt.show()  # Explicitly show the plot
 
-def sammy_par_from_endf(isotope: str = "U-238", 
+def sammy_par_from_endf(isotope: str = "U-239", 
                         flight_path_length: float = 10.72, 
                         archive: bool = False, 
                         archive_dir: str = ".archive/", 

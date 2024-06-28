@@ -104,6 +104,8 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
     - This can only be done for a single isotope at a time
     - we don't need a data file, we create a fake dat file with only Emin and Emax data points
     - archive path name will be deducd from input name
+    
+    TODO: Need to think about how to clean up paths and names. SAMMY should run in the working directory, wheather it is the current directory or an archived one. Right now I am using names sometimes and paths other times. 
 
     Args:
         run_handle (str): run or handle name. This is what will be used for the dat and par file names
@@ -111,8 +113,11 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
         inpfile (str): input file name
         verbose_level (int): verbosity level
     """    
-    
+    # Print info based on verbosity level
     if verbose_level > 0: print("Running SAMMY to create a par file from an ENDF file")
+    
+    # Grab the directory from which the pleiades script was called.
+    pleiades_call_dir = pathlib.Path.cwd()
     
     # Set the working directory path
     working_dir_path = pathlib.Path(working_dir)
@@ -120,9 +125,10 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
     
     # create an results folder within the working directory
     # We will be moving all the SAMMY results to this dir. 
+    result_dir_name = 'results'
     os.makedirs(working_dir_path,exist_ok=True)
-    os.makedirs(working_dir_path / "results",exist_ok=True)
-    sammy_results_path = working_dir_path / "results"
+    os.makedirs(working_dir_path / result_dir_name,exist_ok=True)
+    sammy_results_path = working_dir_path / result_dir_name
     if verbose_level > 0: print(f"Results will be saved in: {sammy_results_path}")
 
     # Need to create a fake data file with only Emin and Emax data points
@@ -174,34 +180,31 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
 
     EOF""")
     
-    if verbose_level > 0: print(sammy_run_command)
+    if verbose_level > 1: print(sammy_run_command)
     
     # Change directories to the working dir
     os.chdir(working_dir_path)
+    
     # Open the output file in write mode
     with open(output_file_name, "w") as output:
         # Run the command and redirect output and error to the file
+        if verbose_level > 0: print(f"Running SAMMY for {run_handle}...")
         subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
     
-    '''
-    pwd = pathlib.Path.cwd()
+    # Move the SAMNDF output files to the results folder
+    for file in glob.glob("SAM*"):
+        # Construct the full path for the destination
+        destination_file = os.path.join(result_dir_name, os.path.basename(file))
+        # Check if the file already exists in the destination folder
+        if os.path.exists(destination_file):
+            # Remove the existing file in the destination folder
+            os.remove(destination_file)
+        # Move the file to the results folder
+        shutil.move(file, result_dir_name)
+    
+    # Change back to the original directory where the pleiades python script was called
+    os.chdir(pleiades_call_dir)
 
-    os.chdir(archive_path)
-    os.system(run_command) # run sammy
-    os.chdir(pwd)
-
-    # move files
-    shutil.move(archive_path /'SAMNDF.PAR', archive_path / f'results/{archivename}.par')
-    shutil.move(archive_path /'SAMNDF.INP', archive_path / f'results/{archivename}.inp')
-    shutil.move(archive_path /'SAMMY.LPT', archive_path / f'results/{archivename}.lpt')
-
-
-    # remove SAM*.*
-    filelist = glob.glob(f"{archive_path}/SAM*")
-    for f in filelist:
-        os.remove(f)
-
-    '''
     
     return
     
