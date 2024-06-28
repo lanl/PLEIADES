@@ -195,6 +195,11 @@ def sammy_par_from_endf(isotope: str = "U-238",
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
     
+    # Need to set the commands for the SAMMY running with ENDF files.
+    inp.data["Card3"]['commands'] = 'TWENTY, DO NOT SOLVE BAYES EQUATIONS, INPUT IS ENDF/B FILE'
+    
+    if verbose_level > 1: print(inp.data)
+    
     # Create a run name or handle based on the isotope name
     sammy_run_handle = isotope.replace("-", "").replace("_", "")
     

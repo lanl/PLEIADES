@@ -144,7 +144,6 @@ class InputFile:
 
     def _set_default_params(self) -> None:
         # set default for each parameter three entries specify the default value, type, and width
-        #TODO: Need to add date and time of creation and add to 'title' card 1
         date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         dummy_title = f"DEFAULT SAMMY INPUT FILE - {date_time}"
         

@@ -5,6 +5,9 @@ import glob
 import time
 import os
 import shutil
+import subprocess
+import datetime
+import textwrap
 
 def run(archivename: str="example",
             inpfile: str = "",
@@ -163,21 +166,21 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
     output_file = working_dir_path / output_file_name
     if verbose_level > 0: print(f"Output file: {output_file}")
 
-    run_command = f"""sammy > {output_file} 2>/dev/null << EOF
-                      {input_file}
-                      {endf_file}
-                      {data_file}
+    sammy_run_command = textwrap.dedent(f"""\
+    sammy <<EOF
+    {input_file}
+    {endf_file}
+    {data_file}
 
-                      EOF 
-                      """
-                      
-    # remove indentation
-    run_command = inspect.cleandoc(run_command) # remove indentation
+    EOF""")
     
-    if verbose_level > 0: print(run_command)
+    if verbose_level > 0: print(sammy_run_command)
         
-    # run the commande in the working directory
-    os.system(run_command) # run sammy
+    # Open the output file in write mode
+    with open(output_file, "w") as output_file:
+        # Run the command and redirect output and error to the file
+        subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output_file, stderr=subprocess.STDOUT)
+    
     '''
     pwd = pathlib.Path.cwd()
 
