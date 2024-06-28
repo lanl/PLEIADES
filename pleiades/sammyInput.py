@@ -3,6 +3,7 @@ from pleiades import nucData as pnd
 from typing import List, Dict
 from contextlib import suppress
 import numpy as np
+import datetime
 
 class InputFile:
     """ InputFile class for the Sammy input file.
@@ -143,9 +144,13 @@ class InputFile:
 
     def _set_default_params(self) -> None:
         # set default for each parameter three entries specify the default value, type, and width
+        #TODO: Need to add date and time of creation and add to 'title' card 1
+        date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        dummy_title = f"DEFAULT SAMMY INPUT FILE - {date_time}"
+        
         self._default_data = dict(
             Card1={
-                'title': ('DEFAULT TITLE FOR SAMMY INPUT',str,80) # title
+                'title': (dummy_title,str,80) # title
                   },
             Card2={
                 'elmnt': ('H_1',str,10),    # Element name. Defaults to None.
