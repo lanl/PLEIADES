@@ -180,7 +180,7 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
         archive_dir (str, optional): string of path for archiving SAMMY files. Defaults to hidden dir ".archive/".
         verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
     """
-    
+    # Create a SAMMY input file data structure
     inp = sammyInput.InputFile()
 
     # Update input data with isotope-specific information
@@ -191,7 +191,8 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
     
-    isotope_name = isotope.replace("-", "").replace("_", "")
+    # Create a run name or handle based on the isotope name
+    sammy_run_handle = isotope.replace("-", "").replace("_", "")
     
     # Check if archive is True and create the .archive directory if it doesn't exist
     if archive:
@@ -200,27 +201,30 @@ def sammy_par_from_endf(isotope: str = "U-238", flight_path_length: float = 10.7
         if verbose_level > 0:
             print(f"Archive directory created at {archive_path}")
         
-        # Create a directory in the archive_path that corresponds to the isotope name
-        output_dir = archive_path / Path(isotope.replace("-", "").replace("_", ""))
+        # Create a directory in the archive_path that corresponds to the sammy_run_handle
+        output_dir = archive_path / Path(sammy_run_handle)
         
         # add new output directory to the archive_path
         output_dir.mkdir(parents=True, exist_ok=True)
         
         # Create a SAMMY input file in the output directory
-        sammy_input_file = output_dir / (isotope_name + ".inp")
+        sammy_input_file = output_dir / (sammy_run_handle + ".inp")
         print(sammy_input_file)
         
     else:
         # determine the current working directory
         output_dir = Path.cwd()
-        sammy_input_file = output_dir / (isotope_name + ".inp")
+        sammy_input_file = output_dir / (sammy_run_handle + ".inp")
         print(sammy_input_file)
 
     # Write the SAMMY input file to the specified location. 
     inp.process().write(sammy_input_file)
 
     # Run SAMMY with ENDF data to generate .par file
-    sammyRunner.run_endf(inpfile=sammy_input_file)
+    sammyRunner.run_endf(run_handle = sammy_run_handle, 
+                         working_dir=output_dir,
+                         inpfile=sammy_input_file,
+                         verbose_level=verbose_level)
     
 
 def run_sammy_fit(archivename: str="UMo",
