@@ -5,6 +5,9 @@ import glob
 import time
 import os
 import shutil
+import subprocess
+import datetime
+import textwrap
 
 def run(archivename: str="example",
             inpfile: str = "",
@@ -95,79 +98,113 @@ def run(archivename: str="example",
     return
 
 
-def run_endf(archivename: str="example",inpfile: str = "") -> None:
+def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
     - we don't need a data file, we create a fake dat file with only Emin and Emax data points
     - archive path name will be deducd from input name
+    
+    TODO: Need to think about how to clean up paths and names. SAMMY should run in the working directory, wheather it is the current directory or an archived one. Right now I am using names sometimes and paths other times. 
 
     Args:
+        run_handle (str): run or handle name. This is what will be used for the dat and par file names
+        working_dir (str): working directory name
         inpfile (str): input file name
+        verbose_level (int): verbosity level
     """    
-
-    inpfile= pathlib.Path(inpfile)
-    archivename = pathlib.Path(inpfile.stem)
-
-    # read the input file to get the Emin and Emax:
-    with open(inpfile) as fid:
-        next(fid)
-        Emin, Emax = next(fid).split()[2:4]
-
-    archive_path = pathlib.Path("archive") / archivename
-
-    # create an archive directory
-    os.makedirs(archive_path,exist_ok=True)
-    os.makedirs(archive_path / "results",exist_ok=True)
-
-
-    # copy files into archive
-    shutil.copy(inpfile, archive_path / archivename.with_suffix(".inp"))
-    inpfile = archivename.with_suffix(".inp")
+    # Print info based on verbosity level
+    if verbose_level > 0: print("Running SAMMY to create a par file from an ENDF file")
     
+    # Grab the directory from which the pleiades script was called.
+    pleiades_call_dir = pathlib.Path.cwd()
+    
+    # Set the working directory path
+    working_dir_path = pathlib.Path(working_dir)
+    if verbose_level > 0: print(f"Working directory: {working_dir_path}")
+    
+    # create an results folder within the working directory
+    # We will be moving all the SAMMY results to this dir. 
+    result_dir_name = 'results'
+    os.makedirs(working_dir_path,exist_ok=True)
+    os.makedirs(working_dir_path / result_dir_name,exist_ok=True)
+    sammy_results_path = working_dir_path / result_dir_name
+    if verbose_level > 0: print(f"Results will be saved in: {sammy_results_path}")
 
-
-
-    # write a fake datafile with two entries of Emin and Emax
-    with open(archive_path / f'{archivename}.dat',"w") as fid:
+    # Need to create a fake data file with only Emin and Emax data points
+    # read the input file to get the Emin and Emax:
+    if verbose_level > 0: print(f"Using input file: {input_file}")
+    with open(working_dir_path / input_file) as fid:
+        next(fid)           # The first line is the isotope name
+        line = next(fid)    # Read the second line with Emin and Emax
+        Emin = line[20:30].strip()  # Extract Emin using character positions and strip spaces
+        Emax = line[30:40].strip()  # Extract Emax using character positions and strip spaces
+        
+        if verbose_level > 1: print(f"Emin: {Emin}, Emax: {Emax}")
+        
+    
+    # Creating the name of the data file based on the input file name
+    data_file_name = run_handle + "_ENDF-dummy.dat"
+    data_file = working_dir_path / data_file_name
+    
+    # open the data file and write the Emin and Emax
+    with open(data_file, "w") as fid:
         fid.write(f"{Emax} 0 0\n")
         fid.write(f"{Emin} 0 0\n")
     
-    datafile = f'{archivename}.dat'
-
-    endffile = pathlib.Path(__file__).parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
-    try:
-        os.symlink(endffile,archive_path / 'res_endf8.endf')
-    except FileExistsError:
-        pass
-    endffile = 'res_endf8.endf'
-
-    outputfile = f'{archivename}.out'
-
-    run_command = f"""sammy > {outputfile} 2>/dev/null << EOF
-                      {inpfile}
-                      {endffile}
-                      {datafile}
-
-                      EOF 
-                      """
-    run_command = inspect.cleandoc(run_command) # remove indentation
+    if verbose_level > 0: print(f"Data file created: {data_file}")
     
-    pwd = pathlib.Path.cwd()
+    # Creating a par file based on ENDF file
+    symlink_path = working_dir_path / "res_endf8.endf"
+    # First check if file already exists
+    if os.path.islink(symlink_path):
+        endf_file = symlink_path
+    else:
+        # Create a symbolic link to the original endf file
+        original_endf_file = pathlib.Path(__file__).parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
+        os.symlink(original_endf_file, symlink_path)
+        endf_file = working_dir_path / "res_endf8.endf"
+    
+    if verbose_level > 0: print(f"ENDF file: {endf_file}")
+    
+    # Create an output file in the working dir. 
+    output_file_name = run_handle + ".out"
+    output_file = working_dir_path / output_file_name
+    if verbose_level > 0: print(f"Output file: {output_file}")
 
-    os.chdir(archive_path)
-    os.system(run_command) # run sammy
-    os.chdir(pwd)
+    sammy_run_command = textwrap.dedent(f"""\
+    sammy <<EOF
+    {input_file}
+    res_endf8.endf
+    {data_file_name}
 
-    # move files
-    shutil.move(archive_path /'SAMNDF.PAR', archive_path / f'results/{archivename}.par')
-    shutil.move(archive_path /'SAMNDF.INP', archive_path / f'results/{archivename}.inp')
-    shutil.move(archive_path /'SAMMY.LPT', archive_path / f'results/{archivename}.lpt')
+    EOF""")
+    
+    if verbose_level > 1: print(sammy_run_command)
+    
+    # Change directories to the working dir
+    os.chdir(working_dir_path)
+    
+    # Open the output file in write mode
+    with open(output_file_name, "w") as output:
+        # Run the command and redirect output and error to the file
+        if verbose_level > 0: print(f"Running SAMMY for {run_handle}...")
+        subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
+    
+    # Move the SAMNDF output files to the results folder
+    for file in glob.glob("SAM*"):
+        # Construct the full path for the destination
+        destination_file = os.path.join(result_dir_name, os.path.basename(file))
+        # Check if the file already exists in the destination folder
+        if os.path.exists(destination_file):
+            # Remove the existing file in the destination folder
+            os.remove(destination_file)
+        # Move the file to the results folder
+        shutil.move(file, result_dir_name)
+    
+    # Change back to the original directory where the pleiades python script was called
+    os.chdir(pleiades_call_dir)
 
-
-    # remove SAM*.*
-    filelist = glob.glob(f"{archive_path}/SAM*")
-    for f in filelist:
-        os.remove(f)
-
+    
     return
+    
