@@ -211,7 +211,7 @@ def sammy_par_from_endf(isotope: str = "U-239",
         archive_path = pathlib.Path(archive_dir)
         archive_path.mkdir(parents=True, exist_ok=True)
         if verbose_level > 0:
-            print(f"Archive directory created at {archive_path}")
+            print(f"\nArchive directory created at {archive_path}")
         
         # Create a directory in the archive_path that corresponds to the sammy_run_handle
         output_dir = archive_path / Path(sammy_run_handle)
