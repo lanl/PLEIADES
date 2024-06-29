@@ -114,7 +114,7 @@ def run_endf(run_handle: str="",working_dir: str="", input_file: str = "", verbo
         verbose_level (int): verbosity level
     """    
     # Print info based on verbosity level
-    if verbose_level > 0: print("Running SAMMY to create a par file from an ENDF file")
+    if verbose_level > 0: print("\nRunning SAMMY to create a par file from an ENDF file")
     
     # Grab the directory from which the pleiades script was called.
     pleiades_call_dir = pathlib.Path.cwd()
