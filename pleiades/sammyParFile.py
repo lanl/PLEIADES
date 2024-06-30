@@ -248,7 +248,6 @@ class ParFile:
                     particle_pairs.append(particle_pair) # stack the final particle pairs in list
 
                 # read spin group and channel cards
-                
                 if line.upper().startswith("SPIN GROUP INFO"):
                     # loop until the end of spin groups info
                     line = next(fid)
@@ -257,7 +256,6 @@ class ParFile:
                         line = next(fid)
                 
                 # read resonance data cards
-              
                 if line.upper().startswith("RESONANCE PARAM"):
                     # loop until the end of resonance params
                     line = next(fid)
@@ -308,7 +306,6 @@ class ParFile:
             self.update.resolution()
             self.update.misc()
             
-
         return self
     
 
@@ -546,6 +543,7 @@ class ParFile:
         """
 
         cr_data = []
+        print(self._channel_radii_cards)
         cards = (card for card in self._channel_radii_cards) # convert to a generator object
 
         # parse channel radii and groups using regex
@@ -553,6 +551,7 @@ class ParFile:
         cg_pattern = r'Group=(\d+) (?:Chan|Channel)=([\d, ]+),'
 
         card = next(cards)
+
         # Using re.search to find the pattern in the line
         while match:=re.search(cr_pattern, card):
             cr_dict = {"radii": [match.group(1).strip(),match.group(2).strip()],

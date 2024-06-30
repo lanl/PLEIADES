@@ -21,23 +21,32 @@ class SammyFitConfig:
     def __init__(self, config_path=None):
         # Default values with sublabels
         self.params = {
-            'working_dir': '',
             'directories': {
+                'working_dir': '',
                 'data_dir': 'data',
                 'results_dir': 'results',
                 'archive_dir': '.archive',
                 'image_dir': ''
             },
-            'run_with_endf': False,
+            'run_with_endf': False,         # flag to run from endf par file 
+            'fit_energy_min': 0.0,          # min energy for sammy fit
+            'fit_energy_max': 1.0,          # max energy for sammy fit
+            'flight_path_length': 10.0,     # Flight path length
+            'fudge_factor': 1.0,            # Sammy fit incrementation
+
+            # Isotopes for sammy fit
             'isotopes': {
                 'names': [],  # list of isotope names
                 'abundances': [],  # list of corresponding abundances
                 'vary_abundances': []  # list of booleans indicating if the abundances should be varied
             },
+            # Thickness and tempeture variables 
             'thickness_and_temperature': {
                 'thickness': 0.0, 'vary_thickness': False,
                 'temperature': 295, 'vary_temperature': False,
             },
+
+            # Fitting normalization and background
             'normalization': {
                 'normalization': 1.0, 'vary_normalization': False,
                 'constant_bg': 0.0, 'vary_constant_bg': False,
@@ -46,6 +55,8 @@ class SammyFitConfig:
                 'exponential_bg': 0.0, 'vary_exponential_bg': False,
                 'exp_decay_bg': 0.0, 'vary_exp_decay_bg': False,
             },
+
+            # Broadening parameters
             'broadening': {
                 'flight_path_spread': 0.0, 'vary_flight_path_spread': False,
                 'deltag_fwhm': 0.0, 'vary_deltag_fwhm': False,
@@ -63,25 +74,29 @@ class SammyFitConfig:
                 'DE': 0.0, 'DE_err': '', 'vary_DE': False,
                 'D0': 0.0, 'D0_err': '', 'vary_D0': False,
                 'DlnE': 0.0, 'DlnE_err': '', 'vary_DlnE': False,
+            },
+            'resonances': {
+                'resonance_energy_min': 0.0,
+                'resonance_energy_max': 1.0,
             }
+
         }
 
         if config_path:
             config = configparser.ConfigParser()
             config.read(config_path)
             self._load_from_config(config)
-            #self._create_directories()
 
     def _load_from_config(self, config):
         for section in config.sections():
 
-            # If the section is 'isotopes' then process the potentail arrays for names, abundances, and vary_abundances.
+            # If the section is 'isotopes' then process the potential arrays for names, abundances, and vary_abundances.
             if section == 'isotopes':
                 self.params['isotopes']['names'] = [x for x in config.get('isotopes', 'names').split(',')]
                 self.params['isotopes']['abundances'] = [float(x) for x in config.get('isotopes', 'abundances').split(',')]
                 self.params['isotopes']['vary_abundances'] = [self._convert_value(x) for x in config.get('isotopes', 'vary_abundances').split(',')]
             
-            # If the section is 'directories' in 
+            # If the section is 'directories' 
             elif section == 'directories':
                 for key, value in config.items(section):
                     if key in self.params['directories']:
@@ -89,9 +104,16 @@ class SammyFitConfig:
             
             elif section == 'main':
                 self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
-
+                self.params['fit_energy_min'] = float(config.get('main', 'fit_energy_min'))
+                self.params['fit_energy_max'] = float(config.get('main', 'fit_energy_max'))
+                self.params['flight_path_length'] = float(config.get('main', 'flight_path_length'))
+                self.params['fudge_factor'] = float(config.get('main', 'fudge_factor'))
+            
+            elif section == 'resonances':
+                self.params['resonances']['resonance_energy_min'] = float(config.get('resonances', 'resonance_energy_min'))
+                self.params['resonances']['resonance_energy_max'] = float(config.get('resonances', 'resonance_energy_max'))
+                    
             else:
-                print(section)
                 for key, value in config.items(section):
                     if key in self.params[section]:
                         self.params[section][key] = self._convert_value(value)
@@ -114,10 +136,11 @@ class SammyFitConfig:
 
     def _create_directories(self):
         # Create working_dir and its subdirectories
-        working_dir = self.params['working_dir']
+        working_dir = self.params['directories']['working_dir']
         if working_dir:
             for dir_key in self.params['directories']:
-                os.makedirs(os.path.join(working_dir, self.params['directories'][dir_key]), exist_ok=True)
+                if dir_key != 'working_dir':  # Skip working_dir itself
+                    os.makedirs(os.path.join(working_dir, self.params['directories'][dir_key]), exist_ok=True)
 
     def print_params(self):
         """Prints the parameters in a nicely formatted way."""
@@ -353,6 +376,34 @@ def sammy_par_from_endf(isotope: str = "U-239",
                          input_file=sammy_input_file_name,
                          verbose_level=verbose_level)
     
+def config_and_run_sammy(config: SammyFitConfig):
+    """
+    Configures and runs SAMMY based on a SammyFitConfig object.
+
+    This function takes a SammyFitConfig object and uses the parameters to
+    configure and run SAMMY. It creates a SAMMY input file, modifies the
+    relevant cards based on the configuration, saves the input file, and then
+    runs SAMMY to generate the corresponding `.par` file.
+
+    Args:
+        config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+    """
+    isotopeParFiles = []
+    working_dir = config.params['directories']['working_dir']
+    archive_dir = config.params['directories']['archive_dir']
+    isotopes = config.params['isotopes']['names']
+    abundances = config.params['isotopes']['abundances']
+    res_emin = config.params['resonances']['resonance_energy_min']
+    res_emax = config.params['resonances']['resonance_energy_max']
+
+    for isotope, abundance in zip(isotopes, abundances):
+
+        # Get rid of any dashes or underscores in the isotope name
+        isotope = isotope.replace("-", "").replace("_", "")
+
+        # Append sammy parFiles using sammyParFile in the ParFile class
+        isotopeParFiles.append(sammyParFile.ParFile(f"{archive_dir}/{isotope}/results/SAMNDF.PAR", weight=abundance, emin=res_emin, emax=res_emax).read())
+
 
 def run_sammy_fit(archivename: str="UMo",
                   abundances: dict={"U238":0.7,"U235":0.3},
@@ -416,7 +467,7 @@ def run_sammy_fit(archivename: str="UMo",
                                              weight=abundance,emin=res_emin,emax=res_emax).read())
     
     # create compound
-    '''    
+     
     compound = isotopes[0]
     for isotope in isotopes[1:]:
         compound = compound +  isotope
@@ -531,7 +582,7 @@ def run_sammy_fit(archivename: str="UMo",
         fid[f"{archivename}/latest"] = stats
     
     return stats
-    '''
+    
 
 
 def plot_transmission(archivename: str="W", stats: dict ={},
