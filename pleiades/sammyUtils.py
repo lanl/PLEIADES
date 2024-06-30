@@ -238,7 +238,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     Configures and runs SAMMY based on a SammyFitConfig object.
 
     This function takes a SammyFitConfig object and uses the parameters to
-    configure and run SAMMY. It creates a SAMMY input file, modifies the
+    configure the files needed to run SAMMY. It creates a SAMMY input file, modifies the
     relevant cards based on the configuration, saves the input file, and then
     runs SAMMY to generate the corresponding `.par` file.
 
@@ -254,19 +254,17 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     res_emin = config.params['resonances']['resonance_energy_min']
     res_emax = config.params['resonances']['resonance_energy_max']
     
-    if verbose_level > 0:
-        print(f"Configuring SAMMY run for isotopes: {isotopes} with abundances: {abundances}")
+    #----------------------------------------
+    # Create a SAMMY parFile for each isotope 
+    if verbose_level > 0: print(f"Creating SAMMY parFile files for isotopes: {isotopes} with abundances: {abundances}")
 
     for isotope, abundance in zip(isotopes, abundances):
-
         # Get rid of any dashes or underscores in the isotope name
         isotope = isotope.replace("-", "").replace("_", "")
-
         # Append sammy parFiles using sammyParFile in the ParFile class
         isotopeParFiles.append(sammyParFile.ParFile(filename=f"{archive_dir}/{isotope}/results/SAMNDF.PAR", name = isotope, weight=abundance, emin=res_emin, emax=res_emax).read())
 
     # Create a compound parFile by summing the isotope parFiles
-    
     compoundParFile = isotopeParFiles[0] # set the first isotope as the compound
     
     # loop through the rest of the isotopes and add them to the compound
@@ -282,11 +280,40 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     compoundParFile.data["info"]["fudge_factor"] = fudge_factor
 
     # write out the compound par file
-    output_compound_file = Path(archive_dir) / Path(compound_dir) / Path(compound_dir).with_suffix(".par")
-    print(f"Writing compound par file {output_compound_file}")
-    compoundParFile.write(output_compound_file)
+    output_compound_par_file = Path(archive_dir) / Path(compound_dir) / Path('compound').with_suffix(".par")
+    if verbose_level > 0: print(f"Writing compound par file {output_compound_par_file}")
+    compoundParFile.write(output_compound_par_file)
 
+    # Now create a SAMMY input file
+    if verbose_level > 0: print(f"Creating SAMMY inpFile files for isotopes: {isotopes} with abundances: {abundances}")
+    
+    # Create an inpFile from 
+    inp = sammyInput.InputFile(verbose_level=verbose_level)
 
+    # Update input data with isotope-specific information
+    inp.data["Card2"]["elmnt"] = isotopes[-1] # set the last isotope as the element
+    inp.data["Card2"]["aw"] = "auto"
+    inp.data["Card5"]["dist"] = config.params['flight_path_length']
+    inp.data["Card5"]["deltag"] = 0.001
+    inp.data["Card5"]["deltae"] = 0.001
+    inp.data["Card7"]["crfn"] = 0.001
+
+    #TODO: Need to figure out a better way to deal with commands in card3.
+    # Resetting the commands for running SAMMY to generate output par files based on ENDF.
+    inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH_MOORE_FORMAT,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
+
+    # Print the input data structure if desired
+    if verbose_level > 1: print(inp.data)
+    
+    # Create a run name or handle for the compound inpFile
+    #TODO: Think about a better way to name files and dir. Should we use 'compound' or 'final'. We used compound because there is often more than one isotope to be fitted, but this is confusing if you only have one isotope.
+    output_compound_inp_file = Path(archive_dir) / Path(compound_dir) / Path('compound').with_suffix(".inp")
+
+    # Write the SAMMY input file to the specified location. 
+    inp.process().write(output_compound_inp_file)
+    if verbose_level > 0: print(f"Created compound input file: {output_compound_inp_file}")
+
+     
 
 
 def sammy_background(energy: np.ndarray, normalization: float = 1.0,
