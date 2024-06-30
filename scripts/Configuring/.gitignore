@@ -1,0 +1,16 @@
+# Ignore everything
+*
+
+# Except the .gitignore file itself
+!.gitignore
+
+# Except the certain files in subdirectories. 
+!makeCompoundParFile/
+!makeCompoundParFile/makeCompoundParFile.py
+
+!makeInpFile/
+!makeInpFile/makeInpFile.py
+
+!makeParFileFromENDF/
+!makeParFileFromENDF/makeParFileFromENDF.py
+
