@@ -230,7 +230,8 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
                             working_dir=output_dir,
                             input_file=sammy_input_file_name,
                             verbose_level=verbose_level)
-                            
+                    
+        #TODO: Need to add a check to see if the .par file was created successfully and print a message if not.        
 
 def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
@@ -245,10 +246,11 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
     isotopeParFiles = []
-    working_dir = config.params['directories']['working_dir']
+    compound_dir = config.params['directories']['compound_dir']
     archive_dir = config.params['directories']['archive_dir']
     isotopes = config.params['isotopes']['names']
     abundances = config.params['isotopes']['abundances']
+    fudge_factor = config.params['fudge_factor']
     res_emin = config.params['resonances']['resonance_energy_min']
     res_emax = config.params['resonances']['resonance_energy_max']
     
@@ -261,11 +263,30 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
         isotope = isotope.replace("-", "").replace("_", "")
 
         # Append sammy parFiles using sammyParFile in the ParFile class
-        isotopeParFiles.append(sammyParFile.ParFile(f"{archive_dir}/{isotope}/results/SAMNDF.PAR", weight=abundance, emin=res_emin, emax=res_emax).read())
+        isotopeParFiles.append(sammyParFile.ParFile(filename=f"{archive_dir}/{isotope}/results/SAMNDF.PAR", name = isotope, weight=abundance, emin=res_emin, emax=res_emax).read())
 
+    # Create a compound parFile by summing the isotope parFiles
+    
+    compoundParFile = isotopeParFiles[0] # set the first isotope as the compound
+    
+    # loop through the rest of the isotopes and add them to the compound
+    for isotopeParFile in isotopeParFiles[1:]:
+        compoundParFile = compoundParFile +  isotopeParFile
 
+    # we want to fit abundances in this case
+    # TODO: Need to implement a method to toggle the vary flag for all abundances
+    compoundParFile.update.toggle_vary_abundances(vary=True)
+    
+    # change the fudge-factor that essentially responsible for the fit step-size
+    # it only has a minor effect on results
+    compoundParFile.data["info"]["fudge_factor"] = fudge_factor
 
-
+    # write out the compound par file
+    output_compound_file = Path(archive_dir) / Path(compound_dir) / Path(compound_dir).with_suffix(".par")
+    print(f"Writing compound par file {output_compound_file}")
+    compoundParFile.write(output_compound_file)
+    
+    
 
 
 

@@ -5,7 +5,7 @@ from pleiades import sammyRunner
 eu_nat = sammyUtils.SammyFitConfig('../sammyFitEuNat.ini')
 
 # Create the needed parFiles from ENDF for the isotopes in the configuration file
-sammyUtils.create_parFile_from_endf(eu_nat,verbose_level=1)
+#sammyUtils.create_parFile_from_endf(eu_nat,verbose_level=1)
 
 # Configure the sammy run, this will create a compound parFile. 
 sammyUtils.configure_sammy_run(eu_nat,verbose_level=1)

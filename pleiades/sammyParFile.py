@@ -3,6 +3,7 @@ import pathlib
 import shelve
 import configparser
 from typing import Tuple, List, Dict, Any
+import json
 
 class ParFile:
     """ parFile class for the Sammy par file.
@@ -38,6 +39,7 @@ class ParFile:
         self.data["info"] = {}
         self.data["info"]["fudge_factor"] = 0.1
         self.data["info"]["filename"] = filename
+        self.data["info"]["name"] = ""
         self.data["info"]["emin"] = emin
         self.data["info"]["emax"] = emax
 
@@ -121,9 +123,9 @@ class ParFile:
         self._MISC_DELTA_FORMAT = {"vary_delta_L1":slice(7-1,7),
                                    "vary_delta_L0":slice(9-1,9),
                                    "delta_L1":slice(11-1,20),
-                                #    "delta_L1_err":slice(21-1,30),
+                                   #"delta_L1_err":slice(21-1,30),
                                    "delta_L0":slice(31-1,40),
-                                #    "delta_L0_err":slice(41-1,50)
+                                   #"delta_L0_err":slice(41-1,50)
                                    }
     
         self._MISC_TZERO_FORMAT = {"vary_t0":slice(7-1,7),
@@ -306,6 +308,17 @@ class ParFile:
             
         return self
     
+    def print_params(self, key=None):
+        """Prints the parameters in a nicely formatted way.
+        
+        Args:
+            key (str): Specific key to print. If None, print the entire structure.
+        """
+        if key and key in self.data:
+            print(json.dumps(self.data[key], indent=4))
+        else:
+            print("key not found in data. Printing the entire structure.")
+            print(json.dumps(self.data, indent=4))
 
     def write(self,filename: str="compound.par") -> None:
         """ writes the data stored in self.data dictionary into a SAMMY .par file
@@ -415,10 +428,11 @@ class ParFile:
     def _rename(self) -> None:
         """rename the isotope and particle-pair names
         """
-
+        
+        # set the particle pair count
         pp_count = len(self.data["particle_pairs"])
-            
-
+           
+        # loop over particle pairs and rename them according to the isotope name 
         for num, reaction in enumerate(self.data["particle_pairs"]):
             old_name = reaction["name"]
             if   self.name == "auto" and pp_count==1:
@@ -434,13 +448,13 @@ class ParFile:
                 name = self.name[:6]
                 new_name = name + f"_{num+1}"
                 
-            
             for group in self.data["spin_group"]:
                 for channel in group[1:]:
                     if channel["channel_name"].strip()==old_name.strip():
                         channel["channel_name"] = new_name
 
             reaction["name"] = new_name
+        
         self.data["info"][name] = self.weight
         self.data["info"]["isotopes"] = [name]
         self.name = name
