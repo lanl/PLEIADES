@@ -21,6 +21,13 @@ class SammyFitConfig:
     def __init__(self, config_path=None):
         # Default values with sublabels
         self.params = {
+            
+            'run_with_endf': False,         # flag to run from endf par file 
+            'fit_energy_min': 0.0,          # min energy for sammy fit
+            'fit_energy_max': 1.0,          # max energy for sammy fit
+            'flight_path_length': 10.0,     # Flight path length
+            'fudge_factor': 1.0,            # Sammy fit incrementation
+            # Directories for data, results, and archive
             'directories': {
                 'working_dir': '',
                 'data_dir': 'data',
@@ -28,12 +35,6 @@ class SammyFitConfig:
                 'archive_dir': '.archive',
                 'image_dir': ''
             },
-            'run_with_endf': False,         # flag to run from endf par file 
-            'fit_energy_min': 0.0,          # min energy for sammy fit
-            'fit_energy_max': 1.0,          # max energy for sammy fit
-            'flight_path_length': 10.0,     # Flight path length
-            'fudge_factor': 1.0,            # Sammy fit incrementation
-
             # Isotopes for sammy fit
             'isotopes': {
                 'names': [],  # list of isotope names
@@ -153,6 +154,122 @@ class SammyFitConfig:
                     print('  ' * indent + str(key) + ': ' + str(value))
 
         print_dict(self.params)
+
+
+def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbose_level: int = 0) -> None:
+    """
+    Generates a SAMMY input file and runs SAMMY with ENDF data to produce a `.par` file
+    for the specified isotope. 
+
+    This function creates a SAMMY input file based on a configuration file, modifies relevant
+    cards for the target isotope, saves the input file, and then runs SAMMY with ENDF data
+    to generate the corresponding `.par` file.
+
+    Args:
+        config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+        archive (bool, optional): Flag for storing sammy files. Defaults to False.
+        verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
+    """
+    
+    isotopes = config.params['isotopes']['names']
+    flight_path_length = config.params['flight_path_length']
+    archive_dir = config.params['directories']['archive_dir']
+    
+    for isotope in isotopes:
+        
+        # Create a SAMMY input file data structure
+        inp = sammyInput.InputFile()
+
+        # Update input data with isotope-specific information
+        inp.data["Card2"]["elmnt"] = isotope
+        inp.data["Card2"]["aw"] = "auto"
+        inp.data["Card5"]["dist"] = flight_path_length
+        inp.data["Card5"]["deltag"] = 0.001
+        inp.data["Card5"]["deltae"] = 0.001
+        inp.data["Card7"]["crfn"] = 0.001
+    
+        #TODO: Need to figure out a better way to deal with commands in card3.
+        # Resetting the commands for running SAMMY to generate output par files based on ENDF.
+        inp.data["Card3"]['commands'] = 'TWENTY,DO NOT SOLVE BAYES EQUATIONS,INPUT IS ENDF/B FILE'
+    
+        # Print the input data structure if desired
+        if verbose_level > 1: print(inp.data)
+    
+        # Create a run name or handle based on the isotope name
+        sammy_run_handle = isotope.replace("-", "").replace("_", "")
+        sammy_input_file_name = sammy_run_handle + ".inp"
+    
+        # Check if archive is True and create the .archive directory if it doesn't exist
+        if archive:
+            archive_path = pathlib.Path(archive_dir)
+            archive_path.mkdir(parents=True, exist_ok=True)
+            if verbose_level > 0:
+                print(f"\nArchive directory created at {archive_path}")
+            
+            # Create a directory in the archive_path that corresponds to the sammy_run_handle
+            output_dir = archive_path / Path(sammy_run_handle)
+            
+            # add new output directory to the archive_path
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Create a SAMMY input file in the output directory
+            sammy_input_file = output_dir / (sammy_input_file_name)
+            
+            if verbose_level > 0: print(f"SAMMY input file created at {sammy_input_file}")
+            
+        else:
+            # determine the current working directory
+            output_dir = Path.cwd()
+            sammy_input_file = output_dir / (sammy_input_file_name)
+
+        # Write the SAMMY input file to the specified location. 
+        inp.process().write(sammy_input_file)
+    
+        # Run SAMMY with ENDF data to generate .par file
+        sammyRunner.run_endf(run_handle = sammy_run_handle, 
+                            working_dir=output_dir,
+                            input_file=sammy_input_file_name,
+                            verbose_level=verbose_level)
+                            
+
+def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
+    """
+    Configures and runs SAMMY based on a SammyFitConfig object.
+
+    This function takes a SammyFitConfig object and uses the parameters to
+    configure and run SAMMY. It creates a SAMMY input file, modifies the
+    relevant cards based on the configuration, saves the input file, and then
+    runs SAMMY to generate the corresponding `.par` file.
+
+    Args:
+        config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+    """
+    isotopeParFiles = []
+    working_dir = config.params['directories']['working_dir']
+    archive_dir = config.params['directories']['archive_dir']
+    isotopes = config.params['isotopes']['names']
+    abundances = config.params['isotopes']['abundances']
+    res_emin = config.params['resonances']['resonance_energy_min']
+    res_emax = config.params['resonances']['resonance_energy_max']
+    
+    if verbose_level > 0:
+        print(f"Configuring SAMMY run for isotopes: {isotopes} with abundances: {abundances}")
+
+    for isotope, abundance in zip(isotopes, abundances):
+
+        # Get rid of any dashes or underscores in the isotope name
+        isotope = isotope.replace("-", "").replace("_", "")
+
+        # Append sammy parFiles using sammyParFile in the ParFile class
+        isotopeParFiles.append(sammyParFile.ParFile(f"{archive_dir}/{isotope}/results/SAMNDF.PAR", weight=abundance, emin=res_emin, emax=res_emax).read())
+
+
+
+
+
+
+
+
 
 def sammy_background(energy: np.ndarray, normalization: float = 1.0,
                      constant_bg: float = 0.0, one_over_v_bg: float = 0.0,
@@ -377,34 +494,6 @@ def sammy_par_from_endf(isotope: str = "U-239",
                          input_file=sammy_input_file_name,
                          verbose_level=verbose_level)
     
-def config_and_run_sammy(config: SammyFitConfig):
-    """
-    Configures and runs SAMMY based on a SammyFitConfig object.
-
-    This function takes a SammyFitConfig object and uses the parameters to
-    configure and run SAMMY. It creates a SAMMY input file, modifies the
-    relevant cards based on the configuration, saves the input file, and then
-    runs SAMMY to generate the corresponding `.par` file.
-
-    Args:
-        config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
-    """
-    isotopeParFiles = []
-    working_dir = config.params['directories']['working_dir']
-    archive_dir = config.params['directories']['archive_dir']
-    isotopes = config.params['isotopes']['names']
-    abundances = config.params['isotopes']['abundances']
-    res_emin = config.params['resonances']['resonance_energy_min']
-    res_emax = config.params['resonances']['resonance_energy_max']
-
-    for isotope, abundance in zip(isotopes, abundances):
-
-        # Get rid of any dashes or underscores in the isotope name
-        isotope = isotope.replace("-", "").replace("_", "")
-
-        # Append sammy parFiles using sammyParFile in the ParFile class
-        isotopeParFiles.append(sammyParFile.ParFile(f"{archive_dir}/{isotope}/results/SAMNDF.PAR", weight=abundance, emin=res_emin, emax=res_emax).read())
-
 
 def run_sammy_fit(archivename: str="UMo",
                   abundances: dict={"U238":0.7,"U235":0.3},
