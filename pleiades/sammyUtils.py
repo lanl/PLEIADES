@@ -29,12 +29,12 @@ class SammyFitConfig:
             'fudge_factor': 1.0,            # Sammy fit incrementation
             # Directories for data, results, and archive
             'directories': {
-                'working_dir': '',
-                'data_dir': 'data',
-                'results_dir': 'results',
-                'archive_dir': '.archive',
-                'image_dir': ''
-            },
+                'working_dir': '',          # working directory, where pleiades is being called
+                'image_dir': '',            # directory for image files
+                'data_dir': 'data',         # directory for data files
+                'compound_dir': 'compound', # directory for compound par files
+                'archive_dir': '.archive'   # directory for archive files (hidden by default)
+            },  
             # Isotopes for sammy fit
             'isotopes': {
                 'names': [],  # list of isotope names
@@ -77,8 +77,8 @@ class SammyFitConfig:
                 'DlnE': 0.0, 'DlnE_err': '', 'vary_DlnE': False,
             },
             'resonances': {
-                'resonance_energy_min': 0.0,
-                'resonance_energy_max': 1.0,
+                'resonance_energy_min': 0.0,    # min energy for resonances in sammy parFile
+                'resonance_energy_max': 1.0,    # max energy for resonances in sammy parFile
             }
 
         }

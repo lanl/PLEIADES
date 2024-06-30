@@ -1,14 +1,12 @@
 from pleiades import sammyUtils
 from pleiades import sammyRunner
 
+# Load the configuration file from the ini file in the parent directory
 eu_nat = sammyUtils.SammyFitConfig('../sammyFitEuNat.ini')
 
+# Create the needed parFiles from ENDF for the isotopes in the configuration file
 sammyUtils.create_parFile_from_endf(eu_nat,verbose_level=1)
 
-
-#sammyUtils.sammy_par_from_endf(isotope='Eu-151')
-#sammyUtils.sammy_par_from_endf(isotope='Eu-153')
-
-
-
+# Configure the sammy run, this will create a compound parFile. 
+sammyUtils.configure_sammy_run(eu_nat,verbose_level=1)
 

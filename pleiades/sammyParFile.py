@@ -8,7 +8,6 @@ class ParFile:
     """ parFile class for the Sammy par file.
     """
 
-    
     def __init__(self,filename: str="Ar_40.par", 
                       name: str="auto",
                       weight: float = 1.,
@@ -41,7 +40,6 @@ class ParFile:
         self.data["info"]["filename"] = filename
         self.data["info"]["emin"] = emin
         self.data["info"]["emax"] = emax
-
 
         # group all update methods in the Update class (and the `update`` namespace)
         self.update = Update(self)
@@ -219,19 +217,19 @@ class ParFile:
         Returns:
             ParFile: the ParFile instance
         """
+
         self._filepath = pathlib.Path(self.filename)
 
         particle_pair = particle_pairs = [] # empty holders for particle pairs
-        resonance_params = []  
-        spin_groups = []
-        channel_radii = []
-        isotopic_masses = []
+        resonance_params = []               # empty holder for resonance params
+        spin_groups = []                    # empty holder for spin groups
+        channel_radii = []                  # empty holder for channel radii  
+        isotopic_masses = []                # empty holder for isotopic masses
 
         with open(self._filepath,"r") as fid:
             for line in fid:
                 
                 # read particle pair cards
-
                 if line.upper().startswith("PARTICLE PAIR DEF"):
 
                     # loop until the end of the P-Pair cards
@@ -266,7 +264,7 @@ class ParFile:
                 # read channel radii cards
                 if line.upper().startswith('CHANNEL RADII IN KEY'):
                     # next line is the channel radii card
-                    line = next(fid).replace("\n"," ") 
+                    line = next(fid)
                     # loop until the end of the channel groups cards
                     while line.strip():
                         channel_radii.append(line.replace("\n"," ")) 
@@ -279,7 +277,7 @@ class ParFile:
                     while line.strip():
                         isotopic_masses.append(line.replace("\n","")) 
                         line = next(fid)
-           
+        
         self._particle_pairs_cards = particle_pairs
         self._spin_group_cards = spin_groups
         self._resonance_params_cards = resonance_params
@@ -541,9 +539,8 @@ class ParFile:
     def _parse_channel_radii_cards(self) -> None:
         """ parse a list of channel-radii and channel-groups cards and sort the key-word pairs
         """
-
         cr_data = []
-        print(self._channel_radii_cards)
+        #print(self._channel_radii_cards)
         cards = (card for card in self._channel_radii_cards) # convert to a generator object
 
         # parse channel radii and groups using regex
