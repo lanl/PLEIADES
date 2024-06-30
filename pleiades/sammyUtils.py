@@ -285,9 +285,6 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     output_compound_file = Path(archive_dir) / Path(compound_dir) / Path(compound_dir).with_suffix(".par")
     print(f"Writing compound par file {output_compound_file}")
     compoundParFile.write(output_compound_file)
-    
-    
-
 
 
 
