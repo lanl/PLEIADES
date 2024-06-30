@@ -165,19 +165,19 @@ class InputFile:
                 'ixxchn': ('0',int,10),       # Number of energy channels in ODF-type data file to be ignored 
                 'ndigit': ('2',int,2),        # Number of digits for compact format for covariance matrix (Default = 2)
                 'idropp': ('2',int,2),        # The input resonance parameter covariance matrix will be modified before being used in the fitting procedure. Defaults to 2
-                'matnum': ('0',int,6),         # ENDF Material number. Defaults to 0.
+                'matnum': ('0',int,6),        # ENDF Material number. Defaults to 0.
                 },     
             Card3={
                 'commands': ('CHI_SQUARED,TWENTY,SOLVE_BAYES,PUT_QUANTUM_NUMS_IN_PARAM',str,None)
                 },
             Card5={
-                'temp':   ('300.5',float,10),
-                'dist':   ('100.2',float,10),
-                'deltal': ('0.0',float,10),
-                'deltae': ('0.0',float,10),
-                'deltag': ('0.0',float,10),
-                'delttt': ('0.0',float,10),
-                'elowbr': ('0.0',float,10),
+                'temp':   ('300.5',float,10),   # Effective temperature of the sample (K);
+                'dist':   ('100.2',float,10),   # Flight-path length (m)
+                'deltal': ('0.0',float,10),     # That portion of the Gaussian resolution width attributed to the flight-path length (m). 
+                'deltae': ('0.0',float,10),     # E-folding width of exponential resolution function (μs); 
+                'deltag': ('0.0',float,10),     # The absolute value of DELTAG is the FWHM (μs) of a Gaussian resolution function representing the burst width
+                'delttt': ('0.0',float,10),     # Approximate step size for the Effective Temperature for the Leal-Hwang method of Doppler broadening (K).
+                'elowbr': ('0.0',float,10),     # The energy below which no broadening is wanted, for highenergy Gaussian approximation to Doppler broadening (eV) 
                 },
             # Card6={
             #     'deltag': ("0.0",float,10),
@@ -187,14 +187,14 @@ class InputFile:
             #     'cf':     ('',float,None),
             # },
             Card7={
-                'crfn':   ('1.0',float,10),
-                'thick':  ('1.0',float,10),
-                'dcova':  ('0.0',float,10),
-                'dcovb':  ('0.0',float,10),
-                'vmin':   ('0.0',float,10),
+                'crfn':   ('1.0',float,10), # Channel radius (fermi)
+                'thick':  ('1.0',float,10), # Sample thickness (atoms/barn)
+                'dcova':  ('0.0',float,10), # Constant term in data covariance (default = 0.0)
+                'dcovb':  ('0.0',float,10), # Linear term in data covariance (default = 0.0)
+                'vmin':   ('0.0',float,10), # Minimum absolute uncertainty (standard deviation) on experimental data
                 },
             Card8={
-                'cross': ('TRANSMISSION',str,80),
+                'cross': ('TRANSMISSION',str,80), #a "command" string that represents the type of data,
                 },
             # Card10={
             #     'isotopes':   ('Si28,Si29,Si30',str,80),
