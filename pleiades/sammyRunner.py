@@ -9,8 +9,6 @@ import subprocess
 import datetime
 import textwrap
 
-def run_sammy()
-
 def run(archivename: str="example",
             inpfile: str = "",
             parfile: str = "",
