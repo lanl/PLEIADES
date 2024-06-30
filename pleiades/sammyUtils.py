@@ -304,7 +304,7 @@ def save_transmission_spectrum(
 
 def sammy_par_from_endf(isotope: str = "U-239", 
                         flight_path_length: float = 10.72, 
-                        archive: bool = False, 
+                        archive: bool = True, 
                         archive_dir: str = ".archive/", 
                         verbose_level: int = 0) -> None:
     """
@@ -359,7 +359,8 @@ def sammy_par_from_endf(isotope: str = "U-239",
         
         # Create a SAMMY input file in the output directory
         sammy_input_file = output_dir / (sammy_input_file_name)
-        print(sammy_input_file)
+        
+        if verbose_level > 0: print(f"SAMMY input file created at {sammy_input_file}")
         
     else:
         # determine the current working directory
