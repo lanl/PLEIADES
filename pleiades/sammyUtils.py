@@ -9,12 +9,127 @@ from pathlib import Path
 import pandas
 import pathlib
 import re
+import configparser
 import os
 
 from pleiades import sammyParFile, sammyInput, sammyRunner, nucData
 
 PWD = pathlib.Path(__file__).parent
 
+class SammyFitConfig:
+    """Class to store and manage SAMMY fit parameters."""
+    def __init__(self, config_path=None):
+        # Default values with sublabels
+        self.params = {
+            'working_dir': '',
+            'directories': {
+                'data_dir': 'data',
+                'results_dir': 'results',
+                'archive_dir': '.archive',
+                'image_dir': ''
+            },
+            'run_with_endf': False,
+            'isotopes': {
+                'names': [],  # list of isotope names
+                'abundances': [],  # list of corresponding abundances
+                'vary_abundances': []  # list of booleans indicating if the abundances should be varied
+            },
+            'thickness_and_temperature': {
+                'thickness': 0.0, 'vary_thickness': False,
+                'temperature': 295, 'vary_temperature': False,
+            },
+            'normalization': {
+                'normalization': 1.0, 'vary_normalization': False,
+                'constant_bg': 0.0, 'vary_constant_bg': False,
+                'one_over_v_bg': 0.0, 'vary_one_over_v_bg': False,
+                'sqrt_energy_bg': 0.0, 'vary_sqrt_energy_bg': False,
+                'exponential_bg': 0.0, 'vary_exponential_bg': False,
+                'exp_decay_bg': 0.0, 'vary_exp_decay_bg': False,
+            },
+            'broadening': {
+                'flight_path_spread': 0.0, 'vary_flight_path_spread': False,
+                'deltag_fwhm': 0.0, 'vary_deltag_fwhm': False,
+                'deltae_us': 0.0, 'vary_deltae_us': False,
+            },
+            'tzero': {
+                't0': 0.0, 'vary_t0': False,
+                'L0': 0.0, 'vary_L0': False,
+            },
+            'delta_L': {
+                'delta_L1': 0.0, 'delta_L1_err': '', 'vary_delta_L1': False,
+                'delta_L0': 0.0, 'delta_L0_err': '', 'vary_delta_L0': False,
+            },
+            'delta_E': {
+                'DE': 0.0, 'DE_err': '', 'vary_DE': False,
+                'D0': 0.0, 'D0_err': '', 'vary_D0': False,
+                'DlnE': 0.0, 'DlnE_err': '', 'vary_DlnE': False,
+            }
+        }
+
+        if config_path:
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            self._load_from_config(config)
+            #self._create_directories()
+
+    def _load_from_config(self, config):
+        for section in config.sections():
+
+            # If the section is 'isotopes' then process the potentail arrays for names, abundances, and vary_abundances.
+            if section == 'isotopes':
+                self.params['isotopes']['names'] = [x for x in config.get('isotopes', 'names').split(',')]
+                self.params['isotopes']['abundances'] = [float(x) for x in config.get('isotopes', 'abundances').split(',')]
+                self.params['isotopes']['vary_abundances'] = [self._convert_value(x) for x in config.get('isotopes', 'vary_abundances').split(',')]
+            
+            # If the section is 'directories' in 
+            elif section == 'directories':
+                for key, value in config.items(section):
+                    if key in self.params['directories']:
+                        self.params['directories'][key] = self._strip_quotes(value)
+            
+            elif section == 'main':
+                self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
+
+            else:
+                print(section)
+                for key, value in config.items(section):
+                    if key in self.params[section]:
+                        self.params[section][key] = self._convert_value(value)
+
+    def _convert_value(self, value):
+        # Helper method to convert string values to appropriate types
+        if value.lower() in ['true', 'false']:
+            return value.lower() == 'true'
+        try:
+            if '.' in value:
+                return float(value)
+            else:
+                return int(value)
+        except ValueError:
+            return value
+
+    def _strip_quotes(self, path):
+        """Remove surrounding quotes from a string if they exist."""
+        return path.strip('"').strip("'")
+
+    def _create_directories(self):
+        # Create working_dir and its subdirectories
+        working_dir = self.params['working_dir']
+        if working_dir:
+            for dir_key in self.params['directories']:
+                os.makedirs(os.path.join(working_dir, self.params['directories'][dir_key]), exist_ok=True)
+
+    def print_params(self):
+        """Prints the parameters in a nicely formatted way."""
+        def print_dict(d, indent=0):
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    print('  ' * indent + str(key) + ':')
+                    print_dict(value, indent + 1)
+                else:
+                    print('  ' * indent + str(key) + ': ' + str(value))
+
+        print_dict(self.params)
 
 def sammy_background(energy: np.ndarray, normalization: float = 1.0,
                      constant_bg: float = 0.0, one_over_v_bg: float = 0.0,
@@ -301,7 +416,7 @@ def run_sammy_fit(archivename: str="UMo",
                                              weight=abundance,emin=res_emin,emax=res_emax).read())
     
     # create compound
-    
+    '''    
     compound = isotopes[0]
     for isotope in isotopes[1:]:
         compound = compound +  isotope
@@ -416,7 +531,7 @@ def run_sammy_fit(archivename: str="UMo",
         fid[f"{archivename}/latest"] = stats
     
     return stats
-
+    '''
 
 
 def plot_transmission(archivename: str="W", stats: dict ={},
