@@ -8,7 +8,7 @@ def test_sammyUtils_run_endf():
     sammyUtils.sammy_par_from_endf("Eu-153",14.96)
 
     # read produced par file
-    eu153 = sammyParFile('.archive/Eu-153/results/SAMNDF.PAR').read()
+    eu153 = sammyParFile.ParFile('.archive/Eu153/results/SAMNDF.PAR').read()
 
     # check that 2 spin groups are defined
     spin_groups = eu153.data["spin_group"]
