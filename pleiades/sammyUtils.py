@@ -466,6 +466,8 @@ def save_transmission_spectrum(
 
 def sammy_par_from_endf(isotope: str = "U-239", 
                         flight_path_length: float = 10.72, 
+                        emin: float = 0.001,
+                        emax: float = 98,
                         archive: bool = True, 
                         archive_dir: str = ".archive/", 
                         verbose_level: int = 0) -> None:
@@ -480,6 +482,8 @@ def sammy_par_from_endf(isotope: str = "U-239",
     Args:
         isotope (str, optional): string of isotope name. Defaults to "U-238".
         flight_path_length (float, optional): Flight path lenght in meters. Defaults to 10.72.
+        emin (float, optional): minimum energy in eV (default to 0.001 eV)
+        emax (float, optional): maximum energy in eV (default to 98 eV)
         archive (bool, optional): Flag for storing sammy files. Defaults to False.
         archive_dir (str, optional): string of path for archiving SAMMY files. Defaults to hidden dir ".archive/".
         verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
@@ -490,6 +494,8 @@ def sammy_par_from_endf(isotope: str = "U-239",
     # Update input data with isotope-specific information
     inp.data["Card2"]["elmnt"] = isotope
     inp.data["Card2"]["aw"] = "auto"
+    inp.data["Card2"]["emin"] = emin
+    inp.data["Card2"]["emax"] = emax
     inp.data["Card5"]["dist"] = flight_path_length
     inp.data["Card5"]["deltag"] = 0.001
     inp.data["Card5"]["deltae"] = 0.001
