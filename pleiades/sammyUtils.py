@@ -29,11 +29,14 @@ class SammyFitConfig:
             'fudge_factor': 1.0,            # Sammy fit incrementation
             # Directories for data, results, and archive
             'directories': {
+                'user_defined': False,      # flag to use user defined directories
                 'working_dir': '',          # working directory, where pleiades is being called
                 'image_dir': '',            # directory for image files
                 'data_dir': 'data',         # directory for data files
-                'compound_dir': 'compound', # directory for compound par files
-                'archive_dir': '.archive'   # directory for archive files (hidden by default)
+                'sammy_fit_dir': '',        # directory for compound par files
+                'archive_dir': '.archive',  # directory for archive files (hidden by default)
+                'endf_dir': 'endf',         # directory for endf sammy runs
+                'fit_results_dir': ''       # directory for fit results
             },  
             # Isotopes for sammy fit
             'isotopes': {
@@ -88,7 +91,14 @@ class SammyFitConfig:
             config.read(config_path)
             self._load_from_config(config)
 
+        self._check_or_create_directories()
+
     def _load_from_config(self, config):
+        """ Load parameters from a configuration file.
+
+        Args:
+            config (SammyFitConfig): ConfigParser object with the configuration parameters.
+        """
         for section in config.sections():
 
             # If the section is 'isotopes' then process the potential arrays for names, abundances, and vary_abundances.
@@ -120,7 +130,14 @@ class SammyFitConfig:
                         self.params[section][key] = self._convert_value(value)
 
     def _convert_value(self, value):
-        # Helper method to convert string values to appropriate types
+        """ Helper method to convert a string value to the appropriate type.
+
+        Args:
+            value (string): The string value to convert.
+
+        Returns:
+            float or int: The converted value.
+        """
         if value.lower() in ['true', 'false']:
             return value.lower() == 'true'
         try:
@@ -132,19 +149,59 @@ class SammyFitConfig:
             return value
 
     def _strip_quotes(self, path):
-        """Remove surrounding quotes from a string if they exist."""
+        """Remove surrounding quotes from a string if they exist.
+        """
         return path.strip('"').strip("'")
 
-    def _create_directories(self):
-        # Create working_dir and its subdirectories
+    def _check_or_create_directories(self):
+        """ Create working_dir and its subdirectories
+            Note: If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
+        """
         working_dir = self.params['directories']['working_dir']
-        if working_dir:
-            for dir_key in self.params['directories']:
-                if dir_key != 'working_dir':  # Skip working_dir itself
-                    os.makedirs(os.path.join(working_dir, self.params['directories'][dir_key]), exist_ok=True)
+        if not working_dir:
+                working_dir = os.getcwd()
+                self.params['directories']['working_dir'] = working_dir
+
+        os.makedirs(working_dir, exist_ok=True)
+
+        # if the user has set the directories then we will use them
+        if self.params["directories"]["user_defined"] == True:
+            archive_dir = self.params['directories']['archive_dir']
+            image_dir = self.params['directories']['image_dir']
+            data_dir = self.params['directories']['data_dir']
+            sammy_fit_dir = self.params['directories']['sammy_fit_dir']
+            fit_results_dir = self.params['directories']['fit_results_dir']
+            endf_dir = self.params['directories']['endf_dir']
+
+        else:
+            # create the subdirectories within the working directory
+            image_dir = os.path.join(working_dir, self.params['directories']['image_dir'])
+            data_dir = os.path.join(working_dir, self.params['directories']['data_dir'])
+            fit_results_dir = os.path.join(working_dir, self.params['directories']['fit_results_dir'])
+            archive_dir = os.path.join(working_dir, self.params['directories']['archive_dir'])
+            endf_dir = os.path.join(archive_dir, self.params['directories']['endf_dir'])
+            sammy_fit_dir = os.path.join(archive_dir, self.params['directories']['sammy_fit_dir'])
+
+            # now we need to reset all the path variables with the full paths
+            self.params['directories']['image_dir'] = image_dir
+            self.params['directories']['data_dir'] = data_dir
+            self.params['directories']['fit_results_dir'] = fit_results_dir
+            self.params['directories']['archive_dir'] = archive_dir
+            self.params['directories']['endf_dir'] = endf_dir
+            self.params['directories']['sammy_fit_dir'] = sammy_fit_dir
+
+        # Check to see if directories exists, if they do not then create them
+        os.makedirs(image_dir, exist_ok=True)
+        os.makedirs(data_dir, exist_ok=True)
+        os.makedirs(fit_results_dir, exist_ok=True)
+        os.makedirs(archive_dir, exist_ok=True)
+        os.makedirs(endf_dir, exist_ok=True)
+        os.makedirs(sammy_fit_dir, exist_ok=True)
+
 
     def print_params(self):
-        """Prints the parameters in a nicely formatted way."""
+        """Prints the parameters in a nicely formatted way.
+        """
         def print_dict(d, indent=0):
             for key, value in d.items():
                 if isinstance(value, dict):
@@ -173,6 +230,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     
     isotopes = config.params['isotopes']['names']
     flight_path_length = config.params['flight_path_length']
+    endf_dir = config.params['directories']['endf_dir']
     archive_dir = config.params['directories']['archive_dir']
     
     for isotope in isotopes:
@@ -187,6 +245,8 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         inp.data["Card5"]["deltag"] = 0.001
         inp.data["Card5"]["deltae"] = 0.001
         inp.data["Card7"]["crfn"] = 0.001
+        #TODO: Need a way to figure out the resonance emin and emax of the ENDF res file and set them here. 
+
     
         #TODO: Need to figure out a better way to deal with commands in card3.
         # Resetting the commands for running SAMMY to generate output par files based on ENDF.
@@ -201,13 +261,13 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     
         # Check if archive is True and create the .archive directory if it doesn't exist
         if archive:
-            archive_path = pathlib.Path(archive_dir)
-            archive_path.mkdir(parents=True, exist_ok=True)
+            endf_dir_path = pathlib.Path(endf_dir)
+            endf_dir_path.mkdir(parents=True, exist_ok=True)
             if verbose_level > 0:
-                print(f"\nArchive directory created at {archive_path}")
+                print(f"ENDF directory created at {endf_dir_path}")
             
-            # Create a directory in the archive_path that corresponds to the sammy_run_handle
-            output_dir = archive_path / Path(sammy_run_handle)
+            # Create a directory in the endf_dir_path that corresponds to the sammy_run_handle
+            output_dir = endf_dir_path / Path(sammy_run_handle)
             
             # add new output directory to the archive_path
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -313,8 +373,25 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     inp.process().write(output_compound_inp_file)
     if verbose_level > 0: print(f"Created compound input file: {output_compound_inp_file}")
 
-     
 
+def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
+    """
+    Runs SAMMY based on a SammyFitConfig object.
+
+    This function takes a SammyFitConfig object and uses it to run sammy. 
+
+    Args:
+        config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+    """
+
+
+
+    sammyRunner.run()
+
+
+
+
+#-------------------------------------------------------------------------    
 
 def sammy_background(energy: np.ndarray, normalization: float = 1.0,
                      constant_bg: float = 0.0, one_over_v_bg: float = 0.0,
@@ -539,7 +616,6 @@ def sammy_par_from_endf(isotope: str = "U-239",
                          input_file=sammy_input_file_name,
                          verbose_level=verbose_level)
     
-
 def run_sammy_fit(archivename: str="UMo",
                   abundances: dict={"U238":0.7,"U235":0.3},
                   emin: float=1.,
