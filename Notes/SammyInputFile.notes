@@ -110,3 +110,14 @@ Card 10.1 -
         71-80, F "EMM2(N,JJ)"   # Mass of second particle in the channel (that is, of the neutron or other incident particle, for entrance channels) (amu)
 
     
+
+Run time notes: 
+Need to use the lowest mass in a compound nuclei fit otherwise you get this:
+ ***************************************************************************
+ * Warning -- Mass used to determine limits for auxiliary grid (for Dopplr *
+ * and multiple-scattering corrections) may be too big. SAMMY is using the *
+ * mass from nuclide number 2 (238.050770), because that is closest to the *
+ * mass from Line 2 of the INPut file (238.050800).  For more accurate     *
+ * results, use the mass of the smallest nuclide (235.043940).  (Expect    *
+ * longer runtime if you change to the smaller mass.)                      *
+ ***************************************************************************

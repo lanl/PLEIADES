@@ -152,10 +152,10 @@ class InputFile:
                 'title': (dummy_title,str,80) # title
                   },
             Card2={
-                'elmnt': ('H_1',str,10),    # Element name. Defaults to None.
+                'elmnt': ('H_1',str,10),      # Element name. Defaults to None.
                 'aw':     ('auto',float,10),  # Atomic weight in amu. Defaults to 0.
-                'emin':   ('0.001',float,10), # Minimum energy. Defaults to 0.
-                'emax':   ('100.',float,10),  # Maximum energy. Defaults to 0.
+                'emin':   ('0.1',float,10),   # Minimum energy. Defaults to 0.
+                'emax':   ('50.',float,10),  # Maximum energy. Defaults to 50.
                 'nepnts': ('10001',int,5),    # Number of points to be used in generating artificial energy grid. Defaults to 10001.
                 'itmax':  ('2',int,5),        # Number of iterations. Defaults to 2.
                 'icorr':  ('50',int,2),       # Correlation option. Defaults to 50.
