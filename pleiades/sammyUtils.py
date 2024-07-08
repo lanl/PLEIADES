@@ -306,15 +306,21 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
     isotopeParFiles = []
-    compound_dir = config.params['directories']['compound_dir']
+    
+    # setting up the directories that we will need to use
     archive_dir = config.params['directories']['archive_dir']
+    endf_dir = config.params['directories']['endf_dir']
+    sammy_fit_dir = config.params['directories']['sammy_fit_dir']
+    
+    # Grabbing the isotopes, abundances, and fudge factor from the config file
     isotopes = config.params['isotopes']['names']
     abundances = config.params['isotopes']['abundances']
     fudge_factor = config.params['fudge_factor']
+    
+    # setting the resonance energy min and max, this will clip the resonances in the parFile to the specified energy range
     res_emin = config.params['resonances']['resonance_energy_min']
     res_emax = config.params['resonances']['resonance_energy_max']
     
-    #----------------------------------------
     # Create a SAMMY parFile for each isotope 
     if verbose_level > 0: print(f"Creating SAMMY parFile files for isotopes: {isotopes} with abundances: {abundances}")
 
@@ -322,27 +328,27 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
         # Get rid of any dashes or underscores in the isotope name
         isotope = isotope.replace("-", "").replace("_", "")
         # Append sammy parFiles using sammyParFile in the ParFile class
-        isotopeParFiles.append(sammyParFile.ParFile(filename=f"{archive_dir}/{isotope}/results/SAMNDF.PAR", name = isotope, weight=abundance, emin=res_emin, emax=res_emax).read())
+        isotopeParFiles.append(sammyParFile.ParFile(filename=f"{endf_dir}/{isotope}/results/SAMNDF.PAR", name = isotope, weight=abundance, emin=res_emin, emax=res_emax).read())
 
-    # Create a compound parFile by summing the isotope parFiles
-    compoundParFile = isotopeParFiles[0] # set the first isotope as the compound
+    # Create a output parFile by summing the isotope parFiles
+    outputParFile = isotopeParFiles[0] # set the first isotope as the output
     
-    # loop through the rest of the isotopes and add them to the compound
+    # loop through the rest of the isotopes and add them to the output
     for isotopeParFile in isotopeParFiles[1:]:
-        compoundParFile = compoundParFile +  isotopeParFile
+        outputParFile = outputParFile +  isotopeParFile
 
     # we want to fit abundances in this case
     # TODO: Need to implement a method to toggle the vary flag for all abundances
-    compoundParFile.update.toggle_vary_abundances(vary=True)
+    outputParFile.update.toggle_vary_abundances(vary=True)
     
     # change the fudge-factor that essentially responsible for the fit step-size
     # it only has a minor effect on results
-    compoundParFile.data["info"]["fudge_factor"] = fudge_factor
+    outputParFile.data["info"]["fudge_factor"] = fudge_factor
 
-    # write out the compound par file
-    output_compound_par_file = Path(archive_dir) / Path(compound_dir) / Path('compound').with_suffix(".par")
-    if verbose_level > 0: print(f"Writing compound par file {output_compound_par_file}")
-    compoundParFile.write(output_compound_par_file)
+    # write out the output par file
+    output_par_file = Path(archive_dir) / Path(sammy_fit_dir) / Path('params').with_suffix(".par")
+    if verbose_level > 0: print(f"Writing output parFile: {output_par_file}")
+    outputParFile.write(output_par_file)
 
     # Now create a SAMMY input file
     if verbose_level > 0: print(f"Creating SAMMY inpFile files for isotopes: {isotopes} with abundances: {abundances}")
@@ -350,8 +356,11 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     # Create an inpFile from 
     inp = sammyInput.InputFile(verbose_level=verbose_level)
 
+    # find the lowest atomic number isotope and set it as the element
+    lowest_atomic_isotope = min(isotopes, key=lambda isotope: nucData.get_mass_from_ame(isotope))
+    
     # Update input data with isotope-specific information
-    inp.data["Card2"]["elmnt"] = isotopes[-1] # set the last isotope as the element
+    inp.data["Card2"]["elmnt"] = lowest_atomic_isotope 
     inp.data["Card2"]["aw"] = "auto"
     inp.data["Card5"]["dist"] = config.params['flight_path_length']
     inp.data["Card5"]["deltag"] = 0.001
@@ -367,11 +376,11 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     
     # Create a run name or handle for the compound inpFile
     #TODO: Think about a better way to name files and dir. Should we use 'compound' or 'final'. We used compound because there is often more than one isotope to be fitted, but this is confusing if you only have one isotope.
-    output_compound_inp_file = Path(archive_dir) / Path(compound_dir) / Path('compound').with_suffix(".inp")
+    output_inp_file = Path(sammy_fit_dir) / Path('input').with_suffix(".inp")
 
     # Write the SAMMY input file to the specified location. 
-    inp.process().write(output_compound_inp_file)
-    if verbose_level > 0: print(f"Created compound input file: {output_compound_inp_file}")
+    inp.process().write(output_inp_file)
+    if verbose_level > 0: print(f"Created compound input file: {output_inp_file}")
 
 
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
