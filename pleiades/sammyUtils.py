@@ -27,6 +27,7 @@ class SammyFitConfig:
             'fit_energy_max': 1.0,          # max energy for sammy fit
             'flight_path_length': 10.0,     # Flight path length
             'fudge_factor': 1.0,            # Sammy fit incrementation
+            
             # Directories for data, results, and archive
             'directories': {
                 'user_defined': False,      # flag to use user defined directories
@@ -38,6 +39,13 @@ class SammyFitConfig:
                 'endf_dir': 'endf',         # directory for endf sammy runs
                 'fit_results_dir': ''       # directory for fit results
             },  
+            
+            # Sammy fit file names
+            'filenames': {
+                'data_file_name': 'data.dat',
+                'input_file_name': 'input.inp',
+                'params_file_name': 'params.par'
+            },
             # Isotopes for sammy fit
             'isotopes': {
                 'names': [],  # list of isotope names
@@ -112,6 +120,12 @@ class SammyFitConfig:
                 for key, value in config.items(section):
                     if key in self.params['directories']:
                         self.params['directories'][key] = self._strip_quotes(value)
+            
+            # If the section is 'filenames' 
+            elif section == 'filenames':
+                for key, value in config.items(section):
+                    if key in self.params['filenames']:
+                        self.params['filenames'][key] = self._strip_quotes(value)
             
             elif section == 'main':
                 self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
@@ -287,7 +301,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     
         # Run SAMMY with ENDF data to generate .par file
         sammyRunner.run_endf(run_handle = sammy_run_handle, 
-                            working_dir=output_dir,
+                            endf_dir=output_dir,
                             input_file=sammy_input_file_name,
                             verbose_level=verbose_level)
                     
@@ -369,7 +383,8 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     #TODO: Need to figure out a better way to deal with commands in card3.
     # Resetting the commands for running SAMMY to generate output par files based on ENDF.
-    inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH_MOORE_FORMAT,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
+    #inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH_MOORE_FORMAT,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
+    inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
 
     # Print the input data structure if desired
     if verbose_level > 1: print(inp.data)
@@ -392,10 +407,13 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
+    sammy_fit_dir = config.params['directories']['sammy_fit_dir']
+    data_dir = config.params['directories']['data_dir']
+    input_file = 'input.inp'
+    parameter_file = 'params.par'
+    data_file = data_dir + '/compoundU.twenty'
 
-
-
-    sammyRunner.run()
+    sammyRunner.single_run(sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
 
 
 

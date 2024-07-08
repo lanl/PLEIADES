@@ -10,4 +10,4 @@ sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
 sammyUtils.configure_sammy_run(uranium,verbose_level=1)
 
 # Run the sammy fit.
-sammyUtils.run_sammy(uranium,verbose_level=1)
+sammyUtils.run_sammy(uranium,verbose_level=2)
