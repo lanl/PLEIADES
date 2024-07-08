@@ -39,7 +39,7 @@ def process_and_plot_lst_file(filename, residual=False, quantity='cross-section'
     if quantity == 'cross-section' and num_columns >= 5:
         plot_cross_section(data, residual=residual)
         
-    elif quantity == 'transmission' and num_columns >= 10:
+    elif quantity == 'transmission':
         plot_transmission(data, residual=residual)
 
     

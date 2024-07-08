@@ -411,7 +411,7 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     data_dir = config.params['directories']['data_dir']
     input_file = 'input.inp'
     parameter_file = 'params.par'
-    data_file = data_dir + '/compoundU.twenty'
+    data_file = data_dir +"/"+ config.params['filenames']['data_file_name']
 
     sammyRunner.single_run(sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
 
