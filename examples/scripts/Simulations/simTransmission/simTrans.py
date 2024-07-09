@@ -4,7 +4,7 @@ import numpy as np
 import pleiades.simData as psd
 
 
-def main(config_file='config.ini', energy_min=1, energy_max=100, energy_points=10000, write_output=False):
+def main(config_file='config.ini', energy_min=1, energy_max=100, energy_points=1000, write_output=False):
     
     # Read the isotope config file
     isotopes = psd.load_isotopes_from_config(config_file)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     parser.add_argument('--isoConfig', type=str, default='config.ini', help='Path to the isotope config file')
     parser.add_argument('--energy_min', type=float, default=1, help='Minimum energy for the plot [eV]')
     parser.add_argument('--energy_max', type=float, default=100, help='Maximum energy for the plot [eV]')
-    parser.add_argument('--energy_points', type=int, default=100000, help='Number of energy points for the plot')
+    parser.add_argument('--energy_points', type=int, default=5000, help='Number of energy points for the plot')
     parser.add_argument('--write_output', action='store_true', help='Flag to write transmission data to a file')
     
     if len(sys.argv) == 1:
