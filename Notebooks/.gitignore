@@ -1,5 +1,2 @@
-# ignore all files in the directory "archive"
-archive/*
-
-# ingore any data files downloaded. 
-X4sGetSubent?subID=14382012*
+# Ignore everything
+*
