@@ -1,5 +1,8 @@
 # Ignore everything
 *
 
+# Do not ignore any .ini files
+!*.ini
+
 # Do not ignore the README.md file
 !README.md
