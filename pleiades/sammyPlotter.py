@@ -39,7 +39,7 @@ def process_and_plot_lst_file(filename, residual=False, quantity='cross-section'
     if quantity == 'cross-section' and num_columns >= 5:
         plot_cross_section(data, residual=residual)
         
-    elif quantity == 'transmission' and num_columns >= 10:
+    elif quantity == 'transmission':
         plot_transmission(data, residual=residual)
 
     
@@ -89,7 +89,10 @@ def plot_transmission(data, residual=False):
         data (DataFrame): The data to plot. It should have columns "energy", "Zeroth-order theoretical transmission", "Zeroth-order theoretical transmission", "Final theoretical transmission", and optionally "Absolute uncertainty in experimental transmission" if residual is True.
         residual (bool, optional): If True, plot the residuals. Defaults to False.
     """
-    
+    data_color = "#433E3F"
+    initial_color = "#003f5c"
+    final_color = "#ff6361"
+
     if residual:
         fig, ax = plt.subplots(2,2, sharey=False,figsize=(8,6),gridspec_kw={"width_ratios":[5,1],"height_ratios":[5,2]})
         ax = np.ravel(ax)
@@ -97,13 +100,15 @@ def plot_transmission(data, residual=False):
         fig, ax = plt.subplots(figsize=(8,6))
         ax = [ax]
 
-    data.plot(x="Energy",y="Experimental transmission",ax=ax[0],zorder=-1)
-    data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8)
-    data.plot(x="Energy",y=["Final theoretical transmission"],ax=ax[0],alpha=0.8)
+    # Plot the Experimental transmission as scattering plot with Energy vs. Experimental transmission with Absolute uncertainty in experimental transmission
+    data.plot.scatter(x="Energy", y="Experimental transmission", yerr="Absolute uncertainty in experimental transmission", ax=ax[0], zorder=-1, color=data_color, alpha=0.25, s=10)
+    data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8, color=initial_color,lw=1)
+    data.plot(x="Energy",y=["Final theoretical transmission"],ax=ax[0],alpha=1.0, color=final_color,lw=1)
     ax[0].set_xlabel("")
     ax[0].set_xticks([])
-    ax[0].legend(["data","initial fit","final fit"])
+    ax[0].legend(["data","initial_guess","final fit"])
     ax[0].set_ylabel("transmission")
+    ax[0].set_ylim(0,1.2)
 
     if residual:
         ax[1].spines['right'].set_visible(False)
@@ -113,13 +118,17 @@ def plot_transmission(data, residual=False):
         ax[1].set_xticks([])
         ax[1].set_yticks([],[])
 
-        data["residual_initial"] = (data["Zeroth-order theoretical transmission"] - data["Zeroth-order theoretical transmission"])/data["Absolute uncertainty in experimental transmission"]
-        data["residual_final"] = (data["Final theoretical transmission"] - data["Zeroth-order theoretical transmission"])/data["Absolute uncertainty in experimental transmission"]
-        data.plot(x="Energy",y=["residual_initial","residual_final"],marker=".",lw=0,ms=3,ylim=(-10,10),ax=ax[2],alpha=0.8,legend=False)
+        data["residual_initial"] = (data["Zeroth-order theoretical transmission"] - data["Experimental transmission"])
+        data["residual_final"] = (data["Final theoretical transmission"] - data["Experimental transmission"])
+
+        data.plot.scatter(x="Energy",y="residual_initial",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=initial_color,ax=ax[2],alpha=0.5,legend=False)
+        data.plot.scatter(x="Energy",y="residual_final",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=final_color,ax=ax[2],alpha=0.5,legend=False)
         ax[2].set_ylabel("residuals\n(fit-data)/err [σ]")
         ax[2].set_xlabel("energy [eV]")
+        ax[2].set_ylim(-1,1)
 
-        data.plot.hist(y=["residual_initial","residual_final"],bins=np.arange(-8,8,0.2),ax=ax[3],orientation="horizontal",legend=False,alpha=0.8,histtype="stepfilled")
+        data.plot.hist(y=["residual_initial"],bins=np.arange(-1,1,0.01),ax=ax[3],orientation="horizontal",legend=False,alpha=0.8,histtype="stepfilled",color=initial_color)
+        data.plot.hist(y=["residual_final"],bins=np.arange(-1,1,0.01),ax=ax[3],orientation="horizontal",legend=False,alpha=0.8,histtype="stepfilled",color=final_color)
         ax[3].set_xlabel("")
         ax[3].set_xticks([],[])
         ax[3].set_yticks([],[])
@@ -127,7 +136,7 @@ def plot_transmission(data, residual=False):
         ax[3].spines['top'].set_visible(False)
         ax[3].spines['bottom'].set_visible(False)
         ax[3].spines['left'].set_visible(False)
-        ax[2].set_ylim(-10,10)
+        
 
     plt.subplots_adjust(wspace=0.003,hspace=0.03)
     plt.show()

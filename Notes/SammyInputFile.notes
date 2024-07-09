@@ -11,22 +11,23 @@ Card 1 -
         1-80 columns, A "TITLE"
 Card 2 - 
     Line 1: 
-        01-10 columns, A "ELMNT"; 
-        11-20 columns, F "AW"; 
-        21-30 columns, F "EMIN"; 
-        31-40 columns, F "EMAX"; 
-        41-45 columns, I "NEPNTS"; 
-        46-50 columns, I "ITMAX"; 
-        51-52 columns, I "ICORR"; 
-        53-55 columns, I "NXTRA"; 
-        56-57 columns, I "IPTDOP"; 
-        59-60 columns, I "IPTWID"; 
-        61-70 columns, I "IXXCHN"; 
-        71-72 columns, I "NDIGIT"; 
-        73-74 columns, I "IDROPP"; 
-        75-80 columns, I "MATNUM"
+        01-10 columns, A "ELMNT";   # Sample element’s name 
+        11-20 columns, F "AW";      # Atomic weight (amu) 
+        21-30 columns, F "EMIN";    # Minimum energy for this data set (eV) 
+        31-40 columns, F "EMAX";    # Maximum energy for this data set (eV) 
+        41-45 columns, I "NEPNTS";  # Number of points to be used in generating artificial energy grid (default = 10001)
+        46-50 columns, I "ITMAX";   # Number of iterations (default = 2)
+        51-52 columns, I "ICORR";   # Correlations smaller than this value (divided by 100) are not to be printed
+        53-55 columns, I "NXTRA";   # Number of extra points to be added between each pair of data points for auxiliary energy grid 
+        56-57 columns, I "IPTDOP";  # Number of points to be added to auxiliary energy grid across small resonances 
+        59-60 columns, I "IPTWID";  # Determines the number of points to be added to auxiliary grid in tails of small resonances
+        61-70 columns, I "IXXCHN";  # Number of energy channels in ODF-type data file to be ignored
+        71-72 columns, I "NDIGIT";  # Number of digits forcompact format for covariance matrix
+        73-74 columns, I "IDROPP";  # The input resonance parameter covariance matrix will be modified before being used in the fitting procedure
+        75-80 columns, I "MATNUM"   # ENDF Material Number
 Card 3 - 
-    Note:   Each command is its own line. This is followed by a blank line.
+    Note:   Alphanumeric information concerning program options.
+            Each command is its own line. This is followed by a blank line.
     Lines: various command statements. 
 
 Card 4 - 
@@ -37,13 +38,14 @@ Card 4 -
 
 Card 5 - 
     Line 1: 
-        01-10 columns, F "TEMP";
-        11-20 columns, F "DIST";
-        21-30 columns, F "DELTAL";
-        31-40 columns, F "DELTAE";
-        41-50 columns, F "DELTAG";
-        51-60 columns, F "DELTTT";
-        61-70 columns, F "ELOWBR";
+        01-10 columns, F "TEMP";    # Effective temperature of the sample (K); 
+        11-20 columns, F "DIST";    # Flight-path length (m) 
+        21-30 columns, F "DELTAL";  # That portion of the Gaussian resolution width attributed to the flight-path length (m). 
+        31-40 columns, F "DELTAE";  # E-folding width of exponential resolution function (μs); 
+        41-50 columns, F "DELTAG";  # The absolute value of DELTAG is the FWHM (μs) of a Gaussian resolution function representing the burst width
+        51-60 columns, F "DELTTT";  # Approximate step size for the Effective Temperature for the Leal-Hwang method of Doppler broadening (K).
+        61-70 columns, F "ELOWBR";  # The energy below which no broadening is wanted, for highenergy Gaussian approximation to Doppler broadening (eV) 
+        71-80 columns, F "DDDEEE";  # Range for straight-line energy average resolution function (eV) 
 
 Card 6 - 
     Note:   This card set is included only if DELTAG < 0 in card set 5.
@@ -108,3 +110,14 @@ Card 10.1 -
         71-80, F "EMM2(N,JJ)"   # Mass of second particle in the channel (that is, of the neutron or other incident particle, for entrance channels) (amu)
 
     
+
+Run time notes: 
+Need to use the lowest mass in a compound nuclei fit otherwise you get this:
+ ***************************************************************************
+ * Warning -- Mass used to determine limits for auxiliary grid (for Dopplr *
+ * and multiple-scattering corrections) may be too big. SAMMY is using the *
+ * mass from nuclide number 2 (238.050770), because that is closest to the *
+ * mass from Line 2 of the INPut file (238.050800).  For more accurate     *
+ * results, use the mass of the smallest nuclide (235.043940).  (Expect    *
+ * longer runtime if you change to the smaller mass.)                      *
+ ***************************************************************************

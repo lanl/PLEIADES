@@ -1,14 +1,13 @@
 import re
 import pathlib
-import shelve
 import configparser
 from typing import Tuple, List, Dict, Any
+import json
 
 class ParFile:
     """ parFile class for the Sammy par file.
     """
 
-    
     def __init__(self,filename: str="Ar_40.par", 
                       name: str="auto",
                       weight: float = 1.,
@@ -39,9 +38,9 @@ class ParFile:
         self.data["info"] = {}
         self.data["info"]["fudge_factor"] = 0.1
         self.data["info"]["filename"] = filename
+        self.data["info"]["name"] = ""
         self.data["info"]["emin"] = emin
         self.data["info"]["emax"] = emax
-
 
         # group all update methods in the Update class (and the `update`` namespace)
         self.update = Update(self)
@@ -123,9 +122,9 @@ class ParFile:
         self._MISC_DELTA_FORMAT = {"vary_delta_L1":slice(7-1,7),
                                    "vary_delta_L0":slice(9-1,9),
                                    "delta_L1":slice(11-1,20),
-                                #    "delta_L1_err":slice(21-1,30),
+                                   #"delta_L1_err":slice(21-1,30),
                                    "delta_L0":slice(31-1,40),
-                                #    "delta_L0_err":slice(41-1,50)
+                                   #"delta_L0_err":slice(41-1,50)
                                    }
     
         self._MISC_TZERO_FORMAT = {"vary_t0":slice(7-1,7),
@@ -219,19 +218,19 @@ class ParFile:
         Returns:
             ParFile: the ParFile instance
         """
+
         self._filepath = pathlib.Path(self.filename)
 
         particle_pair = particle_pairs = [] # empty holders for particle pairs
-        resonance_params = []  
-        spin_groups = []
-        channel_radii = []
-        isotopic_masses = []
+        resonance_params = []               # empty holder for resonance params
+        spin_groups = []                    # empty holder for spin groups
+        channel_radii = []                  # empty holder for channel radii  
+        isotopic_masses = []                # empty holder for isotopic masses
 
         with open(self._filepath,"r") as fid:
             for line in fid:
                 
                 # read particle pair cards
-
                 if line.upper().startswith("PARTICLE PAIR DEF"):
 
                     # loop until the end of the P-Pair cards
@@ -248,7 +247,6 @@ class ParFile:
                     particle_pairs.append(particle_pair) # stack the final particle pairs in list
 
                 # read spin group and channel cards
-                
                 if line.upper().startswith("SPIN GROUP INFO"):
                     # loop until the end of spin groups info
                     line = next(fid)
@@ -257,7 +255,6 @@ class ParFile:
                         line = next(fid)
                 
                 # read resonance data cards
-              
                 if line.upper().startswith("RESONANCE PARAM"):
                     # loop until the end of resonance params
                     line = next(fid)
@@ -268,7 +265,7 @@ class ParFile:
                 # read channel radii cards
                 if line.upper().startswith('CHANNEL RADII IN KEY'):
                     # next line is the channel radii card
-                    line = next(fid).replace("\n"," ") 
+                    line = next(fid)
                     # loop until the end of the channel groups cards
                     while line.strip():
                         channel_radii.append(line.replace("\n"," ")) 
@@ -281,7 +278,7 @@ class ParFile:
                     while line.strip():
                         isotopic_masses.append(line.replace("\n","")) 
                         line = next(fid)
-           
+        
         self._particle_pairs_cards = particle_pairs
         self._spin_group_cards = spin_groups
         self._resonance_params_cards = resonance_params
@@ -308,11 +305,21 @@ class ParFile:
             self.update.resolution()
             self.update.misc()
             
-
         return self
     
+    def print_params(self, key=None):
+        """Prints the parameters in a nicely formatted way.
+        
+        Args:
+            key (str): Specific key to print. If None, print the entire structure.
+        """
+        if key and key in self.data:
+            print(json.dumps(self.data[key], indent=4))
+        else:
+            print("key not found in data. Printing the entire structure.")
+            print(json.dumps(self.data, indent=4))
 
-    def write(self,filename: str="compound.par") -> None:
+    def write(self,filename: str="params.par") -> None:
         """ writes the data stored in self.data dictionary into a SAMMY .par file
 
             Args:
@@ -420,10 +427,11 @@ class ParFile:
     def _rename(self) -> None:
         """rename the isotope and particle-pair names
         """
-
+        
+        # set the particle pair count
         pp_count = len(self.data["particle_pairs"])
-            
-
+           
+        # loop over particle pairs and rename them according to the isotope name 
         for num, reaction in enumerate(self.data["particle_pairs"]):
             old_name = reaction["name"]
             if   self.name == "auto" and pp_count==1:
@@ -439,13 +447,13 @@ class ParFile:
                 name = self.name[:6]
                 new_name = name + f"_{num+1}"
                 
-            
             for group in self.data["spin_group"]:
                 for channel in group[1:]:
                     if channel["channel_name"].strip()==old_name.strip():
                         channel["channel_name"] = new_name
 
             reaction["name"] = new_name
+        
         self.data["info"][name] = self.weight
         self.data["info"]["isotopes"] = [name]
         self.name = name
@@ -544,8 +552,8 @@ class ParFile:
     def _parse_channel_radii_cards(self) -> None:
         """ parse a list of channel-radii and channel-groups cards and sort the key-word pairs
         """
-
         cr_data = []
+        #print(self._channel_radii_cards)
         cards = (card for card in self._channel_radii_cards) # convert to a generator object
 
         # parse channel radii and groups using regex
@@ -553,6 +561,7 @@ class ParFile:
         cg_pattern = r'Group=(\d+) (?:Chan|Channel)=([\d, ]+),'
 
         card = next(cards)
+
         # Using re.search to find the pattern in the line
         while match:=re.search(cr_pattern, card):
             cr_dict = {"radii": [match.group(1).strip(),match.group(2).strip()],
@@ -1016,6 +1025,7 @@ class Update():
         """change or vary broadening parameters and vary flags
 
         Args:
+              - matching radius
               - temperature (float) TEMP
               - thickness (float) THICK
               - flight_path_spread (float) DELTAL
@@ -1028,11 +1038,13 @@ class Update():
               - vary_deltae_us (int) 0=fixed, 1=vary, 2=pup
         """
         if "broadening" not in self.parent.data:
-            self.parent.data["broadening"] = {  "temperature":"296.",
+            self.parent.data["broadening"] = {   "match_radius":"1.",
+                                                 "temperature":"296.",
                                                  "thickness":"",
                                                  "flight_path_spread":"",
                                                  "deltag_fwhm":"",
                                                  "deltae_us":"",
+                                                 "vary_match_radius":0,
                                                  "vary_temperature":0,
                                                  "vary_thickness":0,
                                                  "vary_flight_path_spread":0,
