@@ -81,7 +81,7 @@ Installation
 
    .. code-block:: bash
 
-      pip install .
+      pip install -e .
 
 7. **Add SAMMY's `bin` Directory to PATH:**
 
