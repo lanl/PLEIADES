@@ -1,11 +1,5 @@
-# ignore any text files
-*.txt
-*.twenty
-*.inp
-*.par
-*.out
-*.dat
-*.endf
-*.lpt
+# Ignore everything
+*
 
-./archive/*
+# Do not ignore the README.md file
+!README.md
