@@ -13,8 +13,13 @@ sammyUtils.configure_sammy_run(natEu,verbose_level=1)
 # Run the sammy fit.
 sammyUtils.run_sammy(natEu,verbose_level=2)
 
+# Plot results
+sammyPlotter.process_and_plot_lst_file(natEu.params['directories']['sammy_fit_dir'] + '/results/SAMMY.LST',residual=True,quantity='transmission')
+
+
 sammy_results = sammyOutput.lptResults(natEu.params['directories']['sammy_fit_dir'] + '/results/SAMMY.LPT')
 
+'''
 # update abundances 
 for i in range(len(natEu.params['isotopes']['abundances'])):
     natEu.params['isotopes']['abundances'][i] = float(sammy_results._results["Iteration Results"][-1]["Nuclides"][i]['Abundance'])
@@ -31,3 +36,4 @@ sammyUtils.run_sammy(natEu,verbose_level=2)
 
 # Plot results
 sammyPlotter.process_and_plot_lst_file(natEu.params['directories']['sammy_fit_dir'] + '/results/SAMMY.LST',residual=True,quantity='transmission')
+'''
