@@ -102,11 +102,11 @@ def plot_transmission(data, residual=False):
 
     # Plot the Experimental transmission as scattering plot with Energy vs. Experimental transmission with Absolute uncertainty in experimental transmission
     data.plot.scatter(x="Energy", y="Experimental transmission", yerr="Absolute uncertainty in experimental transmission", ax=ax[0], zorder=-1, color=data_color, alpha=0.25, s=10)
-    data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8, color=initial_color,lw=1)
+    #data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8, color=initial_color,lw=1)
     data.plot(x="Energy",y=["Final theoretical transmission"],ax=ax[0],alpha=1.0, color=final_color,lw=1)
     ax[0].set_xlabel("")
     ax[0].set_xticks([])
-    ax[0].legend(["data","initial_guess","final fit"])
+    ax[0].legend(["data","final fit"])
     ax[0].set_ylabel("transmission")
     ax[0].set_ylim(0,1.2)
 
@@ -121,7 +121,7 @@ def plot_transmission(data, residual=False):
         data["residual_initial"] = (data["Zeroth-order theoretical transmission"] - data["Experimental transmission"])
         data["residual_final"] = (data["Final theoretical transmission"] - data["Experimental transmission"])
 
-        data.plot.scatter(x="Energy",y="residual_initial",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=initial_color,ax=ax[2],alpha=0.5,legend=False)
+        #data.plot.scatter(x="Energy",y="residual_initial",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=initial_color,ax=ax[2],alpha=0.5,legend=False)
         data.plot.scatter(x="Energy",y="residual_final",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=final_color,ax=ax[2],alpha=0.5,legend=False)
         ax[2].set_ylabel("residuals\n(fit-data)/err [σ]")
         ax[2].set_xlabel("energy [eV]")

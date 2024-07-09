@@ -440,6 +440,7 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
+    
     sammy_fit_dir = config.params['directories']['sammy_fit_dir']
     data_dir = config.params['directories']['data_dir']
     input_file = 'input.inp'
@@ -448,8 +449,21 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
 
     sammyRunner.single_run(sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
 
+    # Check the output file in the sammy_fit_dir to see if SAMMY executed successfully. 
+    output_file = config.params['directories']['sammy_fit_dir']+"/output.out"
+    
+    # Open the output_file and check for the line " Normal finish to SAMMY"
+    with open(output_file, 'r') as file:
+        data = file.read()
+        if "Normal finish to SAMMY" in data:
+            sammy_success = True
+            if verbose_level > 0: print("SAMMY executed successfully.")
+        else:
+            sammy_success = False
+            print("SAMMY failed to execute a fit.")
+            print("Check the output file for more information: ", output_file)
 
-
+    return sammy_success
 
 #-------------------------------------------------------------------------    
 
