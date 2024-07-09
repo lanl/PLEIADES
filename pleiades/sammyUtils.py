@@ -359,6 +359,9 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     # it only has a minor effect on results
     outputParFile.data["info"]["fudge_factor"] = fudge_factor
 
+    print(outputParFile.data)
+    
+
     # write out the output par file
     output_par_file = Path(archive_dir) / Path(sammy_fit_dir) / Path('params').with_suffix(".par")
     if verbose_level > 0: print(f"Writing output parFile: {output_par_file}")
@@ -383,8 +386,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     #TODO: Need to figure out a better way to deal with commands in card3.
     # Resetting the commands for running SAMMY to generate output par files based on ENDF.
-    #inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH_MOORE_FORMAT,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
-    inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
+    inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH-MOORE FORMALISm is wanted,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
 
     # Print the input data structure if desired
     if verbose_level > 1: print(inp.data)
@@ -645,7 +647,7 @@ def sammy_par_from_endf(isotope: str = "U-239",
 
     # Run SAMMY with ENDF data to generate .par file
     sammyRunner.run_endf(run_handle = sammy_run_handle, 
-                         working_dir=output_dir,
+                         endf_dir=output_dir,
                          input_file=sammy_input_file_name,
                          verbose_level=verbose_level)
     
@@ -707,7 +709,7 @@ def run_sammy_fit(archivename: str="UMo",
     # make the par file for each isotope
     isotopes = []
     for isotope, abundance in abundances.items():
-        isotopes.append(sammyParFile.ParFile(f"archive/{isotope}/results/{isotope}.par",
+        isotopes.append(sammyParFile.ParFile(f".archive/{isotope}/results/{isotope}.par",
                                              weight=abundance,emin=res_emin,emax=res_emax).read())
     
     # create compound

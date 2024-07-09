@@ -157,7 +157,7 @@ class InputFile:
                 'emin':   ('0.1',float,10),   # Minimum energy. Defaults to 0.
                 'emax':   ('50.',float,10),  # Maximum energy. Defaults to 50.
                 'nepnts': ('10001',int,5),    # Number of points to be used in generating artificial energy grid. Defaults to 10001.
-                'itmax':  ('2',int,5),        # Number of iterations. Defaults to 2.
+                'itmax':  ('4',int,5),        # Number of iterations. Defaults to 2.
                 'icorr':  ('50',int,2),       # Correlation option. Defaults to 50.
                 'nxtra':  ('0',int,3),        # Number of extra points to be added between each pair of data points for auxiliary energy grid. Defaults to 0. 
                 'iptdop': ('9',int,2),        # Number of points to be added to auxiliary energy grid across small resonances. Defaults to 9.
