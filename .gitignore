@@ -187,6 +187,3 @@ cython_debug/
 *.cov
 *.COV
 *.ini
-
-
-./archive/*
