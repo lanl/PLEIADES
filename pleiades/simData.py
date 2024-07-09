@@ -203,9 +203,13 @@ def write_transmission_data_twenty(energy_data, transmission_data, output_file, 
             print(f"Writing transmission data to {output_file}")
             
         for energy, transmission in zip(energy_data,transmission_data):
+            energy = round(energy, 10)
+            transmission = round(transmission, 10)
+            transmission_error = 0.05  # Assuming this is a constant value
+            
             energy_str = f"{energy:>20}"                    # Right-justified, 20 characters
             transmission_str = f"{transmission:>20}"        # Right-justified, 20 characters
-            transmission_error_str = f"{0.01:>20}"          # Right-justified, 20 characters
+            transmission_error_str = f"{transmission_error:>20}"          # Right-justified, 20 characters
             
             if include_error:
                 f.write(f"{energy_str}{transmission_str}{transmission_error_str}\n")
