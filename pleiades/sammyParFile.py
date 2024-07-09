@@ -1,6 +1,5 @@
 import re
 import pathlib
-import shelve
 import configparser
 from typing import Tuple, List, Dict, Any
 import json
@@ -320,7 +319,7 @@ class ParFile:
             print("key not found in data. Printing the entire structure.")
             print(json.dumps(self.data, indent=4))
 
-    def write(self,filename: str="compound.par") -> None:
+    def write(self,filename: str="params.par") -> None:
         """ writes the data stored in self.data dictionary into a SAMMY .par file
 
             Args:
@@ -1026,6 +1025,7 @@ class Update():
         """change or vary broadening parameters and vary flags
 
         Args:
+              - matching radius
               - temperature (float) TEMP
               - thickness (float) THICK
               - flight_path_spread (float) DELTAL
@@ -1038,11 +1038,13 @@ class Update():
               - vary_deltae_us (int) 0=fixed, 1=vary, 2=pup
         """
         if "broadening" not in self.parent.data:
-            self.parent.data["broadening"] = {  "temperature":"296.",
+            self.parent.data["broadening"] = {   "match_radius":"1.",
+                                                 "temperature":"296.",
                                                  "thickness":"",
                                                  "flight_path_spread":"",
                                                  "deltag_fwhm":"",
                                                  "deltae_us":"",
+                                                 "vary_match_radius":0,
                                                  "vary_temperature":0,
                                                  "vary_thickness":0,
                                                  "vary_flight_path_spread":0,

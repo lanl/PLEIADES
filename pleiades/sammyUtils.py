@@ -52,11 +52,6 @@ class SammyFitConfig:
                 'abundances': [],  # list of corresponding abundances
                 'vary_abundances': []  # list of booleans indicating if the abundances should be varied
             },
-            # Thickness and tempeture variables 
-            'thickness_and_temperature': {
-                'thickness': 0.0, 'vary_thickness': False,
-                'temperature': 295, 'vary_temperature': False,
-            },
 
             # Fitting normalization and background
             'normalization': {
@@ -70,6 +65,9 @@ class SammyFitConfig:
 
             # Broadening parameters
             'broadening': {
+                'match_radius': 0.0, 'vary_match_radius': False,
+                'thickness': 0.0, 'vary_thickness': False,
+                'temperature': 295, 'vary_temperature': False,
                 'flight_path_spread': 0.0, 'vary_flight_path_spread': False,
                 'deltag_fwhm': 0.0, 'vary_deltag_fwhm': False,
                 'deltae_us': 0.0, 'vary_deltae_us': False,
@@ -359,8 +357,39 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     # it only has a minor effect on results
     outputParFile.data["info"]["fudge_factor"] = fudge_factor
 
-    print(outputParFile.data)
-    
+    # Set broadening parameters based on the configuration
+    broadening_args = {
+        'match_radius': config.params['broadening']['match_radius'],
+        'temperature': config.params['broadening']['temperature'],
+        'thickness': config.params['broadening']['thickness'],
+        'flight_path_spread': config.params['broadening']['flight_path_spread'],
+        'deltag_fwhm': config.params['broadening']['deltag_fwhm'],
+        'deltae_us': config.params['broadening']['deltae_us'],
+        'vary_match_radius': int(config.params['broadening']['vary_match_radius'] == True),
+        'vary_thickness': int(config.params['broadening']['vary_thickness'] == True),
+        'vary_temperature': int(config.params['broadening']['vary_temperature'] == True),
+        'vary_flight_path_spread': int(config.params['broadening']['vary_flight_path_spread'] == True),
+        'vary_deltag_fwhm': int(config.params['broadening']['vary_deltag_fwhm'] == True),
+        'vary_deltae_us': int(config.params['broadening']['vary_deltae_us'] == True)
+        }
+    outputParFile.update.broadening(**broadening_args)
+
+    # Set normalization parameters based on the configuration
+    normalization_args = {
+        'normalization': float(config.params['normalization']['normalization']),
+        'constant_bg': float(config.params['normalization']['constant_bg']),
+        'one_over_v_bg': float(config.params['normalization']['one_over_v_bg']),
+        'sqrt_energy_bg': float(config.params['normalization']['sqrt_energy_bg']),
+        'exponential_bg': float(config.params['normalization']['exponential_bg']),
+        'exp_decay_bg': float(config.params['normalization']['exp_decay_bg']),
+        'vary_normalization': int(config.params['normalization']['vary_normalization'] == True),
+        'vary_constant_bg': int(config.params['normalization']['vary_constant_bg'] == True),
+        'vary_one_over_v_bg': int(config.params['normalization']['vary_one_over_v_bg'] == True),
+        'vary_sqrt_energy_bg': int(config.params['normalization']['vary_sqrt_energy_bg'] == True),
+        'vary_exponential_bg': int(config.params['normalization']['vary_exponential_bg'] == True),
+        'vary_exp_decay_bg': int(config.params['normalization']['vary_exp_decay_bg'] == True)
+    }
+    outputParFile.update.normalization(**normalization_args)
 
     # write out the output par file
     output_par_file = Path(archive_dir) / Path(sammy_fit_dir) / Path('params').with_suffix(".par")
@@ -379,6 +408,8 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     # Update input data with isotope-specific information
     inp.data["Card2"]["elmnt"] = lowest_atomic_isotope 
     inp.data["Card2"]["aw"] = "auto"
+    inp.data["Card2"]["emin"] = config.params['fit_energy_min']
+    inp.data["Card2"]["emax"] = config.params['fit_energy_max']
     inp.data["Card5"]["dist"] = config.params['flight_path_length']
     inp.data["Card5"]["deltag"] = 0.001
     inp.data["Card5"]["deltae"] = 0.001

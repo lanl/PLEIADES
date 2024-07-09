@@ -98,11 +98,11 @@ def plot_transmission(data, residual=False):
         ax = [ax]
 
     data.plot(x="Energy",y="Experimental transmission",ax=ax[0],zorder=-1)
-    data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8)
+    #data.plot(x="Energy",y=["Zeroth-order theoretical transmission"],ax=ax[0],alpha=0.8)
     data.plot(x="Energy",y=["Final theoretical transmission"],ax=ax[0],alpha=0.8)
     ax[0].set_xlabel("")
     ax[0].set_xticks([])
-    ax[0].legend(["data","initial fit","final fit"])
+    ax[0].legend(["data","final fit"])
     ax[0].set_ylabel("transmission")
 
     if residual:
