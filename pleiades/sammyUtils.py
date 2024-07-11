@@ -169,12 +169,21 @@ class SammyFitConfig:
         """ Create working_dir and its subdirectories
             Note: If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
         """
+        # Get the working directory or set it to the current directory if not provided
         working_dir = self.params['directories']['working_dir']
         if not working_dir:
                 working_dir = os.getcwd()
                 self.params['directories']['working_dir'] = working_dir
 
         os.makedirs(working_dir, exist_ok=True)
+
+        # Set the directories for the image and data directories
+        # Check to see if they are relative or absolute, and if relative then convert to absolute
+        if not os.path.isabs(self.params['directories']['data_dir']):
+            data_dir = os.path.abspath(self.params['directories']['data_dir'])
+        if not os.path.isabs(self.params['directories']['image_dir']):
+            image_dir = os.path.abspath(self.params['directories']['image_dir'])
+
 
         # if the user has set the directories then we will use them
         if self.params["directories"]["user_defined"] == True:
@@ -185,10 +194,8 @@ class SammyFitConfig:
             fit_results_dir = self.params['directories']['fit_results_dir']
             endf_dir = self.params['directories']['endf_dir']
 
+        # otherwise create the subdirectories within the working directory
         else:
-            # create the subdirectories within the working directory
-            image_dir = os.path.join(working_dir, self.params['directories']['image_dir'])
-            data_dir = os.path.join(working_dir, self.params['directories']['data_dir'])
             fit_results_dir = os.path.join(working_dir, self.params['directories']['fit_results_dir'])
             archive_dir = os.path.join(working_dir, self.params['directories']['archive_dir'])
             endf_dir = os.path.join(archive_dir, self.params['directories']['endf_dir'])
@@ -307,12 +314,13 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
 
 def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
-    Configures and runs SAMMY based on a SammyFitConfig object.
+    Configures SAMMY based on a SammyFitConfig object.
 
     This function takes a SammyFitConfig object and uses the parameters to
     configure the files needed to run SAMMY. It creates a SAMMY input file, modifies the
-    relevant cards based on the configuration, saves the input file, and then
-    runs SAMMY to generate the corresponding `.par` file.
+    relevant cards based on the configuration, saves the input file. It then creates a SAMMY
+    parameter file by summing the par files for the isotopes specified in the configuration.
+    Finally, it creates a symlink for the data file into the sammy_fit_dir.
 
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
@@ -323,6 +331,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     archive_dir = config.params['directories']['archive_dir']
     endf_dir = config.params['directories']['endf_dir']
     sammy_fit_dir = config.params['directories']['sammy_fit_dir']
+    data_dir = config.params['directories']['data_dir']
     
     # Grabbing the isotopes, abundances, and fudge factor from the config file
     isotopes = config.params['isotopes']['names']
@@ -392,6 +401,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     outputParFile.update.normalization(**normalization_args)
 
     # write out the output par file
+    #TODO: fix hard coding of parFile name
     output_par_file = Path(archive_dir) / Path(sammy_fit_dir) / Path('params').with_suffix(".par")
     if verbose_level > 0: print(f"Writing output parFile: {output_par_file}")
     outputParFile.write(output_par_file)
@@ -423,12 +433,25 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     if verbose_level > 1: print(inp.data)
     
     # Create a run name or handle for the compound inpFile
-    #TODO: Think about a better way to name files and dir. Should we use 'compound' or 'final'. We used compound because there is often more than one isotope to be fitted, but this is confusing if you only have one isotope.
+    #TODO: fix hard coding of inpFile name
     output_inp_file = Path(sammy_fit_dir) / Path('input').with_suffix(".inp")
 
     # Write the SAMMY input file to the specified location. 
     inp.process().write(output_inp_file)
     if verbose_level > 0: print(f"Created compound input file: {output_inp_file}")
+
+    # Create a symbolic link inside the sammy_fit_dir that points to the data file 
+    data_file = os.path.join(data_dir, config.params['filenames']['data_file_name'])
+    data_file_name = pathlib.Path(data_file).name
+
+    if verbose_level > 0: print(f"Symlinking data file: {data_file} into {sammy_fit_dir}")
+
+    # Check if the symbolic link already exists
+    symlink_path = pathlib.Path(sammy_fit_dir) / data_file_name
+    if os.path.islink(symlink_path):
+        os.unlink(symlink_path)  # unlink old symlink
+
+    os.symlink(data_file, pathlib.Path(sammy_fit_dir) / data_file_name)   # create new symlink
 
 
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
@@ -443,8 +466,8 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     
     sammy_fit_dir = config.params['directories']['sammy_fit_dir']
     data_dir = config.params['directories']['data_dir']
-    input_file = 'input.inp'
-    parameter_file = 'params.par'
+    input_file = config.params['filenames']['input_file_name']
+    parameter_file = config.params['filenames']['params_file_name']
     data_file = data_dir +"/"+ config.params['filenames']['data_file_name']
 
     sammyRunner.single_run(sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
