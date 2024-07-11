@@ -19,15 +19,6 @@ def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_
         raise ValueError("Parameter file is required")
     if not data_file:
         raise ValueError("Data file is required")
-        
-    # Create a symbolic link to the data file in the fit_dir
-    data_file_name = pathlib.Path(data_file).name
-
-    # Check if the symbolic link already exists
-    if os.path.islink(pathlib.Path(fit_dir) / data_file_name): 
-        os.unlink(pathlib.Path(fit_dir) / data_file_name)           # unlink old symlink
-
-    os.symlink(data_file, pathlib.Path(fit_dir) / data_file_name)   # create new symlink
     
     # Check if files exist
     full_path_to_input_file = pathlib.Path(fit_dir) / input_file
@@ -62,7 +53,7 @@ def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_
     sammy <<EOF
     {input_file}
     {par_file}
-    {data_file_name}
+    {data_file}
 
     EOF""")
     
