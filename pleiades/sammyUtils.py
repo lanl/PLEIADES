@@ -18,7 +18,9 @@ PWD = pathlib.Path(__file__).parent
 
 
 class SammyFitConfig:
-    """Class to store and manage SAMMY fit parameters."""
+    """
+    Class to store and manage SAMMY fit parameters.
+    """
 
     def __init__(self, config_path=None):
         # Default values with sublabels
@@ -120,7 +122,8 @@ class SammyFitConfig:
         self._check_or_create_directories()
 
     def _load_from_config(self, config):
-        """Load parameters from a configuration file.
+        """
+        Load parameters from a configuration file.
 
         Args:
             config (SammyFitConfig): ConfigParser object with the configuration parameters.
@@ -212,8 +215,12 @@ class SammyFitConfig:
         return path.strip('"').strip("'")
 
     def _check_or_create_directories(self):
-        """Create working_dir and its subdirectories
-        Note: If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
+        """
+        Create working_dir and its subdirectories
+        
+        Note:
+        -----
+        If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
         """
         # Get the working directory or set it to the current directory if not provided
         working_dir = self.params["directories"]["working_dir"]
@@ -269,7 +276,9 @@ class SammyFitConfig:
         os.makedirs(sammy_fit_dir, exist_ok=True)
 
     def print_params(self):
-        """Prints the parameters in a nicely formatted way."""
+        """
+        Prints the parameters in a nicely formatted way.
+        """
 
         def print_dict(d, indent=0):
             for key, value in d.items():
@@ -286,17 +295,18 @@ def create_parFile_from_endf(
     config: SammyFitConfig, archive: bool = True, verbose_level: int = 0
 ) -> None:
     """
-    Generates a SAMMY input file and runs SAMMY with ENDF data to produce a `.par` file
-    for the specified isotope.
+    Generates a SAMMY input file and runs SAMMY with ENDF data to produce a `.par` file for 
+    the specified isotope.
 
-    This function creates a SAMMY input file based on a configuration file, modifies relevant
-    cards for the target isotope, saves the input file, and then runs SAMMY with ENDF data
-    to generate the corresponding `.par` file.
+    This function creates a SAMMY input file based on a configuration file, modifies relevant 
+    cards for the target isotope, saves the input file, and then runs SAMMY with ENDF data to 
+    generate the corresponding `.par` file.
 
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
-        archive (bool, optional): Flag for storing sammy files. Defaults to False.
-        verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
+        archive (bool, optional): Flag for storing SAMMY files. Defaults to False.
+        verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. 
+        Defaults to 0.
     """
 
     isotopes = config.params["isotopes"]["names"]
@@ -374,14 +384,15 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
     Configures SAMMY based on a SammyFitConfig object.
 
-    This function takes a SammyFitConfig object and uses the parameters to
-    configure the files needed to run SAMMY. It creates a SAMMY input file, modifies the
-    relevant cards based on the configuration, saves the input file. It then creates a SAMMY
-    parameter file by summing the par files for the isotopes specified in the configuration.
-    Finally, it creates a symlink for the data file into the sammy_fit_dir.
+    This function takes a SammyFitConfig object and uses the parameters to configure the files 
+    needed to run SAMMY. It creates a SAMMY input file, modifies the relevant cards based on 
+    the configuration, and saves the input file. It then creates a SAMMY parameter file by 
+    summing the par files for the isotopes specified in the configuration. Finally, it creates 
+    a symlink for the data file into the sammy_fit_dir.
 
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+        verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
     """
     isotopeParFiles = []
 
