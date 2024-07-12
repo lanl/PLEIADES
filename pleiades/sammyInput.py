@@ -169,7 +169,7 @@ class InputFile:
                     int,
                     5,
                 ),  # Number of points to be used in generating artificial energy grid. Defaults to 10001.
-                "itmax": ("4", int, 5),  # Number of iterations. Defaults to 2.
+                "itmax": ("2", int, 5),  # Number of iterations. Defaults to 2.
                 "icorr": ("50", int, 2),  # Correlation option. Defaults to 50.
                 "nxtra": (
                     "0",
