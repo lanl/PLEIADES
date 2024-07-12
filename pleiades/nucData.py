@@ -1,47 +1,52 @@
 import numpy as np
-import os
 import pathlib
 import re
 
 # current file location
 PWD = pathlib.Path(__file__).parent
 
+
 def extract_isotope_info(filename, isotope):
-    """This function extracts the spin and abundance of an isotope from the file isotope.info.
+    """
+    This function extracts the spin and abundance of an isotope from the 
+    file isotope.info.
 
     Args:
         filename (string): isotope.info file location
-        
+
         isotope (string): String of the form "element-nucleonNumber" (e.g. "C-13")
 
     Returns:
         tuple: spin and natural abundance of the isotope
     """
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         lines = file.readlines()
         for line in lines:
             line = line.strip()  # Remove leading/trailing whitespaces
             if line and line[0].isdigit():  # Check if the line contains isotope data
                 data = line.split()  # Split the line into columns based on spaces
-                
+
                 symbol = data[3]  # Extract the element symbol
                 numOfNucleons = data[1]  # Extract the number of nucleons
-                
-                if isotope == f"{symbol}-{numOfNucleons}":  # Check if the isotope matches
+
+                # Check if the isotope matches
+                if isotope == f"{symbol}-{numOfNucleons}":  
                     spin = data[5]
                     abundance = data[7]
                     return spin, abundance
     return None, None
 
+
 def parse_ame_line(line):
-    """ Takes a line from the AME file and parses it into its constituent values.
+    """Takes a line from the AME file and parses it into its constituent values.
 
     Args:
         line (string): line from the AME file
-        
+
     Returns:
         dict: dictionary of the values from the line
     """
+
     def safe_float(val, default="nan"):
         return float(val if val.strip() else default)
 
@@ -96,7 +101,9 @@ def parse_ame_line(line):
 
 
 def get_info(isotopic_str):
-    """Takes a string of the form 'element-atomicNumber' and returns the element and atomic number.
+    """
+    Takes a string of the form 'element-atomicNumber' and returns the 
+    element and atomic number.
 
     Args:
         isotopic_str (string): string of the form 'element-atomicNumber'
@@ -104,9 +111,9 @@ def get_info(isotopic_str):
     Returns:
         tuple: element, atomic number
     """
-    
+
     # Extract the element and its atomic number from the isotopic string
-    match = re.match(r'([A-Za-z]+)[-_]?(\d+)', isotopic_str)
+    match = re.match(r"([A-Za-z]+)[-_]?(\d+)", isotopic_str)
     if match:
         element_name = match.group(1).capitalize()
         atomic_number = int(match.group(2))
@@ -116,8 +123,10 @@ def get_info(isotopic_str):
 
     return element_name, atomic_number
 
-def get_mass_from_ame(isotopic_str: str='U-238',verbose_level: int=0)->float:
-    """Returns the atomic mass from AME tables according to the isotope name (E.g. Eu-153)
+
+def get_mass_from_ame(isotopic_str: str = "U-238", verbose_level: int = 0) -> float:
+    """
+    Returns the atomic mass from AME tables according to the isotope name (E.g. Eu-153)
 
     Args:
         isotopic_str (str, optional): isotope name. Defaults to 'U-238'.
@@ -129,20 +138,19 @@ def get_mass_from_ame(isotopic_str: str='U-238',verbose_level: int=0)->float:
     # pattern = r"\b([A-Z][a-z]?)-(\d+)\b"
     # if not re.search(pattern,isotopic_str):
     #     # raise ValueError(f"isotopic_str should be in the format of Element-AtomicMass (U-235)")
-        
-    
-    possible_isotopes_data_list = []
 
+    possible_isotopes_data_list = []
 
     element, atomic_number = get_info(isotopic_str)
 
-    if verbose_level > 0: print(f"looking for isotope: {element}-{atomic_number}")
-    
+    if verbose_level > 0:
+        print(f"looking for isotope: {element}-{atomic_number}")
+
     # Load the file into a list of lines
     nucelar_masses_file = PWD.parent / "nucDataLibs/isotopeInfo/mass.mas20"
-    
+
     with open(nucelar_masses_file, "r") as f:
-        
+
         # Skip the first 36 lines of header info
         for _ in range(36):
             next(f)
@@ -157,24 +165,26 @@ def get_mass_from_ame(isotopic_str: str='U-238',verbose_level: int=0)->float:
         # If we didn't find any data for the isotope
         if len(possible_isotopes_data_list) == 0:
             # raise ValueError("No data found for {} in {}".format(isotopic_str, nucelar_masses_file))
-            return None 
-        
-        # If we found more than one isotope, then we need to find the correct one. 
+            return None
+
+        # If we found more than one isotope, then we need to find the correct one.
         else:
             for iso in possible_isotopes_data_list:
-                if (iso['el'] == element) and (iso['A'] == atomic_number):
-                    final_atomic_mass = iso['atomic_mass']
-                    return round(final_atomic_mass/1E6,4)     
+                if (iso["el"] == element) and (iso["A"] == atomic_number):
+                    final_atomic_mass = iso["atomic_mass"]
+                    return round(final_atomic_mass / 1e6, 4)
 
-def get_mat_number(isotopic_str: str='U-238')-> int:
-    """Grabs the ENDF mat number of the requested isotope
+
+def get_mat_number(isotopic_str: str = "U-238") -> int:
+    """
+    Grabs the ENDF mat number of the requested isotope
 
     Args:
         isotopic_str (string): string of the form 'element-atomicNumber'
 
     Returns:
-        int: mat number 
-    """  
+        int: mat number
+    """
     # import re
     # pattern = r"\b([A-Z][a-z]?)-(\d+)\b"
     # if not re.search(pattern,isotopic_str):
@@ -182,15 +192,15 @@ def get_mat_number(isotopic_str: str='U-238')-> int:
     element, atomic_number = get_info(isotopic_str)
 
     # open the file containing the endf summary table
-    with open(PWD.parent / "nucDataLibs/isotopeInfo/neutrons.list","r") as fid:
-        pattern = r'\b\s*(\d+)\s*-\s*([A-Za-z]+)\s*-\s*(\d+)([A-Za-z]*)\b' # match the isotope name 
+    with open(PWD.parent / "nucDataLibs/isotopeInfo/neutrons.list", "r") as fid:
+        pattern = r"\b\s*(\d+)\s*-\s*([A-Za-z]+)\s*-\s*(\d+)([A-Za-z]*)\b"  # match the isotope name
         for line in fid:
             # find match for an isotope string in the line
-            match = re.search(pattern,line)
+            match = re.search(pattern, line)
 
-            if match and match.expand(r'\2-\3')==f"{element}-{atomic_number}":
+            if match and match.expand(r"\2-\3") == f"{element}-{atomic_number}":
                 # the mat number is a 4 digits string at the end of each line
                 matnumber = int(line[-5:])
                 return matnumber
-                
-    raise ValueError(f"{isotopic_str} not found")                                                        
+
+    raise ValueError(f"{isotopic_str} not found")
