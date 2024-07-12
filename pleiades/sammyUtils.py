@@ -36,8 +36,8 @@ class SammyFitConfig:
                 "working_dir": "",  # working directory, where pleiades is being called
                 "image_dir": "",  # directory for image files
                 "data_dir": "data",  # directory for data files
-                "sammy_fit_dir": "",  # directory for compound par files
-                "archive_dir": ".archive",  # directory for archive files (hidden by default)
+                "sammy_fit_dir": "sammy_fit_dir",  # directory for compound par files
+                "archive_dir": ".archive",  # directory for archive files 
                 "endf_dir": "endf",  # directory for endf sammy runs
                 "fit_results_dir": "",  # directory for fit results
             },
@@ -51,7 +51,7 @@ class SammyFitConfig:
             "isotopes": {
                 "names": [],  # list of isotope names
                 "abundances": [],  # list of corresponding abundances
-                "vary_abundances": [],  # list of booleans indicating if the abundances should be varied
+                "vary_abundances": [],  # list of booleans indicating abundances to be varied
             },
             # Fitting normalization and background
             "normalization": {
@@ -130,7 +130,8 @@ class SammyFitConfig:
         """
         for section in config.sections():
 
-            # If the section is 'isotopes' then process the potential arrays for names, abundances, and vary_abundances.
+            # If the section is 'isotopes' then process the potential 
+            # arrays for names, abundances, and vary_abundances.
             if section == "isotopes":
                 self.params["isotopes"]["names"] = [
                     x for x in config.get("isotopes", "names").split(",")
@@ -184,7 +185,8 @@ class SammyFitConfig:
                         self.params[section][key] = self._convert_value(value)
 
     def _convert_value(self, value):
-        """Helper method to convert a string value to the appropriate type.
+        """
+        Helper method to convert a string value to the appropriate type.
 
         Args:
             value (string): The string value to convert.
@@ -203,7 +205,8 @@ class SammyFitConfig:
             return value
 
     def _strip_quotes(self, path):
-        """Remove surrounding quotes from a string if they exist.
+        """
+        Remove surrounding quotes from a string if they exist.
 
         Args:
             path (string): string representing a path that may have 'quotes'.
@@ -220,7 +223,8 @@ class SammyFitConfig:
         
         Note:
         -----
-        If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
+        If the flag 'user_defined' is set to True, then the user is responsible 
+        for setting all the specific directory paths in the config.ini file.
         """
         # Get the working directory or set it to the current directory if not provided
         working_dir = self.params["directories"]["working_dir"]
