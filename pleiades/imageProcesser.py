@@ -1,9 +1,10 @@
 import numpy as np
 
 SPEED_OF_LIGHT = 299792458  # m/s
-MASS_OF_NEUTRON = 939.56542052 * 1e6 / (SPEED_OF_LIGHT) ** 2  # [eV s²/m²]  
+MASS_OF_NEUTRON = 939.56542052 * 1e6 / (SPEED_OF_LIGHT) ** 2  # [eV s²/m²]
 TOF_LABEL = "Time-of-flight [μs]"
 ENERGY_LABEL = "Energy [eV]"
+
 
 def time2energy(time, flight_path_length):
     r"""Convert time-of-flight to energy of the neutron.
@@ -58,6 +59,7 @@ def energy2time(energy, flight_path_length):
     t = L / c * np.sqrt(γ**2 / (γ**2 - 1))  # s
     return t  # ns
 
+
 def sammy_background(
     energy: np.ndarray,
     normalization: float = 1.0,
@@ -92,6 +94,7 @@ def sammy_background(
         + exponential_bg * np.exp(-exp_decay_bg / np.sqrt(energy))
     )
     return bg * normalization
+
 
 def save_transmission_spectrum(
     archivename: str = "UMo",
