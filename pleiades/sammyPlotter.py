@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import pathlib
 
 
 def process_and_plot_lst_file(filename, residual=False, quantity="cross-section"):
@@ -28,7 +29,7 @@ def process_and_plot_lst_file(filename, residual=False, quantity="cross-section"
         "Adjusted energy",
     ]
 
-    # Read the file with pandas without column names
+    # Read the file with pd without column names
     data = pd.read_csv(filename, header=None, comment="#", sep="\s+")
 
     # Get the number of columns in the data
@@ -286,7 +287,183 @@ def plot_data(data):
     plt.show()
 
 
-if __name__ == "__main__":
-    filename = input("Enter the filename: ")
-    data = read_data(filename)
-    plot_data(data)
+def plot_transmission_old(
+    archivename: str = "W",
+    stats: dict = {},
+    plot_bg: bool = True,
+    plot_initial: bool = True,
+    color: str = "#227C9D",
+) -> "pd.DataFrame":
+    """plot transmission spectrum and residuals from an archive
+
+    Args:
+        archivename (str, optional): directory name where the fit results are stored. Defaults to "W".
+        stats (dict, optional): dictionary containing the fit params (e.g. output of `sammyOutput.stats()`). Defaults to {}.
+        plot_bg (bool) if True the background component is calculated and plotted
+        plot_initial (bool) if True the initial guess is calculated and plotted
+        color (string): the data color
+
+    Returns:
+        pd.DataFrame: returns a table with transmission spectrum
+    """
+
+    archivepath = pathlib.Path(f"archive/{archivename}")
+    results = (
+        pd.read_csv(
+            (archivepath / "results" / archivename).with_suffix(".lst"),
+            delim_whitespace=True,
+            header=None,
+            names=[
+                "energy",
+                "xs_data",
+                "xs_data_err",
+                "xs_initial",
+                "xs_final",
+                "trans_data",
+                "trans_data_err",
+                "trans_initial",
+                "trans_final",
+                "trans_err",
+                "trans_err2",
+                "initial_energy",
+                "final_energy",
+            ],
+        )
+        .dropna(axis=1, how="all")
+        .dropna()
+    )
+    results["residual"] = (
+        results["trans_data"] - results["trans_final"]
+    )  # /results["trans_data_err"]
+    if plot_bg:
+        # bg
+        constant_bg = stats["constant_bg"]
+        normalization = stats["normalization"]
+        one_over_v_bg = stats["one_over_v_bg"] / np.sqrt(results["energy"])
+        sqrt_energy_bg = stats["sqrt_energy_bg"] * np.sqrt(results["energy"])
+        exp_term_bg = stats["exponential_bg"] * np.exp(
+            -stats["exp_decay_bg"] / np.sqrt(results["energy"])
+        )
+
+        results["total_bg"] = constant_bg + one_over_v_bg + sqrt_energy_bg + exp_term_bg
+        results["theoretical_trans"] = (
+            results["trans_final"] - results["total_bg"]
+        ) / normalization
+        results["theoretical_data"] = (
+            results["trans_data"] - results["total_bg"]
+        ) / normalization
+        results["bg"] = results["total_bg"] * normalization
+
+    fig, ax = plt.subplots(
+        2, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1], "hspace": 0.05}
+    )
+    plt.sca(ax[0])
+    if "final_energy" in results.columns:
+        results.plot(
+            x="final_energy",
+            y="theoretical_data",
+            yerr="trans_data_err",
+            ls="none",
+            ax=plt.gca(),
+            alpha=0.9,
+            zorder=-1,
+            marker=".",
+            ms=3,
+            lw=1,
+            ecolor="0.8",
+            color=color,
+        )
+        if plot_initial:
+            results.plot(
+                x="final_energy",
+                y="trans_initial",
+                ls="--",
+                lw=1,
+                ax=plt.gca(),
+                alpha=0.9,
+            )
+        results.plot(
+            x="final_energy",
+            y="theoretical_trans",
+            ls="-",
+            lw=1,
+            ax=plt.gca(),
+            color="#433E3F",
+        )
+        if plot_bg:
+            results.plot(
+                x="final_energy",
+                y="bg",
+                lw=1,
+                ax=plt.gca(),
+                color="0.5",
+                zorder=-1,
+                ls="--",
+            )
+    else:
+        results.plot(
+            x="energy",
+            y="theoretical_data",
+            yerr="trans_data_err",
+            ls="none",
+            ax=plt.gca(),
+            alpha=0.9,
+            zorder=-1,
+            marker=".",
+            ms=3,
+            lw=1,
+            ecolor="0.8",
+            color=color,
+        )
+        if plot_initial:
+            results.plot(
+                x="energy", y="trans_initial", ls="--", lw=1, ax=plt.gca(), alpha=0.9
+            )
+        results.plot(
+            x="energy",
+            y="theoretical_trans",
+            ls="-",
+            lw=1,
+            ax=plt.gca(),
+            color="#433E3F",
+        )
+        if plot_bg:
+            results.plot(
+                x="energy", y="bg", lw=1, ax=plt.gca(), color="0.5", zorder=-1, ls="--"
+            )
+    plt.ylim(0, 1)
+    plt.ylabel("Average transmission")
+    plt.title(archivename)
+    if stats:
+        plt.legend(title=r"$\chi^2$" + f": {stats['reduced_chi2']:.3f}")
+    else:
+        plt.legend()
+    plt.sca(ax[1])
+    if "final_energy" in results.columns:
+        results.plot(
+            x="final_energy",
+            y="residual",
+            ls="-",
+            lw=1,
+            ax=plt.gca(),
+            color=color,
+            legend=False,
+        )
+        plt.xlabel("Energy [eV]")
+        plt.ylabel(r"Residuals")
+    else:
+        results.plot(
+            x="energy",
+            y="residual",
+            ls="-",
+            lw=1,
+            ax=plt.gca(),
+            color=color,
+            legend=False,
+        )
+        plt.xlabel("energy [eV]")
+        plt.ylabel(r"Residuals")
+    plt.sca(ax[0])
+    plt.legend([], frameon=False)
+
+    return results
