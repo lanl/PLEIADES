@@ -9,6 +9,8 @@ PLEIADES
    :target: https://pleiades-sammy.readthedocs.io/en/latest/
    :alt: Documentation Status
 
+[![DOI](https://zenodo.org/badge/97755175.svg)](https://zenodo.org/records/12729688)
+
 .. This README.rst should work on Github and is also included in the Sphinx documentation project in docs/ - therefore, README.rst uses absolute links for most things so it renders properly on GitHub
 
 PLEIADES' user documentation
