@@ -252,8 +252,14 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
         archive (bool, optional): Flag for storing sammy files. Defaults to False.
         verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
+
+    Notes:
+        #TODO: Need a way to figure out the resonance emin and emax of the ENDF res file and set them here.
+        #TODO: Need to figure out a better way to deal with commands in card3.
+        #TODO: Need to add a check to see if the .par file was created successfully and print a message if not.   
     """
-    
+    sammy_call = config.params['sammy_run_method']
+    sammy_command = config.params['sammy_command']
     isotopes = config.params['isotopes']['names']
     flight_path_length = config.params['flight_path_length']
     endf_dir = config.params['directories']['endf_dir']
@@ -271,10 +277,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         inp.data["Card5"]["deltag"] = 0.001
         inp.data["Card5"]["deltae"] = 0.001
         inp.data["Card7"]["crfn"] = 0.001
-        #TODO: Need a way to figure out the resonance emin and emax of the ENDF res file and set them here. 
 
-    
-        #TODO: Need to figure out a better way to deal with commands in card3.
         # Resetting the commands for running SAMMY to generate output par files based on ENDF.
         inp.data["Card3"]['commands'] = 'TWENTY,DO NOT SOLVE BAYES EQUATIONS,INPUT IS ENDF/B FILE'
     
@@ -312,12 +315,13 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         inp.process().write(sammy_input_file)
     
         # Run SAMMY with ENDF data to generate .par file
-        sammyRunner.run_endf(run_handle = sammy_run_handle, 
+        sammyRunner.run_endf( sammy_call=sammy_call,
+                            sammy_command=sammy_command,
+                            run_handle = sammy_run_handle, 
                             endf_dir=output_dir,
                             input_file=sammy_input_file_name,
                             verbose_level=verbose_level)
-                    
-        #TODO: Need to add a check to see if the .par file was created successfully and print a message if not.        
+                         
 
 
 

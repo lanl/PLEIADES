@@ -9,6 +9,36 @@ import subprocess
 import datetime
 import textwrap
 
+def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "sammy", verbose_level: int = 0) -> bool:
+    """
+    Check if the SAMMY executable is in the path or if a docker container is running.
+    
+    Args:
+        sammy_call (str): compiled or docker
+        sammy_command (str): either sammy or docker image name (such as "sammy-docker")
+    
+    Returns:
+        bool: True if SAMMY is available, False otherwise
+    """
+    if sammy_call == "compiled":
+        # Check if the sammy executable is in the path
+        if shutil.which(sammy_command) is None:
+            sammy_exists = False
+        else: 
+            sammy_exists = True
+
+    elif sammy_call == "docker":
+        # Check if Docker image exists
+        docker_image = 'sammy-docker'
+        docker_command = f'docker image inspect {docker_image}'
+        try:
+            subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
+            sammy_exists = True
+        except subprocess.CalledProcessError:
+            sammy_exists = False
+
+    if sammy_exists:
+        return True
 
 def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
 
@@ -96,7 +126,7 @@ def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "
     os.chdir(pleiades_call_dir)
 
 
-def run_endf(sammy_call = "compiled", run_handle: str="",endf_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
+def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", endf_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
@@ -106,6 +136,8 @@ def run_endf(sammy_call = "compiled", run_handle: str="",endf_dir: str="", input
     TODO: Need to think about how to clean up paths and names. SAMMY should run in the working directory, wheather it is the current directory or an archived one. Right now I am using names sometimes and paths other times. 
 
     Args:
+        sammy_call (str): compiled or docker
+        sammy_command (str): either sammy or docker image name (such as "sammy-docker")
         run_handle (str): run or handle name. This is what will be used for the dat and par file names
         endf_dir (str): working directory name
         inpfile (str): input file name
@@ -113,7 +145,15 @@ def run_endf(sammy_call = "compiled", run_handle: str="",endf_dir: str="", input
     """    
     # Print info based on verbosity level
     if verbose_level > 0: print("\nRunning SAMMY to create a par file from an ENDF file")
+
+    # Check sammy environment
+    sammy_sucess = check_sammy_enviornment(sammy_call, sammy_command, verbose_level)
     
+    if not sammy_sucess:
+        raise FileNotFoundError("SAMMY executable not found in the path")
+    else:
+        if verbose_level > 1: print(f"SAMMY executable found in the path")
+
     # Grab the directory from which the pleiades script was called.
     pleiades_call_dir = pathlib.Path.cwd()
     
@@ -170,14 +210,25 @@ def run_endf(sammy_call = "compiled", run_handle: str="",endf_dir: str="", input
     output_file = endf_path / output_file_name
     if verbose_level > 0: print(f"Output file: {output_file}")
 
-    sammy_run_command = textwrap.dedent(f"""\
-    sammy <<EOF
-    {input_file}
-    res_endf8.endf
-    {data_file_name}
+    # Create SAMMY run command depending on the call type
+    if sammy_call == "compiled":
+        sammy_run_command = textwrap.dedent(f"""\
+        sammy <<EOF
+        {input_file}
+        res_endf8.endf
+        {data_file_name}
 
-    EOF""")
-    
+        EOF""")
+    elif sammy_call == "docker":
+        sammy_run_command = textwrap.dedent(f"""\
+        docker run -v {endf_path}:/data {sammy_command} <<EOF
+        {input_file}
+        res_endf8.endf
+        {data_file_name}
+
+        EOF""")
+
+    # Print the run command if verbose level is high enough    
     if verbose_level > 1: print(sammy_run_command)
     
     # Change directories to the working dir

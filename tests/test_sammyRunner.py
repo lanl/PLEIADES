@@ -39,8 +39,8 @@ def default_config():
     """Fixture to create and return a default config object."""
     return sammyUtils.SammyFitConfig()
 
-def test_sammy_calls(default_config):
-    """ Test for both a compiled and docker version of SAMMY """
+def test_sammy_enviornment(default_config):
+    """ Test if sammy enviornment exist and check for both a compiled and docker version of SAMMY """
 
     # Look for compiled version of SAMMY in the path
     sammy_path = shutil.which('sammy')
@@ -83,3 +83,14 @@ def test_sammy_calls(default_config):
             logger.info("SAMMY is available as a Docker image.")
         else:
             logger.info("Both a compiled SAMMY binary and a Docker image are available.")
+
+
+def test_sammy_call(default_config):
+    """ Tests whether you can call SAMMY.
+
+    Args:
+        default_config (SammyFitConfig): A configuration object for running SAMMY fits.
+    """
+
+
+
