@@ -22,6 +22,11 @@ class SammyFitConfig:
         # Default values with sublabels
         self.params = {
             
+            # Select method to run SAMMY: 'compiled' or 'docker'
+            'sammy_run_method': 'compiled', # options: 'compiled' or 'docker'
+            'sammy_command': 'sammy',       # command to run sammy, 
+                                            # compiled should "sammy" & docker should be "sammy-docker"
+
             'run_with_endf': False,         # flag to run from endf par file 
             'fit_energy_min': 0.0,          # min energy for sammy fit
             'fit_energy_max': 1.0,          # max energy for sammy fit
@@ -126,6 +131,8 @@ class SammyFitConfig:
                         self.params['filenames'][key] = self._strip_quotes(value)
             
             elif section == 'main':
+                self.params['sammy_run_method'] = self._strip_quotes(config.get('main', 'sammy_run_method'))
+                self.params['sammy_command'] = self._strip_quotes(config.get('main', 'sammy_command'))
                 self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
                 self.params['fit_energy_min'] = float(config.get('main', 'fit_energy_min'))
                 self.params['fit_energy_max'] = float(config.get('main', 'fit_energy_max'))
@@ -312,6 +319,9 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
                     
         #TODO: Need to add a check to see if the .par file was created successfully and print a message if not.        
 
+
+
+
 def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
     Configures SAMMY based on a SammyFitConfig object.
@@ -453,7 +463,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     os.symlink(data_file, pathlib.Path(sammy_fit_dir) / data_file_name)   # create new symlink
 
-
+'''
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     """
     Runs SAMMY based on a SammyFitConfig object.
@@ -463,14 +473,14 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
-    
+    sammy_call_method = config.params['sammy_run_method']
     sammy_fit_dir = config.params['directories']['sammy_fit_dir']
     data_dir = config.params['directories']['data_dir']
     input_file = config.params['filenames']['input_file_name']
     parameter_file = config.params['filenames']['params_file_name']
     data_file = data_dir +"/"+ config.params['filenames']['data_file_name']
 
-    sammyRunner.single_run(sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
+    sammyRunner.run_sammy_fit(sammy_call_method, sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
 
     # Check the output file in the sammy_fit_dir to see if SAMMY executed successfully. 
     output_file = config.params['directories']['sammy_fit_dir']+"/output.out"
@@ -637,6 +647,8 @@ def save_transmission_spectrum(
             label=plot_label,
         )
         plt.show()  # Explicitly show the plot
+
+'''
 
 def sammy_par_from_endf(isotope: str = "U-239", 
                         flight_path_length: float = 10.72, 

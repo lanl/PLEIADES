@@ -10,8 +10,18 @@ import datetime
 import textwrap
 
 
-def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
-    
+def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
+
+    # check if SAMMY is compiled and sammy executable is in the path, or if a docker container is running
+    if sammy_call == "compiled":
+        # Check if the sammy executable is in the path
+        if shutil.which("sammy") is None:
+            raise FileNotFoundError("SAMMY executable not found in the path")
+    elif sammy_call == "docker":
+        # Check if the docker container is running
+        if not os.path.exists("/.dockerenv"):
+            raise FileNotFoundError("Docker container not running")
+
     # Check for files 
     if not input_file:
         raise ValueError("Input file is required")
@@ -19,7 +29,8 @@ def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_
         raise ValueError("Parameter file is required")
     if not data_file:
         raise ValueError("Data file is required")
-    
+
+
     # Check if files exist
     full_path_to_input_file = pathlib.Path(fit_dir) / input_file
     if not os.path.isfile(full_path_to_input_file):
@@ -69,7 +80,8 @@ def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_
         if verbose_level > 0: print(f"Running SAMMY for {run_handle}...")
         subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
     
-    # Move the SAMNDF output files to the results folder
+    # Move the SAMNDF output files
+    #  to the results folder
     for file in glob.glob("SAM*"):
         # Construct the full path for the destination
         destination_file = os.path.join(output_dir, os.path.basename(file))
@@ -84,7 +96,7 @@ def single_run(fit_dir: str= "", input_file: str = "", par_file: str = "", data_
     os.chdir(pleiades_call_dir)
 
 
-def run_endf(run_handle: str="",endf_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
+def run_endf(sammy_call = "compiled", run_handle: str="",endf_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
@@ -192,94 +204,4 @@ def run_endf(run_handle: str="",endf_dir: str="", input_file: str = "", verbose_
     os.chdir(pleiades_call_dir)
 
     
-    return
-
-
-    
-def run(archivename: str="example",
-            inpfile: str = "",
-            parfile: str = "",
-            datafile: str = "") -> None:
-    """run the sammy program inside an archive directory
-
-    Args:
-        archivename (str): archive directory name. If only archivename is provided
-                           the other file names will be assumed to have the same name 
-                           at the archive has with the associate extension, e.g. {archivename}.inp
-        inpfile (str, optional): input file name
-        parfile (str, optional): parameter file name
-        datafile (str, optional): data file name
-    """
-
-    # if no file names are provided, assume they are the same as the archive name
-    if not inpfile:
-        inpfile = f"{archivename}.inp"
-    if not parfile:
-        parfile = f"{archivename}.par"
-    if not datafile:
-        datafile = f"{archivename}.dat"
-
-    # Set the archive path
-    archive_path = pathlib.Path(f"archive/{archivename}") 
-
-    # create an archive directory
-    os.makedirs(archive_path,exist_ok=True)
-    os.makedirs(archive_path / "results",exist_ok=True)
-
-
-    # copy files into archive
-    try:
-        shutil.copy(inpfile, archive_path / f'{archivename}.inp')
-        inpfile = f'{archivename}.inp'
-        shutil.copy(parfile, archive_path / f'{archivename}.par')
-        parfile = f'{archivename}.par'
-        shutil.copy(datafile, archive_path / f'{archivename}.dat')
-        datafile = f'{archivename}.dat'
-    except FileNotFoundError:
-        # print(f"grab files from within the {archive_path} directory")
-        pass
-
-    outputfile = f'{archivename}.out'
-
-    # generate the run command
-    run_command = f"""sammy > {outputfile} 2>/dev/null << EOF
-                      {inpfile}
-                      {parfile}
-                      {datafile}
-
-                      EOF 
-                      """
-    # remove indentation
-    run_command = inspect.cleandoc(run_command) # remove indentation
-    
-    # 
-    pwd = pathlib.Path.cwd()
-
-    # change directory to the archive, run sammy, and return to the original directory
-    os.chdir(archive_path)
-    os.system(run_command) 
-    os.chdir(pwd)
-
-    # move files
-
-    try:
-        shutil.move(archivepath /'SAMMY.LST', archivepath / f'results/{archivename}.lst')
-    except FileNotFoundError:
-        print("lst file is not found")
-    try:
-        shutil.move(archivepath /'SAMMY.LPT', archivepath / f'results/{archivename}.lpt')
-    except FileNotFoundError:
-        print("lpt file is not found")
-    try:
-        shutil.move(archivepath /'SAMMY.IO', archivepath / f'results/{archivename}.io')
-    except FileNotFoundError:
-        print("io file is not found")
-    try:
-        shutil.move(archivepath /'SAMMY.PAR', archivepath / f'results/{archivename}.par')
-        # remove SAM*.*
-        filelist = glob.glob(f"{archivepath}/SAM*")
-        for f in filelist:
-            os.remove(f)
-    except FileNotFoundError:
-        print("par file is not found")
     return
