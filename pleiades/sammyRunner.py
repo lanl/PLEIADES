@@ -216,7 +216,7 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
         EOF""")
     elif sammy_call == "docker":
         sammy_run_command = textwrap.dedent(f"""\
-        docker run -i -v $(dirname $PWD):/data-parent -w /data-parent/U238 {sammy_command} sammy <<EOF
+        docker run -i -v $(dirname $PWD):/data-parent -w /data-parent/{run_handle} {sammy_command} sammy <<EOF
         {input_file}
         ./res_endf8.endf
         {data_file_name}
