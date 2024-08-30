@@ -19,13 +19,19 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
     
     Returns:
         bool: True if SAMMY is available, False otherwise
+
+    Note:
+        This function is an absolute shit show, and needs work!
     """
+    
+
     sammy_exists = False
-    if verbose_level > 0: print("Checking SAMMY enviornment...")
+    if verbose_level > 0: print(f"Checking SAMMY enviornment for a <{sammy_call}> version of SAMMY")
 
     if sammy_call == "compiled":
         # Check if the sammy executable is in the path
         if shutil.which(sammy_command) is None:
+            if verbose_level > 1: print("SAMMY executable not found in the path")
             sammy_exists = False
         else: 
             if verbose_level > 1: print("Found compiled version of SAMMY")
@@ -40,11 +46,12 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
             sammy_exists = True
             if verbose_level > 1: print("Found docker version of SAMMY")
         except subprocess.CalledProcessError:
+            print(f"Docker image {docker_image} not found")
             sammy_exists = False
 
     return sammy_exists
 
-def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
+def run_sammy_fit(sammy_call = "compiled", sammy_command = "sammy", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
     """ 
     Run the SAMMY fitting process.
     Parameters:
@@ -98,14 +105,24 @@ def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "
     output_file = pathlib.Path(fit_dir) / output_file_name
     if verbose_level > 0: print(f"Output file: {output_file}")
 
-    # Create SAMMY run command
-    sammy_run_command = textwrap.dedent(f"""\
-    sammy <<EOF
-    {input_file}
-    {par_file}
-    {data_file}
 
-    EOF""")
+    # Create SAMMY run command depending on the call type compiled or docker
+    if sammy_call == "compiled":
+        sammy_run_command = textwrap.dedent(f"""\
+        sammy <<EOF
+        {input_file}
+        {par_file}
+        {data_file}
+
+        EOF""")
+    elif sammy_call == "docker":
+        sammy_run_command = textwrap.dedent(f"""\
+        docker run -i -v $(dirname $PWD):/data-parent -w /data-parent/{run_handle} {sammy_command} sammy <<EOF
+        {input_file}
+        {par_file}
+        {data_file}
+
+        EOF""")
     
     # Print the run command if verbose level is high enough
     if verbose_level > 1: print(sammy_run_command)
