@@ -20,11 +20,15 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
     Returns:
         bool: True if SAMMY is available, False otherwise
     """
+    sammy_exists = False
+    if verbose_level > 0: print("Checking SAMMY enviornment...")
+
     if sammy_call == "compiled":
         # Check if the sammy executable is in the path
         if shutil.which(sammy_command) is None:
             sammy_exists = False
         else: 
+            if verbose_level > 1: print("Found compiled version of SAMMY")
             sammy_exists = True
 
     elif sammy_call == "docker":
@@ -34,23 +38,13 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
         try:
             subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
             sammy_exists = True
+            if verbose_level > 1: print("Found docker version of SAMMY")
         except subprocess.CalledProcessError:
             sammy_exists = False
 
-    if sammy_exists:
-        return True
+    return sammy_exists
 
 def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
-
-    # check if SAMMY is compiled and sammy executable is in the path, or if a docker container is running
-    if sammy_call == "compiled":
-        # Check if the sammy executable is in the path
-        if shutil.which("sammy") is None:
-            raise FileNotFoundError("SAMMY executable not found in the path")
-    elif sammy_call == "docker":
-        # Check if the docker container is running
-        if not os.path.exists("/.dockerenv"):
-            raise FileNotFoundError("Docker container not running")
 
     # Check for files 
     if not input_file:
@@ -126,7 +120,7 @@ def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "
     os.chdir(pleiades_call_dir)
 
 
-def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", endf_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
+def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", fit_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
@@ -139,7 +133,7 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
         sammy_call (str): compiled or docker
         sammy_command (str): either sammy or docker image name (such as "sammy-docker")
         run_handle (str): run or handle name. This is what will be used for the dat and par file names
-        endf_dir (str): working directory name
+        fit_dir (str): fit directory name
         inpfile (str): input file name
         verbose_level (int): verbosity level
     """    
@@ -158,21 +152,21 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
     pleiades_call_dir = pathlib.Path.cwd()
     
     # Set the working directory path
-    endf_path = pathlib.Path(endf_dir)
-    if verbose_level > 0: print(f"Working directory: {endf_path}")
+    fit_dir = pathlib.Path(fit_dir)
+    if verbose_level > 0: print(f"Working directory: {fit_dir}")
     
     # create an results folder within the working directory
     # We will be moving all the SAMMY results to this dir. 
     result_dir_name = 'results'
-    os.makedirs(endf_path,exist_ok=True)
-    os.makedirs(endf_path / result_dir_name,exist_ok=True)
-    sammy_results_path = endf_path / result_dir_name
+    os.makedirs(fit_dir,exist_ok=True)
+    os.makedirs(fit_dir / result_dir_name,exist_ok=True)
+    sammy_results_path = fit_dir / result_dir_name
     if verbose_level > 0: print(f"Results will be saved in: {sammy_results_path}")
 
     # Need to create a fake data file with only Emin and Emax data points
     # read the input file to get the Emin and Emax:
     if verbose_level > 0: print(f"Using input file: {input_file}")
-    with open(endf_path / input_file) as fid:
+    with open(fit_dir / input_file) as fid:
         next(fid)           # The first line is the isotope name
         line = next(fid)    # Read the second line with Emin and Emax
         Emin = line[20:30].strip()  # Extract Emin using character positions and strip spaces
@@ -183,7 +177,7 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
     
     # Creating the name of the data file based on the input file name
     data_file_name = run_handle + "_ENDF-dummy.dat"
-    data_file = endf_path / data_file_name
+    data_file = fit_dir / data_file_name
     
     # open the data file and write the Emin and Emax
     with open(data_file, "w") as fid:
@@ -192,22 +186,23 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
     
     if verbose_level > 0: print(f"Data file created: {data_file}")
     
+
     # Creating a par file based on ENDF file
-    symlink_path = endf_path / "res_endf8.endf"
+    symlink_path = fit_dir / "res_endf8.endf"
     # First check if file already exists
     if os.path.islink(symlink_path):
         endf_file = symlink_path
     else:
         # Create a symbolic link to the original endf file
-        original_endf_file = pathlib.Path(__file__).parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
+        original_endf_file = "../res_endf8.endf"
         os.symlink(original_endf_file, symlink_path)
-        endf_file = endf_path / "res_endf8.endf"
+        endf_file = fit_dir / "res_endf8.endf"
     
     if verbose_level > 0: print(f"ENDF file: {endf_file}")
     
     # Create an output file in the working dir. 
     output_file_name = run_handle + ".out"
-    output_file = endf_path / output_file_name
+    output_file = fit_dir / output_file_name
     if verbose_level > 0: print(f"Output file: {output_file}")
 
     # Create SAMMY run command depending on the call type
@@ -221,9 +216,9 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
         EOF""")
     elif sammy_call == "docker":
         sammy_run_command = textwrap.dedent(f"""\
-        docker run -v {endf_path}:/data {sammy_command} <<EOF
+        docker run -i -v $(dirname $PWD):/data-parent -w /data-parent/U238 {sammy_command} sammy <<EOF
         {input_file}
-        res_endf8.endf
+        ./res_endf8.endf
         {data_file_name}
 
         EOF""")
@@ -232,7 +227,7 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
     if verbose_level > 1: print(sammy_run_command)
     
     # Change directories to the working dir
-    os.chdir(endf_path)
+    os.chdir(fit_dir)
     
     # Open the output file in write mode
     with open(output_file_name, "w") as output:

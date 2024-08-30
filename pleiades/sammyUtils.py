@@ -1,16 +1,11 @@
 # High level utility functions to use Pleiades functionality to run SAMMY
-
-import matplotlib.pyplot as plt
 import numpy as np
-
-import pathlib
 from pathlib import Path
-
-import pandas
 import pathlib
 import re
 import configparser
 import os
+import shutil
 
 from pleiades import sammyParFile, sammyInput, sammyRunner, nucData
 
@@ -292,24 +287,30 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         if archive:
             endf_dir_path = pathlib.Path(endf_dir)
             endf_dir_path.mkdir(parents=True, exist_ok=True)
-            if verbose_level > 0:
-                print(f"ENDF directory created at {endf_dir_path}")
+            if verbose_level > 0: print(f"ENDF directory created at {endf_dir_path}")
             
+            # copy res_endf8.endf to the endf dir
+            source_res_endf = pathlib.Path.cwd().parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
+            destination_res_endf = endf_dir_path / "res_endf8.endf"
+            shutil.copy(source_res_endf, destination_res_endf)
+            if verbose_level > 0:
+                print(f"Copied {source_res_endf} to {destination_res_endf}")
+
             # Create a directory in the endf_dir_path that corresponds to the sammy_run_handle
-            output_dir = endf_dir_path / Path(sammy_run_handle)
+            run_sammy_dir = endf_dir_path / Path(sammy_run_handle)
             
             # add new output directory to the archive_path
-            output_dir.mkdir(parents=True, exist_ok=True)
+            run_sammy_dir.mkdir(parents=True, exist_ok=True)
             
             # Create a SAMMY input file in the output directory
-            sammy_input_file = output_dir / (sammy_input_file_name)
+            sammy_input_file = run_sammy_dir / (sammy_input_file_name)
             
             if verbose_level > 0: print(f"SAMMY input file created at {sammy_input_file}")
             
         else:
             # determine the current working directory
-            output_dir = Path.cwd()
-            sammy_input_file = output_dir / (sammy_input_file_name)
+            run_sammy_dir = Path.cwd()
+            sammy_input_file = run_sammy_dir / (sammy_input_file_name)
 
         # Write the SAMMY input file to the specified location. 
         inp.process().write(sammy_input_file)
@@ -318,7 +319,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         sammyRunner.run_endf( sammy_call=sammy_call,
                             sammy_command=sammy_command,
                             run_handle = sammy_run_handle, 
-                            endf_dir=output_dir,
+                            fit_dir=run_sammy_dir,
                             input_file=sammy_input_file_name,
                             verbose_level=verbose_level)
                          
