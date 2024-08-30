@@ -260,6 +260,10 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     endf_dir = config.params['directories']['endf_dir']
     archive_dir = config.params['directories']['archive_dir']
     
+    # Path to the "res_endf8.endf" file in the repo
+    pleiades_base_path = pathlib.Path(__file__).resolve().parent.parent  # Adjust based on actual location
+    source_res_endf = pleiades_base_path / "nucDataLibs/resonanceTables/res_endf8.endf"
+    
     for isotope in isotopes:
         
         # Create a SAMMY input file data structure
@@ -289,8 +293,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
             endf_dir_path.mkdir(parents=True, exist_ok=True)
             if verbose_level > 0: print(f"ENDF directory created at {endf_dir_path}")
             
-            # copy res_endf8.endf to the endf dir
-            source_res_endf = pathlib.Path.cwd().parent.parent / "nucDataLibs/resonanceTables/res_endf8.endf"
+            # copy res_endf8.endf to the endf directory
             destination_res_endf = endf_dir_path / "res_endf8.endf"
             shutil.copy(source_res_endf, destination_res_endf)
             if verbose_level > 0:
