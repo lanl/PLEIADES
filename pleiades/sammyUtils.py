@@ -471,7 +471,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     os.symlink(data_file, pathlib.Path(sammy_fit_dir) / data_file_name)   # create new symlink
 
-'''
+
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     """
     Runs SAMMY based on a SammyFitConfig object.
@@ -507,7 +507,7 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     return sammy_success
 
 #-------------------------------------------------------------------------    
-
+'''
 def sammy_background(energy: np.ndarray, normalization: float = 1.0,
                      constant_bg: float = 0.0, one_over_v_bg: float = 0.0,
                      sqrt_energy_bg: float = 0.0, exponential_bg: float = 0.0,

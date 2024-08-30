@@ -45,7 +45,22 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
     return sammy_exists
 
 def run_sammy_fit(sammy_call = "compiled", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
-
+    """ 
+    Run the SAMMY fitting process.
+    Parameters:
+    - sammy_call (str): The SAMMY call type. Default is "compiled".
+    - fit_dir (str): The directory where the fitting process will be performed.
+    - input_file (str): The input file for the SAMMY fitting process.
+    - par_file (str): The parameter file for the SAMMY fitting process.
+    - data_file (str): The data file for the SAMMY fitting process.
+    - output_dir (str): The directory where the output files will be stored. Default is "results".
+    - verbose_level (int): The level of verbosity for printing information. Default is 0.
+    Raises:
+    - ValueError: If input_file, par_file, or data_file is not provided.
+    - FileNotFoundError: If input_file or par_file is not found.
+    Returns:
+    - None
+    """
     # Check for files 
     if not input_file:
         raise ValueError("Input file is required")
