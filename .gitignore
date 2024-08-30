@@ -186,4 +186,6 @@ cython_debug/
 *.dat
 *.cov
 *.COV
+
+# ignore any additional ini files
 *.ini
