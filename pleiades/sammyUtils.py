@@ -92,13 +92,15 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         # Write the SAMMY input file to the specified location. 
         inp.process().write(sammy_input_file)
     
+        sammyRunner.run_endf(config,verbose_level=verbose_level)
+        
         # Run SAMMY with ENDF data to generate .par file
-        sammyRunner.run_endf( sammy_call=sammy_call,
-                            sammy_command=sammy_command,
-                            run_handle = sammy_run_handle, 
-                            fit_dir=run_sammy_dir,
-                            input_file=sammy_input_file_name,
-                            verbose_level=verbose_level)
+        #sammyRunner.run_endf( sammy_call=sammy_call,
+        #                    sammy_command=sammy_command,
+        #                    run_handle = sammy_run_handle, 
+        #                    fit_dir=run_sammy_dir,
+        #                    input_file=sammy_input_file_name,
+        #                    verbose_level=verbose_level)
                          
 
 
