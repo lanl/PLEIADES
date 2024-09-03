@@ -83,11 +83,17 @@ class SammyFitConfig:
 
         }
 
+        # if a config file is provided, load the parameters from it
         if config_path:
             config = configparser.ConfigParser()
             config.read(config_path)
             self._load_from_config(config)
+            
+            # Set sammy_fit_dir to sammy_fit_name if sammy_fit_dir is not provided or is empty
+            if not self.params['directories']['sammy_fit_dir']:
+                self.params['directories']['sammy_fit_dir'] = self.params['sammy_fit_name']
 
+        # Check and create all needed directories
         self._check_or_create_directories()
 
     def _load_from_config(self, config):
@@ -97,43 +103,17 @@ class SammyFitConfig:
             config (SammyFitConfig): ConfigParser object with the configuration parameters.
         """
         for section in config.sections():
-
-            # If the section is 'isotopes' then process the potential arrays for names, abundances, and vary_abundances.
-            if section == 'isotopes':
-                self.params['isotopes']['names'] = [x for x in config.get('isotopes', 'names').split(',')]
-                self.params['isotopes']['abundances'] = [float(x) for x in config.get('isotopes', 'abundances').split(',')]
-                self.params['isotopes']['vary_abundances'] = [self._convert_value(x) for x in config.get('isotopes', 'vary_abundances').split(',')]
-            
-            # If the section is 'directories' 
-            elif section == 'directories':
-                for key, value in config.items(section):
-                    if key in self.params['directories']:
-                        self.params['directories'][key] = self._strip_quotes(value)
-            
-            # If the section is 'filenames' 
-            elif section == 'filenames':
-                for key, value in config.items(section):
-                    if key in self.params['filenames']:
-                        self.params['filenames'][key] = self._strip_quotes(value)
-            
-            elif section == 'main':
-                self.params['sammy_run_method'] = self._strip_quotes(config.get('main', 'sammy_run_method'))
-                self.params['sammy_command'] = self._strip_quotes(config.get('main', 'sammy_command'))
-                self.params['sammy_fit_name'] = self._strip_quotes(config.get('main', 'sammy_fit_name'))
-                self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
-                self.params['fit_energy_min'] = float(config.get('main', 'fit_energy_min'))
-                self.params['fit_energy_max'] = float(config.get('main', 'fit_energy_max'))
-                self.params['flight_path_length'] = float(config.get('main', 'flight_path_length'))
-                self.params['fudge_factor'] = float(config.get('main', 'fudge_factor'))
-            
-            elif section == 'resonances':
-                self.params['resonances']['resonance_energy_min'] = float(config.get('resonances', 'resonance_energy_min'))
-                self.params['resonances']['resonance_energy_max'] = float(config.get('resonances', 'resonance_energy_max'))
-                    
-            else:
+            if section in self.params:
                 for key, value in config.items(section):
                     if key in self.params[section]:
-                        self.params[section][key] = self._convert_value(value)
+                        # Strip quotes and convert value
+                        self.params[section][key] = self._convert_value(self._strip_quotes(value))
+            else:
+                for key, value in config.items(section):
+                    if key in self.params:
+                        # Strip quotes and convert value
+                        self.params[key] = self._convert_value(self._strip_quotes(value))
+
 
     def _convert_value(self, value):
         """ Helper method to convert a string value to the appropriate type.

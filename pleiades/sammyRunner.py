@@ -156,29 +156,26 @@ def run_sammy_fit(sammy_call = "compiled", sammy_command = "sammy", fit_dir: str
     os.chdir(pleiades_call_dir)
 
 
-#def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", fit_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
-def run_endf(config: SammyFitConfig, verbose_level: int = 0) -> None:
-
-    
+def run_endf(config: SammyFitConfig, isotope: str = "", verbose_level: int = 0) -> None:
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
     - we don't need a data file, we create a fake dat file with only Emin and Emax data points
     - archive path name will be deducd from input name
     
-    TODO: Need to think about how to clean up paths and names. SAMMY should run in the working directory, wheather it is the current directory or an archived one. Right now I am using names sometimes and paths other times. 
-
     Args:
-        sammy_call (str): compiled or docker
-        sammy_command (str): either sammy or docker image name (such as "sammy-docker")
-        run_handle (str): run or handle name. This is what will be used for the dat and par file names
-        fit_dir (str): fit directory name
-        inpfile (str): input file name
-        verbose_level (int): verbosity level
+        config (SammyFitConfig): A SammyFitConfig object
+        isotope (str): The isotope to run the SAMMY fit for. Default is "".
+        verbose_level (int): The level of verbosity for printing information. Default is 0.
+
+    Returns:   
+        None
+
+    Notes:
+        - This function is not complete and needs more work
     """ 
     sammy_call = config.params['sammy_run_method']
     sammy_command = config.params['sammy_command']
-    run_handle = config.params['run_handle']
     fit_dir = config.params['directories']['sammy_fit_dir']
     input_file = config.params['input_file']
        
