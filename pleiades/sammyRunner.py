@@ -9,13 +9,15 @@ import subprocess
 import datetime
 import textwrap
 
-def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "sammy", verbose_level: int = 0) -> bool:
+from pleiades.sammyStructures import SammyFitConfig
+
+def check_sammy_enviornment(config: SammyFitConfig, verbose_level: int = 0) -> bool:
     """
     Check if the SAMMY executable is in the path or if a docker container is running.
     
     Args:
-        sammy_call (str): compiled or docker
-        sammy_command (str): either sammy or docker image name (such as "sammy-docker")
+        config (SammyFitConfig): A SammyFitConfig object
+        verbose_level (int): The level of verbosity for printing information. Default is 0.
     
     Returns:
         bool: True if SAMMY is available, False otherwise
@@ -23,11 +25,12 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
     Note:
         This function is an absolute shit show, and needs work!
     """
+    sammy_call = config.params['sammy_run_method']
+    sammy_command = config.params['sammy_command']
     
-
     sammy_exists = False
     if verbose_level > 0: print(f"Checking SAMMY enviornment for a <{sammy_call}> version of SAMMY")
-
+    
     if sammy_call == "compiled":
         # Check if the sammy executable is in the path
         if shutil.which(sammy_command) is None:
@@ -50,6 +53,7 @@ def check_sammy_enviornment(sammy_call: str = "compiled", sammy_command: str = "
             sammy_exists = False
 
     return sammy_exists
+  
 
 def run_sammy_fit(sammy_call = "compiled", sammy_command = "sammy", fit_dir: str= "", input_file: str = "", par_file: str = "", data_file: str = "", output_dir: str = "results", verbose_level: int = 0) -> None:
     """ 
@@ -152,7 +156,10 @@ def run_sammy_fit(sammy_call = "compiled", sammy_command = "sammy", fit_dir: str
     os.chdir(pleiades_call_dir)
 
 
-def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", fit_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
+#def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="", fit_dir: str="", input_file: str = "", verbose_level: int = 0) -> None:
+def run_endf(config: SammyFitConfig, verbose_level: int = 0) -> None:
+
+    
     """
     run sammy input with endf isotopes tables file to create a par file
     - This can only be done for a single isotope at a time
@@ -168,12 +175,18 @@ def run_endf(sammy_call = "compiled", sammy_command = "sammy", run_handle: str="
         fit_dir (str): fit directory name
         inpfile (str): input file name
         verbose_level (int): verbosity level
-    """    
+    """ 
+    sammy_call = config.params['sammy_run_method']
+    sammy_command = config.params['sammy_command']
+    run_handle = config.params['run_handle']
+    fit_dir = config.params['directories']['sammy_fit_dir']
+    input_file = config.params['input_file']
+       
     # Print info based on verbosity level
     if verbose_level > 0: print("\nRunning SAMMY to create a par file from an ENDF file")
 
     # Check sammy environment
-    sammy_sucess = check_sammy_enviornment(sammy_call, sammy_command, verbose_level)
+    sammy_sucess = check_sammy_enviornment(config, verbose_level)
     
     if not sammy_sucess:
         raise FileNotFoundError("SAMMY executable not found in the path")

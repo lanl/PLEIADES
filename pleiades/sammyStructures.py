@@ -12,6 +12,7 @@ class SammyFitConfig:
             'sammy_command': 'sammy',       # command to run sammy, 
                                             # compiled should "sammy" & docker should be "sammy-docker"
 
+            'sammy_fit_name': 'sammy_fit',  # name of the sammy fit
             'run_with_endf': False,         # flag to run from endf par file 
             'fit_energy_min': 0.0,          # min energy for sammy fit
             'fit_energy_max': 1.0,          # max energy for sammy fit
@@ -118,6 +119,7 @@ class SammyFitConfig:
             elif section == 'main':
                 self.params['sammy_run_method'] = self._strip_quotes(config.get('main', 'sammy_run_method'))
                 self.params['sammy_command'] = self._strip_quotes(config.get('main', 'sammy_command'))
+                self.params['sammy_fit_name'] = self._strip_quotes(config.get('main', 'sammy_fit_name'))
                 self.params['run_with_endf'] = self._convert_value(config.get('main', 'run_with_endf'))
                 self.params['fit_energy_min'] = float(config.get('main', 'fit_energy_min'))
                 self.params['fit_energy_max'] = float(config.get('main', 'fit_energy_max'))
