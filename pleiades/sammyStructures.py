@@ -45,9 +45,9 @@ class SammyFitConfig:
             },
             # Isotopes for sammy fit
             'isotopes': {
-                'names': [],  # list of isotope names
-                'abundances': [],  # list of corresponding abundances
-                'vary_abundances': []  # list of booleans indicating if the abundances should be varied
+                'names': [],            # list of isotope names
+                'abundances': [],       # list of corresponding abundances
+                'vary_abundances': []   # list of booleans indicating if the abundances should be varied
             },
 
             # Fitting normalization and background
@@ -115,13 +115,23 @@ class SammyFitConfig:
             if section in self.params:
                 for key, value in config.items(section):
                     if key in self.params[section]:
-                        # Strip quotes and convert value
-                        self.params[section][key] = self._convert_value(self._strip_quotes(value))
+                        # Check if the value contains commas (for fields like 'names' and 'abundances')
+                        if "," in value:
+                            # If the field is "abundances", convert to a list of floats
+                            if key == 'abundances':
+                                self.params[section][key] = [float(v.strip()) for v in value.split(',')]
+                            else:
+                                # Otherwise, convert to a list of strings
+                                self.params[section][key] = [v.strip() for v in value.split(',')]
+                        else:
+                            # Handle normal value conversion for non-list fields
+                            self.params[section][key] = self._convert_value(self._strip_quotes(value))
             else:
                 for key, value in config.items(section):
                     if key in self.params:
                         # Strip quotes and convert value
                         self.params[key] = self._convert_value(self._strip_quotes(value))
+
 
 
     def _convert_value(self, value):

@@ -143,6 +143,9 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
+    
+    Notes:
+        - TODO: This assumes that parfiles were created via ENDF data. This might not always be the case.
     """
     isotopeParFiles = []
     
@@ -167,8 +170,8 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     if verbose_level > 0: print(f"\n{print_header_check} Merging SAMMY parameter files for isotopes: {isotopes}, with abundances: {abundances}")
 
 
-    for isotope, abundance in zip(isotopes, abundances):
-        
+    # TODO: This assumes that parfiles were created via ENDF data. This might not always be the case.
+    for isotope, abundance in zip(isotopes, abundances):        
         # turn the abundance into a float
         abundance = float(abundance)
         # Append sammy parFiles using sammyParFile in the ParFile class

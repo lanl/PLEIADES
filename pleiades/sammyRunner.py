@@ -157,7 +157,7 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
         EOF""")
     
     # Print the run command if verbose level is high enough
-    if verbose_level > 1: print(sammy_run_command)
+    if verbose_level > 2: print(sammy_run_command)
     
     # Change directories to the working dir
     os.chdir(fit_dir)
