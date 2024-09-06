@@ -5,6 +5,10 @@ from contextlib import suppress
 import numpy as np
 import datetime
 
+print_header_check = "\033[1;34m<SAMMY Inputs>\033[0m "
+print_header_good = "\033[1;32m<SAMMY Inputs>\033[0m "
+print_header_bad = "\033[1;31m<SAMMY Inputs>\033[0m "
+
 class InputFile:
     """ InputFile class for the Sammy input file.
     """
@@ -28,7 +32,7 @@ class InputFile:
         if config_file is not None:
             
             if verbose_level > 0:
-                print(f"Reading SAMMY input config file: {config_file}")
+                print(f"{print_header_check} Reading SAMMY input config file: {config_file}")
             
             # read the config file using configparser
             self._config = configparser.ConfigParser()
@@ -47,7 +51,7 @@ class InputFile:
         
         else:
             if verbose_level > 0:
-                print("No config file given. Using default parameters.")
+                print(f"{print_header_check} No input config file given. Using default parameters for input deck.")
 
         # update auto values
         self._update_and_calculate_values(auto_update=auto_update)
@@ -99,7 +103,7 @@ class InputFile:
                         line += self.format_type_F(float(self.data[card][parameter]), par_width)
                     else:
                         # Raise an error for unsupported parameter types
-                        raise ValueError("Parameter can only have float, int, or str types")
+                        raise ValueError(f"{print_header_bad} Parameter can only have float, int, or str types")
                 else:
                     # Handle free format cards like Card3
                     if card == "Card3":

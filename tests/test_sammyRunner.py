@@ -1,20 +1,19 @@
 import shutil
 import os
-from pleiades import sammyUtils
+from pleiades import sammyUtils, sammyRunner
 import pathlib
 import pytest
 import logging
 import subprocess
 
-## Configure logging for the test
-# Set file name
-log_file = 'test_sammyUtils.log'
+# Configure logging for the test
+log_file = 'test_sammyRunner.log'
 
 # Remove file if it already exists
 if os.path.exists(log_file):
     os.remove(log_file)
 
-# Create handlers
+# Create logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -35,14 +34,10 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
-
-
 @pytest.fixture
 def default_config():
     """Fixture to create and return a default config object."""
     return sammyUtils.SammyFitConfig()
-
-
 
 def test_sammy_enviornment(default_config):
     """ Test if sammy enviornment exist and check for both a compiled and docker version of SAMMY """
@@ -54,7 +49,6 @@ def test_sammy_enviornment(default_config):
         compiled_sammy_exists = True
 
         # Update the default config with the calls to the compiled SAMMY binary
-        logger.info("Updating default config with compiled SAMMY binary")
         default_config.params['sammy_run_method'] = 'compiled'
         default_config.params['sammy_command'] = 'sammy'
 
@@ -71,7 +65,6 @@ def test_sammy_enviornment(default_config):
         docker_image_exists = True
 
         # Update the default config with the calls to the Docker image
-        logger.info(f"Updating default config with Docker image -> {docker_image}")
         default_config.params['sammy_run_method'] = 'docker'
         default_config.params['sammy_command'] = docker_image
         
@@ -92,65 +85,12 @@ def test_sammy_enviornment(default_config):
             logger.info("Both a compiled SAMMY binary and a Docker image are available.")
 
 
+def test_sammy_call(default_config):
+    """ Tests whether you can call SAMMY.
 
-def test_sammyUtils_sammy_config(default_config):
-    """Test the sammyUtils.SammyFitConfig class by loading the default config."""
-    # Check if default_config is a SammyFitConfig object
-    assert isinstance(default_config, sammyUtils.SammyFitConfig)
-    logger.info("Default config loaded successfully")
-
-
-
-def test_create_parFile_from_endf(default_config):
-    """Test the creation of a parFile from an ENDF file."""
-
-    test_sammy_enviornment(default_config)
-
-    # Update the default config with a U-238 isotope
-    logger.info("Updating default config with U-238 isotope")
-    default_config.params['isotopes']['names'] = ['U-238']
-    default_config.params['isotopes']['abundances'] = [1.0]
-
-    # Create the parFile from the ENDF file
-    logger.info("Creating parFile from ENDF file")
-    sammyUtils.create_parFile_from_endf(default_config, verbose_level=0)
-
-    # Before running sammy_par_from_endf() we need to check if the 
-    # u238 directory was created in the .archive/endf/u238
-    endfFile_path = pathlib.Path(default_config.params['directories']['endf_dir'])
-    u238_dir_path = pathlib.Path(endfFile_path / 'u238')
-    logger.info("Checking if endf directory was created")
-    assert u238_dir_path.exists()
+    Args:
+        default_config (SammyFitConfig): A configuration object for running SAMMY fits.
+    """
 
 
 
-    # Check if the parFile was created
-    logger.info("Checking if parFile was created")
-    #parFile_path = pathlib.Path(endfFile_path / 'u238' / 'u238.par')
-    #assert parFile_path.exists()
-
-
-
-def final_file_checks_and_cleanup(default_config):
-    """Test if the directories created by the default config are created and then delete them."""
-    # Check if default archive and data directory were created
-    archive_dir_path = pathlib.Path(default_config.params['directories']['archive_dir'])
-    endf_dir_path = pathlib.Path(default_config.params['directories']['endf_dir'])
-    data_dir_path = pathlib.Path(default_config.params['directories']['data_dir'])
-    assert archive_dir_path.exists()
-    assert endf_dir_path.exists()
-    assert data_dir_path.exists()
-    logger.info("Default archive and data directories created successfully")
-
-    # Remove the directories created when the config was loaded even if there are files in them
-    shutil.rmtree(endf_dir_path)
-    shutil.rmtree(archive_dir_path)
-    shutil.rmtree(data_dir_path)
-    logger.info("Default archive and data directories removed successfully")
-
-
-
-# flush and close the all logger handlers
-for handler in logger.handlers:
-    handler.flush()
-    handler.close()

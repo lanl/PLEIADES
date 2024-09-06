@@ -1,9 +1,26 @@
-import pathlib
-from typing import List, Union, Dict, Union
-from itertools import takewhile, dropwhile
-import configparser
+# SammyOutput.py
+# Version: 1.0
+# Authors: 
+#   - Alexander M. Long
+#       - Los Alamos National Laboratory
+#       - ORCID: 0000-0003-4300-9454
+#   - Tsviki Hirsh 
+#       - Soreq Nuclear Research Center
+#       - ORCID: 0000-0001-5889-4500
+# About: 
+#   This file is part of the PLEIADES package and contains classes and functions to parse SAMMY output files.
+# Classes:
+#   - LptFile: Class to read and parse an LPT output file.
+# Functions:
+#   - __init__: Initializes the class with the filename to be parsed and prepares the results structure.
+#   - preprocess_lpt_file: Preprocess the LPT file to extract general info and identify iteration blocks.
+#   - grab_results_of_fits: Extracts results from each iteration block.
+#   - _parse_iteration_block: Parses an iteration block and extracts parameters.
+#   - _parse_emin_emax: Parses Emin and Emax values from a given line.
+# How to use:
+#   - Import the this class with 'from pleiades import sammyOutput'
+
 import re
-import pandas
 
 
 class lptResults:
@@ -195,6 +212,8 @@ class lptResults:
             return None, None
 
 
+
+'''
 class LptFile:
     """Class to read and parse an LPT output file.
 
@@ -436,8 +455,7 @@ class LptFile:
                         line = next(fid)
                         
         return cards
-    
-
+ 
 class ParamsConfig:
     # utilities to parse and read param config files
 
@@ -503,5 +521,5 @@ class ParamsConfig:
                 sorted_params[key] = (self.flatten_params[key],0.,vary_params[f"vary_{key}"])   
 
         return sorted_params
-
+'''
 

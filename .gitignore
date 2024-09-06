@@ -159,6 +159,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# VSCODE
+.virtual_documents/
+.vscode/
 
 # ignore any text files from SAMMY
 #*.txt
@@ -189,3 +192,6 @@ cython_debug/
 
 # ignore any additional ini files
 *.ini
+
+# Ignore mac stuff.
+*.DS_Store
