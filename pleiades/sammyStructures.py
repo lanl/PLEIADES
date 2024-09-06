@@ -3,7 +3,12 @@ import os
 
 class SammyFitConfig:
     """Class to store and manage SAMMY fit parameters."""
+    
     def __init__(self, config_path=None):
+        """ Initialize the SammyFitConfig object.
+            config_path (str): Path to a configuration file to load parameters from.
+        """
+        
         # Default values with sublabels
         self.params = {
             
@@ -24,7 +29,7 @@ class SammyFitConfig:
                 'user_defined': False,      # flag to use user defined directories
                 'working_dir': '',          # working directory, where pleiades is being called
                 'image_dir': '',            # directory for image files
-                'data_dir': 'data',         # directory for data files
+                'data_dir': '',             # directory for data files
                 'sammy_fit_dir': '',        # directory for compound par files
                 'archive_dir': '.archive',  # directory for archive files (hidden by default)
                 'endf_dir': 'endf',         # directory for endf sammy runs
@@ -86,9 +91,12 @@ class SammyFitConfig:
 
         # if a config file is provided, load the parameters from it
         if config_path:
-            config = configparser.ConfigParser()
-            config.read(config_path)
-            self._load_from_config(config)
+            if not os.path.exists(config_path):
+                raise FileNotFoundError(f"Config file {config_path} not found.")
+            else:
+                config = configparser.ConfigParser()
+                config.read(config_path)
+                self._load_from_config(config)
             
             # Set sammy_fit_dir to sammy_fit_name if sammy_fit_dir is not provided or is empty
             if not self.params['directories']['sammy_fit_dir']:
