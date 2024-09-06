@@ -169,8 +169,8 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     # Create a SAMMY parFile for each isotope 
     if verbose_level > 0: print(f"\n{print_header_check} Merging SAMMY parameter files for isotopes: {isotopes}, with abundances: {abundances}")
 
-
     # TODO: This assumes that parfiles were created via ENDF data. This might not always be the case.
+    # I think I can use the run_with_endf flag to determine if the par file was created with ENDF data
     for isotope, abundance in zip(isotopes, abundances):        
         # turn the abundance into a float
         abundance = float(abundance)
@@ -250,7 +250,7 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     inp.data["Card5"]["deltae"] = 0.001
     inp.data["Card7"]["crfn"] = 0.001
 
-    #TODO: Need to figure out a better way to deal with commands in card3.
+    # TODO: Need to figure out a better way to deal with commands in card3.
     # Resetting the commands for running SAMMY to generate output par files based on ENDF.
     inp.data["Card3"]['commands'] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH-MOORE FORMALISm is wanted,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
 
