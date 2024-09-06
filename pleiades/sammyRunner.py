@@ -109,8 +109,6 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
     output_file = config.params['filenames']['output_file_name']
     data_file = config.params['filenames']['data_file_name']
 
-    print(results_dir)
-    
     # Create full paths to the files
     full_path_to_data_file = pathlib.Path(data_dir) / data_file
     full_path_to_input_file = pathlib.Path(fit_dir) / input_file
@@ -120,7 +118,7 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
     
     # Print info based on verbosity level
     if verbose_level > 0: 
-        print(f"\n{print_header_check} Running SAMMY for {fit_dir}")  
+        print(f"\n{print_header_check} Running SAMMY for {sammy_fit_name}")  
         if verbose_level > 1:
             print(f"{print_header_check} input_file: {full_path_to_input_file}")
             print(f"{print_header_check} par_file: {full_path_to_params_file}")
@@ -173,7 +171,6 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
         output.write(f"\n=== SAMMY Run Started at {current_time} ===")
         
         # Run the command and redirect output and error to the file
-        if verbose_level > 0: print(f"Running SAMMY for {sammy_fit_name}...")
         subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
     
     # Check if the SAMMY run was successful by opening the output file and checking for the line " Normal finish to SAMMY"
@@ -181,7 +178,6 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
         if verbose_level > 0: print(f"{print_header_check} Checking SAMMY output file: {full_path_to_output_file}")
         for line in output_file:
             if " Normal finish to SAMMY" in line:
-                print(line)
                 if verbose_level > 0: print(f"{print_header_good} SAMMY fit was successful for {sammy_fit_name}")
                 break
         else:
