@@ -18,7 +18,8 @@ class SammyFitConfig:
                                             # compiled should "sammy" & docker should be "sammy-docker"
 
             'sammy_fit_name': 'sammy_fit',  # name of the sammy fit
-            'run_with_endf': False,         # flag to run from endf par file 
+            'run_endf_for_par': False,      # flag to run from endf to get parFile
+            'use_endf_par_file': False,     # flag to use endf generated parFile for sammy fit
             'fit_energy_min': 0.0,          # min energy for sammy fit
             'fit_energy_max': 1.0,          # max energy for sammy fit
             'flight_path_length': 10.0,     # Flight path length
@@ -183,9 +184,9 @@ class SammyFitConfig:
             archive_dir = self.params['directories']['archive_dir']
             image_dir = self.params['directories']['image_dir']
             data_dir = self.params['directories']['data_dir']
-            sammy_fit_dir = self.params['directories']['sammy_fit_dir']
-            fit_results_dir = self.params['directories']['fit_results_dir']
-            endf_dir = self.params['directories']['endf_dir']
+            #sammy_fit_dir = self.params['directories']['sammy_fit_dir']
+            #fit_results_dir = self.params['directories']['fit_results_dir']
+            #endf_dir = self.params['directories']['endf_dir']
 
         # otherwise create the subdirectories within the working directory
         else:
