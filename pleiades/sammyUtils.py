@@ -1,12 +1,37 @@
-# High level utility functions to use Pleiades functionality to run SAMMY
+# sammyUtils.py
+# Version: 1.0
+# Authors: 
+#   - Alexander M. Long
+#       - Los Alamos National Laboratory
+#       - ORCID: 0000-0003-4300-9454
+#   - Tsviki Hirsh 
+#       - Soreq Nuclear Research Center
+#       - ORCID: 0000-0001-5889-4500
+# About: 
+#   This file is part of the PLEIADES package and contains high level functions to setup the SAMMY fitting process.
+# Functions:
+#   - create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbose_level: int = 0) -> None
+#   - configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0)
+#   - run_sammy(config: SammyFitConfig, verbose_level: int = 0)
+# How to use:
+#   - Import the this class with 'from pleiades import sammyUtils'
+#   Note: 
+#       also need to import SammyFitConfig from pleiades.sammyStructures 
+#       with 'from pleiades.sammyStructures import SammyFitConfig'
+
+# General imports
 from pathlib import Path
 import pathlib
 import os
 import shutil
 
-# pleiades imports
-from pleiades import sammyParFile, sammyInput, sammyRunner, nucData
+# PLEIADES imports
 from pleiades.sammyStructures import SammyFitConfig
+from pleiades import sammyParFile, sammyInput, sammyRunner, nucData
+
+print_header_check = "\033[1;34m<SAMMY Utilities>\033[0m "
+print_header_good = "\033[1;32m<SAMMY Utilities>\033[0m "
+print_header_bad = "\033[1;31m<SAMMY Utilities>\033[0m "
 
 def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbose_level: int = 0) -> None:
     """
@@ -23,7 +48,6 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         verbose_level (int, optional): 0: no printing, 1: prints general info, 2: prints data. Defaults to 0.
 
     Notes:
-        #TODO: Need a way to figure out the resonance emin and emax of the ENDF res file and set them here.
         #TODO: Need to figure out a better way to deal with commands in card3.
         #TODO: Need to add a check to see if the .par file was created successfully and print a message if not.   
     """
@@ -32,7 +56,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     # Ensure isotopes is a list
     if isinstance(isotopes, str): isotopes = [iso.strip() for iso in isotopes.split(',')]  
 
-    if verbose_level > 0: print(f"Creating SAMMY parFile files from ENDF data for isotopes: {isotopes}")
+    if verbose_level > 0: print(f"{print_header_check} Creating SAMMY parFile files from ENDF data for isotopes: {isotopes}")
 
     # Then Grab the rest of the nessessary parameters from the configuration class
     flight_path_length = config.params['flight_path_length']
@@ -46,18 +70,18 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     if archive:
         endf_dir_path = pathlib.Path(endf_dir)
         endf_dir_path.mkdir(parents=True, exist_ok=True)
-        if verbose_level > 0: print(f"ENDF directory created at {endf_dir_path}")
+        if verbose_level > 0: print(f"{print_header_check} ENDF directory created at {endf_dir_path}")
         
         # copy res_endf8.endf to the endf directory
         destination_res_endf = endf_dir_path / "res_endf8.endf"
         shutil.copy(source_res_endf, destination_res_endf)
         if verbose_level > 0:
-            print(f"Copied {source_res_endf} to {destination_res_endf}")
+            print(f"{print_header_check} Copied {source_res_endf} to {destination_res_endf}")
 
     # Loop through the isotope list: Create a SAMMY input file and run SAMMY with ENDF data to generate .par file
     for isotope in isotopes:
         
-        if verbose_level > 0: print(f"Creating SAMMY parFile for isotope: {isotope}")
+        if verbose_level > 0: print(f"\n{print_header_check} Creating SAMMY parFile for isotope: {isotope}")
 
         # Create a SAMMY input file data structure
         inp = sammyInput.InputFile()
@@ -74,38 +98,38 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         inp.data["Card3"]['commands'] = 'TWENTY,DO NOT SOLVE BAYES EQUATIONS,INPUT IS ENDF/B FILE'
     
         # Print the input data structure if desired
-        if verbose_level > 1: print(inp.data)
+        if verbose_level > 1: 
+            print(f"{print_header_check} SAMMY input data for isotope {isotope}:")
+            print(inp.data)
+            print(f"{print_header_check} -------------------------------")
     
         # Create a run name or handle based on the isotope name
-        sammy_run_handle = isotope.replace("-", "").replace("_", "")
-        sammy_input_file_name = sammy_run_handle + ".inp"
+        #sammy_run_handle = isotope.replace("-", "").replace("_", "")
+        #sammy_input_file_name = sammy_run_handle + ".inp"
     
         # if archive is 'True', then create directories for the isotope sammy fit (if it doesn't already exist)
         if archive:
             # Create a directory in the endf_dir_path that corresponds to the sammy_run_handle
-            run_sammy_dir = endf_dir_path / Path(sammy_run_handle)
+            run_sammy_dir = endf_dir_path / Path(isotope)
             
             # add new output directory to the archive_path
             run_sammy_dir.mkdir(parents=True, exist_ok=True)
             
             # Create a SAMMY input file in the output directory
-            sammy_input_file = run_sammy_dir / (sammy_input_file_name)
+            sammy_input_file = run_sammy_dir / (config.params['filenames']['input_file_name'])
             
-            if verbose_level > 0: print(f"SAMMY input file created at {sammy_input_file}")
+            if verbose_level > 0: print(f"{print_header_check} SAMMY input file created at {sammy_input_file}")
             
         else:
             # determine the current working directory
             run_sammy_dir = Path.cwd()
-            sammy_input_file = run_sammy_dir / (sammy_input_file_name)
+            sammy_input_file = run_sammy_dir / (config.params['filenames']['input_file_name'])
 
         # Write the SAMMY input file to the specified location. 
         inp.process().write(sammy_input_file)
     
         sammyRunner.run_endf(config, isotope, verbose_level=verbose_level)
-                         
-
-
-
+        
 
 def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
@@ -130,7 +154,9 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     
     # Grabbing the isotopes, abundances, and fudge factor from the config file
     isotopes = config.params['isotopes']['names']
+    if isinstance(isotopes, str): isotopes = [iso.strip() for iso in isotopes.split(',')] 
     abundances = config.params['isotopes']['abundances']
+    if isinstance(abundances, str): abundances = [abd.strip() for abd in abundances.split(',')] 
     fudge_factor = config.params['fudge_factor']
     
     # setting the resonance energy min and max, this will clip the resonances in the parFile to the specified energy range
@@ -138,11 +164,13 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     res_emax = config.params['resonances']['resonance_energy_max']
     
     # Create a SAMMY parFile for each isotope 
-    if verbose_level > 0: print(f"Creating SAMMY parFile files for isotopes: {isotopes} with abundances: {abundances}")
+    if verbose_level > 0: print(f"\n{print_header_check} Merging SAMMY parameter files for isotopes: {isotopes}, with abundances: {abundances}")
+
 
     for isotope, abundance in zip(isotopes, abundances):
-        # Get rid of any dashes or underscores in the isotope name
-        isotope = isotope.replace("-", "").replace("_", "")
+        
+        # turn the abundance into a float
+        abundance = float(abundance)
         # Append sammy parFiles using sammyParFile in the ParFile class
         isotopeParFiles.append(sammyParFile.ParFile(filename=f"{endf_dir}/{isotope}/results/SAMNDF.PAR", name = isotope, weight=abundance, emin=res_emin, emax=res_emax).read())
 
@@ -196,13 +224,12 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     outputParFile.update.normalization(**normalization_args)
 
     # write out the output par file
-    #TODO: fix hard coding of parFile name
     output_par_file = Path(archive_dir) / Path(sammy_fit_dir) / Path('params').with_suffix(".par")
-    if verbose_level > 0: print(f"Writing output parFile: {output_par_file}")
+    if verbose_level > 0: print(f"{print_header_check} Writing output parFile: {output_par_file}")
     outputParFile.write(output_par_file)
 
     # Now create a SAMMY input file
-    if verbose_level > 0: print(f"Creating SAMMY inpFile files for isotopes: {isotopes} with abundances: {abundances}")
+    if verbose_level > 0: print(f"{print_header_check} Creating SAMMY inpFile files for isotopes: {isotopes} with abundances: {abundances}")
     
     # Create an inpFile from 
     inp = sammyInput.InputFile(verbose_level=verbose_level)
@@ -233,13 +260,13 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
 
     # Write the SAMMY input file to the specified location. 
     inp.process().write(output_inp_file)
-    if verbose_level > 0: print(f"Created compound input file: {output_inp_file}")
+    if verbose_level > 0: print(f"{print_header_check} Created compound input file: {output_inp_file}")
 
     # Create a symbolic link inside the sammy_fit_dir that points to the data file 
     data_file = os.path.join(data_dir, config.params['filenames']['data_file_name'])
     data_file_name = pathlib.Path(data_file).name
 
-    if verbose_level > 0: print(f"Symlinking data file: {data_file} into {sammy_fit_dir}")
+    if verbose_level > 0: print(f"{print_header_check} Symlinking data file: {data_file} into {sammy_fit_dir}")
 
     # Check if the symbolic link already exists
     symlink_path = pathlib.Path(sammy_fit_dir) / data_file_name
@@ -258,31 +285,7 @@ def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     Args:
         config (SammyFitConfig): SammyFitConfig object containing the configuration parameters.
     """
-    sammy_call_method = config.params['sammy_run_method']
-    sammy_command = config.params['sammy_command']
-    sammy_fit_dir = config.params['directories']['sammy_fit_dir']
-    data_dir = config.params['directories']['data_dir']
-    input_file = config.params['filenames']['input_file_name']
-    parameter_file = config.params['filenames']['params_file_name']
-    data_file = data_dir +"/"+ config.params['filenames']['data_file_name']
 
     # Run SAMMY
-    # TODO: Need think about how to handle mounting the data directory if the docker image is used.
-    sammyRunner.run_sammy_fit(sammy_call_method, sammy_command, sammy_fit_dir, input_file, parameter_file, data_file, verbose_level=verbose_level)
-
-    # Check the output file in the sammy_fit_dir to see if SAMMY executed successfully. 
-    output_file = config.params['directories']['sammy_fit_dir']+"/output.out"
-    
-    # Open the output_file and check for the line " Normal finish to SAMMY"
-    with open(output_file, 'r') as file:
-        data = file.read()
-        if "Normal finish to SAMMY" in data:
-            sammy_success = True
-            if verbose_level > 0: print("SAMMY executed successfully.")
-        else:
-            sammy_success = False
-            print("SAMMY failed to execute a fit.")
-            print("Check the output file for more information: ", output_file)
-
-    return sammy_success
+    sammyRunner.run_sammy_fit(config, verbose_level=verbose_level)
 

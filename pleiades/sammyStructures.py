@@ -17,7 +17,7 @@ class SammyFitConfig:
             'fit_energy_min': 0.0,          # min energy for sammy fit
             'fit_energy_max': 1.0,          # max energy for sammy fit
             'flight_path_length': 10.0,     # Flight path length
-            'fudge_factor': 1.0,            # Sammy fit incrementation
+            'fudge_factor': 1.0,            # Sammy fit uncertainty scale factor
             
             # Directories for data, results, and archive
             'directories': {
@@ -35,7 +35,8 @@ class SammyFitConfig:
             'filenames': {
                 'data_file_name': 'data.dat',
                 'input_file_name': 'input.inp',
-                'params_file_name': 'params.par'
+                'params_file_name': 'params.par',
+                'output_file_name': 'output.out'
             },
             # Isotopes for sammy fit
             'isotopes': {
@@ -170,10 +171,10 @@ class SammyFitConfig:
 
         # otherwise create the subdirectories within the working directory
         else:
-            fit_results_dir = os.path.join(working_dir, self.params['directories']['fit_results_dir'])
             archive_dir = os.path.join(working_dir, self.params['directories']['archive_dir'])
             endf_dir = os.path.join(archive_dir, self.params['directories']['endf_dir'])
             sammy_fit_dir = os.path.join(archive_dir, self.params['directories']['sammy_fit_dir'])
+            fit_results_dir = os.path.join(sammy_fit_dir, self.params['directories']['fit_results_dir'])
 
             # now we need to reset all the path variables with the full paths
             self.params['directories']['image_dir'] = image_dir

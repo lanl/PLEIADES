@@ -1,8 +1,27 @@
+# sammyParFile.py
+# Version: 1.0
+# Authors: 
+#   - Alexander M. Long
+#       - Los Alamos National Laboratory
+#       - ORCID: 0000-0003-4300-9454
+#   - Tsviki Hirsh 
+#       - Soreq Nuclear Research Center
+#       - ORCID: 0000-0001-5889-4500
+# About: 
+#   This file is part of the PLEIADES package and contains classes to handle SAMMY parameter files.
+# Classes:
+#   - ParFile - class utility to read, parse and combine par files to allow fitting of compounds
+#   - Update - class utility to update the par file data structure
+# How to use:
+#   - Import the this class with 'from pleiades import sammyParFile'
+
+# General imports
 import re
 import pathlib
 import configparser
 from typing import Tuple, List, Dict, Any
 import json
+
 
 class ParFile:
     """ parFile class for the Sammy par file.
@@ -553,7 +572,6 @@ class ParFile:
         """ parse a list of channel-radii and channel-groups cards and sort the key-word pairs
         """
         cr_data = []
-        #print(self._channel_radii_cards)
         cards = (card for card in self._channel_radii_cards) # convert to a generator object
 
         # parse channel radii and groups using regex
