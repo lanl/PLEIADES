@@ -4,12 +4,14 @@ from pleiades import sammyUtils, sammyRunner, sammyOutput, sammyPlotter
 # Load the configuration file from the ini file in the parent directory
 uranium = sammyUtils.SammyFitConfig('../configFiles/uranium.ini')
 
-# Create the needed parFiles from ENDF for the isotopes in the configuration file
-sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
+# If parFiles as needed, then create them from ENDF for each isotope
+if uranium.params['run_endf_for_par'] == True:
+    sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
 
 # Configure the sammy run, this will create a compound parFile. 
 sammyUtils.configure_sammy_run(uranium,verbose_level=1)
 
+'''
 # Run a sammy fit.
 sammyRunner.run_sammy_fit(uranium,verbose_level=2)
 
@@ -62,3 +64,5 @@ uranium_fit = sammyOutput.lptResults(uranium.params['directories']['sammy_fit_di
 
 # Plot the results
 sammyPlotter.process_and_plot_lst_file(uranium.params['directories']['sammy_fit_dir']+"/results/SAMMY.LST", residual=True,quantity='transmission')
+
+'''

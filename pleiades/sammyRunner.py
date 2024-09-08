@@ -29,9 +29,8 @@ import textwrap
 import numpy as np
 import datetime
 
-
 # SammyFitConfig imports from PLEIADES 
-from pleiades.sammyStructures import SammyFitConfig
+from pleiades.sammyStructures import SammyFitConfig, sammyRunConfig
 
 print_header_check = "\033[1;34m<SAMMY Runner>\033[0m "
 print_header_good = "\033[1;32m<SAMMY Runner>\033[0m "
@@ -83,11 +82,11 @@ def check_sammy_environment(config: SammyFitConfig, verbose_level: int = 0) -> b
     return sammy_exists
   
 
-def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
+def run_sammy_fit(config: sammyRunConfig, verbose_level: int = 0) -> None:
     """ 
     Run the SAMMY fitting process.
     Parameters:
-    - config (SammyFitConfig): A SammyFitConfig object
+    - config (sammyRunConfig): A sammyRunConfig object needed to execute a SAMMY fit.
     - verbose_level (int): The level of verbosity for printing information. Default is 0.
     Raises:
     - ValueError: If input_file, par_file, or data_file is not provided.
@@ -95,6 +94,10 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
     Returns:
     - None
     """
+    
+    # Grab the directory from which the pleiades script was called.
+    pleiades_call_dir = pathlib.Path.cwd()
+    
     # Set the SAMMY run method
     sammy_call = config.params['sammy_run_method']
     sammy_command = config.params['sammy_command']
@@ -103,7 +106,8 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
     # Set directories and file names
     data_dir = config.params['directories']['data_dir']
     fit_dir = config.params['directories']['sammy_fit_dir']
-    results_dir = config.params['directories']['fit_results_dir']
+    params_dir = config.params['directories']['params_dir']
+    input_dir = config.params['directories']['input_dir']
     input_file = config.params['filenames']['input_file_name']
     params_file = config.params['filenames']['params_file_name']
     output_file = config.params['filenames']['output_file_name']
@@ -111,14 +115,14 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
 
     # Create full paths to the files
     full_path_to_data_file = pathlib.Path(data_dir) / data_file
-    full_path_to_input_file = pathlib.Path(fit_dir) / input_file
-    full_path_to_params_file = pathlib.Path(fit_dir) / params_file
+    full_path_to_input_file = pathlib.Path(input_dir) / input_file
+    full_path_to_params_file = pathlib.Path(params_dir) / params_file
     full_path_to_output_file = pathlib.Path(fit_dir) / output_file
-    full_path_to_result_files = pathlib.Path(fit_dir) / results_dir
+    full_path_to_result_files = pathlib.Path(fit_dir) / 'results'
     
     # Print info based on verbosity level
     if verbose_level > 0: 
-        print(f"\n{print_header_check} Running SAMMY for {sammy_fit_name}")  
+        print(f"{print_header_check} ----------------------- Running SAMMY for {sammy_fit_name}")  
         if verbose_level > 1:
             print(f"{print_header_check} input_file: {full_path_to_input_file}")
             print(f"{print_header_check} par_file: {full_path_to_params_file}")
@@ -134,36 +138,59 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
     if not os.path.isfile(full_path_to_data_file):
         raise FileNotFoundError(f"{print_header_bad} Data file {data_file} not found")
     
-    # Grab the directory from which the pleiades script was called.
-    pleiades_call_dir = pathlib.Path.cwd()
+    # Create results directory if it does not exist
+    os.makedirs(full_path_to_result_files, exist_ok=True)
 
-    # Create SAMMY run command depending on the call type compiled or docker
-    if sammy_call == "compiled":
-        sammy_run_command = textwrap.dedent(f"""\
-        sammy <<EOF
-        {input_file}
-        {params_file}
-        {data_file}
-
-        EOF""")
+    # Check if we are running SAMMY to produce a par file from ENDF tables
+    if config.params['run_endf_for_par'] == True:
         
-    elif sammy_call == "docker":
-        sammy_run_command = textwrap.dedent(f"""\
-        docker run -i -v {fit_dir}:/sammy_fit_dir -v {data_dir}:/data_dir -w /sammy_fit_dir  {sammy_command} sammy <<EOF
-        /sammy_fit_dir/{input_file}
-        /sammy_fit_dir/{params_file}
-        /data_dir/{data_file}
+        # Create SAMMY run command depending on the call type
+        if sammy_call == "compiled":
+            sammy_run_command = textwrap.dedent(f"""\
+            sammy <<EOF
+            {input_file}
+            res_endf8.endf
+            {data_file}
 
-        EOF""")
+            EOF""")
+            
+        elif sammy_call == "docker":
+            sammy_run_command = textwrap.dedent(f"""\
+            docker run -i -v {fit_dir}:/sammy_fit_dir -v {data_dir}:/data_dir -v {params_dir}:/params_dir -w /sammy_fit_dir  {sammy_command} sammy <<EOF
+            /sammy_fit_dir/{input_file}
+            /params_dir/res_endf8.endf
+            /data_dir/{data_file}
+            
+            EOF""")
+    else:
+        # Create SAMMY run command depending on the call type compiled or docker
+        if sammy_call == "compiled":
+            sammy_run_command = textwrap.dedent(f"""\
+            sammy <<EOF
+            {input_file}
+            {params_file}
+            {data_file}
+
+            EOF""")
+        
+        elif sammy_call == "docker":
+            sammy_run_command = textwrap.dedent(f"""\
+            docker run -i -v {fit_dir}:/sammy_fit_dir -v {data_dir}:/data_dir -w /sammy_fit_dir  {sammy_command} sammy <<EOF
+            /sammy_fit_dir/{input_file}
+            /sammy_fit_dir/{params_file}
+            /data_dir/{data_file}
+
+            EOF""")
     
     # Print the run command if verbose level is high enough
-    if verbose_level > 2: print(sammy_run_command)
+    if verbose_level > 1: print(sammy_run_command)
     
     # Change directories to the working dir
     os.chdir(fit_dir)
+    if verbose_level > 0: print(f"{print_header_check} Changing to directory to: {fit_dir}")
     
     # Open the output file in write mode
-    with open(full_path_to_output_file, "w+") as output:
+    with open(output_file, "w+") as output:
         # Get the current timestamp
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -174,14 +201,14 @@ def run_sammy_fit(config: SammyFitConfig, verbose_level: int = 0) -> None:
         subprocess.run(sammy_run_command, shell=True, executable='/bin/bash', stdout=output, stderr=subprocess.STDOUT)
     
     # Check if the SAMMY run was successful by opening the output file and checking for the line " Normal finish to SAMMY"
-    with open(full_path_to_output_file, "r") as output_file:
+    with open(output_file, "r") as output:
         if verbose_level > 0: print(f"{print_header_check} Checking SAMMY output file: {full_path_to_output_file}")
-        for line in output_file:
+        for line in output:
             if " Normal finish to SAMMY" in line:
                 if verbose_level > 0: print(f"{print_header_good} SAMMY fit was successful for {sammy_fit_name}")
                 break
         else:
-            raise RuntimeError(f"{print_header_bad} SAMMY fit was not successful for {sammy_fit_name}")
+            raise RuntimeError(f"{print_header_bad} SAMMY fit was not successful for {sammy_fit_name} - Check the output file: {full_path_to_output_file}")
         
     # Move all SAMMY output files with the prefix SAM to the results folder
     for file in glob.glob("SAM*"):
@@ -222,24 +249,9 @@ def run_endf(config: SammyFitConfig, isotope: str = "", verbose_level: int = 0) 
     fit_dir = config.params['directories']['endf_dir'] +"/"+ isotope
     input_file = config.params['filenames']['input_file_name']
     
-       
-    # Print info based on verbosity level
-    if verbose_level > 0: print(f"{print_header_check} Running SAMMY to create a par file from an ENDF file")
-
-    # Check sammy environment
-    sammy_sucess = check_sammy_environment(config, verbose_level)
-    
-    if not sammy_sucess:
-        raise FileNotFoundError(f"{print_header_bad} SAMMY executable not found in the path")
-    else:
-        if verbose_level > 1: print(f"{print_header_bad} SAMMY executable found in the path")
-
-    # Grab the directory from which the pleiades script was called.
-    pleiades_call_dir = pathlib.Path.cwd()
-    
     # Set the working directory path
     fit_dir = pathlib.Path(fit_dir)
-    if verbose_level > 0: print(f"{print_header_check} Working directory: {fit_dir}")
+
     
     # create an results folder within the working directory
     # We will be moving all the SAMMY results to this dir. 
