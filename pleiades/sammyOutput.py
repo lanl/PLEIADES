@@ -211,6 +211,63 @@ class lptResults:
         else:
             return None, None
 
+    def _print(self, iteration_index: int = None):
+        """
+        Prints the results structure. If an iteration_index is provided, it prints only the specified iteration.
+        If no index is provided, it prints all iterations.
+
+        Args:
+            iteration_index (int, optional): Index of the iteration to print. If None, prints all iterations.
+        """
+        # Print general information
+        print("General Information:")
+        print(f"  Emin: {self._results['General']['Emin']}")
+        print(f"  Emax: {self._results['General']['Emax']}")
+        print(f"  Target Element: {self._results['General']['Target Element']}")
+        print(f"  Atomic Weight: {self._results['General']['Atomic Weight']}")
+        print(f"  Number of Nuclides: {self._results['General']['Number of nuclides']}")
+        print(f"  Data Type: {self._results['General'].get('Data Type', 'N/A')}")
+        print("\nIteration Blocks:")
+
+        # Print only a specific iteration if an index is provided
+        if iteration_index is not None:
+            if 0 <= iteration_index < len(self._results['Iteration Results']):
+                self._print_iteration(iteration_index)
+            else:
+                print(f"Error: Invalid iteration index {iteration_index}. Valid range: 0 to {len(self._results['Iteration Results']) - 1}")
+        else:
+            # Print all iterations
+            for idx in range(len(self._results['Iteration Results'])):
+                self._print_iteration(idx)
+
+        print("\nEnd of results.")
+
+    def _print_iteration(self, idx: int):
+        """Helper function to print a specific iteration."""
+        iteration = self._results['Iteration Results'][idx]
+        print(f"\nIteration {idx + 1}:")
+        print(f"  Temperature: {iteration['Temperature']}")
+        print(f"  Thickness: {iteration['Thickness']}")
+        print(f"  DELTA-L: {iteration['DELTA-L']}")
+        print(f"  DELTA-T-GAUS: {iteration['DELTA-T-GAUS']}")
+        print(f"  DELTA-T-EXP: {iteration['DELTA-T-EXP']}")
+        print(f"  NORMALIZATION: {iteration.get('NORMALIZATION', 'N/A')}")
+        print(f"  Chi-Squared: {iteration['Chi2']}")
+        print(f"  Reduced Chi-Squared: {iteration['RedChi2']}")
+        
+        # Print background data
+        print("  Backgrounds:")
+        for key, value in iteration['Backgrounds'].items():
+            print(f"    {key}: {value}")
+
+        # Print nuclide data
+        print("  Nuclides:")
+        for nuclide in iteration['Nuclides']:
+            print(f"    Nuclide {nuclide['Number']}:")
+            print(f"      Abundance: {nuclide['Abundance']}")
+            print(f"      Vary Flag: {nuclide['Vary Flag']}")
+            print(f"      Mass: {nuclide['Mass']}")
+            print(f"      Spin Groups: {nuclide['SpinGroups']}")
 
 
 '''

@@ -5,6 +5,10 @@ from contextlib import suppress
 import numpy as np
 import datetime
 
+# SammyFitConfig imports from PLEIADES 
+from pleiades.sammyStructures import SammyFitConfig
+from pleiades import nucData
+
 print_header_check = "\033[1;34m<SAMMY Inputs>\033[0m "
 print_header_good = "\033[1;32m<SAMMY Inputs>\033[0m "
 print_header_bad = "\033[1;31m<SAMMY Inputs>\033[0m "
@@ -61,7 +65,45 @@ class InputFile:
             print(f"Config data: {self._config_data}")
 
         return
+        
+    def update_with_config(self, config: SammyFitConfig, isotope: str='', for_endf: bool = False) -> "InputFile":
+        """
+        Update the SAMMY input data with isotope-specific information and configuration.
 
+        Args:
+            config (SammyFitConfig): A SammyFitConfig object.
+            isotope (str): Isotope name to update.
+
+        Returns:
+            InputFile: The InputFile instance.
+        """
+        
+        # If no isotope is provided, select the isotope with the lowest atomic mass
+        if not isotope:
+            isotope = min(config.params['isotopes']['names'], key=lambda isotope: nucData.get_mass_from_ame(isotope))
+
+        # Set isotope and atomic weight (use auto to calculate if necessary)
+        self.data["Card2"]["elmnt"] = isotope
+        self.data["Card2"]["aw"] = "auto"  # This will trigger auto calculation of atomic weight
+        self.data["Card2"]["emin"] = config.params['fit_energy_min']
+        self.data["Card2"]["emax"] = config.params['fit_energy_max']
+        
+        # Set commands for Card3
+        if for_endf == True:
+            # Resetting the commands for running SAMMY to generate output par files based on ENDF.
+            self.data["Card3"]['commands'] = 'TWENTY,DO NOT SOLVE BAYES EQUATIONS,INPUT IS ENDF/B FILE'
+        else: 
+            self.data["Card3"]["commands"] = 'CHI_SQUARED,TWENTY,SOLVE_BAYES,QUANTUM_NUMBERS,REICH-MOORE FORMALISm is wanted,GENERATE ODF FILE AUTOMATICALLY,USE I4 FORMAT TO READ SPIN GROUP NUMBER'
+        
+        # Set flight path length and other parameters for Card5
+        self.data["Card5"]["dist"] = config.params['flight_path_length']
+        self.data["Card5"]["deltag"] = config.params['broadening']['deltag_fwhm']
+        self.data["Card5"]["deltae"] = config.params['broadening']['deltae_us']
+
+        # Set additional isotope-specific parameters
+        self.data["Card7"]["crfn"] = config.params['broadening']['flight_path_spread']
+
+        return self
 
     def process(self, auto_update: bool=True) -> "InputFile":
         """
@@ -130,7 +172,6 @@ class InputFile:
             self.processed_cards += [self._resolution_commands]
 
         return self
-
 
     def write(self, filename: str = "sammy.inp") -> "InputFile":
         """
@@ -286,8 +327,7 @@ class InputFile:
                 commands.pop(i)
 
         self.data["Card3"]["commands"] = ",".join(commands)
-
-
+        
         return
     
    
