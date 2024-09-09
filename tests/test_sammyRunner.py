@@ -48,7 +48,7 @@ def test_check_sammy_environment(default_config):
     logger.info(logger_header_break)
     logger.info("Checking if SAMMY environment exists")
 
-   sammy_compiled_exists, sammy_docker_exists = sammyRunner.check_sammy_environment(default_config)
+    sammy_compiled_exists, sammy_docker_exists = sammyRunner.check_sammy_environment(default_config)
 
     logger.info(logger_footer_break)
 
