@@ -6,20 +6,19 @@ uranium = sammyUtils.SammyFitConfig('../configFiles/uranium.ini')
 
 # If parFiles as needed, then create them from ENDF for each isotope
 if uranium.params['run_endf_for_par'] == True:
-    sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
+    sammyUtils.create_parFile_from_endf(uranium,verbose_level=0)
 
 # Configure the sammy run, this will create a compound parFile. 
-sammyUtils.configure_sammy_run(uranium,verbose_level=1)
+sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=0)
 
-'''
 # Run a sammy fit.
-sammyRunner.run_sammy_fit(uranium,verbose_level=2)
+sammyRunner.run_sammy_fit(sammy_run, verbose_level=0)
 
-# Grab the results from the SAMMY fit
-uranium_fit = sammyOutput.lptResults(uranium.params['directories']['sammy_fit_dir']+"/results/SAMMY.LPT")
-
-# Plot the results
-sammyPlotter.process_and_plot_lst_file(uranium.params['directories']['sammy_fit_dir']+"/results/SAMMY.LST", residual=True,quantity='transmission')
+# Grab the results from the SAMMY fit and plot the fit
+results_lpt = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LPT'
+results_lst = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LST'
+uranium_fit = sammyOutput.lptResults(results_lpt)
+sammyPlotter.process_and_plot_lst_file(results_lst, residual=True,quantity='transmission')
 
 # Print out the initial parameters for the isotopes (names and abundances)
 print(f"Isotopes: {uranium.params['isotopes']['names']}")
@@ -37,8 +36,8 @@ uranium.params['broadening']['thickness'] = float(uranium_fit._results['Iteratio
 print(f"New Abundance: {uranium.params['isotopes']['abundances']}")
 print(f"New Thickness: {uranium.params['broadening']['thickness']}")
 
-# Update the `sammy_fit_dir` to a new directory name
-uranium.params['directories']['sammy_fit_dir'] = uranium.params['directories']['sammy_fit_dir'] + "-ta181"
+#Create new fit directory
+uranium.params['directories']['sammy_fit_dir'] = uranium.params['directories']['working_dir'] / "u235-u238-ta181"
 
 # check your work!
 print(f"New fit directory: {uranium.params['directories']['sammy_fit_dir']}")
@@ -51,18 +50,19 @@ uranium.params['isotopes']['abundances'].append(0.01)
 print(f"Names: {uranium.params['isotopes']['names']}")
 print(f"Abundance: {uranium.params['isotopes']['abundances']}")
 
-# Create the needed parFiles from ENDF for the isotopes in the configuration file
-sammyUtils.create_parFile_from_endf(uranium,verbose_level=0)
+# Create a new par file for the additional isotope Ta-181
+if uranium.params['run_endf_for_par'] == True:
+    sammyUtils.create_parFile_from_endf(uranium,verbose_level=0)
+
 
 # Configure the sammy run, this will create a compound parFile. 
-sammyUtils.configure_sammy_run(uranium,verbose_level=1)
+sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=0)
 
-# Run the sammy fit.
-success = sammyUtils.run_sammy(uranium,verbose_level=1)
+# Run the new sammy fit.
+sammyRunner.run_sammy_fit(sammy_run, verbose_level=0)
 
-uranium_fit = sammyOutput.lptResults(uranium.params['directories']['sammy_fit_dir']+"/results/SAMMY.LPT")
-
-# Plot the results
-sammyPlotter.process_and_plot_lst_file(uranium.params['directories']['sammy_fit_dir']+"/results/SAMMY.LST", residual=True,quantity='transmission')
-
-'''
+# Grab the results from the SAMMY fit and plot the fit
+updated_results_lpt = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LPT'
+updated_results_lst = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LST'
+updated_uranium_fit = sammyOutput.lptResults(results_lpt)
+sammyPlotter.process_and_plot_lst_file(updated_results_lst, residual=True,quantity='transmission')

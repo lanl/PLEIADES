@@ -74,16 +74,8 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         print(f"\n{print_header_check} ================================================")
         print(f"{print_header_check} Creating SAMMY parFile files from ENDF data for isotopes: {isotopes}")
 
-    # Need to check if directories are user defined or not. 
-    # If user defined, then the endf_dir path is set in the configuration file
-    if config.params['directories']['user_defined'] == True:
-        endf_dir_path = config.params['directories']['endf_dir']
-    # If not user defined, then the endf_dir path is placed in the sammy_fit_dir 
-    else:
-        endf_dir_path = config.params['directories']['sammy_fit_dir'] + "/" + config.params['directories']['endf_dir']
-    
-    # Convert the endf_dir_path to an absolute path
-    endf_dir_path = pathlib.Path(endf_dir_path).resolve()
+    # Set the ENDF directory path
+    endf_dir_path = pathlib.Path(config.params['directories']['endf_dir']).resolve()
     
     # Check to see if the endf_dir exists and create it if it doesn't
     if not os.path.exists(endf_dir_path):
@@ -97,13 +89,15 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
     
     # Now check to see if the res_endf8.endf file exists in the endf dir. If not, copy it there.
     if not os.path.exists(destination_res_endf):
-        # Path to the "res_endf8.endf" file in the repo
+        # Get the path to the pleiades base directory 
         pleiades_base_path = pathlib.Path(__file__).resolve().parent.parent
+        # Path to the "res_endf8.endf" file in the pleiades base directory
         source_res_endf = pleiades_base_path / "nucDataLibs/resonanceTables/res_endf8.endf"
+        # Copy the res_endf8.endf file to the endf directory
         shutil.copy(source_res_endf, destination_res_endf)
-        print(f"{print_header_check} Copied {source_res_endf} to {destination_res_endf}")
+        if verbose_level > 0: print(f"{print_header_check} Copied {source_res_endf} to {destination_res_endf}")
     else:
-        print(f"{print_header_check} res_endf8.endf file already exists at {destination_res_endf}\n")
+        if verbose_level > 0:print(f"{print_header_check} res_endf8.endf file already exists at {destination_res_endf}\n")
 
     # Loop through the isotope list: 
     #   1. Create a SAMMY input, data, and params file, 
@@ -166,7 +160,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
                 # Write each line with 20 characters width, right justified
                 fid.write(f"{energy:>20.8f}{transmission:>20.8f}{error:>20.8f}\n")
         
-        print(f"{print_header_check} Created an ENDF dummy data file at {data_file}")
+        if verbose_level > 0: print(f"{print_header_check} Created an ENDF dummy data file at {data_file}")
         
         # Creating a par file based on ENDF file
         endf_res_file_name = "res_endf8.endf"
@@ -220,7 +214,9 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
     """
     isotopeParFiles = []
     
+    
     # setting up the directories that we will need to use
+    fit_dir = config.params['directories']['sammy_fit_dir']
     endf_dir = config.params['directories']['endf_dir']
     sammy_fit_dir = config.params['directories']['sammy_fit_dir']
     data_dir = config.params['directories']['data_dir']
@@ -347,7 +343,23 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
             os.unlink(symlink_path)  # unlink old symlink
 
         os.symlink(data_file, pathlib.Path(sammy_fit_dir) / data_file_name)   # create new symlink
+        
+        # Create a sammy run configuration object
+        sammy_run_config = sammyRunConfig()
+        
+        # configure run_config for an ENDF SAMMY run
+        sammy_run_config.params['sammy_run_method'] = config.params['sammy_run_method']
+        sammy_run_config.params['sammy_command'] = config.params['sammy_command']
+        sammy_run_config.params['run_endf_for_par'] = False
+        sammy_run_config.params['directories']['sammy_fit_dir'] = config.params['directories']['sammy_fit_dir']
+        sammy_run_config.params['directories']['input_dir'] = config.params['directories']['sammy_fit_dir']
+        sammy_run_config.params['directories']['params_dir'] = config.params['directories']['sammy_fit_dir']
+        sammy_run_config.params['directories']['data_dir'] = config.params['directories']['data_dir']
+        sammy_run_config.params['filenames']['params_file_name'] = config.params['filenames']['params_file_name']
+        sammy_run_config.params['filenames']['input_file_name'] = config.params['filenames']['input_file_name']
+        sammy_run_config.params['filenames']['data_file_name'] = config.params['filenames']['data_file_name']
 
+    return sammy_run_config
 
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):
     """

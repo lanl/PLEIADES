@@ -1,5 +1,10 @@
 import configparser
 import os
+import pathlib
+
+print_header_check = "\033[1;34m<SAMMY Structures>\033[0m "
+print_header_good = "\033[1;32m<SAMMY Structures>\033[0m "
+print_header_bad = "\033[1;31m<SAMMY Structures>\033[0m "
 
 class SammyFitConfig:
     """Class to store and manage SAMMY fit parameters."""
@@ -90,7 +95,7 @@ class SammyFitConfig:
         # if a config file is provided, load the parameters from it
         if config_path:
             if not os.path.exists(config_path):
-                raise FileNotFoundError(f"Config file {config_path} not found.")
+                raise FileNotFoundError(f"{print_header_bad} Config file {config_path} not found.")
             else:
                 config = configparser.ConfigParser()
                 config.read(config_path)
@@ -145,7 +150,7 @@ class SammyFitConfig:
             elif value.lower() == 'false':
                 return False
             else:
-                raise ValueError(f"Invalid boolean value: {value}")
+                raise ValueError(f"{print_header_bad} Invalid boolean value: {value}")
         try:
             if '.' in value:
                 return float(value)
@@ -163,11 +168,11 @@ class SammyFitConfig:
         """ Create working_dir and its subdirectories
             Note: If the flag 'user_defined' is set to True, then the user is responsible for setting all the specific directory paths in the config.ini file.
         """
-        # Get the working directory or set it to the current directory if not provided
-        working_dir = self.params['directories']['working_dir']
-        if not working_dir:
-                working_dir = os.getcwd()
-                self.params['directories']['working_dir'] = working_dir
+
+        if not self.params['directories']['working_dir']:
+            self.params['directories']['working_dir'] = os.getcwd()
+
+        working_dir = pathlib.Path(self.params['directories']['working_dir']).resolve()
 
         # Check if the working_dir exists, if not create it
         if not os.path.exists(working_dir):
@@ -177,14 +182,30 @@ class SammyFitConfig:
         # Check to see if they are relative or absolute, and if relative then convert to absolute
         if not os.path.isabs(self.params['directories']['data_dir']):
             data_dir = os.path.abspath(self.params['directories']['data_dir'])
-        if not os.path.isabs(self.params['directories']['image_dir']):
-            image_dir = os.path.abspath(self.params['directories']['image_dir'])
         
-        # Check if the directories exist, if not create them
+        # Check if the directories exist, if not send a error message
         if not os.path.exists(data_dir):
-            os.makedirs(data_dir, exist_ok=True)
-        if not os.path.exists(image_dir):
-            os.makedirs(image_dir, exist_ok=True)
+            raise ValueError(f"{print_header_bad} {data_dir} not found.")
+            
+        # Need to check if directories are user defined or not. 
+        # If user defined, then the endf_dir path is set in the configuration file
+        if self.params['directories']['user_defined'] == False:
+            
+            # Set the data directory to be an absolute path
+            self.params['directories']['data_dir'] = pathlib.Path(self.params['directories']['data_dir']).resolve()
+            
+            # set the working directory to be an absolute path
+            self.params['directories']['working_dir'] = working_dir
+            
+            # Convert the endf_dir_path to an absolute path
+            endf_dir_path = working_dir / self.params['directories']['endf_dir']
+            endf_dir_path = pathlib.Path(endf_dir_path).resolve()
+            self.params['directories']['endf_dir'] = endf_dir_path
+            
+            # Convert the sammy_fit_dir_path to an absolute path
+            sammy_fit_dir_path = working_dir / self.params['directories']['sammy_fit_dir']
+            sammy_fit_dir_path = pathlib.Path(sammy_fit_dir_path).resolve()
+            self.params['directories']['sammy_fit_dir'] = sammy_fit_dir_path
         
     def print_params(self):
         """Prints the parameters in a nicely formatted way.
