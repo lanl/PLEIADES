@@ -34,63 +34,40 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
+logger_header_break = '====================================================='
+logger_footer_break = '-----------------------------------------------------'
+
 @pytest.fixture
 def default_config():
     """Fixture to create and return a default config object."""
     return sammyUtils.SammyFitConfig()
 
-def test_sammy_enviornment(default_config):
+def test_check_sammy_environment(default_config):
     """ Test if sammy enviornment exist and check for both a compiled and docker version of SAMMY """
 
-    # Look for compiled version of SAMMY in the path
-    sammy_path = shutil.which('sammy')
-    if sammy_path:
-        logger.info(f"Compiled SAMMY binary found at {sammy_path}")
-        compiled_sammy_exists = True
+    logger.info(logger_header_break)
+    logger.info("Checking if SAMMY environment exists")
 
-        # Update the default config with the calls to the compiled SAMMY binary
-        default_config.params['sammy_run_method'] = 'compiled'
-        default_config.params['sammy_command'] = 'sammy'
+   sammy_compiled_exists, sammy_docker_exists = sammyRunner.check_sammy_environment(default_config)
 
-    else:
-        logger.warning("Compiled SAMMY binary not found.")
-        compiled_sammy_exists = False
+    logger.info(logger_footer_break)
 
-    # Check if Docker image exists
-    docker_image = 'sammy-docker'
-    docker_command = f'docker image inspect {docker_image}'
-    try:
-        subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
-        logger.info(f"Found Docker image: {docker_image}")
-        docker_image_exists = True
+def test_set_sammy_call_method(default_config):
+    """Test the set_sammy_call_method() function to determine the SAMMY run method."""
+    
+    # Test the set_sammy_call_method() function
+    logger.info(logger_header_break)
+    logger.info("Testing the set_sammy_call_method() function")
+    sammy_call, sammy_command = sammyRunner.set_sammy_call_method(docker_image_name='sammy-docker', verbose_level=1)
+    logger.info(f"Sammy call: {sammy_call}")
+    logger.info(f"Sammy command: {sammy_command}")
 
-        # Update the default config with the calls to the Docker image
-        default_config.params['sammy_run_method'] = 'docker'
-        default_config.params['sammy_command'] = docker_image
-        
-    except subprocess.CalledProcessError:
-        logger.warning(f"Docker image {docker_image} not found.")
-        docker_image_exists = False
+    # Check if the sammy_call and sammy_command are strings
+    assert isinstance(sammy_call, str)
+    assert isinstance(sammy_command, str)
+    logger.info(logger_footer_break)
 
-    # Assert that either the compiled SAMMY exists or the Docker image exists
-    if not sammy_path and not docker_image_exists:
-        logger.error("Neither a compiled version of SAMMY nor the SAMMY Docker image is available.")
-        pytest.fail("Neither a compiled version of SAMMY nor the SAMMY Docker image is available.")
-    else:
-        if compiled_sammy_exists == True and docker_image_exists == False:
-            logger.info("SAMMY is available as a compiled binary.")
-        elif compiled_sammy_exists == False and docker_image_exists == True:
-            logger.info("SAMMY is available as a Docker image.")
-        else:
-            logger.info("Both a compiled SAMMY binary and a Docker image are available.")
-
-
-def test_sammy_call(default_config):
-    """ Tests whether you can call SAMMY.
-
-    Args:
-        default_config (SammyFitConfig): A configuration object for running SAMMY fits.
-    """
-
-
+    # Setting the sammy_run_method and sammy_command in the default config for subsequent tests
+    default_config.params['sammy_run_method'] = sammy_call
+    default_config.params['sammy_command'] = sammy_command
 

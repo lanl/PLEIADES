@@ -35,7 +35,7 @@ from pleiades.sammyStructures import SammyFitConfig, sammyRunConfig
 print_header_check = "\033[1;34m<SAMMY Runner>\033[0m "
 print_header_good = "\033[1;32m<SAMMY Runner>\033[0m "
 print_header_bad = "\033[1;31m<SAMMY Runner>\033[0m "
-    
+
 def check_sammy_environment(config: SammyFitConfig, verbose_level: int = 0) -> bool:
     """
     Check if the SAMMY executable is in the path or if a docker container is running.
@@ -45,42 +45,80 @@ def check_sammy_environment(config: SammyFitConfig, verbose_level: int = 0) -> b
         verbose_level (int): The level of verbosity for printing information. Default is 0.
     
     Returns:
-        bool: True if SAMMY is available, False otherwise
+        sammy_compiled_exists (bool): True if compiled version of SAMMY is available, False otherwise
+        sammy_docker_exists (bool): True if Docker version of SAMMY is available, False otherwise
 
     Note:
         This function is an absolute shit show, and needs work!
     """
     
+    sammy_compiled_command = 'sammy'
     
-    sammy_call = config.params['sammy_run_method']
-    sammy_command = config.params['sammy_command']
+    sammy_compiled_exists = False
+    if verbose_level > 0: 
+        print(f"{print_header_check} Checking for SAMMY in your environment")
+        print(f"{print_header_check} Checking for compiled version of SAMMY")
     
-    sammy_exists = False
-    if verbose_level > 0: print(f"{print_header_check} Checking SAMMY environment for a <{sammy_call}> version of SAMMY")
-    
-    if sammy_call == "compiled":
-        # Check if the sammy executable is in the path
-        if shutil.which(sammy_command) is None:
-            if verbose_level > 1: print(f"{print_header_bad} SAMMY executable not found in the path")
-            sammy_exists = False
-        else: 
-            if verbose_level > 1: print(f"{print_header_good} Found compiled version of SAMMY")
-            sammy_exists = True
+    # Check if the sammy executable is in the path
+    if shutil.which(sammy_compiled_command) is None:
+        if verbose_level > 0: print(f"{print_header_bad} SAMMY executable not found in the path")
+        sammy_compiled_exists = False
+    else: 
+        if verbose_level > 0: print(f"{print_header_good} Found compiled version of SAMMY")
+        sammy_compiled_exists = True
 
-    elif sammy_call == "docker":
+    # Check if Docker image exists
+    docker_image = 'sammy-docker'
+    docker_command = f'docker image inspect {docker_image}'
+
+    if verbose_level > 0: print(f"{print_header_check} Checking for SAMMY docker image {docker_image}")
+    try:
+        subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
+        sammy_docker_exists = True
+        if verbose_level > 0: print(f"{print_header_good} Found docker version of SAMMY")
+    except subprocess.CalledProcessError:
+        if verbose_level > 0: print(f"{print_header_bad} Docker image {docker_image} not found")
+        sammy_docker_exists = False
+
+    return sammy_compiled_exists, sammy_docker_exists
+  
+def set_sammy_call_method(docker_image_name: str='',verbose_level: int = 0) -> str:
+    """
+    Set the SAMMY run method based on the availability of the compiled SAMMY executable or the Docker image.
+    
+    Args:
+        verbose_level (int): The level of verbosity for printing information. Default is 0.
+    
+    Returns:
+        str: The SAMMY run method (compiled or docker)
+    
+    Note:
+        This function is not complete and needs more work
+    """
+    
+    # Check if the compiled SAMMY executable is in the path
+    sammy_path = shutil.which('sammy')
+    if sammy_path is not None:
+        if verbose_level > 0: print(f"{print_header_check} Found compiled version of SAMMY")
+        sammy_call = "compiled"
+        sammy_command = 'sammy'
+    else:
+        if verbose_level > 0: print(f"{print_header_bad} SAMMY executable not found in the path")
+        
         # Check if Docker image exists
-        docker_image = 'sammy-docker'
+        docker_image = docker_image_name
         docker_command = f'docker image inspect {docker_image}'
         try:
             subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
-            sammy_exists = True
-            if verbose_level > 1: print(f"{print_header_good} Found docker version of SAMMY")
+            if verbose_level > 0: print(f"{print_header_good} Found docker version of SAMMY")
+            sammy_call = "docker"
+            sammy_command = docker_image
         except subprocess.CalledProcessError:
-            print(f"{print_header_bad} Docker image {docker_image} not found")
-            sammy_exists = False
+            if verbose_level > 0: print(f"{print_header_bad} Docker image {docker_image} not found")
+            sammy_call = ""
+            sammy_command = ""
 
-    return sammy_exists
-  
+    return sammy_call, sammy_command
 
 def run_sammy_fit(config: sammyRunConfig, verbose_level: int = 0) -> None:
     """ 

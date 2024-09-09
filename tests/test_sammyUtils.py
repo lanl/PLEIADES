@@ -1,6 +1,6 @@
 import shutil
 import os
-from pleiades import sammyUtils
+from pleiades import sammyUtils, sammyRunner
 import pathlib
 import pytest
 import logging
@@ -35,101 +35,82 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
-
+logger_header_break = '====================================================='
+logger_footer_break = '-----------------------------------------------------'
 
 @pytest.fixture
 def default_config():
     """Fixture to create and return a default config object."""
     return sammyUtils.SammyFitConfig()
 
-
-
-def test_sammy_enviornment(default_config):
-    """ Test if sammy enviornment exist and check for both a compiled and docker version of SAMMY """
-
-    # Look for compiled version of SAMMY in the path
-    sammy_path = shutil.which('sammy')
-    if sammy_path:
-        logger.info(f"Compiled SAMMY binary found at {sammy_path}")
-        compiled_sammy_exists = True
-
-        # Update the default config with the calls to the compiled SAMMY binary
-        logger.info("Updating default config with compiled SAMMY binary")
-        default_config.params['sammy_run_method'] = 'compiled'
-        default_config.params['sammy_command'] = 'sammy'
-
-    else:
-        logger.warning("Compiled SAMMY binary not found.")
-        compiled_sammy_exists = False
-
-    # Check if Docker image exists
-    docker_image = 'sammy-docker'
-    docker_command = f'docker image inspect {docker_image}'
-    try:
-        subprocess.check_output(docker_command, shell=True, stderr=subprocess.STDOUT)
-        logger.info(f"Found Docker image: {docker_image}")
-        docker_image_exists = True
-
-        # Update the default config with the calls to the Docker image
-        logger.info(f"Updating default config with Docker image -> {docker_image}")
-        default_config.params['sammy_run_method'] = 'docker'
-        default_config.params['sammy_command'] = docker_image
-        
-    except subprocess.CalledProcessError:
-        logger.warning(f"Docker image {docker_image} not found.")
-        docker_image_exists = False
-
-    # Assert that either the compiled SAMMY exists or the Docker image exists
-    if not sammy_path and not docker_image_exists:
-        logger.error("Neither a compiled version of SAMMY nor the SAMMY Docker image is available.")
-        pytest.fail("Neither a compiled version of SAMMY nor the SAMMY Docker image is available.")
-    else:
-        if compiled_sammy_exists == True and docker_image_exists == False:
-            logger.info("SAMMY is available as a compiled binary.")
-        elif compiled_sammy_exists == False and docker_image_exists == True:
-            logger.info("SAMMY is available as a Docker image.")
-        else:
-            logger.info("Both a compiled SAMMY binary and a Docker image are available.")
-
-
-
 def test_sammyUtils_sammy_config(default_config):
     """Test the sammyUtils.SammyFitConfig class by loading the default config."""
+    
     # Check if default_config is a SammyFitConfig object
+    logger.info(logger_header_break)
+    logger.info("Checking if default config is a SammyFitConfig object")
     assert isinstance(default_config, sammyUtils.SammyFitConfig)
     logger.info("Default config loaded successfully")
+    logger.info(logger_footer_break)
 
+def test_set_sammy_call_method(default_config):
+    """Test the set_sammy_call_method() function to determine the SAMMY run method."""
+    
+    # Test the set_sammy_call_method() function
+    logger.info(logger_header_break)
+    logger.info("Testing the set_sammy_call_method() function")
+    sammy_call, sammy_command = sammyRunner.set_sammy_call_method(docker_image_name='sammy-docker', verbose_level=1)
+    logger.info(f"Sammy call: {sammy_call}")
+    logger.info(f"Sammy command: {sammy_command}")
 
+    # Check if the sammy_call and sammy_command are strings
+    assert isinstance(sammy_call, str)
+    assert isinstance(sammy_command, str)
+    logger.info(logger_footer_break)
+
+    # Setting the sammy_run_method and sammy_command in the default config for subsequent tests
+    default_config.params['sammy_run_method'] = sammy_call
+    default_config.params['sammy_command'] = sammy_command
 
 def test_create_parFile_from_endf(default_config):
     """Test the creation of a parFile from an ENDF file."""
 
-    test_sammy_enviornment(default_config)
+    logger.info(logger_header_break)
+    test_isotope = 'U-238'
+    logger.info(f"Testing the creation of a parFile from an ENDF file for with test isotope: {test_isotope}")
+
+    # Grab the sammy_call and sammy_command from the sammyRunner.set_sammy_call_method() function
+    sammy_call, sammy_command = sammyRunner.set_sammy_call_method(docker_image_name = 'sammy-docker',verbose_level=1)
 
     # Update the default config with a U-238 isotope
     logger.info("Updating default config with U-238 isotope")
-    default_config.params['isotopes']['names'] = ['U-238']
+    default_config.params['isotopes']['names'] = [test_isotope]
+    default_config.params['sammy_run_method'] = sammy_call
+    default_config.params['sammy_command'] = sammy_command
+    default_config.params['isotopes']['names'] = [test_isotope]
     default_config.params['isotopes']['abundances'] = [1.0]
+    default_config.params['fit_energy_min'] = 0.1
+    default_config.params['fit_energy_max'] = 10.0
 
     # Create the parFile from the ENDF file
-    logger.info("Creating parFile from ENDF file")
+    logger.info(f"Creating parFile from ENDF file for {test_isotope}")
+
+    # test create_parFile_from_endf() function with config object. 
     sammyUtils.create_parFile_from_endf(default_config, verbose_level=0)
 
     # Before running sammy_par_from_endf() we need to check if the 
     # u238 directory was created in the .archive/endf/u238
     endfFile_path = pathlib.Path(default_config.params['directories']['endf_dir'])
-    u238_dir_path = pathlib.Path(endfFile_path / 'u238')
-    logger.info("Checking if endf directory was created")
-    assert u238_dir_path.exists()
-
-
+    isotope_dir_path = pathlib.Path(endfFile_path / test_isotope)
+    logger.info(f"Checking if endf directory was created at {isotope_dir_path}")
+    assert isotope_dir_path.exists()
 
     # Check if the parFile was created
-    logger.info("Checking if parFile was created")
-    #parFile_path = pathlib.Path(endfFile_path / 'u238' / 'u238.par')
-    #assert parFile_path.exists()
-
-
+    logger.info(f"Checking if SAMNDF.PAR parFile was created at {isotope_dir_path / 'results'}")
+    
+    parFile_path = pathlib.Path(isotope_dir_path / 'results' / 'SAMNDF.PAR')
+    assert parFile_path.exists()
+    logger.info(logger_footer_break)
 
 def final_file_checks_and_cleanup(default_config):
     """Test if the directories created by the default config are created and then delete them."""
@@ -148,9 +129,9 @@ def final_file_checks_and_cleanup(default_config):
     shutil.rmtree(data_dir_path)
     logger.info("Default archive and data directories removed successfully")
 
-
-
 # flush and close the all logger handlers
 for handler in logger.handlers:
     handler.flush()
     handler.close()
+
+
