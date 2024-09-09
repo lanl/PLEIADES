@@ -193,7 +193,7 @@ def create_parFile_from_endf(config: SammyFitConfig, archive: bool = True, verbo
         
         sammyRunner.run_sammy_fit(isotope_run_config, verbose_level=verbose_level)
         
-        print('\r')
+        if verbose_level >0: print('\r')
         
 
 def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):

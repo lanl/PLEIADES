@@ -6,13 +6,13 @@ uranium = sammyUtils.SammyFitConfig('../configFiles/uranium.ini')
 
 # If parFiles as needed, then create them from ENDF for each isotope
 if uranium.params['run_endf_for_par'] == True:
-    sammyUtils.create_parFile_from_endf(uranium,verbose_level=0)
+    sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
 
 # Configure the sammy run, this will create a compound parFile. 
-sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=0)
+sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=1)
 
 # Run a sammy fit.
-sammyRunner.run_sammy_fit(sammy_run, verbose_level=0)
+sammyRunner.run_sammy_fit(sammy_run, verbose_level=1)
 
 # Grab the results from the SAMMY fit and plot the fit
 results_lpt = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LPT'
@@ -52,14 +52,14 @@ print(f"Abundance: {uranium.params['isotopes']['abundances']}")
 
 # Create a new par file for the additional isotope Ta-181
 if uranium.params['run_endf_for_par'] == True:
-    sammyUtils.create_parFile_from_endf(uranium,verbose_level=0)
+    sammyUtils.create_parFile_from_endf(uranium,verbose_level=1)
 
 
 # Configure the sammy run, this will create a compound parFile. 
-sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=0)
+sammy_run = sammyUtils.configure_sammy_run(uranium,verbose_level=1)
 
 # Run the new sammy fit.
-sammyRunner.run_sammy_fit(sammy_run, verbose_level=0)
+sammyRunner.run_sammy_fit(sammy_run, verbose_level=1)
 
 # Grab the results from the SAMMY fit and plot the fit
 updated_results_lpt = uranium.params['directories']['sammy_fit_dir'] / 'results/SAMMY.LPT'
