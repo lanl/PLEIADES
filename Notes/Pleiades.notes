@@ -17,21 +17,31 @@ docs/
         - pleiades.rst
     - usage.rst
 notes/
+    - Pleiades.notes [this file]
+    - SammyInputFile.notes
+    - SammyOutputFile.notes
+    - SammyParameterFile.notes
 examples/
-    - makeSammyInput/
-        - makeInputFile.py
-    - plotOutput/
-        - plotSammyLST.py
-    - plotCrossSections/
-        - plotXS.py
-    - plotTransmission/
-        - plotTrans.py
+    - configFiles/
+        - nat_europium.ini
+        - uranium.ini
+    - data/
+        - natEu.twenty
+        - u235-u238.twenty
+    - Notebooks/
+        - natEu_fit_tutorial.ipynb
+        - u_fit_tutorial.ipynb
+    - scripts/
+        - makeCompoundFit.py
 nucDataLibs/
     - isotopeInfo/
         - isotopes.info
         - mass.mas20
+        - neutrons.list
+    - resonanceTables/
+        - res_endf8.endf
     - xSections/
-        - [cross-section files for each isotope]
+        - [cross-section files for select isotopes]
 pleiades/
     - __pycache__
     - __init__.py
@@ -39,4 +49,10 @@ pleiades/
     - sammyPlotter.py 
     - nucData.py
     - simData.py
+tests
+    - test_nucData.py
+    - test_sammyInput.py
+    - test_sammyRunner.py
+    - test_sammyUtils.py
+
 

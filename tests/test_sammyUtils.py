@@ -38,27 +38,39 @@ logger_header_break = '====================================================='
 logger_footer_break = '-----------------------------------------------------'
 
 @pytest.fixture
-def default_config():
-    """Fixture to create and return a default config object."""
-    return sammyUtils.SammyFitConfig()
+def default_config(tmpdir):
+    """Fixture to create and return a default config object with temporary directories."""
+    
+    config = sammyUtils.SammyFitConfig()
+    config.params['directories']['working_dir'] = str(tmpdir.mkdir("working_dir"))
+    
+    # Set paths for subdirectories endf and data 
+    config.params['directories']['endf_dir'] = str(pathlib.Path(config.params['directories']['working_dir']) / 'endf')
+    
+    
+    return config
 
 def test_sammyUtils_sammy_config(default_config):
     """Test the sammyUtils.SammyFitConfig class by loading the default config."""
-    
-    # Check if default_config is a SammyFitConfig object
     logger.info(logger_header_break)
     logger.info("Checking if default config is a SammyFitConfig object")
+    logger.info(f"Temp working directory created at {default_config.params['directories']['working_dir']}")
+    
+    # Check if default_config is a SammyFitConfig object
     assert isinstance(default_config, sammyUtils.SammyFitConfig)
+    
     logger.info("Default config loaded successfully")
     logger.info(logger_footer_break)
 
 def test_set_sammy_call_method(default_config):
     """Test the set_sammy_call_method() function to determine the SAMMY run method."""
-    
-    # Test the set_sammy_call_method() function
     logger.info(logger_header_break)
     logger.info("Testing the set_sammy_call_method() function")
+    logger.info(f"Temp working directory created at {default_config.params['directories']['working_dir']}")
+    
+    # Test the set_sammy_call_method() function
     sammy_call, sammy_command = sammyRunner.set_sammy_call_method(docker_image_name='sammy-docker', verbose_level=1)
+   
     logger.info(f"Sammy call: {sammy_call}")
     logger.info(f"Sammy command: {sammy_command}")
 
@@ -73,11 +85,11 @@ def test_set_sammy_call_method(default_config):
 
 def test_create_parFile_from_endf(default_config):
     """Test the creation of a parFile from an ENDF file."""
-
     logger.info(logger_header_break)
     test_isotope = 'U-238'
     logger.info(f"Testing the creation of a parFile from an ENDF file for with test isotope: {test_isotope}")
-
+    logger.info(f"Temp working directory created at {default_config.params['directories']['working_dir']}")
+    
     # Grab the sammy_call and sammy_command from the sammyRunner.set_sammy_call_method() function
     sammy_call, sammy_command = sammyRunner.set_sammy_call_method(docker_image_name = 'sammy-docker',verbose_level=1)
 
@@ -94,11 +106,10 @@ def test_create_parFile_from_endf(default_config):
     # Create the parFile from the ENDF file
     logger.info(f"Creating parFile from ENDF file for {test_isotope}")
 
-    # test create_parFile_from_endf() function with config object. 
+    # Test create_parFile_from_endf() function with config object.
     sammyUtils.create_parFile_from_endf(default_config, verbose_level=0)
 
-    # Before running sammy_par_from_endf() we need to check if the 
-    # u238 directory was created in the .archive/endf/u238
+    # Before running sammy_par_from_endf(), check if the directory was created in the temp endf dir
     endfFile_path = pathlib.Path(default_config.params['directories']['endf_dir'])
     isotope_dir_path = pathlib.Path(endfFile_path / test_isotope)
     logger.info(f"Checking if endf directory was created at {isotope_dir_path}")
@@ -111,15 +122,9 @@ def test_create_parFile_from_endf(default_config):
     assert parFile_path.exists()
     logger.info(f"SAMNDF.PAR parFile created successfully at {isotope_dir_path / 'results'}")
     
-    # If the parFile was created, remove the endf directory
-    logger.info(f"Now removing the endf directory at {endfFile_path}")
-    shutil.rmtree(endfFile_path)
-    
     logger.info(logger_footer_break)
 
-# flush and close the all logger handlers
+# flush and close all logger handlers
 for handler in logger.handlers:
     handler.flush()
     handler.close()
-
-

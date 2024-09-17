@@ -134,3 +134,8 @@ def test_format_type_I():
     
     logger.info("format_type_I method tested successfully")
     logger.info(logger_footer_break)
+    
+# flush and close the all logger handlers
+for handler in logger.handlers:
+    handler.flush()
+    handler.close()
