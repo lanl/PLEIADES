@@ -148,10 +148,11 @@ def test_get_mass_from_ame(ame_file, monkeypatch):
     """Test fetching the atomic mass from the actual mass.mas20 file."""
     logger.info(logger_header_break)
     logger.info("Testing fetching the atomic mass from mass.mas20")
-    
-    # Use monkeypatch to override the PWD path for nucData
-    monkeypatch.setattr(nucData, "PWD", pathlib.Path(ame_file).parent)
 
+    # Use monkeypatch to override the pleiades_dir path for nucData
+    monkeypatch.setattr(nucData, "pleiades_dir", pathlib.Path(ame_file).parent.parent.parent) 
+    
+    # Test for a few isotopes
     isotope = "H-1"
     logger.info(f"Testing get_mass_from_ame for {isotope}")
     mass = nucData.get_mass_from_ame(isotope)
@@ -164,8 +165,14 @@ def test_get_mass_from_ame(ame_file, monkeypatch):
     logger.info(f"Mass: {mass}")
     assert mass == pytest.approx(4.0026, rel=1e-4)
 
-    # Test for an isotope not present in the file
     isotope = "C-12"
+    logger.info(f"Testing get_mass_from_ame for {isotope}")
+    mass = nucData.get_mass_from_ame(isotope)
+    logger.info(f"Mass: {mass}")
+    assert mass == pytest.approx(12.000, rel=1e-4)
+    
+    # Test for an isotope not present in the file
+    isotope = "U-244"
     logger.info(f"Testing get_mass_from_ame for {isotope}")
     mass = nucData.get_mass_from_ame(isotope)
     logger.info(f"Mass: {mass}")
@@ -173,3 +180,31 @@ def test_get_mass_from_ame(ame_file, monkeypatch):
 
     logger.info("Atomic mass fetching from AME file tested successfully")
     logger.info(logger_footer_break)
+
+
+def test_get_mat_number(neutron_file, monkeypatch):
+    """Test retrieving the mat number from the neutrons.list file."""
+    logger.info(logger_header_break)
+    logger.info("Testing fetching the ENDF mat number from neutrons.list")
+
+    # Use monkeypatch to override the pleiades_dir path for nucData
+    monkeypatch.setattr(nucData, "pleiades_dir", pathlib.Path(neutron_file).parent.parent.parent)  # Points to root directory
+
+    # Test with known isotopes
+    isotope = "Fe-56"
+    logger.info(f"Testing get_mat_number for {isotope}")
+    mat_number = nucData.get_mat_number(isotope)
+    logger.info(f"Mat number: {mat_number}")
+    assert mat_number == 2631  
+
+    isotope = "U-238"
+    logger.info(f"Testing get_mat_number for {isotope}")
+    mat_number = nucData.get_mat_number(isotope)
+    logger.info(f"Mat number: {mat_number}")
+    assert mat_number == 9237  
+
+    # Test for an isotope not present in the file
+    isotope = "InvalidIsotope"
+    logger.info(f"Testing get_mat_number for {isotope}")
+    with pytest.raises(ValueError):
+        mat_number = nucData.get_mat_number(isotope)

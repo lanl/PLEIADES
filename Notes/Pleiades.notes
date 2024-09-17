@@ -49,7 +49,7 @@ pleiades/
     - sammyPlotter.py 
     - nucData.py
     - simData.py
-tests
+tests/
     - test_nucData.py
     - test_sammyInput.py
     - test_sammyRunner.py
