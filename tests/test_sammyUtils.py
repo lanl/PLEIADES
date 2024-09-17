@@ -4,7 +4,6 @@ from pleiades import sammyUtils, sammyRunner
 import pathlib
 import pytest
 import logging
-import subprocess
 
 ## Configure logging for the test
 # Set file name
@@ -110,24 +109,13 @@ def test_create_parFile_from_endf(default_config):
     
     parFile_path = pathlib.Path(isotope_dir_path / 'results' / 'SAMNDF.PAR')
     assert parFile_path.exists()
+    logger.info(f"SAMNDF.PAR parFile created successfully at {isotope_dir_path / 'results'}")
+    
+    # If the parFile was created, remove the endf directory
+    logger.info(f"Now removing the endf directory at {endfFile_path}")
+    shutil.rmtree(endfFile_path)
+    
     logger.info(logger_footer_break)
-
-def final_file_checks_and_cleanup(default_config):
-    """Test if the directories created by the default config are created and then delete them."""
-    # Check if default archive and data directory were created
-    archive_dir_path = pathlib.Path(default_config.params['directories']['archive_dir'])
-    endf_dir_path = pathlib.Path(default_config.params['directories']['endf_dir'])
-    data_dir_path = pathlib.Path(default_config.params['directories']['data_dir'])
-    assert archive_dir_path.exists()
-    assert endf_dir_path.exists()
-    assert data_dir_path.exists()
-    logger.info("Default archive and data directories created successfully")
-
-    # Remove the directories created when the config was loaded even if there are files in them
-    shutil.rmtree(endf_dir_path)
-    shutil.rmtree(archive_dir_path)
-    shutil.rmtree(data_dir_path)
-    logger.info("Default archive and data directories removed successfully")
 
 # flush and close the all logger handlers
 for handler in logger.handlers:
