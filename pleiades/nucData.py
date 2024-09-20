@@ -3,8 +3,8 @@ import os
 import pathlib
 import re
 
-# current file location
-PWD = pathlib.Path(__file__).parent
+# Grab pleiades working directory repo location
+pleiades_dir = pathlib.Path(__file__).parent.parent 
 
 def extract_isotope_info(filename, isotope):
     """This function extracts the spin and abundance of an isotope from the file isotope.info.
@@ -125,21 +125,15 @@ def get_mass_from_ame(isotopic_str: str='U-238',verbose_level: int=0)->float:
     Returns:
         float: the atomic mass in amu
     """
-    # import re
-    # pattern = r"\b([A-Z][a-z]?)-(\d+)\b"
-    # if not re.search(pattern,isotopic_str):
-    #     # raise ValueError(f"isotopic_str should be in the format of Element-AtomicMass (U-235)")
-        
     
     possible_isotopes_data_list = []
-
 
     element, atomic_number = get_info(isotopic_str)
 
     if verbose_level > 0: print(f"looking for isotope: {element}-{atomic_number}")
     
     # Load the file into a list of lines
-    nucelar_masses_file = PWD.parent / "nucDataLibs/isotopeInfo/mass.mas20"
+    nucelar_masses_file = pleiades_dir / "nucDataLibs/isotopeInfo/mass.mas20"
     
     with open(nucelar_masses_file, "r") as f:
         
@@ -182,7 +176,7 @@ def get_mat_number(isotopic_str: str='U-238')-> int:
     element, atomic_number = get_info(isotopic_str)
 
     # open the file containing the endf summary table
-    with open(PWD.parent / "nucDataLibs/isotopeInfo/neutrons.list","r") as fid:
+    with open(pleiades_dir / "nucDataLibs/isotopeInfo/neutrons.list","r") as fid:
         pattern = r'\b\s*(\d+)\s*-\s*([A-Za-z]+)\s*-\s*(\d+)([A-Za-z]*)\b' # match the isotope name 
         for line in fid:
             # find match for an isotope string in the line

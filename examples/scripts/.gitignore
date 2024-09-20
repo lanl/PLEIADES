@@ -3,6 +3,7 @@
 
 # Do not ignore any .ini files
 !*.ini
+!simTrans.py
 
 # Do not ignore the README.md file
 !README.md
