@@ -15,6 +15,14 @@ Welcome to pleiades's documentation!
    usage
    examples
 
+API Reference
+=============
+
+.. toctree::
+   :maxdepth: 1
+
+   modules
+
 Indices and tables
 ==================
 
