@@ -62,23 +62,6 @@ Step-by-Step Installation
       cd Pleiades
       pip install -e .
 
-5. **Configure SAMMY Path**
-
-   For PLEIADES to work correctly with SAMMY, you need to add SAMMY’s `bin` directory to your system’s PATH environment variable.
-
-   1. Open your terminal and edit your shell configuration file (e.g., `.bashrc`, `.zshrc`, or `.bash_profile`).
-   2. Add the following line, replacing `<SAMMY_INSTALL_DIR>` with the actual installation directory of SAMMY:
-
-      .. code-block:: bash
-
-         export PATH=$PATH:<SAMMY_INSTALL_DIR>/bin
-
-   3. Apply the changes by sourcing the configuration file:
-
-      .. code-block:: bash
-
-         source ~/.bashrc  # Replace with your shell configuration file name
-
 6. **Uninstalling PLEIADES (Optional)**
 
    If you ever need to uninstall the PLEIADES package, you can do so using `pip`:
@@ -100,8 +83,3 @@ Additional Notes
 
 * You need to ensure that your SAMMY installation is properly accessible from your environment's PATH.
 * Use a virtual environment or conda environment to manage Python dependencies effectively.
-
-License
-=======
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
