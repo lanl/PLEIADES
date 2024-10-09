@@ -92,4 +92,37 @@ Once the environment and input are set, run the SAMMY simulation.
 Formatting Methods
 ------------------
 
-The `sammyInput` module i
+The `sammyInput` module includes several formatting utilities for handling SAMMY input formatting:
+
+**Formatting a String (`format_type_A`)**
+
+This function formats a string to a fixed width.
+
+.. code-block:: python
+
+    formatted_str = sammyInput.InputFile.format_type_A("Test", 10)
+    print(f"Formatted string: '{formatted_str}'")  # Output: 'Test      '
+
+**Formatting a Float (`format_type_F`)**
+
+This function formats a floating point number to a fixed width.
+
+.. code-block:: python
+
+    formatted_float = sammyInput.InputFile.format_type_F(1.2345, 10)
+    print(f"Formatted float: '{formatted_float}'")  # Output: '  1.2345'
+
+**Formatting an Integer (`format_type_I`)**
+
+This function formats an integer to a fixed width.
+
+.. code-block:: python
+
+    formatted_int = sammyInput.InputFile.format_type_I(123, 5)
+    print(f"Formatted int: '{formatted_int}'")  # Output: '  123'
+
+More Examples
+-------------
+
+Refer to the :doc:`examples` section for more detailed use cases and code snippets for PLEIADES.
+
