@@ -18,9 +18,10 @@ PLEIADES
 PLEIADES' user documentation
 ============================
 
-**PLEIADES:** Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY.
-This is a Python package that sets up, executes, and analyzes, SAMMY runs. If you are unfamiliar with
-SAMMY, please see the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
+**PLEIADES:**
+Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY.
+This is a Python package that sets up, executes, and analyzes, SAMMY runs.
+If you are unfamiliar with SAMMY, please see the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
 
 The user documentation can be found at `Read the Docs <https://pleiades-sammy.readthedocs.io/en/latest/>`_.
 
@@ -29,14 +30,14 @@ Installation
 
 **Prerequisites:**
 
-* `git`: A version control system used to clone the SAMMY repository. You can usually install it using your system's package manager.
-* `pip`: A package installer for Python. You can usually install it using your system's package manager.
+* ``git``: A version control system used to clone the SAMMY repository. You can usually install it using your system's package manager.
+* ``pip``: A package installer for Python. You can usually install it using your system's package manager.
 
 **Steps:**
 
 1. **Clone and build the SAMMY Repository:**
 
-   Use `git` to clone the SAMMY repository from GitLab:
+   Use ``git`` to clone the SAMMY repository from GitLab:
 
    .. code-block:: bash
 
@@ -45,7 +46,7 @@ Installation
 
 2. **Build and Install SAMMY:**
 
-   Navigate to the cloned SAMMY directory (`SAMMY/sammy`) and follow the SAMMY installation instructions to build and install it. Refer to the SAMMY documentation for specific instructions.
+   Navigate to the cloned SAMMY directory (``SAMMY/sammy``) and follow the SAMMY installation instructions to build and install it. Refer to the SAMMY documentation for specific instructions.
 
 
    .. code-block:: bash
@@ -61,11 +62,11 @@ Installation
 
 3. **Verification (Optional):**
 
-   Open a new terminal window and check if the SAMMY executables are accessible. You can try running a SAMMY command, such as `sammy`. If successful, the command should execute.
+   Open a new terminal window and check if the SAMMY executables are accessible. You can try running a SAMMY command, such as ``sammy``. If successful, the command should execute.
 
 4. **Clone the PLEIADES Repository:**
 
-   Use `git` to clone the `pleiades` repository from GitHub:
+   Use ``git`` to clone the ``pleiades`` repository from GitHub:
 
    .. code-block:: bash
 
@@ -81,18 +82,31 @@ Installation
 
 6. **Install the Package:**
 
-   Use `pip` to install the `pleiades` package:
+   Use ``pip`` to install the ``pleiades`` package:
 
    .. code-block:: bash
 
       pip install -e .
 
-7. **Add SAMMY's `bin` Directory to PATH:**
+   Use ``poetry`` to install the ``pleiades`` package:
 
-   You'll need to add the `bin` directory of the installed SAMMY package to your system's PATH environment variable. This allows `pleiades` to locate the necessary SAMMY executables.
+   .. code-block:: bash
 
-   - Open your terminal and edit your shell configuration file (e.g., `.bashrc` for Bash).
-   - Add the following line (replace `<SAMMY_INSTALL_DIR>` with the actual installation directory of SAMMY):
+      poetry install
+
+   Then run the following command to perform the post-installation check after sammy is installed:
+
+   .. code-block:: bash
+
+      poetry run post_install_check
+
+7. **Add SAMMY's ``bin``` Directory to PATH:**
+
+   You'll need to add the ``bin`` directory of the installed SAMMY package to your system's PATH environment variable.
+   This allows ``pleiades`` to locate the necessary SAMMY executables.
+
+   - Open your terminal and edit your shell configuration file (e.g., ``.bashrc`` for Bash).
+   - Add the following line (replace ``<SAMMY_INSTALL_DIR>`` with the actual installation directory of SAMMY):
 
      .. code-block:: bash
 
@@ -111,7 +125,7 @@ Installation
 
 **Additional Notes:**
 
-* You can uninstall `pleiades` using `pip uninstall pleiades`.
+* You can uninstall ``pleiades`` using ``pip uninstall pleiades``.
 
 License
 =======
