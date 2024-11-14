@@ -88,6 +88,12 @@ Installation
 
       pip install -e .
 
+   Alternatively, you can use ``poetry`` to install the package. First, install ``poetry`` using the following command:
+
+   .. code-block:: bash
+
+      pip install poetry
+
    Use ``poetry`` to install the ``pleiades`` package:
 
    .. code-block:: bash
@@ -99,6 +105,8 @@ Installation
    .. code-block:: bash
 
       poetry run post_install_check
+
+   Using Poetry is recommended for managing dependencies and virtual environments, especially if you are working with multiple Python projects sharing the same base Python installation.
 
 7. **Add SAMMY's ``bin``` Directory to PATH:**
 
