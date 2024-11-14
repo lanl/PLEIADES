@@ -11,6 +11,10 @@ include = [
     "nucDataLibs/**/*"
 ]
 
+[build-system]
+requires = ["poetry>=1.1.0"]
+build-backend = "poetry.core.masonry.api"
+
 # ---------------------------------------------------------- #
 # This section is for users who want to install via `poetry` #
 # ---------------------------------------------------------- #
@@ -30,10 +34,6 @@ jupyterlab = "^4.3.0"
 [tool.poetry.scripts]
 pleiades = "pleiades:main"  # Console script entry point
 post_install_check = "pleiades.post_install:check_sammy_installed"
-
-[build-system]
-requires = ["poetry>=1.1.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
