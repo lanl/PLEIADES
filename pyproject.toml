@@ -1,0 +1,68 @@
+[tool.poetry]
+name = "pleiades"
+version = "0.0.0"  # placeholder, version is handled by versioningit
+description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
+authors = ["Alex M. Long <alexlong@lanl.gov>"]
+license = "MIT"
+packages = [
+    { include = "pleiades", from = "src" }
+]
+
+# ------------------------------------------------------- #
+# This section is for users who want to install via `pip` #
+# ------------------------------------------------------- #
+[project]
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "pytest",
+    "scipy",
+    "setuptools"
+]
+
+# ---------------------------------------------------------- #
+# This section is for users who want to install via `poetry` #
+# ---------------------------------------------------------- #
+[tool.poetry.dependencies]
+# Core
+python = "^3.10"  # replace with the appropriate Python version
+setuptools = "*"
+# Numerical
+numpy = "*"
+scipy = "*"
+pandas = "*"
+# Visualization
+matplotlib = ">=3.1.2"
+# Development
+pytest = "*"
+versioningit = "*"
+pre-commit = "^4.0.1"
+
+[tool.poetry.scripts]
+pleiades = "pleiades:main"  # replace with the main entry point for your project if applicable
+
+[build-system]
+requires = ["poetry>=1.1.0", "versioningit"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
+# --------------------------------------------- #
+# The rest all 3rd party plugins configurations #
+# --------------------------------------------- #
+[tool.versioningit.vcs]
+method = "git"
+default-tag = "0.1.0"
+
+[tool.versioningit.next-version]
+method = "minor"
+
+[tool.versioningit.format]
+distance = "{next_version}.dev{distance}"
+dirty = "{version}+d{build_date:%Y%m%d}"
+distance-dirty = "{next_version}.dev{distance}+d{build_date:%Y%m%d%H%M}"
+
+[tool.versioningit.write]
+file = "src/pleiades/_version.py"
