@@ -108,7 +108,7 @@ Installation
 
    Using Poetry is recommended for managing dependencies and virtual environments, especially if you are working with multiple Python projects sharing the same base Python installation.
 
-7. **Add SAMMY's ``bin``` Directory to PATH:**
+7. **Add SAMMY's ``bin`` Directory to PATH:**
 
    You'll need to add the ``bin`` directory of the installed SAMMY package to your system's PATH environment variable.
    This allows ``pleiades`` to locate the necessary SAMMY executables.
