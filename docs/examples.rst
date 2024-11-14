@@ -22,17 +22,17 @@ In ```plotTrans.py```, the pleiades module, along with other needed modules, as 
     import pleiades.simulate as psd # For simulating neutron transmission spectra
     import numpy as np              # For generating energy grids
 
-additionaly, ```plotTrans.py`` uses a main function is defined as follows:
+additionally, ```plotTrans.py`` uses a main function is defined as follows:
 
 .. code-block:: python
-    
+
     if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process config file for isotopes and plot transmission.')
     parser.add_argument('--isoConfig', type=str, default='config.ini', help='Path to the isotope config file')
     parser.add_argument('--energy_min', type=float, default=1, help='Minimum energy for the plot [eV]')
     parser.add_argument('--energy_max', type=float, default=100, help='Maximum energy for the plot [eV]')
     parser.add_argument('--energy_points', type=int, default=100000, help='Number of energy points for the plot')
-    
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -45,7 +45,7 @@ The ```argparse``` module is used to parse command line arguments. The ```--isoC
 The isotope.ini file contains the following information:
 
 .. code-block:: ini
-    
+
     [Isotope1]
     name = U-238
     thickness = 0.01
@@ -56,7 +56,7 @@ The isotope.ini file contains the following information:
     density_unit = g/cm3
     ignore = false
 
-This file contains the information for one isotope. There can be multiple isotopes in the file where the information for each isotope is contained in separate sections, and the section names can be arbitrary, but unique. If any of the given fields are not listed, then defualt values are used. 
+This file contains the information for one isotope. There can be multiple isotopes in the file where the information for each isotope is contained in separate sections, and the section names can be arbitrary, but unique. If any of the given fields are not listed, then default values are used.
 
 * ```name = U-238```: The name of the isotope, should be in the form of ```element-massNumber```
 * ```thickness = 0.01``` : The thickness of the sample
@@ -83,7 +83,7 @@ Once loaded in the an array of isotope objects, the information can be accessed 
 
     # Loop over all isotopes in isotope_info.isotopes
     for isotope in isotopes:
-        
+
         # Generate transmission data
         transmission_data = psd.create_transmission(energy_grid,isotope)
         grid_energies, interp_transmission = zip(*transmission_data)
@@ -92,7 +92,7 @@ Once loaded in the an array of isotope objects, the information can be accessed 
         # Plot the transmission data
         ax.semilogx(grid_energies, interp_transmission, alpha=0.75, label=isotope.name)
 
-Here the main function of ```psd.create_transmission(energy_grid,isotope)``` is used to generate the transmission data. The first argument is the energy grid, and the second argument is the isotope information. The function returns a list of tuples where the first element of the tuple is the energy and the second element is the transmission. The ```zip(*transmission_data)``` function is used to unzip the list of tuples into two lists, one for the energy and one for the transmission. The ```transmissions``` list is used to store the transmission data for each isotope. Once stored the transmissison can be ploted using the ```ax.semilogx``` function. 
+Here the main function of ```psd.create_transmission(energy_grid,isotope)``` is used to generate the transmission data. The first argument is the energy grid, and the second argument is the isotope information. The function returns a list of tuples where the first element of the tuple is the energy and the second element is the transmission. The ```zip(*transmission_data)``` function is used to unzip the list of tuples into two lists, one for the energy and one for the transmission. The ```transmissions``` list is used to store the transmission data for each isotope. Once stored the transmissison can be plotted using the ```ax.semilogx``` function.
 
 Once all the transmission data is stored in the ```transmissions``` list, the total transmission can be calculated using the following code:
 
@@ -100,20 +100,20 @@ Once all the transmission data is stored in the ```transmissions``` list, the to
 
     #combine transmissions for all isotopes
     combined_transmission = np.prod(transmissions, axis=0)
-    
+
     # Plot the combined transmission data
     ax.semilogx(energy_grid, combined_transmission, color='black', alpha=0.75, linestyle='dashed', label="Total")
 
 Using the isotope.ini file and the ```plotTrans.py``` script, the following plot is generated:
 
 .. figure:: images/example1.jpg
-   :alt: The transmission of U-238 and U-235 as a function of energy. 
+   :alt: The transmission of U-238 and U-235 as a function of energy.
    :width: 600px
    :align: center
 
-   Reading in the file isotope.ini giving in the example should result in the transmission of U-238 and U-235 as a function of energy. 
+   Reading in the file isotope.ini giving in the example should result in the transmission of U-238 and U-235 as a function of energy.
 
-A transmission output file can also be generated by calling the ```psd.write_transmission_data(energy_data, transmission_data, output_file)``` function. The first argument is the energy data, the second argument is the transmission data, and the third argument is the output file name. The output file is writing in the SAMMY twenty format, which mean each entry takes up twenty characters. 
+A transmission output file can also be generated by calling the ```psd.write_transmission_data(energy_data, transmission_data, output_file)``` function. The first argument is the energy data, the second argument is the transmission data, and the third argument is the output file name. The output file is writing in the SAMMY twenty format, which mean each entry takes up twenty characters.
 
 Example 2: Generating SAMMY input files
 ---------------------------------------

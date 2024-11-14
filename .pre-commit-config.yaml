@@ -9,18 +9,20 @@ repos:
       args: [--allow-multiple-documents]
       exclude: "conda.recipe/meta.yaml"
     - id: end-of-file-fixer
-      exclude: "tests/cis_tests/.*"
+      exclude: "nucDataLibs/.*"
     - id: trailing-whitespace
-      exclude: "tests/cis_tests/.*"
+      exclude: "nucDataLibs/.*"
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.7.3
   hooks:
     - id: ruff
       args: [--fix, --exit-non-zero-on-fix]
-      exclude: "tests/cis_tests/.*"
+      exclude: "nucDataLibs/.*"
     - id: ruff-format
-      exclude: "tests/cis_tests/.*"
+      exclude: "nucDataLibs/.*"
 - repo: https://github.com/codespell-project/codespell
   rev: v2.3.0
   hooks:
     - id: codespell
+      exclude: "(nucDataLibs/.*|.*\\.ipynb)"
+      args: ["--ignore-words-list=DELTE"]

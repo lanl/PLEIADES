@@ -52,7 +52,7 @@ To get started, you'll want to load and manipulate input files using the `sammyI
 Advanced Usage: Running Simulations
 -----------------------------------
 
-Once the input file is prepared, you can run simulations using the `sammyRunner` module. 
+Once the input file is prepared, you can run simulations using the `sammyRunner` module.
 
 **Setting the SAMMY Call Method**
 
@@ -125,4 +125,3 @@ More Examples
 -------------
 
 Refer to the :doc:`examples` section for more detailed use cases and code snippets for PLEIADES.
-

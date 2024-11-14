@@ -13,7 +13,7 @@ docs/
     - requirements.in
     - requirements.txt
     - source/
-        - modules.rst 
+        - modules.rst
         - pleiades.rst
     - usage.rst
 notes/
@@ -45,8 +45,8 @@ nucDataLibs/
 pleiades/
     - __pycache__
     - __init__.py
-    - sammyInput.py 
-    - sammyPlotter.py 
+    - sammyInput.py
+    - sammyPlotter.py
     - nucData.py
     - simData.py
 tests/
@@ -54,5 +54,3 @@ tests/
     - test_sammyInput.py
     - test_sammyRunner.py
     - test_sammyUtils.py
-
-
