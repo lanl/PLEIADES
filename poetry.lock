@@ -975,21 +975,6 @@ files = [
 ]
 
 [[package]]
-name = "versioningit"
-version = "3.1.2"
-description = "Versioning It with your Version In Git"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "versioningit-3.1.2-py3-none-any.whl", hash = "sha256:33c0905aeac7877b562171387c2c98af87b391aa9195f095455f21ddc47d4636"},
-    {file = "versioningit-3.1.2.tar.gz", hash = "sha256:4db83ed99f56b07d83940bee3445ca46ca120d13b6b304cdb5fb44e5aa4edec0"},
-]
-
-[package.dependencies]
-packaging = ">=17.1"
-tomli = {version = ">=1.2,<3.0", markers = "python_version < \"3.11\""}
-
-[[package]]
 name = "virtualenv"
 version = "20.27.1"
 description = "Virtual Python Environment builder"
@@ -1012,4 +997,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "547bf290e3c57f729ea2e09eec7bab88483bd6ec3e81249dd54bebcad6453ae1"
+content-hash = "fd5ca2ac61067aba1f10960a3bd5cfd49c80c326b604cd74d18cb6d8046f3032"
