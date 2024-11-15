@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pleiades"
-version = "0.1.1"  # placeholder, version is handled by versioningit
+version = "0.1.1"
 description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
 authors = ["Alex M. Long <alexlong@lanl.gov>"]
 license = "MIT"
