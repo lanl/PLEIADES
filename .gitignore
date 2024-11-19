@@ -195,3 +195,9 @@ cython_debug/
 
 # Ignore mac stuff.
 *.DS_Store
+
+# Ignore direnv stuff.
+.envrc
+
+# Ignore vscode stuff.
+.vscode/

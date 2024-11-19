@@ -2,9 +2,9 @@
 title: 'PLEIADES: Python Library Extensions for Isotopic Analysis via Detailed Examination of SAMMY results'
 tags:
   - Python
-  - neutron imaging 
+  - neutron imaging
   - material science
-  - non-descrutive testing and evaluation 
+  - non-descrutive testing and evaluation
 
 authors:
   - name: Alexander M. Long
@@ -12,7 +12,7 @@ authors:
     affiliation: 1
   - name: Tsviki Y. Hirsh
     orcid: 0000-0001-5889-4500
-    affiliation: 2 
+    affiliation: 2
   - name: Jean Bilheux
     orcid: 0000-0003-2172-6487
     affiliation: 3
@@ -36,4 +36,3 @@ PLEIADES is a Python-based code designed to streamline and simplify the process 
 
 
 # Statement of need
-

@@ -1,0 +1,14 @@
+name: pleiades-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib>=3.1.2
+  - jupyterlab
+  - setuptools
+  - pytest
+  - pre-commit
