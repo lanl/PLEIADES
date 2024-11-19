@@ -36,6 +36,7 @@ class SammyFitConfig:
                 "sammy_fit_dir": "",  # directory where sammy fit is performed
                 "endf_dir": "endf",  # directory for endf sammy runs
                 "iso_results_dir": "",  # directory for isotopic results from fits are stored
+                "archive_dir": "archive",  # directory for archived files
             },
             # Sammy fit file names
             "filenames": {
@@ -113,6 +114,7 @@ class SammyFitConfig:
 
         # if a config file is provided, load the parameters from it
         if config_path:
+            print(f"{print_header_check} Loading configuration from {config_path}")
             if not os.path.exists(config_path):
                 raise FileNotFoundError(
                     f"{print_header_bad} Config file {config_path} not found."
@@ -207,6 +209,13 @@ class SammyFitConfig:
         # Check if the working_dir exists, if not create it
         if not os.path.exists(working_dir):
             os.makedirs(working_dir, exist_ok=True)
+
+        # Create archive_dir if it doesn't exist
+        archive_dir = pathlib.Path(
+            working_dir / self.params["directories"]["archive_dir"]
+        ).resolve()
+        if not os.path.exists(archive_dir):
+            os.makedirs(archive_dir, exist_ok=True)
 
         # Set the directories for the image and data directories
         # Check to see if they are relative or absolute, and if relative then convert to absolute
