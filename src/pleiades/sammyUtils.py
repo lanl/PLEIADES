@@ -25,6 +25,7 @@ import pathlib
 import os
 import shutil
 import numpy as np
+import importlib.resources as pkg_resources
 
 # PLEIADES imports
 from pleiades.sammyStructures import SammyFitConfig, sammyRunConfig
@@ -106,11 +107,8 @@ def create_parFile_from_endf(
 
     # Now check to see if the res_endf8.endf file exists in the endf dir. If not, copy it there.
     if not os.path.exists(destination_res_endf):
-        # Get the path to the pleiades base directory
-        pleiades_base_path = pathlib.Path(__file__).resolve().parent.parent
-        # Path to the "res_endf8.endf" file in the pleiades base directory
-        source_res_endf = (
-            pleiades_base_path / "nucDataLibs/resonanceTables/res_endf8.endf"
+        source_res_endf = pkg_resources.files("pleiades").joinpath(
+            "../../nucDataLibs/resonanceTables/res_endf8.endf"
         )
         # Copy the res_endf8.endf file to the endf directory
         shutil.copy(source_res_endf, destination_res_endf)
@@ -483,7 +481,10 @@ def configure_sammy_run(config: SammyFitConfig, verbose_level: int = 0):
             "filenames"
         ]["data_file_name"]
 
-    return sammy_run_config
+        return sammy_run_config
+
+    else:
+        return config
 
 
 def run_sammy(config: SammyFitConfig, verbose_level: int = 0):

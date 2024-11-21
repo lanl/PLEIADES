@@ -1,11 +1,11 @@
-import pathlib
+#!/usr/bin/env python
+"""This module contains functions to extract isotope information from the isotope.info file and the AME file."""
+
+import importlib.resources as pkg_resources
 import re
 
-# Grab pleiades working directory repo location
-pleiades_dir = pathlib.Path(__file__).parent.parent
 
-
-def extract_isotope_info(filename, isotope):
+def extract_isotope_info(filename: str, isotope: str) -> tuple:
     """This function extracts the spin and abundance of an isotope from the file isotope.info.
 
     Args:
@@ -137,9 +137,10 @@ def get_mass_from_ame(isotopic_str: str = "U-238", verbose_level: int = 0) -> fl
     if verbose_level > 0:
         print(f"looking for isotope: {element}-{atomic_number}")
 
-    # Load the file into a list of lines
-    nucelar_masses_file = pleiades_dir / "nucDataLibs/isotopeInfo/mass.mas20"
-
+    # Use Python 3.9's new feature to open the file from data files
+    nucelar_masses_file = pkg_resources.files("pleiades").joinpath(
+        "../../nucDataLibs/isotopeInfo/mass.mas20"
+    )
     with open(nucelar_masses_file, "r") as f:
         # Skip the first 36 lines of header info
         for _ in range(36):
@@ -181,7 +182,10 @@ def get_mat_number(isotopic_str: str = "U-238") -> int:
     element, atomic_number = get_info(isotopic_str)
 
     # open the file containing the endf summary table
-    with open(pleiades_dir / "nucDataLibs/isotopeInfo/neutrons.list", "r") as fid:
+    nucelar_masses_file = pkg_resources.files("pleiades").joinpath(
+        "../../nucDataLibs/isotopeInfo/neutrons.list"
+    )
+    with open(nucelar_masses_file, "r") as fid:
         pattern = r"\b\s*(\d+)\s*-\s*([A-Za-z]+)\s*-\s*(\d+)([A-Za-z]*)\b"  # match the isotope name
         for line in fid:
             # find match for an isotope string in the line

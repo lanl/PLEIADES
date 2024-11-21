@@ -29,7 +29,7 @@ def process_and_plot_lst_file(filename, residual=False, quantity="cross-section"
     ]
 
     # Read the file with pandas without column names
-    data = pd.read_csv(filename, header=None, comment="#", sep="\s+")
+    data = pd.read_csv(filename, header=None, comment="#", sep=r"\s+")
 
     # Get the number of columns in the data
     num_columns = data.shape[1]
