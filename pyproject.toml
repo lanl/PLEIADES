@@ -8,7 +8,9 @@ packages = [
     { include = "pleiades", from = "src" }
 ]
 include = [
-    "nucDataLibs/**"
+    "src/pleiades/data/isotopes/*",
+    "src/pleiades/data/resonances/*",
+    "src/pleiades/data/cross_sections/*"
 ]
 
 [build-system]
