@@ -65,11 +65,11 @@ class NuclearDataManager:
         for category in DataCategory:
             try:
                 category_path = self._get_category_path(category)
-                with resources.files('pleiades.data').joinpath(category_path).iterdir() as path:
-                    self._cached_files[category] = {
-                        item for item in path
-                        if item.suffix in self._VALID_EXTENSIONS[category]
-                    }
+                data_path = resources.files('pleiades.data').joinpath(category_path)
+                self._cached_files[category] = {
+                    item.name for item in data_path.iterdir()
+                    if item.suffix in self._VALID_EXTENSIONS[category]
+                }
             except Exception as e:
                 logger.error(f"Failed to initialize cache for {category}: {str(e)}")
                 self._cached_files[category] = set()
@@ -136,10 +136,10 @@ class NuclearDataManager:
         if category is not None:
             if not isinstance(category, DataCategory):
                 raise ValueError(f"Invalid category: {category}")
-            return {category: [p.name for p in sorted(self._cached_files[category])]}
+            return {category: sorted(self._cached_files[category])}
         
         return {
-            cat: [p.name for p in sorted(self._cached_files[cat])]
+            cat: sorted(self._cached_files[cat])
             for cat in DataCategory
         }
 
@@ -227,6 +227,11 @@ class NuclearDataManager:
                         atomic_mass_fine = line[110:124].replace("*", "nan").replace("#", ".0")
                         
                         if "nan" not in [atomic_mass_coarse, atomic_mass_fine]:
+                            # use string concatenation to combine the two parts
+                            # e.g. "238" + "050786.936" 
+                            # -> "238050786.936"
+                            # -> 238050786.936/1e6
+                            # = 238.050786936
                             atomic_mass = float(atomic_mass_coarse + atomic_mass_fine) / 1e6
                         else:
                             atomic_mass = float("nan")
@@ -310,6 +315,17 @@ class NuclearDataManager:
             element, nucleon = isotope.split('-')
             
             with self.get_file_path(DataCategory.ISOTOPES, "neutrons.list").open() as f:
+                # Line matching breakdown:
+                # "496)  92-U -238 IAEA       EVAL-DEC14 IAEA Consortium                  9237"
+                # When line matches pattern
+                # We get groups:
+                #   match.group(1) = "92"  
+                #   match.group(2) = "U"
+                #   match.group(3) = "238"
+                # Check if constructed string matches input:
+                #   match.expand(r"\2-\3") = "U-238"
+                # If match found, get MAT number:
+                # Take last 5 characters of line "  9237" -> 9237
                 pattern = r"\b\s*(\d+)\s*-\s*([A-Za-z]+)\s*-\s*(\d+)([A-Za-z]*)\b"
                 
                 for line in f:

@@ -44,3 +44,14 @@ pre-commit = "^4.0.1"
 # --------------------------------------------- #
 # The rest all 3rd party plugins configurations #
 # --------------------------------------------- #
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", "src", "scripts"
+]
+testpaths = ["tests"]
+python_files = ["test*.py"]
+norecursedirs = [".git", "tmp*", "_tmp*", "__pycache__", "*dataset*", "*data_set*"]
+
+[tool.ruff]
+line-length = 120
+select = ["A", "ARG","ASYNC","BLE","C90", "E", "F", "I", "N", "UP032", "W"]
