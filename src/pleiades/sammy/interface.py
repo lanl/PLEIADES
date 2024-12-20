@@ -5,7 +5,7 @@ Interface definitions for SAMMY execution system.
 This module defines the core interfaces and data structures used across
 all SAMMY backend implementations.
 """
-
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -67,7 +67,24 @@ class BaseSammyConfig(ABC):
     """Base configuration for all SAMMY backends."""
     working_dir: Path          # Directory for SAMMY execution
     output_dir: Path          # Directory for SAMMY outputs
-    
+
+    def prepare_directories(self) -> None:
+        """
+        Create and prepare required directories.
+        
+        Raises:
+            ConfigurationError: If directory creation fails
+        """
+        try:
+            # Create working directory if it doesn't exist
+            self.working_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Create output directory if it doesn't exist
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            
+        except Exception as e:
+            raise ConfigurationError(f"Failed to create directories: {str(e)}")
+
     def validate(self) -> bool:
         """
         Validate the configuration.
@@ -78,17 +95,17 @@ class BaseSammyConfig(ABC):
         Raises:
             ConfigurationError: If configuration is invalid
         """
-        # Validate working directory exists and is writable
-        if not self.working_dir.exists():
-            raise ConfigurationError(f"Working directory does not exist: {self.working_dir}")
+        # Create directories first
+        self.prepare_directories()
+
+        # Validate working directory is writable
         if not os.access(self.working_dir, os.W_OK):
             raise ConfigurationError(f"Working directory not writable: {self.working_dir}")
             
-        # Ensure output directory exists and is writable
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Validate output directory is writable
         if not os.access(self.output_dir, os.W_OK):
             raise ConfigurationError(f"Output directory not writable: {self.output_dir}")
-            
+
         return True
 
 class SammyRunner(ABC):

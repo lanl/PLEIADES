@@ -175,3 +175,55 @@ class LocalSammyRunner(SammyRunner):
     def validate_config(self) -> bool:
         """Validate the configuration."""
         return self.config.validate()
+
+
+if __name__ == "__main__":
+   from pathlib import Path
+
+   # Setup paths
+   sammy_executable = Path.home() / "code.ornl.gov/SAMMY/build/bin/sammy"
+   test_data_dir = Path(__file__).parents[4] / "tests/data/ex012"
+   working_dir = Path.home() / "tmp/pleiades_test"
+   output_dir = working_dir / "output"
+
+   # Create config
+   config = LocalSammyConfig(
+       sammy_executable=sammy_executable,
+       working_dir=working_dir,
+       output_dir=output_dir
+   )
+   config.validate()
+
+   # Create files container
+   files = SammyFiles(
+       input_file=test_data_dir / "ex012a.inp",
+       parameter_file=test_data_dir / "ex012a.par", 
+       data_file=test_data_dir / "ex012a.dat"
+   )
+
+   try:
+       # Create and use runner
+       runner = LocalSammyRunner(config)
+       
+       # Prepare environment
+       runner.prepare_environment(files)
+       
+       # Execute SAMMY
+       result = runner.execute_sammy(files)
+       
+       # Process results
+       if result.success:
+           print(f"SAMMY execution successful (runtime: {result.runtime_seconds:.2f}s)")
+           runner.collect_outputs(result)
+       else:
+           print("SAMMY execution failed:")
+           print(result.error_message)
+           print("\nConsole output:")
+           print(result.console_output)
+           
+   except Exception as e:
+       print(f"Error running SAMMY: {str(e)}")
+       
+   finally:
+       # Cleanup
+       runner.cleanup()
