@@ -12,7 +12,6 @@ from uuid import uuid4
 from pleiades.sammy.config import LocalSammyConfig
 from pleiades.sammy.interface import (
     EnvironmentPreparationError,
-    OutputCollectionError,
     SammyExecutionError,
     SammyExecutionResult,
     SammyFiles,
@@ -102,68 +101,6 @@ class LocalSammyRunner(SammyRunner):
         except Exception as e:
             logger.exception(f"SAMMY execution failed for {execution_id}")
             raise SammyExecutionError(f"SAMMY execution failed: {str(e)}")
-
-    def collect_outputs(self, result: SammyExecutionResult) -> None:
-        """Collect and validate output files after execution."""
-        collection_start = datetime.now()
-        logger.info(f"Collecting outputs for execution {result.execution_id}")
-
-        try:
-            self._moved_files = []  # Reset moved files list
-            found_outputs = set()
-
-            # First check for known output files
-            for known_file in SAMMY_OUTPUT_FILES:
-                output_file = self.config.working_dir / known_file
-                if output_file.is_file():
-                    found_outputs.add(output_file)
-                    logger.debug(f"Found known output file: {known_file}")
-
-            # Then look for any additional SAM* files
-            for output_file in self.config.working_dir.glob("SAM*"):
-                if output_file.is_file() and output_file not in found_outputs:
-                    found_outputs.add(output_file)
-                    logger.debug(f"Found additional output file: {output_file.name}")
-
-            if not found_outputs:
-                logger.warning("No SAMMY output files found")
-                if result.success:
-                    logger.error("SAMMY reported success but produced no output files")
-                return
-
-            # Move all found outputs
-            for output_file in found_outputs:
-                dest = self.config.output_dir / output_file.name
-                try:
-                    if dest.exists():
-                        logger.debug(f"Removing existing output file: {dest}")
-                        dest.unlink()
-
-                    output_file.rename(dest)
-                    self._moved_files.append(dest)
-                    logger.debug(f"Moved {output_file} to {dest}")
-
-                except OSError as e:
-                    self._rollback_moves()
-                    raise OutputCollectionError(f"Failed to move output file {output_file}: {str(e)}")
-
-            logger.info(
-                f"Successfully collected {len(self._moved_files)} output files in "
-                f"{(datetime.now() - collection_start).total_seconds():.2f} seconds"
-            )
-
-        except Exception as e:
-            self._rollback_moves()
-            raise OutputCollectionError(f"Output collection failed: {str(e)}")
-
-    def _rollback_moves(self) -> None:
-        """Rollback any moved files in case of error."""
-        for moved_file in self._moved_files:
-            try:
-                original = self.config.working_dir / moved_file.name
-                moved_file.rename(original)
-            except Exception as e:
-                logger.error(f"Failed to rollback move for {moved_file}: {str(e)}")
 
     def cleanup(self) -> None:
         """Clean up after execution."""
