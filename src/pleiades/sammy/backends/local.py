@@ -1,32 +1,34 @@
 #!/usr/env/bin python
 """Local backend implementation for SAMMY execution."""
+
+import logging
 import subprocess
 import textwrap
 from datetime import datetime
 from pathlib import Path
-from uuid import uuid4
-import logging
 from typing import List
+from uuid import uuid4
 
-from pleiades.sammy.interface import (
-    SammyRunner,
-    SammyFiles,
-    SammyExecutionResult,
-    EnvironmentPreparationError,
-    SammyExecutionError,
-    OutputCollectionError,
-)
 from pleiades.sammy.config import LocalSammyConfig
+from pleiades.sammy.interface import (
+    EnvironmentPreparationError,
+    OutputCollectionError,
+    SammyExecutionError,
+    SammyExecutionResult,
+    SammyFiles,
+    SammyRunner,
+)
 
 logger = logging.getLogger(__name__)
 
 # Known SAMMY output file patterns
 SAMMY_OUTPUT_FILES = {
-    'SAMMY.LPT',     # Log file
-    'SAMMIE.ODF',    # Output data file
-    'SAMNDF.PAR',    # Updated parameter file
-    'SAMRESOLVED.PAR'  # Additional parameter file
+    "SAMMY.LPT",  # Log file
+    "SAMMIE.ODF",  # Output data file
+    "SAMNDF.PAR",  # Updated parameter file
+    "SAMRESOLVED.PAR",  # Additional parameter file
 }
+
 
 class LocalSammyRunner(SammyRunner):
     """Implementation of SAMMY runner for local installation."""
@@ -41,20 +43,18 @@ class LocalSammyRunner(SammyRunner):
         try:
             logger.debug("Validating input files")
             files.validate()
-            
+
             # No need to validate directories as this is done in config validation
             logger.debug("Environment preparation complete")
 
         except Exception as e:
-            raise EnvironmentPreparationError(
-                f"Environment preparation failed: {str(e)}"
-            )
+            raise EnvironmentPreparationError(f"Environment preparation failed: {str(e)}")
 
     def execute_sammy(self, files: SammyFiles) -> SammyExecutionResult:
         """Execute SAMMY using local installation."""
         execution_id = str(uuid4())
         start_time = datetime.now()
-        
+
         logger.info(f"Starting SAMMY execution {execution_id}")
         logger.debug(f"Working directory: {self.config.working_dir}")
 
@@ -73,13 +73,13 @@ class LocalSammyRunner(SammyRunner):
                 env=self.config.env_vars,
                 cwd=str(self.config.working_dir),
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             end_time = datetime.now()
             console_output = process.stdout + process.stderr
             success = " Normal finish to SAMMY" in console_output
-            
+
             if not success:
                 logger.error(f"SAMMY execution failed for {execution_id}")
                 error_message = (
@@ -96,7 +96,7 @@ class LocalSammyRunner(SammyRunner):
                 start_time=start_time,
                 end_time=end_time,
                 console_output=console_output,
-                error_message=error_message
+                error_message=error_message,
             )
 
         except Exception as e:
@@ -138,16 +138,14 @@ class LocalSammyRunner(SammyRunner):
                     if dest.exists():
                         logger.debug(f"Removing existing output file: {dest}")
                         dest.unlink()
-                    
+
                     output_file.rename(dest)
                     self._moved_files.append(dest)
                     logger.debug(f"Moved {output_file} to {dest}")
-                    
+
                 except OSError as e:
                     self._rollback_moves()
-                    raise OutputCollectionError(
-                        f"Failed to move output file {output_file}: {str(e)}"
-                    )
+                    raise OutputCollectionError(f"Failed to move output file {output_file}: {str(e)}")
 
             logger.info(
                 f"Successfully collected {len(self._moved_files)} output files in "
@@ -178,52 +176,48 @@ class LocalSammyRunner(SammyRunner):
 
 
 if __name__ == "__main__":
-   from pathlib import Path
+    from pathlib import Path
 
-   # Setup paths
-   sammy_executable = Path.home() / "code.ornl.gov/SAMMY/build/bin/sammy"
-   test_data_dir = Path(__file__).parents[4] / "tests/data/ex012"
-   working_dir = Path.home() / "tmp/pleiades_test"
-   output_dir = working_dir / "output"
+    # Setup paths
+    sammy_executable = Path.home() / "code.ornl.gov/SAMMY/build/bin/sammy"
+    test_data_dir = Path(__file__).parents[4] / "tests/data/ex012"
+    working_dir = Path.home() / "tmp/pleiades_test"
+    output_dir = working_dir / "output"
 
-   # Create config
-   config = LocalSammyConfig(
-       sammy_executable=sammy_executable,
-       working_dir=working_dir,
-       output_dir=output_dir
-   )
-   config.validate()
+    # Create config
+    config = LocalSammyConfig(sammy_executable=sammy_executable, working_dir=working_dir, output_dir=output_dir)
+    config.validate()
 
-   # Create files container
-   files = SammyFiles(
-       input_file=test_data_dir / "ex012a.inp",
-       parameter_file=test_data_dir / "ex012a.par", 
-       data_file=test_data_dir / "ex012a.dat"
-   )
+    # Create files container
+    files = SammyFiles(
+        input_file=test_data_dir / "ex012a.inp",
+        parameter_file=test_data_dir / "ex012a.par",
+        data_file=test_data_dir / "ex012a.dat",
+    )
 
-   try:
-       # Create and use runner
-       runner = LocalSammyRunner(config)
-       
-       # Prepare environment
-       runner.prepare_environment(files)
-       
-       # Execute SAMMY
-       result = runner.execute_sammy(files)
-       
-       # Process results
-       if result.success:
-           print(f"SAMMY execution successful (runtime: {result.runtime_seconds:.2f}s)")
-           runner.collect_outputs(result)
-       else:
-           print("SAMMY execution failed:")
-           print(result.error_message)
-           print("\nConsole output:")
-           print(result.console_output)
-           
-   except Exception as e:
-       print(f"Error running SAMMY: {str(e)}")
-       
-   finally:
-       # Cleanup
-       runner.cleanup()
+    try:
+        # Create and use runner
+        runner = LocalSammyRunner(config)
+
+        # Prepare environment
+        runner.prepare_environment(files)
+
+        # Execute SAMMY
+        result = runner.execute_sammy(files)
+
+        # Process results
+        if result.success:
+            print(f"SAMMY execution successful (runtime: {result.runtime_seconds:.2f}s)")
+            runner.collect_outputs(result)
+        else:
+            print("SAMMY execution failed:")
+            print(result.error_message)
+            print("\nConsole output:")
+            print(result.console_output)
+
+    except Exception as e:
+        print(f"Error running SAMMY: {str(e)}")
+
+    finally:
+        # Cleanup
+        runner.cleanup()
