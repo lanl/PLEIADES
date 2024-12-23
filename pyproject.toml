@@ -8,8 +8,15 @@ packages = [
     { include = "pleiades", from = "src" }
 ]
 include = [
-    "nucDataLibs/**"
+    "src/pleiades/data/isotopes/*",
+    "src/pleiades/data/resonances/*",
+    "src/pleiades/data/cross_sections/*"
 ]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+pre-commit = "^4.0.1"
 
 [build-system]
 requires = ["poetry>=1.1.0"]
@@ -30,15 +37,29 @@ pandas = "*"
 matplotlib = ">=3.1.2"
 # Notebooks
 jupyterlab = "^4.3.0"
+# Nova backend
+nova-galaxy = "^0.4.0"
+pyyaml = "^6.0.2"
 
 [tool.poetry.scripts]
 pleiades = "pleiades:main"  # Console script entry point
 post_install_check = "pleiades.post_install:check_sammy_installed"
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pre-commit = "^4.0.1"
 
 # --------------------------------------------- #
 # The rest all 3rd party plugins configurations #
 # --------------------------------------------- #
+[tool.pytest.ini_options]
+addopts = "-v --cov=pleiades --cov-report=term-missing"
+pythonpath = [
+  ".", "src", "scripts"
+]
+testpaths = ["tests"]
+python_files = ["test*.py"]
+norecursedirs = [".git", "tmp*", "_tmp*", "__pycache__", "*dataset*", "*data_set*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["A", "ARG","ASYNC", "E", "F", "I", "N", "UP032", "W"]
