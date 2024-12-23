@@ -10,7 +10,6 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
-from urllib.parse import urlparse
 
 from pleiades.sammy.interface import BaseSammyConfig, ConfigurationError
 
@@ -86,25 +85,36 @@ class NovaSammyConfig(BaseSammyConfig):
     url: str
     api_key: str
     tool_id: str = "neutrons_imaging_sammy"
-    timeout: int = 3600  # Default 1 hour timeout
-    verify_ssl: bool = True
+    timeout: int = 3600  # Default 1 hour timeout in seconds
 
     def validate(self) -> bool:
-        """Validate NOVA SAMMY configuration."""
-        # First validate base configuration
+        """
+        Validate NOVA SAMMY configuration.
+
+        Returns:
+            bool: True if configuration is valid
+
+        Raises:
+            ConfigurationError: If configuration is invalid
+        """
+        # Validate base configuration (directories)
         super().validate()
 
-        # Validate URL format
-        try:
-            parsed_url = urlparse(self.url)
-            if not all([parsed_url.scheme, parsed_url.netloc]):
-                raise ConfigurationError(f"Invalid URL format: {self.url}")
-        except Exception as e:
-            raise ConfigurationError(f"URL validation failed: {str(e)}")
+        # Validate URL
+        if not self.url:
+            raise ConfigurationError("NOVA service URL cannot be empty")
 
-        # Validate API key format
-        if not self.api_key or len(self.api_key) < 32:
-            raise ConfigurationError("Invalid API key format")
+        # Simple URL format check
+        if not self.url.startswith("https://"):
+            raise ConfigurationError("Invalid URL format - must start with https://")
+
+        # Validate API key
+        if not self.api_key:
+            raise ConfigurationError("API key cannot be empty")
+
+        # Validate tool ID
+        if not self.tool_id:
+            raise ConfigurationError("Tool ID cannot be empty")
 
         # Validate timeout
         if self.timeout <= 0:

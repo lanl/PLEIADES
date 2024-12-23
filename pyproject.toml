@@ -32,6 +32,8 @@ pandas = "*"
 matplotlib = ">=3.1.2"
 # Notebooks
 jupyterlab = "^4.3.0"
+# Nova backend
+nova-galaxy = "^0.4.0"
 
 [tool.poetry.scripts]
 pleiades = "pleiades:main"  # Console script entry point
