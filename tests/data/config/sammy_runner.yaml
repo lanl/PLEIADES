@@ -1,0 +1,18 @@
+backend: docker
+working_dir: {working_dir}
+output_dir: {output_dir}
+
+local:
+  sammy_executable: sammy
+  shell_path: /bin/bash
+
+docker:
+  image_name: kedokudo/sammy-docker
+  container_working_dir: /sammy/work
+  container_data_dir: /sammy/data
+
+nova:
+  url: ${NOVA_URL}
+  api_key: ${NOVA_API_KEY}
+  tool_id: neutrons_imaging_sammy
+  timeout: 3600
