@@ -58,7 +58,7 @@ class TestLocalSammyConfig:
         config = LocalSammyConfig(
             working_dir=temp_working_dir,
             output_dir=temp_working_dir / "output",
-            sammy_executable=Path("sammy"),
+            sammy_executable=Path("ls"),  # use a unix command as sammy executable
             shell_path=Path("/bin/invalid_shell"),
         )
         with pytest.raises(ConfigurationError) as exc:
