@@ -128,7 +128,7 @@ class SammyRunner(ABC):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     @abstractmethod
-    async def prepare_environment(self, files: SammyFiles) -> None:
+    def prepare_environment(self, files: SammyFiles) -> None:
         """
         Prepare the execution environment.
 
@@ -141,7 +141,7 @@ class SammyRunner(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def execute_sammy(self, files: SammyFiles) -> SammyExecutionResult:
+    def execute_sammy(self, files: SammyFiles) -> SammyExecutionResult:
         """
         Execute SAMMY with prepared files.
 
@@ -157,7 +157,7 @@ class SammyRunner(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def cleanup(self, files: SammyFiles) -> None:
+    def cleanup(self, files: SammyFiles) -> None:
         """
         Clean up resources after execution.
 

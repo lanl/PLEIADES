@@ -192,7 +192,8 @@ if __name__ == "__main__":
         # Process results
         if result.success:
             print(f"SAMMY execution successful (runtime: {result.runtime_seconds:.2f}s)")
-            runner.collect_outputs(result)
+            # NOTE: DO NOT collect here as nova runner packages all output files on the server
+            #       and pleiades download the zip archive, extract and move to output directory.
             print(f"Output files available in: {output_dir}")
         else:
             print("SAMMY execution failed:")

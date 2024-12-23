@@ -13,6 +13,11 @@ include = [
     "src/pleiades/data/cross_sections/*"
 ]
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+pre-commit = "^4.0.1"
+
 [build-system]
 requires = ["poetry>=1.1.0"]
 build-backend = "poetry.core.masonry.api"
@@ -40,14 +45,12 @@ pyyaml = "^6.0.2"
 pleiades = "pleiades:main"  # Console script entry point
 post_install_check = "pleiades.post_install:check_sammy_installed"
 
-[tool.poetry.dev-dependencies]
-pytest = "*"
-pre-commit = "^4.0.1"
 
 # --------------------------------------------- #
 # The rest all 3rd party plugins configurations #
 # --------------------------------------------- #
 [tool.pytest.ini_options]
+addopts = "-v --cov=pleiades --cov-report=term-missing"
 pythonpath = [
   ".", "src", "scripts"
 ]
