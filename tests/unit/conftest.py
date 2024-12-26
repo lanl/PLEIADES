@@ -61,13 +61,13 @@ def mock_sammy_error_output() -> str:
     """
 
 
-# @pytest.fixture
-# def mock_sammy_results(mock_sammy_output, temp_working_dir) -> None:
-#     """Create mock SAMMY output files."""
-#     # Create some mock output files
-#     files = ["SAMMY.LPT", "SAMMY.PAR", "SAMMY.LST", "SAMMY.ODF"]
-#     for file in files:
-#         (temp_working_dir / file).write_text("Mock SAMMY output")
+@pytest.fixture
+def mock_sammy_results(temp_working_dir) -> None:
+    """Create mock SAMMY output files."""
+    # Create some mock output files
+    files = ["SAMMY.LPT", "SAMMY.PAR", "SAMMY.LST", "SAMMY.ODF"]
+    for file in files:
+        (temp_working_dir / file).write_text("Mock SAMMY output")
 
 
 @pytest.fixture
