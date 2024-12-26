@@ -12,8 +12,22 @@ from pleiades.sammy.interface import EnvironmentPreparationError, SammyExecution
 
 
 @pytest.fixture
-def local_config(temp_working_dir):
+def mock_sammy_executable(monkeypatch):
+    """Mock shutil.which to simulate SAMMY being available."""
+
+    def mock_which(cmd):
+        if cmd == "sammy":
+            return "sammy"
+        return None
+
+    monkeypatch.setattr("shutil.which", mock_which)
+    return mock_which
+
+
+@pytest.fixture
+def local_config(temp_working_dir, mock_sammy_executable):
     """Create local SAMMY configuration."""
+    _ = mock_sammy_executable  # make pre-commit happy
     local_sammy_config = LocalSammyConfig(
         working_dir=temp_working_dir,
         output_dir=temp_working_dir / "output",
