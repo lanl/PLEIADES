@@ -85,11 +85,13 @@ class TestLocalSammyRunner:
         with pytest.raises(EnvironmentPreparationError):
             runner.prepare_environment(files)
 
-    def test_execute_sammy_success(self, local_config, mock_sammy_files):
+    def test_execute_sammy_success(self, local_config, mock_sammy_files, mock_subprocess_run):
         """Should execute SAMMY successfully."""
+        _ = mock_subprocess_run  # make pre-commit happy
         runner = LocalSammyRunner(local_config)
         files = SammyFiles(**mock_sammy_files)
 
+        # mock_subprocess_run is used implicitly via the fixture's monkeypatch
         runner.prepare_environment(files)
         result = runner.execute_sammy(files)
 
@@ -97,11 +99,13 @@ class TestLocalSammyRunner:
         assert "Normal finish to SAMMY" in result.console_output
         assert result.error_message is None
 
-    def test_execute_sammy_failure(self, local_config, mock_sammy_files):
+    def test_execute_sammy_failure(self, local_config, mock_sammy_files, mock_subprocess_fail):
         """Should handle SAMMY execution failure."""
+        _ = mock_subprocess_fail  # make pre-commit happy
         runner = LocalSammyRunner(local_config)
         files = SammyFiles(**mock_sammy_files)
 
+        # mock_subprocess_fail is used implicitly via the fixture's monkeypatch
         runner.prepare_environment(files)
         result = runner.execute_sammy(files)
 
@@ -126,8 +130,10 @@ class TestLocalSammyRunner:
             runner.execute_sammy(files)
         assert "Mock crash" in str(exc.value)
 
-    def test_collect_outputs(self, local_config, mock_sammy_files):
+    def test_collect_outputs(self, local_config, mock_sammy_files, mock_subprocess_run, mock_sammy_results):
         """Should collect output files."""
+        _ = mock_subprocess_run  # make pre-commit happy
+        _ = mock_sammy_results  # make pre-commit happy
         runner = LocalSammyRunner(local_config)
         files = SammyFiles(**mock_sammy_files)
 
@@ -142,8 +148,10 @@ class TestLocalSammyRunner:
         assert (local_config.output_dir / "SAMMY.LPT").exists()
         assert (local_config.output_dir / "SAMMY.PAR").exists()
 
-    def test_cleanup(self, local_config, mock_sammy_files):
+    def test_cleanup(self, local_config, mock_sammy_files, mock_subprocess_run, mock_sammy_results):
         """Should perform cleanup successfully."""
+        _ = mock_subprocess_run  # make pre-commit happy
+        _ = mock_sammy_results  # make pre-commit happy
         runner = LocalSammyRunner(local_config)
         files = SammyFiles(**mock_sammy_files)
 
