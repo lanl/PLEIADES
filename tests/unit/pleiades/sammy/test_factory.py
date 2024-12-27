@@ -116,9 +116,9 @@ class TestSammyFactory:
             BackendType.NOVA: False,
         }
 
-    def test_create_runner_local(self, mock_sammy_runner, tmp_path):
+    def test_create_runner_local(self, mock_sammy_runner, tmp_path, mock_which):
         """Should create LocalSammyRunner."""
-        _ = mock_sammy_runner  # implicitly used by the fixture
+        _ = mock_sammy_runner, mock_which  # implicitly used by the fixture
         runner = SammyFactory.create_runner("local", tmp_path)
         assert isinstance(runner, LocalSammyRunner)  # Check if it's the mocked runner
 
@@ -154,9 +154,9 @@ class TestSammyFactory:
             SammyFactory.create_runner("docker", tmp_path)
         assert "Backend docker is not available" in str(exc.value)
 
-    def test_from_config_valid(self, tmp_path, mock_sammy_runner):
+    def test_from_config_valid(self, tmp_path, mock_sammy_runner, mock_which):
         """Should create runner from valid config file."""
-        _ = mock_sammy_runner  # implicitly used by the fixture
+        _ = mock_sammy_runner, mock_which  # implicitly used by the fixture
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
             f"""
@@ -183,9 +183,9 @@ class TestSammyFactory:
             SammyFactory.from_config(config_file)
         assert "Missing required fields" in str(exc.value)
 
-    def test_from_config_env_vars(self, tmp_path, mock_sammy_runner, monkeypatch):
+    def test_from_config_env_vars(self, tmp_path, mock_sammy_runner, monkeypatch, mock_which):
         """Should expand environment variables."""
-        _ = mock_sammy_runner  # implicitly used by the fixture
+        _ = mock_sammy_runner, mock_which  # implicitly used by the fixture
         monkeypatch.setenv("MY_VAR", f"{tmp_path}")
         config_file = tmp_path / "config.yaml"
         config_file.write_text(
