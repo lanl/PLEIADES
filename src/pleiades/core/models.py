@@ -171,7 +171,7 @@ class Isotope(BaseModel):
     - Added computed properties for derived values
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=False)
 
     # Core properties
     identifier: IsotopeIdentifier
