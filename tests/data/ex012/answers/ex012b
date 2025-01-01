@@ -1,0 +1,12 @@
+#!/bin/csh
+
+sammy <<EOF
+ex012b.inp
+ex012a.par
+ex012a.dat
+
+EOF
+mv -f SAMMY.LPT results/ex012bb.lpt
+mv -f SAMMY.ODF results/ex012bb.odf
+rm -f SAM*.*
+
