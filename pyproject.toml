@@ -65,7 +65,7 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-line-length = 120
+line-length = 140
 
 [tool.ruff.lint]
-select = ["A", "ARG","ASYNC", "E", "F", "I", "N", "UP032", "W"]
+select = ["A", "ARG","ASYNC", "E", "F", "I", "UP032", "W"]

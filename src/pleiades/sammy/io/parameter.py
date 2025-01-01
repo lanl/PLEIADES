@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-"""Classes for handling SAMMY parameter files."""
-# (originally sammyParFile.py)
+# sammyParFile.py
 # Version: 1.0
 # Authors:
 #   - Alexander M. Long
@@ -17,14 +15,11 @@
 # How to use:
 #   - Import the this class with 'from pleiades import sammyParFile'
 
+# General imports
 import configparser
 import json
-import logging
 import pathlib
 import re
-from copy import deepcopy
-
-logger = logging.getLogger(__name__)
 
 
 class ParFile:
@@ -505,6 +500,8 @@ class ParFile:
         Returns:
             parFile: combined parFile instance
         """
+        from copy import deepcopy
+
         compound = deepcopy(self)
 
         # only add an isotope if resonances exists in the specified energy range
@@ -550,11 +547,9 @@ class ParFile:
         """parse a list of spin_group cards, sort the key-word pairs of groups and channels
 
         Args:
-            - spin_group_cards (list): list of strings containing the lines associated with
-            spin-groups and/or spin-channels
+            - spin_group_cards (list): list of strings containing the lines associated with spin-groups and/or spin-channels
 
-        Returns: (list of dicts): list containing groups, each group is a dictionary containing
-            key-value dicts for spin_groups and channels
+        Returns: (list of dicts): list containing groups, each group is a dictionary containing key-value dicts for spin_groups and channels
         """
         sg_dict = []
         lines = (line for line in self._spin_group_cards)  # convert to a generator object
@@ -694,9 +689,7 @@ class ParFile:
 
     def _read_resonance_params(self, resonance_params_line: str) -> dict:
         # parse key-word pairs from a resonance_params line
-        resonance_params_dict = {
-            key: resonance_params_line[value] for key, value in self._RESONANCE_PARAMS_FORMAT.items()
-        }
+        resonance_params_dict = {key: resonance_params_line[value] for key, value in self._RESONANCE_PARAMS_FORMAT.items()}
         return resonance_params_dict
 
     def _write_resonance_params(self, resonance_params_dict: dict) -> str:
@@ -760,7 +753,7 @@ class ParFile:
             new_text[slice_value] = list(str(misc_tzero_dict[key]).ljust(word_length))
         return "".join(new_text)
 
-    def _write_misc_deltE(self, misc_deltE_dict: dict) -> str:  # noqa: N802, N803
+    def _write_misc_deltE(self, misc_deltE_dict: dict) -> str:
         # write a formatted misc_deltE line from dict with the key-word misc_deltE values
         new_text = [" "] * 80  # 80 characters long list of spaces to be filled
         new_text[:5] = list("DELTE")
@@ -813,7 +806,7 @@ class Update:
                 spin_groups = [f"{group[0]['group_number'].strip():>5}" for group in self.parent.data["spin_group"]]
 
                 sg_formatted = "".join(spin_groups[:8]).ljust(43)
-                L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # # noqa: N806
+                L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # number of extra lines needed
                 for l in range(0, L + 1):  # noqa: E741
                     sg_formatted += "-1\n" + "".join(spin_groups[8 + 15 * l : 8 + 15 * (l + 1)]).ljust(78)
                 isotope["spin_groups"] = sg_formatted
@@ -845,7 +838,7 @@ class Update:
             spin_groups = [f"{group[0]['group_number'].strip():>5}" for group in self.parent.data["spin_group"]]
 
             sg_formatted = "".join(spin_groups[:8]).ljust(43)
-            L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # noqa: N806
+            L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # number of extra lines needed
             for l in range(0, L + 1):  # noqa: E741
                 sg_formatted += "-1\n" + "".join(spin_groups[8 + 15 * l : 8 + 15 * (l + 1)]).ljust(78)
 
@@ -864,14 +857,12 @@ class Update:
         spin_groups = [f"{group[0]['group_number'].strip():>5}" for group in self.parent.data["spin_group"]]
 
         sg_formatted = "".join(spin_groups[:8]).ljust(43)
-        L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # # noqa: N806
+        L = (len(spin_groups) - 8) // 15 if len(spin_groups) > 8 else -1  # number of extra lines needed
         for l in range(0, L + 1):  # noqa: E741
             sg_formatted += "-1\n" + "".join(spin_groups[8 + 15 * l : 8 + 15 * (l + 1)]).ljust(78)
 
         aw = [float(i["mass_b"]) for i in self.parent.data["particle_pairs"]]
-        weights = [
-            float(self.parent.data["isotopic_masses"][i]["abundance"]) for i in self.parent.data["isotopic_masses"]
-        ]
+        weights = [float(self.parent.data["isotopic_masses"][i]["abundance"]) for i in self.parent.data["isotopic_masses"]]
         aw = average(aw, weights=weights)
 
         iso_dict = {
@@ -1038,9 +1029,7 @@ class Update:
                 "vary_exp_decay_bg": 0,
             }
 
-        self.parent.data["normalization"].update(
-            {key: value for key, value in kwargs.items() if key in self.parent.data["normalization"]}
-        )
+        self.parent.data["normalization"].update({key: value for key, value in kwargs.items() if key in self.parent.data["normalization"]})
 
     def broadening(self, **kwargs) -> None:
         """change or vary broadening parameters and vary flags
@@ -1074,9 +1063,7 @@ class Update:
                 "vary_deltae_us": 0,
             }
 
-        self.parent.data["broadening"].update(
-            {key: value for key, value in kwargs.items() if key in self.parent.data["broadening"]}
-        )
+        self.parent.data["broadening"].update({key: value for key, value in kwargs.items() if key in self.parent.data["broadening"]})
 
     def misc(self, **kwargs) -> None:
         """change or vary misc parameters and vary flags
@@ -1118,9 +1105,7 @@ class Update:
                 "DlnE": "",
             }
 
-        self.parent.data["misc"].update(
-            {key: value for key, value in kwargs.items() if key in self.parent.data["misc"]}
-        )
+        self.parent.data["misc"].update({key: value for key, value in kwargs.items() if key in self.parent.data["misc"]})
 
     def resolution(self, **kwargs) -> None:
         """change or vary resolution parameters and vary flags
@@ -1253,9 +1238,7 @@ class Update:
                 "chann": "",
             }
 
-        self.parent.data["resolution"].update(
-            {key: value for key, value in kwargs.items() if key in self.parent.data["resolution"]}
-        )
+        self.parent.data["resolution"].update({key: value for key, value in kwargs.items() if key in self.parent.data["resolution"]})
 
     def vary_all(self, vary=True, data_key="misc_delta"):
         """toggle all vary parameters in a data keyword to either vary/fixed
