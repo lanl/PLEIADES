@@ -201,6 +201,3 @@ cython_debug/
 
 # Ignore vscode stuff.
 .vscode/
-
-# Ignore legacy stuff.
-legacy/
