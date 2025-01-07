@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.pleiades.sammy.parameters.resonance import ResonanceEntry, UnsupportedFormatError, VaryFlag
+from pleiades.sammy.parameters.resonance import ResonanceEntry, UnsupportedFormatError, VaryFlag
 
 
 def test_valid_resonance_entry():
@@ -72,7 +72,7 @@ def test_full_channel_widths():
 
 def test_logger_error_for_x_value():
     line = "-3.6616E+06 1.5877E+05 3.6985E+09                       0 0 1     1    abc"
-    with patch("src.pleiades.sammy.parameters.resonance.logger") as mock_logger:
+    with patch("pleiades.sammy.parameters.resonance.logger") as mock_logger:
         ResonanceEntry.from_str(line)
         mock_logger.error.assert_called_once_with("Failed to parse X value: could not convert string to float: 'abc'")
 
