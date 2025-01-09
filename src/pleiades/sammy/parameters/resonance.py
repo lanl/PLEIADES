@@ -2,19 +2,14 @@
 """Data class for card 01::resonance."""
 
 import logging
-from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from pleiades.sammy.parameters.helper import VaryFlag, safe_parse
+
 # setup logging
 logger = logging.getLogger(__name__)
-
-
-class VaryFlag(Enum):
-    NO = 0
-    YES = 1
-    PUP = 3
 
 
 # Define format constants
@@ -84,17 +79,6 @@ class ResonanceEntry(BaseModel):
                 pass
 
         params = {}
-
-        def safe_parse(s: str, as_int: bool = False) -> Optional[float]:
-            s = s.strip()
-            if not s:
-                return None
-            try:
-                if as_int:
-                    return int(s)
-                return float(s)
-            except ValueError:
-                return None
 
         # Parse each field according to format (excluding x_value)
         for field, slice_obj in RESONANCE_FORMAT.items():
