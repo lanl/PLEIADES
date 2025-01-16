@@ -1,9 +1,35 @@
-[tool.poetry]
+[project]
 name = "pleiades"
 version = "0.1.1"
 description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
-authors = ["Alex M. Long <alexlong@lanl.gov>"]
 license = "MIT"
+authors = [
+    {name = "Alex M. Long", email = "alexlong@lanl.gov"},
+    {name = "Tsviki Hirsh", email = "tsviki.hirsh@gmail.com"},
+    {name = "Chen Zhang", email = "zhangc@ornl.gov"},
+    {name = "Jean Bilheux", email = "bilheuxjm@ornl.gov"},
+]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "setuptools",
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "jupyterlab",
+    "nova-galaxy",
+    "pyyaml",
+    "pydantic",
+]
+
+[project.scripts]
+pleiades = "pleiades:main"  # Console script entry point
+post_install_check = "pleiades.post_install:check_sammy_installed"
+
+# ---------------------------------------------------------- #
+# This section is for users who want to install via `poetry` #
+# ---------------------------------------------------------- #
+[tool.poetry]
 packages = [
     { include = "pleiades", from = "src" }
 ]
@@ -21,31 +47,6 @@ pre-commit = "^4.0.1"
 [build-system]
 requires = ["poetry>=1.1.0"]
 build-backend = "poetry.core.masonry.api"
-
-# ---------------------------------------------------------- #
-# This section is for users who want to install via `poetry` #
-# ---------------------------------------------------------- #
-[tool.poetry.dependencies]
-# Core
-python = "^3.10"  # replace with the appropriate Python version
-setuptools = "*"
-# Numerical
-numpy = "*"
-scipy = "*"
-pandas = "*"
-# Visualization
-matplotlib = ">=3.1.2"
-# Notebooks
-jupyterlab = "^4.3.0"
-# Nova backend
-nova-galaxy = "^0.4.0"
-pyyaml = "^6.0.2"
-pydantic = "^2.10.4"
-
-[tool.poetry.scripts]
-pleiades = "pleiades:main"  # Console script entry point
-post_install_check = "pleiades.post_install:check_sammy_installed"
-
 
 # --------------------------------------------- #
 # The rest all 3rd party plugins configurations #
