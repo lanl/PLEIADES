@@ -9,6 +9,8 @@ class VaryFlag(Enum):
     NO = 0
     YES = 1
     PUP = 3  # propagated uncertainty parameter
+    USE_FROM_PARFILE = -1  # do not vary, use value from parfile
+    USE_FROM_OTHERS = -2  # do not vary, use value from other sources (INP, COV, etc.)
 
 
 def safe_parse(s: str, as_int: bool = False) -> Optional[float]:

@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 from pleiades.sammy.parameters import (
     BroadeningParameterCard,
     ExternalREntry,
+    NormalizationBackgroundCard,
     ResonanceEntry,
+    UnusedCorrelatedCard,
 )
 
 
@@ -20,6 +22,8 @@ class SammyParameterFile(BaseModel):
     # Add additional optional cards
     external_r: Optional[ExternalREntry] = Field(None, description="External R matrix")
     broadening: Optional[BroadeningParameterCard] = Field(None, description="Broadening parameters")
+    unused_correlated: Optional[UnusedCorrelatedCard] = Field(None, description="Unused but correlated variables")
+    normalization: Optional[NormalizationBackgroundCard] = Field(None, description="Normalization and background parameters")
 
     @classmethod
     def from_file(cls, file_path):
