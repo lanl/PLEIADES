@@ -194,12 +194,12 @@ class BroadeningParameters(BaseModel):
 
         # Format main parameter line
         main_parts = [
-            format_float(self.crfn, width=10),
-            format_float(self.temp, width=10),
-            format_float(self.thick, width=10),
-            format_float(self.deltal, width=10),
-            format_float(self.deltag, width=10),
-            format_float(self.deltae, width=10),
+            format_float(self.crfn, width=9),
+            format_float(self.temp, width=9),
+            format_float(self.thick, width=9),
+            format_float(self.deltal, width=9),
+            format_float(self.deltag, width=9),
+            format_float(self.deltae, width=9),
             format_vary(self.flag_crfn),
             format_vary(self.flag_temp),
             format_vary(self.flag_thick),
@@ -207,7 +207,7 @@ class BroadeningParameters(BaseModel):
             format_vary(self.flag_deltag),
             format_vary(self.flag_deltae),
         ]
-        lines.append("".join(main_parts))
+        lines.append(" ".join(main_parts))
 
         # Add uncertainties line if any uncertainties are present
         if any(getattr(self, f"d_{param}") is not None for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]):

@@ -36,8 +36,21 @@ def format_float(value: Optional[float], width: int = 11) -> str:
     """Helper to format float values in fixed width with proper spacing"""
     if value is None:
         return " " * width
-    # Format with proper scientific notation and alignment
-    return f"{value:<{width}.4E}"
+
+    # Subtract 5 characters for "E+xx" (scientific notation exponent)
+    # The rest is for the significant digits (1 before the dot and decimals)
+    max_decimals = max(0, width - 6)  # At least room for "0.E+00"
+
+    # Create a format string with dynamic precision
+    format_str = f"{{:.{max_decimals}E}}"
+    formatted = format_str.format(value)
+
+    # Ensure the string fits the width
+    if len(formatted) > width:
+        raise ValueError(f"Cannot format value {value} to fit in {width} characters.")
+
+    # Align to the left if required
+    return f"{formatted:<{width}}"
 
 
 def format_vary(value: VaryFlag) -> str:
