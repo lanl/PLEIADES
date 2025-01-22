@@ -59,4 +59,12 @@ def format_vary(value: VaryFlag) -> str:
     """Helper to format vary flags with proper spacing"""
     if value == VaryFlag.NO:
         return "0"
-    return "1"
+    if value == VaryFlag.YES:
+        return "1"
+    if value == VaryFlag.PUP:
+        return "3"
+    if value == VaryFlag.USE_FROM_PARFILE:
+        return "-1"
+    if value == VaryFlag.USE_FROM_OTHERS:
+        return "-2"
+    raise ValueError(f"Unsupported vary flag: {value}")
