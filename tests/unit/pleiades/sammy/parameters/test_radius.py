@@ -301,5 +301,107 @@ Flags= 1 3
         RadiusCard.from_lines(invalid_input.splitlines())
 
 
+def test_minimal_radius_creation():
+    """Test creating RadiusCard with minimal required parameters."""
+
+    print("\nTest minimal parameter creation:")
+    # Create with just effective radius and spin groups
+    card = RadiusCard.from_values(effective_radius=3.200, spin_groups=[1, 2, 3])
+
+    print(f"Card parameters: {card.parameters}")
+
+    # Verify defaults
+    assert card.parameters.effective_radius == pytest.approx(3.200)
+    assert card.parameters.true_radius == pytest.approx(3.200)  # Should equal effective_radius
+    assert card.parameters.spin_groups == [1, 2, 3]
+    assert card.parameters.channel_mode == 0  # Default
+    assert card.parameters.vary_effective == VaryFlag.NO  # Default
+    assert card.parameters.vary_true == VaryFlag.NO  # Default
+    assert card.parameters.channels is None  # Default
+
+
+def test_full_radius_creation():
+    """Test creating RadiusCard with full parameter set."""
+
+    print("\nTest full parameter creation:")
+    card = RadiusCard.from_values(
+        effective_radius=3.200,
+        true_radius=3.400,
+        spin_groups=[1, 2],
+        channels=[1, 2, 3],
+        vary_effective=VaryFlag.YES,
+        vary_true=VaryFlag.PUP,
+    )
+
+    print(f"Card parameters: {card.parameters}")
+
+    # Verify all parameters
+    assert card.parameters.effective_radius == pytest.approx(3.200)
+    assert card.parameters.true_radius == pytest.approx(3.400)
+    assert card.parameters.spin_groups == [1, 2]
+    assert card.parameters.channel_mode == 1  # Auto-set when channels provided
+    assert card.parameters.channels == [1, 2, 3]
+    assert card.parameters.vary_effective == VaryFlag.YES
+    assert card.parameters.vary_true == VaryFlag.PUP
+
+
+def test_radius_with_extras():
+    """Test creating RadiusCard with keyword format extras."""
+
+    print("\nTest creation with extras:")
+    card = RadiusCard.from_values(
+        effective_radius=3.200,
+        spin_groups=[1],
+        particle_pair="n+16O",
+        orbital_momentum=["all"],
+        relative_uncertainty=0.05,
+        absolute_uncertainty=0.002,
+    )
+
+    print(f"Card parameters: {card.parameters}")
+    print(
+        f"Card extras: particle_pair={card.particle_pair}, "
+        f"orbital_momentum={card.orbital_momentum}, "
+        f"uncertainties={card.relative_uncertainty}, {card.absolute_uncertainty}"
+    )
+
+    # Verify core parameters
+    assert card.parameters.effective_radius == pytest.approx(3.200)
+    assert card.parameters.true_radius == pytest.approx(3.200)
+    assert card.parameters.spin_groups == [1]
+
+    # Verify extras
+    assert card.particle_pair == "n+16O"
+    assert card.orbital_momentum == ["all"]
+    assert card.relative_uncertainty == pytest.approx(0.05)
+    assert card.absolute_uncertainty == pytest.approx(0.002)
+
+
+def test_invalid_radius_creation():
+    """Test error cases for direct parameter creation."""
+
+    print("\nTesting invalid parameter combinations:")
+
+    # Missing required parameters
+    with pytest.raises(TypeError) as exc_info:
+        RadiusCard.from_values()
+    print(f"Missing params error: {exc_info.value}")
+
+    # Invalid radius value
+    with pytest.raises(ValueError) as exc_info:
+        RadiusCard.from_values(effective_radius=-1.0, spin_groups=[1])
+    print(f"Invalid radius error: {exc_info.value}")
+
+    # Inconsistent vary flags with radii
+    with pytest.raises(ValueError) as exc_info:
+        RadiusCard.from_values(
+            effective_radius=3.200,
+            true_radius=3.400,
+            spin_groups=[1],
+            vary_true=VaryFlag.USE_FROM_PARFILE,  # Can't use -1 when radii differ
+        )
+    print(f"Inconsistent flags error: {exc_info.value}")
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

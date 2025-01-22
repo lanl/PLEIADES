@@ -5,7 +5,6 @@ This module handles both fixed-width (Card Set 7) and keyword-based (Card Set 7a
 for radius parameters in SAMMY parameter files.
 """
 
-import logging
 import re
 from enum import Enum
 from typing import List, Optional, Tuple, Union
@@ -76,7 +75,7 @@ class RadiusParameters(BaseModel):
         of input format.
     """
 
-    effective_radius: float = Field(description="Radius for potential scattering (Fermi)")
+    effective_radius: float = Field(description="Radius for potential scattering (Fermi)", ge=0)
     true_radius: float = Field(description="Radius for penetrabilities and shifts (Fermi)")
     channel_mode: int = Field(
         description="Channel specification mode (0: all channels, 1: specific channels)",
@@ -914,12 +913,29 @@ class RadiusCard(BaseModel):
         true_radius: Optional[float] = None,
         spin_groups: List[int] = None,
         channels: Optional[List[int]] = None,
+        particle_pair: Optional[str] = None,
+        orbital_momentum: Optional[List[Union[int, str]]] = None,
+        relative_uncertainty: Optional[float] = None,
+        absolute_uncertainty: Optional[float] = None,
         **kwargs,
     ) -> "RadiusCard":
         """Create a new radius card from parameter values.
 
-        A convenience method for creating cards directly from values.
+        Args:
+            effective_radius: Radius for potential scattering
+            true_radius: Radius for penetrabilities and shifts (defaults to effective_radius)
+            spin_groups: List of spin group numbers
+            channels: Optional list of channel numbers
+            particle_pair: Optional particle pair specification
+            orbital_momentum: Optional orbital angular momentum values
+            relative_uncertainty: Optional relative uncertainty for radii
+            absolute_uncertainty: Optional absolute uncertainty for radii
+            **kwargs: Additional parameters to pass to RadiusParameters
+
+        Returns:
+            RadiusCard: Created card instance
         """
+        # Separate parameters and extras
         params = {
             "effective_radius": effective_radius,
             "true_radius": true_radius or effective_radius,
@@ -927,46 +943,22 @@ class RadiusCard(BaseModel):
             "channel_mode": 1 if channels else 0,
             "channels": channels,
         }
-        params.update(kwargs)  # Allow setting other parameters
+        params.update(kwargs)  # Only parameter-specific kwargs
 
-        return cls(parameters=RadiusParameters(**params))
+        # Create card with both parameters and extras
+        return cls(
+            parameters=RadiusParameters(**params),
+            particle_pair=particle_pair,
+            orbital_momentum=orbital_momentum,
+            relative_uncertainty=relative_uncertainty,
+            absolute_uncertainty=absolute_uncertainty,
+        )
 
 
 if __name__ == "__main__":
-    # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
-
-    # Test Targets:
-    # 1. Fixed-Width Format Tests (Default Format)
-    # - Basic single line (effective_radius, true_radius, single spin group)
-    # - Multiple spin groups on one line
-    # - Spin groups with continuation (-1 marker)
-    # - Channel specification with IX=0 marker
-    # - Error case: Invalid format/missing required fields
-
-# 2. Alternate Format Tests (>99 spin groups)
-# - Basic alternate format parsing (5-column integers)
-# - Multiple spin groups in alternate format
-# - Channel specification in alternate format
-# - Error case: Invalid alternate format
-
-# 3. Keyword Format Tests
-# - Basic radius specification (single value)
-# - Separate effective/true radius values
-# - Uncertainty specifications (relative and absolute)
-# - Particle pair and orbital momentum
-# - Groups with channel specifications
-# - Error case: Invalid keyword format
-
-# 4. Format Detection and Conversion
-# - Detect and parse default format
-# - Detect and parse alternate format
-# - Detect and parse keyword format
-# - Convert between formats
-# - Error case: Invalid/ambiguous format
-
-# 5. Direct Parameter Creation
-# - Create from minimal values
-# - Create with full parameter set
-# - Create with keyword format extras
-# - Error case: Invalid parameter combinations
+    # Example usage
+    card = RadiusCard.from_values(effective_radius=3.2, true_radius=3.2, spin_groups=[1, 2, 3])
+    lines = card.to_lines(radius_format=RadiusFormat.KEYWORD)
+    print("\n".join(lines))
+    print("Format:", RadiusCard.detect_format(lines))
+    print("Parsed card:", RadiusCard.from_lines(lines))
