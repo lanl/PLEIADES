@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, parse_keyword_pairs_to_dict, safe_parse
 
 
 class OrbitalMomentum(str, Enum):
@@ -85,9 +85,8 @@ class RadiusParameters(BaseModel):
     )
     vary_effective: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying effective radius")
     vary_true: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying true radius")
-    spin_groups: List[int] = Field(
+    spin_groups: Optional[List[int]] = Field(
         description="List of spin group numbers",
-        min_length=1,  # Must have at least one spin group
     )
     channels: Optional[List[int]] = Field(default=None, description="List of channel numbers (required when channel_mode=1)")
 
@@ -689,8 +688,12 @@ class RadiusCardKeyword(BaseModel):
         Raises:
             ValueError: If lines are invalid or required data is missing
         """
-        if not lines or not cls.is_header_line(lines[0]):
-            raise ValueError("Invalid or missing header line")
+        if not lines:
+            raise ValueError("No lines provided")
+
+        # Validate header
+        if not cls.is_header_line(lines[0]):
+            raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Parse parameters for RadiusParameters
         params = {
@@ -706,63 +709,67 @@ class RadiusCardKeyword(BaseModel):
         # Parse keyword format extras
         extras = {"particle_pair": None, "orbital_momentum": None, "relative_uncertainty": None, "absolute_uncertainty": None}
 
-        for line in (l.strip() for l in lines[1:] if l.strip()):  # noqa: E741
-            if "=" not in line:
-                continue
+        # Combine all non-empty lines into single string for parsing
+        text = "\n".join(line for line in lines[1:] if line.strip())
 
-            key, value = [x.strip().lower() for x in line.split("=", 1)]
-            values = cls._parse_values(value)
+        # Use the new parser
+        data = parse_keyword_pairs_to_dict(text)
 
-            if not values:
-                continue
+        for key, value in data.items():
+            key = key.lower()
 
             if key == "radius":
-                params["effective_radius"] = float(values[0])
-                params["true_radius"] = float(values[1] if len(values) > 1 else values[0])
+                if isinstance(value, list):
+                    params["effective_radius"] = value[0]
+                    params["true_radius"] = value[1]
+                else:
+                    params["effective_radius"] = value
+                    params["true_radius"] = value
 
             elif key == "flags":
-                params["vary_effective"] = VaryFlag(int(values[0]))
-                params["vary_true"] = VaryFlag(int(values[1] if len(values) > 1 else values[0]))
-
-            elif key in ["relative", "absolute"]:
-                value = float(values[0])
-                if key == "relative":
-                    extras["relative_uncertainty"] = value
+                if isinstance(value, list):
+                    params["vary_effective"] = VaryFlag(value[0])
+                    params["vary_true"] = VaryFlag(value[1])
                 else:
-                    extras["absolute_uncertainty"] = value
+                    params["vary_effective"] = VaryFlag(value)
+                    params["vary_true"] = VaryFlag(value)
 
-            elif key in ["particle-pair", "pp"]:
+            elif key in ["pp", "particle-pair"]:
                 extras["particle_pair"] = value
 
-            elif key in ["orbital", "l"]:
-                extras["orbital_momentum"] = []
-                for v in values:
-                    if v.lower() in ["odd", "even", "all"]:
-                        extras["orbital_momentum"].append(v.lower())
-                    else:
-                        extras["orbital_momentum"].append(int(v))
+            elif key in ["l", "orbital"]:
+                if isinstance(value, list):
+                    extras["orbital_momentum"] = [str(v).lower() if isinstance(v, str) else v for v in value]
+                else:
+                    extras["orbital_momentum"] = [str(value).lower()]
+
+            elif key == "relative":
+                extras["relative_uncertainty"] = value[0] if isinstance(value, list) else value
+
+            elif key == "absolute":
+                extras["absolute_uncertainty"] = value[0] if isinstance(value, list) else value
+
+            elif key == "channels":
+                params["channels"] = [int(x) for x in value]
+                params["channel_mode"] = 1
 
             elif key == "group":
-                if "channels" in value.lower():
-                    # Group with channels format: "Group= 1 Channels= 1 2 3"
-                    group_part, channel_part = value.lower().split("channels")
-                    params["spin_groups"].append(int(cls._parse_values(group_part)[0]))
-                    params["channels"] = [int(x) for x in cls._parse_values(channel_part)]
-                    params["channel_mode"] = 1
+                if isinstance(value, list):
+                    params["spin_groups"] = [int(x) for x in value]
+                elif isinstance(value, int):
+                    params["spin_groups"] = [value]
                 else:
-                    # Simple group format: "Group= 1"
-                    params["spin_groups"].extend(int(x) for x in values)
+                    raise ValueError("Invalid group value")
 
-        if not params["effective_radius"]:
-            raise ValueError("No radius values specified")
+        # Validate required parameters
+        if not params["spin_groups"] and not (extras["particle_pair"] and extras["orbital_momentum"]):
+            raise ValueError("Must specify either spin groups or both particle pair (PP) and orbital momentum (L)")
 
-        if not params["spin_groups"]:
-            # Check if we have both PP and L specified
-            if not (extras["particle_pair"] and extras["orbital_momentum"]):
-                raise ValueError("Must specify either spin groups or both particle pair (PP) and orbital momentum (L)")
-
-        # Create RadiusParameters instance first
-        parameters = RadiusParameters(**params)
+        # Create RadiusParameters instance
+        try:
+            parameters = RadiusParameters(**params)
+        except ValueError as e:
+            raise ValueError(f"Invalid parameter values: {e}")
 
         return cls(parameters=parameters, **extras)
 

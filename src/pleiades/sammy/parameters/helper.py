@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Helper functions for parameter file handling."""
 
+import re
 from enum import Enum
 from typing import Optional
 
@@ -68,3 +69,49 @@ def format_vary(value: VaryFlag) -> str:
     if value == VaryFlag.USE_FROM_OTHERS:
         return "-2"
     raise ValueError(f"Unsupported vary flag: {value}")
+
+
+def parse_keyword_pairs_to_dict(text: str) -> dict:
+    """
+    Parse an ASCII text into a dictionary of keyword-value pairs.
+
+    Parameters:
+        text (str): The input text with keyword-value pairs.
+
+    Returns:
+        dict: A dictionary with keywords as keys and parsed values.
+    """
+    data = {}
+
+    # Regex to match key=value pairs
+    # (\w+): captures the keyword
+    # \s*=\s*: matches the equal sign with optional spaces around it
+    # ([^=\n]+?): captures the value until the next keyword or end of line
+    # (?=\s+\w+\s*=|$): lookahead to match the next keyword or end of line
+    pattern = r"(\w+)\s*=\s*([^=\n]+?)(?=\s+\w+\s*=|$)"
+
+    for line in text.splitlines():
+        # Skip empty lines
+        if not line.strip():
+            continue
+
+        # Find all key-value pairs in the line
+        matches = re.findall(pattern, line)
+
+        for key, value in matches:
+            # Process the value
+            value = value.strip()
+            if " " in value:
+                # Convert space-separated numbers to a list of float or int
+                items = value.split()
+                parsed_value = [float(item) if "." in item else int(item) if item.isdigit() else item for item in items]
+            else:
+                # Single value, convert to int or float if possible
+                if value.isdigit():
+                    parsed_value = int(value)
+                else:
+                    parsed_value = float(value) if "." in value else value
+
+            data[key] = parsed_value
+
+    return data
