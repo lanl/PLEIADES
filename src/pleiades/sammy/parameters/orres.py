@@ -234,6 +234,7 @@ class WaterParameters(BaseModel):
         # Parse uncertainties if present
         if len(lines) > 1 and lines[1].strip():
             unc_line = f"{lines[1]:<40}"
+
             for param in ["d_watr0", "d_watr1", "d_watr2"]:
                 value = safe_parse(unc_line[FORMAT_WATER[param]])
                 if value is not None:
@@ -253,15 +254,17 @@ class WaterParameters(BaseModel):
             format_vary(self.flag_watr1),
             format_vary(self.flag_watr2),
             str(self.dof),
-            format_float(self.watr0, width=9),
-            format_float(self.watr1, width=9),
-            format_float(self.watr2, width=9),
+            format_float(self.watr0, width=10),
+            format_float(self.watr1, width=10),
+            format_float(self.watr2, width=10),
         ]
         lines.append("".join(main_parts))
 
         # Add uncertainties line if any uncertainties present
         if any(getattr(self, f"d_{param}") is not None for param in ["watr0", "watr1", "watr2"]):
             unc_parts = [format_float(getattr(self, f"d_{param}", 0.0), width=10) for param in ["watr0", "watr1", "watr2"]]
+            # pad the first 10 characters
+            unc_parts = [" " * 10] + unc_parts
             lines.append("".join(unc_parts))
 
         return lines
@@ -304,8 +307,8 @@ class TantalumParameters(BaseModel):
     @classmethod
     def from_lines(cls, lines: List[str]) -> "TantalumParameters":
         """Parse parameters from input lines."""
-        if len(lines) < 5:
-            raise ValueError("Insufficient lines for Tantalum parameters")
+        if len(lines) < 3:
+            raise ValueError("Insufficient lines - require main params, position params, and shape params")
 
         params = {}
 
@@ -323,25 +326,31 @@ class TantalumParameters(BaseModel):
             flag_val = line2[FORMAT_TANTA[f"flag_{x}"]].strip() or "0"
             params[f"flag_{x}"] = VaryFlag(int(flag_val))
 
-        # Third line - position uncertainties
-        line3 = f"{lines[2]:<50}"
-        for x in ["x0", "x1", "x2", "x3"]:
-            if d_x := safe_parse(line3[FORMAT_TANTA[f"d_{x}"]]):
-                params[f"d_{x}"] = d_x
+        # Third line - optional position uncertainties
+        if len(lines) > 2 and not lines[2].strip().startswith(" " * 6):
+            line3 = f"{lines[2]:<50}"
+            for x in ["x0", "x1", "x2", "x3"]:
+                if d_x := safe_parse(line3[FORMAT_TANTA[f"d_{x}"]]):
+                    params[f"d_{x}"] = d_x
 
-        # Fourth line - shape parameters
-        line4 = f"{lines[3]:<30}"
+        # Shape parameters - required
+        shape_line_idx = 2 if len(lines) == 3 or lines[2].strip().startswith(" " * 6) else 3
+        if shape_line_idx >= len(lines):
+            raise ValueError("Missing required shape parameters line")
+
+        line4 = f"{lines[shape_line_idx]:<30}"
         params["beta"] = safe_parse(line4[FORMAT_TANTA["beta"]])
         params["alpha"] = safe_parse(line4[FORMAT_TANTA["alpha"]])
         params["flag_beta"] = VaryFlag(int(line4[FORMAT_TANTA["flag_beta"]].strip() or "0"))
         params["flag_alpha"] = VaryFlag(int(line4[FORMAT_TANTA["flag_alpha"]].strip() or "0"))
 
-        # Fifth line - shape uncertainties
-        line5 = f"{lines[4]:<30}"
-        if d_beta := safe_parse(line5[FORMAT_TANTA["d_beta"]]):
-            params["d_beta"] = d_beta
-        if d_alpha := safe_parse(line5[FORMAT_TANTA["d_alpha"]]):
-            params["d_alpha"] = d_alpha
+        # Shape uncertainties - optional
+        if shape_line_idx + 1 < len(lines):
+            line5 = f"{lines[shape_line_idx+1]:<30}"
+            if d_beta := safe_parse(line5[FORMAT_TANTA["d_beta"]]):
+                params["d_beta"] = d_beta
+            if d_alpha := safe_parse(line5[FORMAT_TANTA["d_alpha"]]):
+                params["d_alpha"] = d_alpha
 
         return cls(**params)
 
@@ -355,8 +364,8 @@ class TantalumParameters(BaseModel):
             " ",
             format_vary(self.flag_tanta),
             "   ",
-            format_float(self.tanta, width=9),
-            format_float(self.d_tanta, width=9) if self.d_tanta else "",
+            format_float(self.tanta, width=10),
+            format_float(self.d_tanta, width=10) if self.d_tanta else "",
         ]
         lines.append("".join(line1))
 
@@ -367,20 +376,20 @@ class TantalumParameters(BaseModel):
             format_vary(self.flag_x2),
             format_vary(self.flag_x3),
             format_vary(self.flag_x0),
-            format_float(self.x1, width=9),
-            format_float(self.x2, width=9),
-            format_float(self.x3, width=9),
-            format_float(self.x0, width=9),
+            format_float(self.x1, width=10),
+            format_float(self.x2, width=10),
+            format_float(self.x3, width=10),
+            format_float(self.x0, width=10),
         ]
         lines.append("".join(line2))
 
         # Position uncertainties
         line3 = [
             " " * 10,
-            format_float(self.d_x1, width=9),
-            format_float(self.d_x2, width=9),
-            format_float(self.d_x3, width=9),
-            format_float(self.d_x0, width=9),
+            format_float(self.d_x1, width=10),
+            format_float(self.d_x2, width=10),
+            format_float(self.d_x3, width=10),
+            format_float(self.d_x0, width=10),
         ]
         lines.append("".join(line3))
 
@@ -390,13 +399,13 @@ class TantalumParameters(BaseModel):
             format_vary(self.flag_beta),
             format_vary(self.flag_alpha),
             "   ",
-            format_float(self.beta, width=9),
-            format_float(self.alpha, width=9),
+            format_float(self.beta, width=10),
+            format_float(self.alpha, width=10),
         ]
         lines.append("".join(line4))
 
         # Shape uncertainties
-        line5 = [" " * 10, format_float(self.d_beta, width=9), format_float(self.d_alpha, width=9)]
+        line5 = [" " * 10, format_float(self.d_beta, width=10), format_float(self.d_alpha, width=10)]
         lines.append("".join(line5))
 
         return lines

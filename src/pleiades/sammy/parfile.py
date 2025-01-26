@@ -7,8 +7,10 @@ from pydantic import BaseModel, Field
 
 from pleiades.sammy.parameters import (
     BroadeningParameterCard,
+    DataReductionCard,
     ExternalREntry,
     NormalizationBackgroundCard,
+    RadiusCard,
     ResonanceEntry,
     UnusedCorrelatedCard,
 )
@@ -24,6 +26,8 @@ class SammyParameterFile(BaseModel):
     broadening: Optional[BroadeningParameterCard] = Field(None, description="Broadening parameters")
     unused_correlated: Optional[UnusedCorrelatedCard] = Field(None, description="Unused but correlated variables")
     normalization: Optional[NormalizationBackgroundCard] = Field(None, description="Normalization and background parameters")
+    radius: Optional[RadiusCard] = Field(None, description="Radius parameters")
+    data_reduction: Optional[DataReductionCard] = Field(None, description="Data reduction parameters")
 
     @classmethod
     def from_file(cls, file_path):

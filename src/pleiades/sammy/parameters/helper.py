@@ -48,12 +48,20 @@ def format_float(value: Optional[float], width: int = 11) -> str:
     format_str = f"{{:.{max_decimals}E}}"
     formatted = format_str.format(value)
 
-    # Ensure the string fits the width
-    if len(formatted) > width:
+    # If it fits, return the formatted scientific notation
+    if len(formatted) <= width:
+        return f"{formatted:<{width}}"
+
+    # Fall back to standard float format
+    max_decimals_f = max(0, width - len(f"{int(value):d}") - 2)  # Leave room for "-" and "."
+    format_str_float = f"{{:.{max_decimals_f}f}}"
+    formatted_float = format_str_float.format(value)
+
+    # Ensure the fallback fits
+    if len(formatted_float) > width:
         raise ValueError(f"Cannot format value {value} to fit in {width} characters.")
 
-    # Align to the left if required
-    return f"{formatted:<{width}}"
+    return f"{formatted_float:<{width}}"
 
 
 def format_vary(value: VaryFlag) -> str:
