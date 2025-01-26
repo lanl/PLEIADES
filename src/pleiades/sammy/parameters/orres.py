@@ -471,15 +471,18 @@ class LithiumParameters(BaseModel):
             format_vary(self.flag_d),
             format_vary(self.flag_f),
             format_vary(self.flag_g),
-            format_float(self.d, width=9),
-            format_float(self.f, width=9),
-            format_float(self.g, width=9),
+            " ",
+            format_float(self.d, width=10),
+            format_float(self.f, width=10),
+            format_float(self.g, width=10),
         ]
         lines.append("".join(main_parts))
 
         # Add uncertainties line if any present
         if any(getattr(self, f"d_{param}") is not None for param in ["d", "f", "g"]):
-            unc_parts = [format_float(self.d_d, width=9), format_float(self.d_f, width=9), format_float(self.d_g, width=9)]
+            unc_parts = [format_float(self.d_d, width=10), format_float(self.d_f, width=10), format_float(self.d_g, width=9)]
+            # pad the first 10 characters
+            unc_parts = [" " * 10] + unc_parts
             lines.append("".join(unc_parts))
 
         return lines

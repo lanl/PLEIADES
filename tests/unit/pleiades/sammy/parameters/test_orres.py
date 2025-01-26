@@ -3,6 +3,7 @@ import pytest
 
 from pleiades.sammy.parameters.orres import (
     BurstParameters,
+    LithiumParameters,
     TantalumParameters,
     VaryFlag,
     WaterParameters,
@@ -154,6 +155,44 @@ def test_tanta_round_trip(basic_tanta_input):
 def test_tanta_invalid_input():
     with pytest.raises(ValueError):
         TantalumParameters.from_lines([])  # Empty input
+
+
+@pytest.fixture
+def basic_lithi_input():
+    # Col:    1----5-7-8-9-10-------20-------30-------40
+    return ["LITHI 111 1.234     2.345     3.456", "          0.123     0.234     0.345"]
+
+
+@pytest.fixture
+def lithi_no_uncertainty():
+    return ["LITHI 000 1.234     2.345     3.456"]
+
+
+def test_parse_basic_lithi(basic_lithi_input):
+    params = LithiumParameters.from_lines(basic_lithi_input)
+    assert params.d == pytest.approx(1.234)
+    assert params.f == pytest.approx(2.345)
+    assert params.g == pytest.approx(3.456)
+    assert params.flag_d == VaryFlag.YES
+    assert params.d_d == pytest.approx(0.123)
+
+
+def test_lithi_no_uncertainty(lithi_no_uncertainty):
+    params = LithiumParameters.from_lines(lithi_no_uncertainty)
+    assert params.d == pytest.approx(1.234)
+    assert params.flag_d == VaryFlag.NO
+    assert params.d_d is None
+
+
+def test_lithi_round_trip(basic_lithi_input):
+    params = LithiumParameters.from_lines(basic_lithi_input)
+    lines = params.to_lines()
+
+    for pos, line in enumerate(lines):
+        print(f"{pos:>2}: {line}")
+
+    params_rt = LithiumParameters.from_lines(lines)
+    assert params_rt == params
 
 
 if __name__ == "__main__":
