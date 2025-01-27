@@ -4,6 +4,7 @@ import pytest
 from pleiades.sammy.parameters.orres import (
     BurstParameters,
     LithiumParameters,
+    NE110Parameters,
     TantalumParameters,
     VaryFlag,
     WaterParameters,
@@ -192,6 +193,42 @@ def test_lithi_round_trip(basic_lithi_input):
         print(f"{pos:>2}: {line}")
 
     params_rt = LithiumParameters.from_lines(lines)
+    assert params_rt == params
+
+
+@pytest.fixture
+def basic_ne110_input():
+    # Col:    1----5-7-9-10-------20-------30-------40
+    return ["NE110 1 2 1.234     0.123     0.0047", "          100.0     10.0", "          200.0     20.0"]
+
+
+@pytest.fixture
+def ne110_no_cross_sections():
+    return ["NE110 0 0 1.234     0.123     0.0047"]
+
+
+def test_parse_basic_ne110(basic_ne110_input):
+    params = NE110Parameters.from_lines(basic_ne110_input)
+    assert params.delta == pytest.approx(1.234)
+    assert params.flag_delta == VaryFlag.YES
+    assert params.d_delta == pytest.approx(0.123)
+    assert params.density == pytest.approx(0.0047)
+    assert len(params.cross_sections) == 2
+    assert params.cross_sections[0].energy == pytest.approx(100.0)
+    assert params.cross_sections[0].sigma == pytest.approx(10.0)
+
+
+def test_ne110_no_cross_sections(ne110_no_cross_sections):
+    params = NE110Parameters.from_lines(ne110_no_cross_sections)
+    assert params.delta == pytest.approx(1.234)
+    assert params.flag_delta == VaryFlag.NO
+    assert params.cross_sections is None
+
+
+def test_ne110_round_trip(basic_ne110_input):
+    params = NE110Parameters.from_lines(basic_ne110_input)
+    lines = params.to_lines()
+    params_rt = NE110Parameters.from_lines(lines)
     assert params_rt == params
 
 

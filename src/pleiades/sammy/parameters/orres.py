@@ -550,16 +550,16 @@ class NE110Parameters(BaseModel):
             " ",
             format_vary(self.flag_delta),
             str(len(self.cross_sections or [])).rjust(3),
-            format_float(self.delta, width=9),
-            format_float(self.d_delta, width=9),
-            format_float(self.density, width=9),
+            format_float(self.delta, width=10),
+            format_float(self.d_delta, width=10),
+            format_float(self.density, width=10),
         ]
         lines.append("".join(main_parts))
 
         # Cross section points
         if self.cross_sections:
             for point in self.cross_sections:
-                lines.append("".join([" " * 10, format_float(point.energy, width=9), format_float(point.sigma, width=9)]))
+                lines.append("".join([" " * 10, format_float(point.energy, width=10), format_float(point.sigma, width=10)]))
 
         return lines
 
