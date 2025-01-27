@@ -10,6 +10,7 @@ from pleiades.sammy.parameters import (
     DataReductionCard,
     ExternalREntry,
     NormalizationBackgroundCard,
+    ORRESCard,
     RadiusCard,
     ResonanceEntry,
     UnusedCorrelatedCard,
@@ -28,6 +29,7 @@ class SammyParameterFile(BaseModel):
     normalization: Optional[NormalizationBackgroundCard] = Field(None, description="Normalization and background parameters")
     radius: Optional[RadiusCard] = Field(None, description="Radius parameters")
     data_reduction: Optional[DataReductionCard] = Field(None, description="Data reduction parameters")
+    orres: Optional[ORRESCard] = Field(None, description="ORRES card parameters")
 
     @classmethod
     def from_file(cls, file_path):
