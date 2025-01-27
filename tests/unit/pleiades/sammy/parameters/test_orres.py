@@ -3,6 +3,7 @@ import pytest
 
 from pleiades.sammy.parameters.orres import (
     BurstParameters,
+    ChannelParameters,
     LithiumParameters,
     NE110Parameters,
     TantalumParameters,
@@ -230,6 +231,41 @@ def test_ne110_round_trip(basic_ne110_input):
     lines = params.to_lines()
     params_rt = NE110Parameters.from_lines(lines)
     assert params_rt == params
+
+
+@pytest.fixture
+def basic_channel_input():
+    # Col:    1----5-7--10-------20-------30-------40
+    return ["CHANN 1   100.0     1.234     0.123", "CHANN 0   200.0     2.345     0.234"]
+
+
+def test_parse_basic_channel(basic_channel_input):
+    channels = ChannelParameters.from_lines(basic_channel_input)
+    assert len(channels) == 2
+
+    assert channels[0].ecrnch == pytest.approx(100.0)
+    assert channels[0].chann == pytest.approx(1.234)
+    assert channels[0].d_chann == pytest.approx(0.123)
+    assert channels[0].flag_chann == VaryFlag.YES
+
+    assert channels[1].ecrnch == pytest.approx(200.0)
+    assert channels[1].flag_chann == VaryFlag.NO
+
+
+def test_channel_single_line():
+    lines = ["CHANN 1   100.0     1.234"]
+    channels = ChannelParameters.from_lines(lines)
+    assert len(channels) == 1
+    assert channels[0].d_chann is None
+
+
+def test_channel_round_trip(basic_channel_input):
+    channels = ChannelParameters.from_lines(basic_channel_input)
+    lines = []
+    for channel in channels:
+        lines.extend(channel.to_lines())
+    channels_rt = ChannelParameters.from_lines(lines)
+    assert channels == channels_rt
 
 
 if __name__ == "__main__":

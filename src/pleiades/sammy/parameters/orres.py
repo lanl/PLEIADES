@@ -608,9 +608,9 @@ class ChannelParameters(BaseModel):
             " ",
             format_vary(self.flag_chann),
             "   ",
-            format_float(self.ecrnch, width=9),
-            format_float(self.chann, width=9),
-            format_float(self.d_chann, width=9) if self.d_chann else "",
+            format_float(self.ecrnch, width=10),
+            format_float(self.chann, width=10),
+            format_float(self.d_chann, width=10) if self.d_chann else "",
         ]
         return ["".join(parts)]
 
