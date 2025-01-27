@@ -6,6 +6,7 @@ from pleiades.sammy.parameters.orres import (
     ChannelParameters,
     LithiumParameters,
     NE110Parameters,
+    ORRESCard,
     TantalumParameters,
     VaryFlag,
     WaterParameters,
@@ -100,9 +101,9 @@ def test_water_no_uncertainty(water_no_uncertainty):
 def test_water_round_trip(basic_water_input):
     params = WaterParameters.from_lines(basic_water_input)
     lines = params.to_lines()
-
+    print("original:\n", basic_water_input)
+    print("round trip:\n", lines)
     params_rt = WaterParameters.from_lines(lines)
-
     assert params_rt == params
 
 
@@ -266,6 +267,75 @@ def test_channel_round_trip(basic_channel_input):
         lines.extend(channel.to_lines())
     channels_rt = ChannelParameters.from_lines(lines)
     assert channels == channels_rt
+
+
+@pytest.fixture
+def full_orres_input():
+    return [
+        "ORRES",
+        "BURST 1   12.345    0.123",
+        "WATER 11143.614     -0.089    0.037",
+        "          0.001     0.002     0.003",
+        "LITHI 111 1.234     2.345     3.456",
+        "          0.123     0.234     0.345",
+        "CHANN 1   100.0     1.234     0.123",
+        "CHANN 0   200.0     2.345     0.234",
+    ]
+
+
+def test_full_card_parsing(full_orres_input):
+    card = ORRESCard.from_lines(full_orres_input)
+    assert isinstance(card.parameters.burst, BurstParameters)
+    assert isinstance(card.parameters.moderator, WaterParameters)
+    assert isinstance(card.parameters.detector, LithiumParameters)
+    print(card.parameters.channels)
+    assert len(card.parameters.channels) == 2
+
+
+def test_moderator_exclusivity():
+    input_lines = [
+        "ORRES",
+        "WATER 111 3.614    -0.089    0.037",
+        "TANTA 0   1.234",
+        "      0000 2.345     3.456     4.567     5.678",
+        "      00   7.890     8.901",
+    ]
+    with pytest.raises(ValueError, match="Cannot have both WATER and TANTA moderators"):
+        ORRESCard.from_lines(input_lines)
+
+
+def test_detector_exclusivity():
+    input_lines = ["ORRES", "LITHI 111 1.234     2.345     3.456", "NE110 1 2 1.234     0.123    0.0047"]
+    with pytest.raises(ValueError, match="Cannot have both LITHI and NE110 detectors"):
+        ORRESCard.from_lines(input_lines)
+
+
+def test_channel_order():
+    input_lines = [
+        "ORRES",
+        "CHANN 0   200.0     1.234     0.123",
+        "CHANN 1   100.0     2.345     0.234",
+    ]
+    with pytest.raises(ValueError, match="Channel energies must be in increasing order"):
+        ORRESCard.from_lines(input_lines)
+
+
+def test_missing_header():
+    with pytest.raises(ValueError, match="Invalid header line"):
+        ORRESCard.from_lines(["WATER 111 3.614"])
+
+
+def test_round_trip(full_orres_input):
+    card = ORRESCard.from_lines(full_orres_input)
+    lines = card.to_lines()
+    print("original::")
+    for line in full_orres_input:
+        print(line)
+    print("round trip::")
+    for line in lines:
+        print(line)
+    card_rt = ORRESCard.from_lines(lines)
+    assert card == card_rt
 
 
 if __name__ == "__main__":

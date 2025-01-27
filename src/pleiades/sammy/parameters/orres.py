@@ -625,17 +625,8 @@ class ORRESParameters(BaseModel):
 
     @model_validator(mode="after")
     def validate_components(self) -> "ORRESParameters":
-        """Validate mutual exclusivity and dependencies between components."""
-
-        # Check 1: Moderator type exclusivity
-        if isinstance(self.moderator, WaterParameters) and isinstance(self.moderator, TantalumParameters):
-            raise ValueError("Cannot have both Water and Tantalum moderators")
-
-        # Check 2: Detector type exclusivity
-        if isinstance(self.detector, LithiumParameters) and isinstance(self.detector, NE110Parameters):
-            raise ValueError("Cannot have both Lithium and NE110 detectors")
-
-        # Check 3: Channel parameters order
+        """Validate dependencies between components."""
+        # Check 0: Channel parameters order
         if self.channels and len(self.channels) > 1:
             prev_energy = float("-inf")
             for channel in self.channels:
@@ -643,7 +634,7 @@ class ORRESParameters(BaseModel):
                     raise ValueError("Channel energies must be in increasing order")
                 prev_energy = channel.ecrnch
 
-        # Check 4: NE110 cross section data consistency
+        # Check 1: NE110 cross section data consistency
         if isinstance(self.detector, NE110Parameters) and self.detector.cross_sections:
             prev_energy = float("-inf")
             for point in self.detector.cross_sections:
@@ -655,62 +646,57 @@ class ORRESParameters(BaseModel):
 
     @classmethod
     def parse_orres_parameters(cls, lines: List[str]) -> "ORRESParameters":
-        """Parse ORRES parameters from input lines."""
-        if not lines:
-            raise ValueError("No lines provided")
-
         params = {}
         current_section = None
         section_lines = []
+        channel_lines = []  # Accumulate channel lines
 
+        # Check data validity
+        # NOTE: post model initialization validation does not work as later
+        #       one overwrites the previous one.
+        has_water_moderator = False
+        has_tantalum_moderator = False
+        has_lithium_detector = False
+        has_ne110_detector = False
         for line in lines:
-            line = line.strip()
+            if not line:
+                continue  # Skip empty lines
+            if line.startswith("WATER"):
+                has_water_moderator = True
+            elif line.startswith("TANTA"):
+                has_tantalum_moderator = True
+            elif line.startswith("LITHI"):
+                has_lithium_detector = True
+            elif line.startswith("NE110"):
+                has_ne110_detector = True
+        # Check for conflicting moderator and detector types
+        if has_water_moderator and has_tantalum_moderator:
+            raise ValueError("Cannot have both WATER and TANTA moderators")
+        if has_lithium_detector and has_ne110_detector:
+            raise ValueError("Cannot have both LITHI and NE110 detectors")
+
+        # Process lines
+        for line in lines:
             if not line:
                 continue
 
-            # Detect section starts
-            if line.startswith("BURST"):
+            if line.startswith("CHANN"):
+                channel_lines.append(line)
+            elif line.startswith(("BURST", "WATER", "TANTA", "LITHI", "NE110")):
                 if section_lines:
                     cls._process_section(current_section, section_lines, params)
-                current_section = "burst"
+                current_section = line[:5].lower().strip()
                 section_lines = [line]
-
-            elif line.startswith("WATER"):
-                if section_lines:
-                    cls._process_section(current_section, section_lines, params)
-                current_section = "water"
-                section_lines = [line]
-
-            elif line.startswith("TANTA"):
-                if section_lines:
-                    cls._process_section(current_section, section_lines, params)
-                current_section = "tanta"
-                section_lines = [line]
-
-            elif line.startswith("LITHI"):
-                if section_lines:
-                    cls._process_section(current_section, section_lines, params)
-                current_section = "lithi"
-                section_lines = [line]
-
-            elif line.startswith("NE110"):
-                if section_lines:
-                    cls._process_section(current_section, section_lines, params)
-                current_section = "ne110"
-                section_lines = [line]
-
-            elif line.startswith("CHANN"):
-                if section_lines:
-                    cls._process_section(current_section, section_lines, params)
-                current_section = "channel"
-                section_lines = [line]
-
             else:
                 section_lines.append(line)
 
-        # Process final section
-        if section_lines:
+        # Process final non-channel section
+        if section_lines and current_section != "chann":
             cls._process_section(current_section, section_lines, params)
+
+        # Process accumulated channel lines
+        if channel_lines:
+            params["channels"] = ChannelParameters.from_lines(channel_lines)
 
         return cls(**params)
 
