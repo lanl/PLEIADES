@@ -773,4 +773,4 @@ class ORRESCard(BaseModel):
 
 
 if __name__ == "__main__":
-    print("TODO: usage example for ORRES card handling")
+    print("Refer unit test for usage examples.")
