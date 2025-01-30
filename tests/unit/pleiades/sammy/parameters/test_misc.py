@@ -6,6 +6,7 @@ import pytest
 from pleiades.sammy.parameters.helper import VaryFlag
 from pleiades.sammy.parameters.misc import (
     DeltaParameters,
+    DelteParameters,
     EfficParameters,
     EtaParameters,
     FinitParameters,
@@ -754,6 +755,133 @@ class TestEfficParameters:
         assert params.fission_efficiency == pytest.approx(2.345)
         assert params.capture_uncertainty is None
         assert params.fission_uncertainty is None
+
+
+class TestDelteParameters:
+    """Test suite for DELTE parameter parsing and formatting.
+
+    DELTE parameters specify energy-dependent delta E parameters:
+    Cols  Format  Variable    Description
+    1-5   A       "DELTE"     Parameter identifier
+    7     I       IFLAG1      Flag for DELE1
+    9     I       IFLAG0      Flag for DELE0
+    10    I       IFLAGL      Flag for DELEL
+    11-20 F       DELE1       Coefficient of E (m/eV)
+    21-30 F       DD1         Uncertainty on DELE1
+    31-40 F       DELE0       Constant term (m)
+    41-50 F       DD0         Uncertainty on DELE0
+    51-60 F       DELEL       Coefficient of log term (m/ln(eV))
+    61-70 F       DDL         Uncertainty on DELEL
+    """
+
+    @pytest.fixture
+    def valid_delte_line(self):
+        """Sample valid DELTE parameter line."""
+        return "DELTE 1 111.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03"
+        #       |     | |||         |         |         |         |         |
+        #       |     | |||         |         |         |         |         61-70: Log coef uncertainty
+        #       |     | |||         |         |         |         51-60: Log coefficient
+        #       |     | |||         |         |         41-50: Constant term uncertainty
+        #       |     | |||         |         31-40: Constant term
+        #       |     | |||         21-30: E coef uncertainty
+        #       |     | ||11-20: E coefficient
+        #       |     | |10: Log term flag
+        #       |     | 9: Constant term flag
+        #       |     7: E coefficient flag
+        #       1-5: "DELTE"
+
+    @pytest.fixture
+    def valid_delte_params(self):
+        """Sample valid DELTE parameters."""
+        return DelteParameters(
+            e_coefficient=1.234,
+            e_uncertainty=2.345e-3,
+            constant_term=3.456,
+            constant_uncertainty=4.567e-3,
+            log_coefficient=5.678,
+            log_uncertainty=6.789e-3,
+            e_flag=VaryFlag.YES,
+            constant_flag=VaryFlag.YES,
+            log_flag=VaryFlag.YES,
+        )
+
+    def test_parse_valid_line(self, valid_delte_line):
+        """Test parsing of valid DELTE parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_delte_line):
+            print(f"{i+1}: {char}")
+
+        params = DelteParameters.from_lines([valid_delte_line])
+        assert params.e_coefficient == pytest.approx(1.234)
+        assert params.e_uncertainty == pytest.approx(2.345e-3)
+        assert params.constant_term == pytest.approx(3.456)
+        assert params.constant_uncertainty == pytest.approx(4.567e-3)
+        assert params.log_coefficient == pytest.approx(5.678)
+        assert params.log_uncertainty == pytest.approx(6.789e-3)
+        assert params.e_flag == VaryFlag.YES
+        assert params.constant_flag == VaryFlag.YES
+        assert params.log_flag == VaryFlag.YES
+
+    def test_round_trip(self, valid_delte_params):
+        """Test round-trip parsing and formatting of DELTE parameters."""
+        lines = valid_delte_params.to_lines()
+        assert len(lines) == 1
+        params = DelteParameters.from_lines(lines)
+        assert params == valid_delte_params
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "DELTE x 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",  # Invalid E flag
+            "DELTE 1 x 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",  # Invalid constant flag
+            "DELTE 1 1 x 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",  # Invalid log flag
+            "DELTE 1 1 1 invalid   2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",  # Invalid E coefficient
+            "DELTX 1 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid DELTE parameter lines."""
+        with pytest.raises(ValueError):
+            DelteParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that required values must be provided."""
+        with pytest.raises(ValueError):
+            DelteParameters(
+                e_coefficient=None,  # Required
+                constant_term=3.456,
+                log_coefficient=5.678,
+            )
+
+        with pytest.raises(ValueError):
+            DelteParameters(
+                e_coefficient=1.234,
+                constant_term=None,  # Required
+                log_coefficient=5.678,
+            )
+
+        with pytest.raises(ValueError):
+            DelteParameters(
+                e_coefficient=1.234,
+                constant_term=3.456,
+                log_coefficient=None,  # Required
+            )
+
+    def test_optional_uncertainties(self):
+        """Test that uncertainties are optional."""
+        line = "DELTE 1 111.234E+00           3.456E+00           5.678E+00"  # No uncertainties
+
+        for i, char in enumerate(line):
+            print(f"{i+1}: {char}")
+
+        params = DelteParameters.from_lines([line])
+        assert params.e_coefficient == pytest.approx(1.234)
+        assert params.constant_term == pytest.approx(3.456)
+        assert params.log_coefficient == pytest.approx(5.678)
+        assert params.e_uncertainty is None
+        assert params.constant_uncertainty is None
+        assert params.log_uncertainty is None
 
 
 if __name__ == "__main__":

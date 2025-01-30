@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 """Parsers and containers for SAMMY's Card Set 11 parameters.
 
 This module implements parsers and containers for SAMMY's Card Set 11 miscellaneous
@@ -1015,6 +1014,124 @@ class EfficParameters(Card11Parameter):
             format_float(self.fission_efficiency, width=10),
             format_float(self.capture_uncertainty, width=10),
             format_float(self.fission_uncertainty, width=10),
+        ]
+        return ["".join(parts)]
+
+
+class DelteParameters(Card11Parameter):
+    """Container for DELTE (energy-dependent delta E) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "DELTE"     Parameter identifier
+    7     I       IFLAG1      Flag for DELE1
+    9     I       IFLAG0      Flag for DELE0
+    10    I       IFLAGL      Flag for DELEL
+    11-20 F       DELE1       Coefficient of E (m/eV)
+    21-30 F       DD1         Uncertainty on DELE1
+    31-40 F       DELE0       Constant term (m)
+    41-50 F       DD0         Uncertainty on DELE0
+    51-60 F       DELEL       Coefficient of log term (m/ln(eV))
+    61-70 F       DDL         Uncertainty on DELEL
+
+    Attributes:
+        e_coefficient: Coefficient of E (m/eV)
+        e_uncertainty: Uncertainty on E coefficient
+        constant_term: Constant term (m)
+        constant_uncertainty: Uncertainty on constant term
+        log_coefficient: Coefficient of log term (m/ln(eV))
+        log_uncertainty: Uncertainty on log coefficient
+        e_flag: Flag for varying E coefficient
+        constant_flag: Flag for varying constant term
+        log_flag: Flag for varying log coefficient
+    """
+
+    type: Card11ParameterType = Card11ParameterType.DELTE
+    e_coefficient: float = Field(..., description="Coefficient of E (m/eV)")
+    e_uncertainty: Optional[float] = Field(None, description="Uncertainty on E coefficient")
+    constant_term: float = Field(..., description="Constant term (m)")
+    constant_uncertainty: Optional[float] = Field(None, description="Uncertainty on constant term")
+    log_coefficient: float = Field(..., description="Coefficient of log term (m/ln(eV))")
+    log_uncertainty: Optional[float] = Field(None, description="Uncertainty on log coefficient")
+    e_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for E coefficient")
+    constant_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for constant term")
+    log_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for log coefficient")
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "DelteParameters":
+        """Parse DELTE parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for DELTE parameters)
+
+        Returns:
+            DelteParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["DELTE"]["identifier"]].strip()
+        if identifier != "DELTE":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flags
+        try:
+            e_flag = VaryFlag(int(line[FORMAT_SPECS["DELTE"]["flag1"]].strip() or "0"))
+            constant_flag = VaryFlag(int(line[FORMAT_SPECS["DELTE"]["flag0"]].strip() or "0"))
+            log_flag = VaryFlag(int(line[FORMAT_SPECS["DELTE"]["flagl"]].strip() or "0"))
+        except ValueError as e:
+            raise ValueError(f"Invalid flag value: {e}")
+
+        # Parse required values
+        e_coef = safe_parse(line[FORMAT_SPECS["DELTE"]["dele1"]])
+        const_term = safe_parse(line[FORMAT_SPECS["DELTE"]["dele0"]])
+        log_coef = safe_parse(line[FORMAT_SPECS["DELTE"]["delel"]])
+
+        if e_coef is None or const_term is None or log_coef is None:
+            raise ValueError("Missing required coefficient values")
+
+        # Parse optional uncertainties
+        e_unc = safe_parse(line[FORMAT_SPECS["DELTE"]["dd1"]])
+        const_unc = safe_parse(line[FORMAT_SPECS["DELTE"]["dd0"]])
+        log_unc = safe_parse(line[FORMAT_SPECS["DELTE"]["ddl"]])
+
+        return cls(
+            e_coefficient=e_coef,
+            e_uncertainty=e_unc,
+            constant_term=const_term,
+            constant_uncertainty=const_unc,
+            log_coefficient=log_coef,
+            log_uncertainty=log_unc,
+            e_flag=e_flag,
+            constant_flag=constant_flag,
+            log_flag=log_flag,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "DELTE",  # Identifier
+            " ",  # Column 6 spacing
+            format_vary(self.e_flag),  # Col 7
+            " ",  # Column 8 spacing
+            format_vary(self.constant_flag),  # Col 9
+            format_vary(self.log_flag),  # Col 10
+            format_float(self.e_coefficient, width=10),
+            format_float(self.e_uncertainty, width=10),
+            format_float(self.constant_term, width=10),
+            format_float(self.constant_uncertainty, width=10),
+            format_float(self.log_coefficient, width=10),
+            format_float(self.log_uncertainty, width=10),
         ]
         return ["".join(parts)]
 
