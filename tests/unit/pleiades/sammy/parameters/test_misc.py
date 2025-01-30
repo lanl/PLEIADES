@@ -340,12 +340,12 @@ class TestTzeroParameters:
     TZERO parameters specify time offset and flight path parameters:
     Cols  Format  Variable    Description
     1-5   A       "TZERO"     Parameter identifier
-    7     I       IFTZER      Flag for t₀
-    9     I       IFLZER      Flag for L₀
-    11-20 F       TZERO       t₀ (μs)
-    21-30 F       DTZERO      Uncertainty on t₀ (μs)
-    31-40 F       LZERO       L₀ (dimensionless)
-    41-50 F       DLZERO      Uncertainty on L₀
+    7     I       IFTZER      Flag for t
+    9     I       IFLZER      Flag for L
+    11-20 F       TZERO       t (μs)
+    21-30 F       DTZERO      Uncertainty on t (μs)
+    31-40 F       LZERO       L (dimensionless)
+    41-50 F       DLZERO      Uncertainty on L
     51-60 F       FPL         Flight-path length (m)
     """
 
@@ -355,12 +355,12 @@ class TestTzeroParameters:
         return "TZERO 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01"
         #       |     | | |         |         |         |         |
         #       |     | | |         |         |         |         51-60: Flight-path length
-        #       |     | | |         |         |         41-50: L₀ uncertainty
-        #       |     | | |         |         31-40: L₀ value
-        #       |     | | |         21-30: t₀ uncertainty
-        #       |     | | 11-20: t₀ value
-        #       |     | 9: L₀ flag
-        #       |     7: t₀ flag
+        #       |     | | |         |         |         41-50: L uncertainty
+        #       |     | | |         |         31-40: L value
+        #       |     | | |         21-30: t uncertainty
+        #       |     | | 11-20: t value
+        #       |     | 9: L flag
+        #       |     7: t flag
         #       1-5: "TZERO"
 
     @pytest.fixture
@@ -402,10 +402,10 @@ class TestTzeroParameters:
         "invalid_line",
         [
             "",  # Empty line
-            "TZERO x 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t₀ flag
-            "TZERO 1 x 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid L₀ flag
-            "TZERO 1 1 invalid   2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t₀ value
-            "TZERO 1 1 1.234E+00 2.345E-03 invalid   4.567E-03 5.678E+01",  # Invalid L₀ value
+            "TZERO x 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t flag
+            "TZERO 1 x 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid L flag
+            "TZERO 1 1 invalid   2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t value
+            "TZERO 1 1 1.234E+00 2.345E-03 invalid   4.567E-03 5.678E+01",  # Invalid L value
             "TZERX 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Wrong identifier
         ],
     )

@@ -601,32 +601,32 @@ class TzeroParameters(Card11Parameter):
     Format specification from Table VI B.2:
     Cols  Format  Variable    Description
     1-5   A       "TZERO"     Parameter identifier
-    7     I       IFTZER      Flag for t₀
-    9     I       IFLZER      Flag for L₀
-    11-20 F       TZERO       t₀ (μs)
-    21-30 F       DTZERO      Uncertainty on t₀ (μs)
-    31-40 F       LZERO       L₀ (dimensionless)
-    41-50 F       DLZERO      Uncertainty on L₀
+    7     I       IFTZER      Flag for t
+    9     I       IFLZER      Flag for L
+    11-20 F       TZERO       t (μs)
+    21-30 F       DTZERO      Uncertainty on t (μs)
+    31-40 F       LZERO       L (dimensionless)
+    41-50 F       DLZERO      Uncertainty on L
     51-60 F       FPL         Flight-path length (m)
 
     Attributes:
-        t0_value: Time offset t₀ (μs)
-        t0_uncertainty: Uncertainty on t₀ (μs)
-        l0_value: L₀ value (dimensionless)
-        l0_uncertainty: Uncertainty on L₀
+        t0_value: Time offset t (μs)
+        t0_uncertainty: Uncertainty on t (μs)
+        l0_value: L value (dimensionless)
+        l0_uncertainty: Uncertainty on L
         flight_path_length: Flight path length (m), optional
-        t0_flag: Flag for varying t₀
-        l0_flag: Flag for varying L₀
+        t0_flag: Flag for varying t
+        l0_flag: Flag for varying L
     """
 
     type: Card11ParameterType = Card11ParameterType.TZERO
-    t0_value: float = Field(..., description="Time offset t₀ (μs)")
-    t0_uncertainty: Optional[float] = Field(None, description="Uncertainty on t₀ (μs)")
-    l0_value: float = Field(..., description="L₀ value (dimensionless)")
-    l0_uncertainty: Optional[float] = Field(None, description="Uncertainty on L₀")
+    t0_value: float = Field(..., description="Time offset t (μs)")
+    t0_uncertainty: Optional[float] = Field(None, description="Uncertainty on t (μs)")
+    l0_value: float = Field(..., description="L value (dimensionless)")
+    l0_uncertainty: Optional[float] = Field(None, description="Uncertainty on L")
     flight_path_length: Optional[float] = Field(None, description="Flight path length (m)")
-    t0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for t₀")
-    l0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for L₀")
+    t0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for t")
+    l0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for L")
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> "TzeroParameters":
@@ -693,10 +693,10 @@ class TzeroParameters(Card11Parameter):
             " ",  # Column 8 spacing
             format_vary(self.l0_flag),  # Col 9
             " ",  # Column 10 spacing
-            format_float(self.t0_value, width=10),  # t₀ value
-            format_float(self.t0_uncertainty, width=10),  # t₀ uncertainty
-            format_float(self.l0_value, width=10),  # L₀ value
-            format_float(self.l0_uncertainty, width=10),  # L₀ uncertainty
+            format_float(self.t0_value, width=10),  # t value
+            format_float(self.t0_uncertainty, width=10),  # t uncertainty
+            format_float(self.l0_value, width=10),  # L value
+            format_float(self.l0_uncertainty, width=10),  # L uncertainty
             format_float(self.flight_path_length, width=10),  # Flight path length
         ]
         return ["".join(parts)]
