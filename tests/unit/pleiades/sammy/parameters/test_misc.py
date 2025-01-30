@@ -9,6 +9,7 @@ from pleiades.sammy.parameters.misc import (
     EtaParameters,
     FinitParameters,
     GammaParameters,
+    TzeroParameters,
 )
 
 
@@ -325,6 +326,111 @@ class TestGammaParameters:
                 width=1.234,
                 flag=VaryFlag.YES,
             )
+
+
+class TestTzeroParameters:
+    """Test suite for TZERO parameter parsing and formatting.
+
+    TZERO parameters specify time offset and flight path parameters:
+    Cols  Format  Variable    Description
+    1-5   A       "TZERO"     Parameter identifier
+    7     I       IFTZER      Flag for t₀
+    9     I       IFLZER      Flag for L₀
+    11-20 F       TZERO       t₀ (μs)
+    21-30 F       DTZERO      Uncertainty on t₀ (μs)
+    31-40 F       LZERO       L₀ (dimensionless)
+    41-50 F       DLZERO      Uncertainty on L₀
+    51-60 F       FPL         Flight-path length (m)
+    """
+
+    @pytest.fixture
+    def valid_tzero_line(self):
+        """Sample valid TZERO parameter line."""
+        return "TZERO 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01"
+        #       |     | | |         |         |         |         |
+        #       |     | | |         |         |         |         51-60: Flight-path length
+        #       |     | | |         |         |         41-50: L₀ uncertainty
+        #       |     | | |         |         31-40: L₀ value
+        #       |     | | |         21-30: t₀ uncertainty
+        #       |     | | 11-20: t₀ value
+        #       |     | 9: L₀ flag
+        #       |     7: t₀ flag
+        #       1-5: "TZERO"
+
+    @pytest.fixture
+    def valid_tzero_params(self):
+        """Sample valid TZERO parameters."""
+        return TzeroParameters(
+            t0_value=1.234,
+            t0_uncertainty=2.345e-3,
+            l0_value=3.456,
+            l0_uncertainty=4.567e-3,
+            flight_path_length=56.78,
+            t0_flag=VaryFlag.YES,
+            l0_flag=VaryFlag.YES,
+        )
+
+    def test_parse_valid_line(self, valid_tzero_line):
+        """Test parsing of valid TZERO parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_tzero_line):
+            print(f"{i+1}: {char}")
+
+        params = TzeroParameters.from_lines([valid_tzero_line])
+        assert params.t0_value == pytest.approx(1.234)
+        assert params.t0_uncertainty == pytest.approx(2.345e-3)
+        assert params.l0_value == pytest.approx(3.456)
+        assert params.l0_uncertainty == pytest.approx(4.567e-3)
+        assert params.flight_path_length == pytest.approx(56.78)
+        assert params.t0_flag == VaryFlag.YES
+        assert params.l0_flag == VaryFlag.YES
+
+    def test_round_trip(self, valid_tzero_params):
+        """Test round-trip parsing and formatting of TZERO parameters."""
+        lines = valid_tzero_params.to_lines()
+        assert len(lines) == 1
+        params = TzeroParameters.from_lines(lines)
+        assert params == valid_tzero_params
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "TZERO x 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t₀ flag
+            "TZERO 1 x 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid L₀ flag
+            "TZERO 1 1 invalid   2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Invalid t₀ value
+            "TZERO 1 1 1.234E+00 2.345E-03 invalid   4.567E-03 5.678E+01",  # Invalid L₀ value
+            "TZERX 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+01",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid TZERO parameter lines."""
+        with pytest.raises(ValueError):
+            TzeroParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that required values must be provided."""
+        with pytest.raises(ValueError):
+            TzeroParameters(
+                t0_value=None,  # Required
+                l0_value=3.456,
+                t0_flag=VaryFlag.YES,
+                l0_flag=VaryFlag.YES,
+            )
+
+        with pytest.raises(ValueError):
+            TzeroParameters(
+                t0_value=1.234,
+                l0_value=None,  # Required
+                t0_flag=VaryFlag.YES,
+                l0_flag=VaryFlag.YES,
+            )
+
+    def test_flight_path_optional(self):
+        """Test that flight path length is optional."""
+        line = "TZERO 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03"  # No flight path
+        params = TzeroParameters.from_lines([line])
+        assert params.flight_path_length is None
 
 
 if __name__ == "__main__":

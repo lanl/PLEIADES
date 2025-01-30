@@ -590,5 +590,112 @@ class GammaParameters(Card11Parameter):
         return ["".join(parts)]
 
 
+class TzeroParameters(Card11Parameter):
+    """Container for TZERO (time offset) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "TZERO"     Parameter identifier
+    7     I       IFTZER      Flag for t₀
+    9     I       IFLZER      Flag for L₀
+    11-20 F       TZERO       t₀ (μs)
+    21-30 F       DTZERO      Uncertainty on t₀ (μs)
+    31-40 F       LZERO       L₀ (dimensionless)
+    41-50 F       DLZERO      Uncertainty on L₀
+    51-60 F       FPL         Flight-path length (m)
+
+    Attributes:
+        t0_value: Time offset t₀ (μs)
+        t0_uncertainty: Uncertainty on t₀ (μs)
+        l0_value: L₀ value (dimensionless)
+        l0_uncertainty: Uncertainty on L₀
+        flight_path_length: Flight path length (m), optional
+        t0_flag: Flag for varying t₀
+        l0_flag: Flag for varying L₀
+    """
+
+    type: Card11ParameterType = Card11ParameterType.TZERO
+    t0_value: float = Field(..., description="Time offset t₀ (μs)")
+    t0_uncertainty: Optional[float] = Field(None, description="Uncertainty on t₀ (μs)")
+    l0_value: float = Field(..., description="L₀ value (dimensionless)")
+    l0_uncertainty: Optional[float] = Field(None, description="Uncertainty on L₀")
+    flight_path_length: Optional[float] = Field(None, description="Flight path length (m)")
+    t0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for t₀")
+    l0_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for L₀")
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "TzeroParameters":
+        """Parse TZERO parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for TZERO parameters)
+
+        Returns:
+            TzeroParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["TZERO"]["identifier"]].strip()
+        if identifier != "TZERO":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flags
+        try:
+            t0_flag = VaryFlag(int(line[FORMAT_SPECS["TZERO"]["flag_t0"]].strip() or "0"))
+            l0_flag = VaryFlag(int(line[FORMAT_SPECS["TZERO"]["flag_l0"]].strip() or "0"))
+        except ValueError as e:
+            raise ValueError(f"Invalid flag value: {e}")
+
+        # Parse required values
+        t0_value = safe_parse(line[FORMAT_SPECS["TZERO"]["t0_value"]])
+        l0_value = safe_parse(line[FORMAT_SPECS["TZERO"]["l0_value"]])
+
+        if t0_value is None or l0_value is None:
+            raise ValueError("Missing required t₀ or L₀ value")
+
+        # Parse optional values
+        t0_unc = safe_parse(line[FORMAT_SPECS["TZERO"]["t0_unc"]])
+        l0_unc = safe_parse(line[FORMAT_SPECS["TZERO"]["l0_unc"]])
+        fpl = safe_parse(line[FORMAT_SPECS["TZERO"]["fpl"]])
+
+        return cls(
+            t0_value=t0_value,
+            t0_uncertainty=t0_unc,
+            l0_value=l0_value,
+            l0_uncertainty=l0_unc,
+            flight_path_length=fpl,
+            t0_flag=t0_flag,
+            l0_flag=l0_flag,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "TZERO",  # Identifier
+            " ",  # Column 6 spacing
+            format_vary(self.t0_flag),  # Col 7
+            " ",  # Column 8 spacing
+            format_vary(self.l0_flag),  # Col 9
+            " ",  # Column 10 spacing
+            format_float(self.t0_value, width=10),  # t₀ value
+            format_float(self.t0_uncertainty, width=10),  # t₀ uncertainty
+            format_float(self.l0_value, width=10),  # L₀ value
+            format_float(self.l0_uncertainty, width=10),  # L₀ uncertainty
+            format_float(self.flight_path_length, width=10),  # Flight path length
+        ]
+        return ["".join(parts)]
+
+
 if __name__ == "__main__":
     print("Refer to unit tests for usage examples.")
