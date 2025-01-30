@@ -9,6 +9,7 @@ from pleiades.sammy.parameters.misc import (
     EtaParameters,
     FinitParameters,
     GammaParameters,
+    SelfiParameters,
     SiabnParameters,
     TzeroParameters,
 )
@@ -543,6 +544,111 @@ class TestSiabnParameters:
                 uncertainties=[2.345e-3, 4.567e-3],
                 flags=[VaryFlag.YES],  # Only one flag for two abundances
             )
+
+
+class TestSelfiParameters:
+    """Test suite for SELFI parameter parsing and formatting.
+
+    SELFI parameters specify temperature and thickness for self-indication transmission:
+    Cols  Format  Variable    Description
+    1-5   A       "SELFI"     Parameter identifier
+    7     I       IFTEMP      Flag for temperature
+    9     I       IFTHCK      Flag for thickness
+    11-20 F       SITEM       Effective temperature (K)
+    21-30 F       dSITEM      Uncertainty on SITEM
+    31-40 F       SITHC       Thickness (atoms/barn)
+    41-50 F       dSITHC      Uncertainty on SITHC
+    """
+
+    @pytest.fixture
+    def valid_selfi_line(self):
+        """Sample valid SELFI parameter line."""
+        return "SELFI 1 1 1.234E+02 2.345E-03 3.456E-01 4.567E-03"
+        #       |     | | |         |         |         |
+        #       |     | | |         |         |         41-50: Thickness uncertainty
+        #       |     | | |         |         31-40: Thickness
+        #       |     | | |         21-30: Temperature uncertainty
+        #       |     | | 11-20: Temperature
+        #       |     | 9: Thickness flag
+        #       |     7: Temperature flag
+        #       1-5: "SELFI"
+
+    @pytest.fixture
+    def valid_selfi_params(self):
+        """Sample valid SELFI parameters."""
+        return SelfiParameters(
+            temperature=123.4,
+            temperature_uncertainty=2.345e-3,
+            thickness=0.3456,
+            thickness_uncertainty=4.567e-3,
+            temperature_flag=VaryFlag.YES,
+            thickness_flag=VaryFlag.YES,
+        )
+
+    def test_parse_valid_line(self, valid_selfi_line):
+        """Test parsing of valid SELFI parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_selfi_line):
+            print(f"{i+1}: {char}")
+
+        params = SelfiParameters.from_lines([valid_selfi_line])
+        assert params.temperature == pytest.approx(123.4)
+        assert params.temperature_uncertainty == pytest.approx(2.345e-3)
+        assert params.thickness == pytest.approx(0.3456)
+        assert params.thickness_uncertainty == pytest.approx(4.567e-3)
+        assert params.temperature_flag == VaryFlag.YES
+        assert params.thickness_flag == VaryFlag.YES
+
+    def test_round_trip(self, valid_selfi_params):
+        """Test round-trip parsing and formatting of SELFI parameters."""
+        lines = valid_selfi_params.to_lines()
+        assert len(lines) == 1
+        params = SelfiParameters.from_lines(lines)
+        assert params == valid_selfi_params
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "SELFI x 1 1.234E+02 2.345E-03 3.456E-01 4.567E-03",  # Invalid temperature flag
+            "SELFI 1 x 1.234E+02 2.345E-03 3.456E-01 4.567E-03",  # Invalid thickness flag
+            "SELFI 1 1 invalid    2.345E-03 3.456E-01 4.567E-03",  # Invalid temperature
+            "SELFI 1 1 1.234E+02  2.345E-03 invalid   4.567E-03",  # Invalid thickness
+            "SELFX 1 1 1.234E+02  2.345E-03 3.456E-01 4.567E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid SELFI parameter lines."""
+        with pytest.raises(ValueError):
+            SelfiParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that required values must be provided."""
+        with pytest.raises(ValueError):
+            SelfiParameters(
+                temperature=None,  # Required
+                thickness=0.3456,
+                temperature_flag=VaryFlag.YES,
+                thickness_flag=VaryFlag.YES,
+            )
+
+        with pytest.raises(ValueError):
+            SelfiParameters(
+                temperature=123.4,
+                thickness=None,  # Required
+                temperature_flag=VaryFlag.YES,
+                thickness_flag=VaryFlag.YES,
+            )
+
+    def test_optional_uncertainties(self):
+        """Test that uncertainties are optional."""
+        line = "SELFI 1 1 1.234E+02           3.456E-01"  # No uncertainties
+
+        params = SelfiParameters.from_lines([line])
+        assert params.temperature == pytest.approx(123.4)
+        assert params.thickness == pytest.approx(0.3456)
+        assert params.temperature_uncertainty is None
+        assert params.thickness_uncertainty is None
 
 
 if __name__ == "__main__":

@@ -817,5 +817,106 @@ class SiabnParameters(Card11Parameter):
         return ["".join(parts)]
 
 
+class SelfiParameters(Card11Parameter):
+    """Container for SELFI (self-indication temperature/thickness) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "SELFI"     Parameter identifier
+    7     I       IFTEMP      Flag for temperature
+    9     I       IFTHCK      Flag for thickness
+    11-20 F       SITEM       Effective temperature (K)
+    21-30 F       dSITEM      Uncertainty on SITEM
+    31-40 F       SITHC       Thickness (atoms/barn)
+    41-50 F       dSITHC      Uncertainty on SITHC
+
+    Attributes:
+        temperature: Effective temperature (K) for transmission sample
+        temperature_uncertainty: Uncertainty on temperature
+        thickness: Sample thickness (atoms/barn)
+        thickness_uncertainty: Uncertainty on thickness
+        temperature_flag: Flag for varying temperature
+        thickness_flag: Flag for varying thickness
+    """
+
+    type: Card11ParameterType = Card11ParameterType.SELFI
+    temperature: float = Field(..., description="Effective temperature (K)")
+    temperature_uncertainty: Optional[float] = Field(None, description="Uncertainty on temperature")
+    thickness: float = Field(..., description="Sample thickness (atoms/barn)")
+    thickness_uncertainty: Optional[float] = Field(None, description="Uncertainty on thickness")
+    temperature_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for temperature")
+    thickness_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for thickness")
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "SelfiParameters":
+        """Parse SELFI parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for SELFI parameters)
+
+        Returns:
+            SelfiParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["SELFI"]["identifier"]].strip()
+        if identifier != "SELFI":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flags
+        try:
+            temp_flag = VaryFlag(int(line[FORMAT_SPECS["SELFI"]["flag_temp"]].strip() or "0"))
+            thick_flag = VaryFlag(int(line[FORMAT_SPECS["SELFI"]["flag_thick"]].strip() or "0"))
+        except ValueError as e:
+            raise ValueError(f"Invalid flag value: {e}")
+
+        # Parse required values
+        temp = safe_parse(line[FORMAT_SPECS["SELFI"]["temperature"]])
+        thick = safe_parse(line[FORMAT_SPECS["SELFI"]["thickness"]])
+
+        if temp is None or thick is None:
+            raise ValueError("Missing required temperature or thickness value")
+
+        # Parse optional uncertainties
+        temp_unc = safe_parse(line[FORMAT_SPECS["SELFI"]["temp_unc"]])
+        thick_unc = safe_parse(line[FORMAT_SPECS["SELFI"]["thick_unc"]])
+
+        return cls(
+            temperature=temp,
+            temperature_uncertainty=temp_unc,
+            thickness=thick,
+            thickness_uncertainty=thick_unc,
+            temperature_flag=temp_flag,
+            thickness_flag=thick_flag,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "SELFI",  # Identifier
+            " ",  # Column 6 spacing
+            format_vary(self.temperature_flag),  # Col 7
+            " ",  # Column 8 spacing
+            format_vary(self.thickness_flag),  # Col 9
+            " ",  # Column 10 spacing
+            format_float(self.temperature, width=10),
+            format_float(self.temperature_uncertainty, width=10),
+            format_float(self.thickness, width=10),
+            format_float(self.thickness_uncertainty, width=10),
+        ]
+        return ["".join(parts)]
+
+
 if __name__ == "__main__":
     print("Refer to unit tests for usage examples.")
