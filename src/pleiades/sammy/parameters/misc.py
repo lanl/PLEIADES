@@ -103,7 +103,7 @@ FORMAT_SPECS = {
     },
     "DRCAP": {
         "identifier": slice(0, 5),
-        "flag1": slice(6, 7),
+        "flag": slice(6, 7),
         "nuc": slice(8, 9),
         "coef": slice(10, 20),
         "dcoef": slice(20, 30),
@@ -1132,6 +1132,105 @@ class DelteParameters(Card11Parameter):
             format_float(self.constant_uncertainty, width=10),
             format_float(self.log_coefficient, width=10),
             format_float(self.log_uncertainty, width=10),
+        ]
+        return ["".join(parts)]
+
+
+class DrcapParameters(Card11Parameter):
+    """Container for DRCAP (direct capture component) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "DRCAP"     Parameter identifier
+    7     I       IFLAG1      Flag to vary COEF
+    9     I       NUC         Nuclide Number
+    11-20 F       COEF        Coefficient of DRC file value
+    21-30 F       dCOEF       Uncertainty on COEF
+
+    Notes:
+    - May be included multiple times, once per nuclide
+    - Numerical direct capture component is read from DRC file
+    - COEF multiplies the value from DRC file
+
+    Attributes:
+        coefficient: Coefficient of the DRC file value
+        coefficient_uncertainty: Uncertainty on coefficient
+        nuclide_number: Nuclide number (must be positive)
+        flag: Flag for varying coefficient
+    """
+
+    type: Card11ParameterType = Card11ParameterType.DRCAP
+    coefficient: float = Field(..., description="Coefficient of DRC file value")
+    coefficient_uncertainty: Optional[float] = Field(None, description="Uncertainty on coefficient")
+    nuclide_number: int = Field(..., gt=0, description="Nuclide number")
+    flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for coefficient")
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "DrcapParameters":
+        """Parse DRCAP parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for DRCAP parameters)
+
+        Returns:
+            DrcapParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["DRCAP"]["identifier"]].strip()
+        if identifier != "DRCAP":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flag
+        try:
+            flag = VaryFlag(int(line[FORMAT_SPECS["DRCAP"]["flag"]].strip() or "0"))
+        except ValueError as e:
+            raise ValueError(f"Invalid flag value: {e}")
+
+        # Parse nuclide number
+        nuc_num = safe_parse(line[FORMAT_SPECS["DRCAP"]["nuc"]], as_int=True)
+        if nuc_num is None:
+            raise ValueError("Missing required nuclide number")
+        if nuc_num <= 0:
+            raise ValueError("Nuclide number must be positive")
+
+        # Parse coefficient
+        coef = safe_parse(line[FORMAT_SPECS["DRCAP"]["coef"]])
+        if coef is None:
+            raise ValueError("Missing required coefficient value")
+
+        # Parse optional uncertainty
+        coef_unc = safe_parse(line[FORMAT_SPECS["DRCAP"]["dcoef"]])
+
+        return cls(
+            coefficient=coef,
+            coefficient_uncertainty=coef_unc,
+            nuclide_number=nuc_num,
+            flag=flag,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "DRCAP",  # Identifier
+            " ",  # Column 6 spacing
+            format_vary(self.flag),  # Col 7
+            " ",  # Column 8 spacing
+            f"{self.nuclide_number:1d}",  # Col 9
+            " ",  # Column 10 spacing
+            format_float(self.coefficient, width=10),
+            format_float(self.coefficient_uncertainty, width=10),
         ]
         return ["".join(parts)]
 

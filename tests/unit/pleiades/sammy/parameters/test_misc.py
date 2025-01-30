@@ -7,6 +7,7 @@ from pleiades.sammy.parameters.helper import VaryFlag
 from pleiades.sammy.parameters.misc import (
     DeltaParameters,
     DelteParameters,
+    DrcapParameters,
     EfficParameters,
     EtaParameters,
     FinitParameters,
@@ -882,6 +883,111 @@ class TestDelteParameters:
         assert params.e_uncertainty is None
         assert params.constant_uncertainty is None
         assert params.log_uncertainty is None
+
+
+class TestDrcapParameters:
+    """Test suite for DRCAP parameter parsing and formatting.
+
+    DRCAP parameters specify direct capture component coefficients:
+    Cols  Format  Variable    Description
+    1-5   A       "DRCAP"     Parameter identifier
+    7     I       IFLAG1      Flag to vary COEF
+    9     I       NUC         Nuclide Number
+    11-20 F       COEF        Coefficient of DRC file value
+    21-30 F       dCOEF       Uncertainty on COEF
+
+    Notes:
+    - May be included multiple times, once per nuclide
+    - Numerical direct capture component is read from DRC file
+    - COEF multiplies the value from DRC file
+    """
+
+    @pytest.fixture
+    def valid_drcap_line(self):
+        """Sample valid DRCAP parameter line."""
+        return "DRCAP 1 1 1.234E+00 2.345E-03"
+        #       |     | | |         |
+        #       |     | | |         21-30: Coefficient uncertainty
+        #       |     | | 11-20: Coefficient value
+        #       |     | 9: Nuclide number
+        #       |     7: Flag
+        #       1-5: "DRCAP"
+
+    @pytest.fixture
+    def valid_drcap_params(self):
+        """Sample valid DRCAP parameters."""
+        return DrcapParameters(
+            coefficient=1.234,
+            coefficient_uncertainty=2.345e-3,
+            nuclide_number=1,
+            flag=VaryFlag.YES,
+        )
+
+    def test_parse_valid_line(self, valid_drcap_line):
+        """Test parsing of valid DRCAP parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_drcap_line):
+            print(f"{i+1}: {char}")
+
+        params = DrcapParameters.from_lines([valid_drcap_line])
+        assert params.coefficient == pytest.approx(1.234)
+        assert params.coefficient_uncertainty == pytest.approx(2.345e-3)
+        assert params.nuclide_number == 1
+        assert params.flag == VaryFlag.YES
+
+    def test_round_trip(self, valid_drcap_params):
+        """Test round-trip parsing and formatting of DRCAP parameters."""
+        lines = valid_drcap_params.to_lines()
+        assert len(lines) == 1
+        params = DrcapParameters.from_lines(lines)
+        assert params == valid_drcap_params
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "DRCAP x 1 1.234E+00 2.345E-03",  # Invalid flag
+            "DRCAP 1 x 1.234E+00 2.345E-03",  # Invalid nuclide number
+            "DRCAP 1 1 invalid   2.345E-03",  # Invalid coefficient
+            "DRCAX 1 1 1.234E+00 2.345E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid DRCAP parameter lines."""
+        with pytest.raises(ValueError):
+            DrcapParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that required values must be provided."""
+        with pytest.raises(ValueError):
+            DrcapParameters(
+                coefficient=None,  # Required
+                nuclide_number=1,
+                flag=VaryFlag.YES,
+            )
+
+        with pytest.raises(ValueError):
+            DrcapParameters(
+                coefficient=1.234,
+                nuclide_number=None,  # Required
+                flag=VaryFlag.YES,
+            )
+
+    def test_nuclide_number_positive(self):
+        """Test that nuclide number must be positive."""
+        with pytest.raises(ValueError):
+            DrcapParameters(
+                coefficient=1.234,
+                nuclide_number=0,  # Invalid
+                flag=VaryFlag.YES,
+            )
+
+    def test_optional_uncertainty(self):
+        """Test that uncertainty is optional."""
+        line = "DRCAP 1 1 1.234E+00"  # No uncertainty
+        params = DrcapParameters.from_lines([line])
+        assert params.coefficient == pytest.approx(1.234)
+        assert params.coefficient_uncertainty is None
 
 
 if __name__ == "__main__":
