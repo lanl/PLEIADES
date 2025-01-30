@@ -12,6 +12,7 @@ from pleiades.sammy.parameters.misc import (
     EtaParameters,
     FinitParameters,
     GammaParameters,
+    NonunParameters,
     SelfiParameters,
     SiabnParameters,
     TzeroParameters,
@@ -988,6 +989,132 @@ class TestDrcapParameters:
         params = DrcapParameters.from_lines([line])
         assert params.coefficient == pytest.approx(1.234)
         assert params.coefficient_uncertainty is None
+
+
+class TestNonunParameters:
+    """Test suite for NONUN parameter parsing and formatting.
+
+    NONUN parameters specify non-uniform sample thickness:
+    Cols  Format  Variable    Description
+    1-5   A       "NONUN"     Parameter identifier
+    21-30 F       R           Radius at which thickness is given
+    31-40 F       Z           Positive value for sample thickness at radius
+    41-50 F       dZ          Uncertainty on thickness
+
+    Notes:
+    - At least two lines must be given (center and outer edge)
+    - First line must have zero radius (center)
+    - Last line must be at outer edge
+    - Lines must be in increasing radius order
+    - No fitting parameters yet permitted
+    """
+
+    @pytest.fixture
+    def valid_nonun_lines(self):
+        """Sample valid NONUN parameter lines."""
+        return [
+            "NONUN               0.000E+00 1.234E+00 2.345E-03",  # Center
+            "NONUN               5.000E+00 3.456E+00 4.567E-03",  # Intermediate
+            "NONUN               1.000E+01 5.678E+00 6.789E-03",  # Edge
+        ]
+
+    @pytest.fixture
+    def valid_nonun_params(self):
+        """Sample valid NONUN parameters."""
+        return NonunParameters(
+            radii=[0.0, 5.0, 10.0],
+            thicknesses=[1.234, 3.456, 5.678],
+            uncertainties=[2.345e-3, 4.567e-3, 6.789e-3],
+        )
+
+    def test_parse_valid_lines(self, valid_nonun_lines):
+        """Test parsing of valid NONUN parameter lines."""
+        # Check column number for each char in first line
+        for i, char in enumerate(valid_nonun_lines[0]):
+            print(f"{i+1}: {char}")
+
+        params = NonunParameters.from_lines(valid_nonun_lines)
+        assert params.radii[0] == pytest.approx(0.0)
+        assert params.radii[1] == pytest.approx(5.0)
+        assert params.radii[2] == pytest.approx(10.0)
+        assert params.thicknesses[0] == pytest.approx(1.234)
+        assert params.thicknesses[1] == pytest.approx(3.456)
+        assert params.thicknesses[2] == pytest.approx(5.678)
+        assert params.uncertainties[0] == pytest.approx(2.345e-3)
+        assert params.uncertainties[1] == pytest.approx(4.567e-3)
+        assert params.uncertainties[2] == pytest.approx(6.789e-3)
+
+    def test_round_trip(self, valid_nonun_params):
+        """Test round-trip parsing and formatting of NONUN parameters."""
+        lines = valid_nonun_params.to_lines()
+        assert len(lines) == 3
+        params = NonunParameters.from_lines(lines)
+        assert params == valid_nonun_params
+
+    def test_minimum_two_points(self):
+        """Test that at least two points are required."""
+        # Single point is invalid
+        with pytest.raises(ValueError):
+            NonunParameters.from_lines(
+                [
+                    "NONUN               0.000E+00 1.234E+00 2.345E-03",
+                ]
+            )
+
+        # Two points is valid
+        params = NonunParameters.from_lines(
+            [
+                "NONUN               0.000E+00 1.234E+00 2.345E-03",
+                "NONUN               1.000E+01 5.678E+00 6.789E-03",
+            ]
+        )
+        assert len(params.radii) == 2
+
+    def test_first_point_zero_radius(self):
+        """Test that first point must have zero radius."""
+        with pytest.raises(ValueError):
+            NonunParameters.from_lines(
+                [
+                    "NONUN               1.000E+00 1.234E+00 2.345E-03",  # Non-zero first radius
+                    "NONUN               1.000E+01 5.678E+00 6.789E-03",
+                ]
+            )
+
+    def test_increasing_radius(self):
+        """Test that radii must be in increasing order."""
+        with pytest.raises(ValueError):
+            NonunParameters.from_lines(
+                [
+                    "NONUN               0.000E+00 1.234E+00 2.345E-03",
+                    "NONUN               1.000E+01 5.678E+00 6.789E-03",
+                    "NONUN               5.000E+00 3.456E+00 4.567E-03",  # Out of order
+                ]
+            )
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "NONUN               invalid   1.234E+00 2.345E-03",  # Invalid radius
+            "NONUN               0.000E+00 invalid   2.345E-03",  # Invalid thickness
+            "NONUX               0.000E+00 1.234E+00 2.345E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid NONUN parameter lines."""
+        with pytest.raises(ValueError):
+            NonunParameters.from_lines([invalid_line])
+
+    def test_optional_uncertainties(self):
+        """Test that uncertainties are optional."""
+        lines = [
+            "NONUN               0.000E+00 1.234E+00",  # No uncertainties
+            "NONUN               1.000E+01 5.678E+00",
+        ]
+        params = NonunParameters.from_lines(lines)
+        assert params.radii[0] == pytest.approx(0.0)
+        assert params.thicknesses[0] == pytest.approx(1.234)
+        assert params.uncertainties[0] is None
 
 
 if __name__ == "__main__":

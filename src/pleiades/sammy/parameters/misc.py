@@ -187,10 +187,16 @@ class Card11Parameter(BaseModel):
         # Dispatch to appropriate parameter class based on type
         parameter_classes = {
             Card11ParameterType.DELTA: DeltaParameters,
-            # Card11ParameterType.ETA: EtaParameters,
-            # Card11ParameterType.GAMMA: GammaParameters,
-            # Card11ParameterType.TZERO: TzeroParameters,
-            # Add other parameter classes as implemented
+            Card11ParameterType.ETA: EtaParameters,
+            Card11ParameterType.FINIT: FinitParameters,
+            Card11ParameterType.GAMMA: GammaParameters,
+            Card11ParameterType.TZERO: TzeroParameters,
+            Card11ParameterType.SIABN: SiabnParameters,
+            Card11ParameterType.SELFI: SelfiParameters,
+            Card11ParameterType.EFFIC: EfficParameters,
+            Card11ParameterType.DELTE: DelteParameters,
+            Card11ParameterType.DRCAP: DrcapParameters,
+            Card11ParameterType.NONUN: NonunParameters,
         }
 
         parser_class = parameter_classes.get(param_type)
@@ -1233,6 +1239,115 @@ class DrcapParameters(Card11Parameter):
             format_float(self.coefficient_uncertainty, width=10),
         ]
         return ["".join(parts)]
+
+
+class NonunParameters(Card11Parameter):
+    """Container for NONUN (non-uniform sample thickness) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "NONUN"     Parameter identifier
+    21-30 F       R           Radius at which thickness is given
+    31-40 F       Z           Positive value for sample thickness at radius
+    41-50 F       dZ          Uncertainty on thickness
+
+    Notes:
+    - At least two lines must be given (center and outer edge)
+    - First line must have zero radius (center)
+    - Last line must be at outer edge
+    - Lines must be in increasing radius order
+    - No fitting parameters yet permitted
+
+    Attributes:
+        radii: List of radii values (must start with 0)
+        thicknesses: List of thickness values at each radius
+        uncertainties: List of uncertainties on thicknesses (optional)
+    """
+
+    type: Card11ParameterType = Card11ParameterType.NONUN
+    radii: List[float] = Field(..., min_length=2, description="Radii values")
+    thicknesses: List[float] = Field(..., min_length=2, description="Thickness values")
+    uncertainties: List[Optional[float]] = Field(..., min_length=2, description="Uncertainties")
+
+    @model_validator(mode="after")
+    def validate_arrays(self) -> "NonunParameters":
+        """Validate array lengths and values."""
+        if len(self.radii) != len(self.thicknesses) or len(self.radii) != len(self.uncertainties):
+            raise ValueError("All arrays must have same length")
+
+        if self.radii[0] != 0.0:
+            raise ValueError("First radius must be zero (center point)")
+
+        # Check increasing radius order
+        for i in range(1, len(self.radii)):
+            if self.radii[i] <= self.radii[i - 1]:
+                raise ValueError("Radii must be in strictly increasing order")
+
+        return self
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "NonunParameters":
+        """Parse NONUN parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (minimum 2 lines required)
+
+        Returns:
+            NonunParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or len(lines) < 2:
+            raise ValueError("At least two lines required (center and edge)")
+
+        radii = []
+        thicknesses = []
+        uncertainties = []
+
+        for line in lines:
+            line = f"{line:<80}"  # Pad to full width
+
+            # Verify identifier
+            identifier = line[FORMAT_SPECS["NONUN"]["identifier"]].strip()
+            if identifier != "NONUN":
+                raise ValueError(f"Invalid identifier: {identifier}")
+
+            # Parse values
+            radius = safe_parse(line[FORMAT_SPECS["NONUN"]["radius"]])
+            thickness = safe_parse(line[FORMAT_SPECS["NONUN"]["thickness"]])
+            uncertainty = safe_parse(line[FORMAT_SPECS["NONUN"]["uncertainty"]])
+
+            if radius is None or thickness is None:
+                raise ValueError("Missing required radius or thickness value")
+
+            radii.append(radius)
+            thicknesses.append(thickness)
+            uncertainties.append(uncertainty)
+
+        return cls(
+            radii=radii,
+            thicknesses=thicknesses,
+            uncertainties=uncertainties,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format lines.
+
+        Returns:
+            List containing formatted lines for each radius point
+        """
+        lines = []
+        for i in range(len(self.radii)):
+            parts = [
+                "NONUN",  # Identifier
+                " " * 15,  # Columns 6-20 spacing
+                format_float(self.radii[i], width=10),
+                format_float(self.thicknesses[i], width=10),
+                format_float(self.uncertainties[i], width=10),
+            ]
+            lines.append("".join(parts))
+        return lines
 
 
 if __name__ == "__main__":
