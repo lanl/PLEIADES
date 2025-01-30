@@ -918,5 +918,106 @@ class SelfiParameters(Card11Parameter):
         return ["".join(parts)]
 
 
+class EfficParameters(Card11Parameter):
+    """Container for EFFIC (detection efficiency) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "EFFIC"     Parameter identifier
+    7     I       IFCAPE      Flag for capture efficiency
+    9     I       IFFISE      Flag for fission efficiency
+    11-20 F       EFCAP       Efficiency for detecting capture events
+    21-30 F       EFFIS       Efficiency for detecting fission events
+    31-40 F       dEFCAP      Uncertainty on EFCAP
+    41-50 F       dEFFIS      Uncertainty on EFFIS
+
+    Attributes:
+        capture_efficiency: Efficiency for detecting capture events
+        fission_efficiency: Efficiency for detecting fission events
+        capture_uncertainty: Uncertainty on capture efficiency
+        fission_uncertainty: Uncertainty on fission efficiency
+        capture_flag: Flag for varying capture efficiency
+        fission_flag: Flag for varying fission efficiency
+    """
+
+    type: Card11ParameterType = Card11ParameterType.EFFIC
+    capture_efficiency: float = Field(..., description="Capture detection efficiency")
+    fission_efficiency: float = Field(..., description="Fission detection efficiency")
+    capture_uncertainty: Optional[float] = Field(None, description="Uncertainty on capture efficiency")
+    fission_uncertainty: Optional[float] = Field(None, description="Uncertainty on fission efficiency")
+    capture_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for capture efficiency")
+    fission_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for fission efficiency")
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "EfficParameters":
+        """Parse EFFIC parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for EFFIC parameters)
+
+        Returns:
+            EfficParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["EFFIC"]["identifier"]].strip()
+        if identifier != "EFFIC":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flags
+        try:
+            cap_flag = VaryFlag(int(line[FORMAT_SPECS["EFFIC"]["flag_cap"]].strip() or "0"))
+            fis_flag = VaryFlag(int(line[FORMAT_SPECS["EFFIC"]["flag_fis"]].strip() or "0"))
+        except ValueError as e:
+            raise ValueError(f"Invalid flag value: {e}")
+
+        # Parse required values
+        cap_eff = safe_parse(line[FORMAT_SPECS["EFFIC"]["eff_cap"]])
+        fis_eff = safe_parse(line[FORMAT_SPECS["EFFIC"]["eff_fis"]])
+
+        if cap_eff is None or fis_eff is None:
+            raise ValueError("Missing required efficiency values")
+
+        # Parse optional uncertainties
+        cap_unc = safe_parse(line[FORMAT_SPECS["EFFIC"]["eff_cap_unc"]])
+        fis_unc = safe_parse(line[FORMAT_SPECS["EFFIC"]["eff_fis_unc"]])
+
+        return cls(
+            capture_efficiency=cap_eff,
+            fission_efficiency=fis_eff,
+            capture_uncertainty=cap_unc,
+            fission_uncertainty=fis_unc,
+            capture_flag=cap_flag,
+            fission_flag=fis_flag,
+        )
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "EFFIC",  # Identifier
+            " ",  # Column 6 spacing
+            format_vary(self.capture_flag),  # Col 7
+            " ",  # Column 8 spacing
+            format_vary(self.fission_flag),  # Col 9
+            " ",  # Column 10 spacing
+            format_float(self.capture_efficiency, width=10),
+            format_float(self.fission_efficiency, width=10),
+            format_float(self.capture_uncertainty, width=10),
+            format_float(self.fission_uncertainty, width=10),
+        ]
+        return ["".join(parts)]
+
+
 if __name__ == "__main__":
     print("Refer to unit tests for usage examples.")

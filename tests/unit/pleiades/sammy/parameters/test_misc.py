@@ -6,6 +6,7 @@ import pytest
 from pleiades.sammy.parameters.helper import VaryFlag
 from pleiades.sammy.parameters.misc import (
     DeltaParameters,
+    EfficParameters,
     EtaParameters,
     FinitParameters,
     GammaParameters,
@@ -649,6 +650,110 @@ class TestSelfiParameters:
         assert params.thickness == pytest.approx(0.3456)
         assert params.temperature_uncertainty is None
         assert params.thickness_uncertainty is None
+
+
+class TestEfficParameters:
+    """Test suite for EFFIC parameter parsing and formatting.
+
+    EFFIC parameters specify efficiencies for capture and fission detection:
+    Cols  Format  Variable    Description
+    1-5   A       "EFFIC"     Parameter identifier
+    7     I       IFCAPE      Flag for capture efficiency
+    9     I       IFFISE      Flag for fission efficiency
+    11-20 F       EFCAP       Efficiency for detecting capture events
+    21-30 F       EFFIS       Efficiency for detecting fission events
+    31-40 F       dEFCAP      Uncertainty on EFCAP
+    41-50 F       dEFFIS      Uncertainty on EFFIS
+    """
+
+    @pytest.fixture
+    def valid_effic_line(self):
+        """Sample valid EFFIC parameter line."""
+        return "EFFIC 1 1 1.234E+00 2.345E+00 3.456E-03 4.567E-03"
+        #       |     | | |         |         |         |
+        #       |     | | |         |         |         41-50: Fission efficiency uncertainty
+        #       |     | | |         |         31-40: Capture efficiency uncertainty
+        #       |     | | |         21-30: Fission efficiency
+        #       |     | | 11-20: Capture efficiency
+        #       |     | 9: Fission flag
+        #       |     7: Capture flag
+        #       1-5: "EFFIC"
+
+    @pytest.fixture
+    def valid_effic_params(self):
+        """Sample valid EFFIC parameters."""
+        return EfficParameters(
+            capture_efficiency=1.234,
+            fission_efficiency=2.345,
+            capture_uncertainty=3.456e-3,
+            fission_uncertainty=4.567e-3,
+            capture_flag=VaryFlag.YES,
+            fission_flag=VaryFlag.YES,
+        )
+
+    def test_parse_valid_line(self, valid_effic_line):
+        """Test parsing of valid EFFIC parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_effic_line):
+            print(f"{i+1}: {char}")
+
+        params = EfficParameters.from_lines([valid_effic_line])
+        assert params.capture_efficiency == pytest.approx(1.234)
+        assert params.fission_efficiency == pytest.approx(2.345)
+        assert params.capture_uncertainty == pytest.approx(3.456e-3)
+        assert params.fission_uncertainty == pytest.approx(4.567e-3)
+        assert params.capture_flag == VaryFlag.YES
+        assert params.fission_flag == VaryFlag.YES
+
+    def test_round_trip(self, valid_effic_params):
+        """Test round-trip parsing and formatting of EFFIC parameters."""
+        lines = valid_effic_params.to_lines()
+        assert len(lines) == 1
+        params = EfficParameters.from_lines(lines)
+        assert params == valid_effic_params
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "EFFIC x 1 1.234E+00 2.345E+00 3.456E-03 4.567E-03",  # Invalid capture flag
+            "EFFIC 1 x 1.234E+00 2.345E+00 3.456E-03 4.567E-03",  # Invalid fission flag
+            "EFFIC 1 1 invalid   2.345E+00 3.456E-03 4.567E-03",  # Invalid capture efficiency
+            "EFFIC 1 1 1.234E+00 invalid   3.456E-03 4.567E-03",  # Invalid fission efficiency
+            "EFFIX 1 1 1.234E+00 2.345E+00 3.456E-03 4.567E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid EFFIC parameter lines."""
+        with pytest.raises(ValueError):
+            EfficParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that required values must be provided."""
+        with pytest.raises(ValueError):
+            EfficParameters(
+                capture_efficiency=None,  # Required
+                fission_efficiency=2.345,
+                capture_flag=VaryFlag.YES,
+                fission_flag=VaryFlag.YES,
+            )
+
+        with pytest.raises(ValueError):
+            EfficParameters(
+                capture_efficiency=1.234,
+                fission_efficiency=None,  # Required
+                capture_flag=VaryFlag.YES,
+                fission_flag=VaryFlag.YES,
+            )
+
+    def test_optional_uncertainties(self):
+        """Test that uncertainties are optional."""
+        line = "EFFIC 1 1 1.234E+00 2.345E+00"  # No uncertainties
+        params = EfficParameters.from_lines([line])
+        assert params.capture_efficiency == pytest.approx(1.234)
+        assert params.fission_efficiency == pytest.approx(2.345)
+        assert params.capture_uncertainty is None
+        assert params.fission_uncertainty is None
 
 
 if __name__ == "__main__":
