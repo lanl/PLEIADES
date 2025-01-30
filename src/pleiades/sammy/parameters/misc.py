@@ -24,7 +24,7 @@ import logging
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
 
@@ -694,6 +694,126 @@ class TzeroParameters(Card11Parameter):
             format_float(self.l0_uncertainty, width=10),  # L₀ uncertainty
             format_float(self.flight_path_length, width=10),  # Flight path length
         ]
+        return ["".join(parts)]
+
+
+class SiabnParameters(Card11Parameter):
+    """Container for SIABN (self-indication abundance) parameters.
+
+    Format specification from Table VI B.2:
+    Cols  Format  Variable    Description
+    1-5   A       "SIABN"     Parameter identifier
+    7     I       IF1         Flag for SIABN(1)
+    9     I       IF2         Flag for SIABN(2)
+    10    I       IF3         Flag for SIABN(3)
+    11-20 F       SIABN(1)    Abundance for nuclide #1
+    21-30 F       DS(1)       Uncertainty on SIABN(1)
+    31-40 F       SIABN(2)    Abundance for nuclide #2
+    41-50 F       DS(2)       Uncertainty on SIABN(2)
+    51-60 F       SIABN(3)    Abundance for nuclide #3
+    61-70 F       DS(3)       Uncertainty on SIABN(3)
+
+    Notes:
+    - Nuclides must be defined in card set 10 before card set 11
+    - At least one abundance must be provided
+    - Number of flags must match number of abundances
+    """
+
+    type: Card11ParameterType = Card11ParameterType.SIABN
+    abundances: List[float] = Field(..., min_length=1, max_length=3, description="Abundance values for nuclides")
+    uncertainties: List[Optional[float]] = Field(..., max_length=3, description="Uncertainties on abundances")
+    flags: List[VaryFlag] = Field(..., max_length=3, description="Flags for varying abundances")
+
+    @model_validator(mode="after")
+    def validate_list_lengths(self) -> "SiabnParameters":
+        """Validate that all lists have matching lengths."""
+        if len(self.abundances) != len(self.uncertainties) or len(self.abundances) != len(self.flags):
+            raise ValueError("Number of abundances, uncertainties, and flags must match")
+        return self
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "SiabnParameters":
+        """Parse SIABN parameters from fixed-width format lines.
+
+        Args:
+            lines: List of input lines (expects single line for SIABN parameters)
+
+        Returns:
+            SiabnParameters: Parsed parameters
+
+        Raises:
+            ValueError: If format is invalid or required values missing
+        """
+        if not lines or not lines[0].strip():
+            raise ValueError("No valid parameter line provided")
+
+        line = f"{lines[0]:<80}"  # Pad to full width
+
+        # Verify identifier
+        identifier = line[FORMAT_SPECS["SIABN"]["identifier"]].strip()
+        if identifier != "SIABN":
+            raise ValueError(f"Invalid identifier: {identifier}")
+
+        # Parse flags
+        flags = []
+        for i, flag_slice in enumerate([FORMAT_SPECS["SIABN"]["flag1"], FORMAT_SPECS["SIABN"]["flag2"], FORMAT_SPECS["SIABN"]["flag3"]]):
+            flag_str = line[flag_slice].strip()
+            if flag_str:
+                try:
+                    flags.append(VaryFlag(int(flag_str)))
+                except ValueError as e:
+                    raise ValueError(f"Invalid flag value for flag {i+1}: {e}")
+
+        # Parse abundance-uncertainty pairs
+        abundances = []
+        uncertainties = []
+        for i in range(1, 4):  # Up to 3 pairs
+            abund = safe_parse(line[FORMAT_SPECS["SIABN"][f"abundance{i}"]])
+            uncert = safe_parse(line[FORMAT_SPECS["SIABN"][f"uncertainty{i}"]])
+
+            if abund is not None:  # Found a valid abundance
+                abundances.append(abund)
+                uncertainties.append(uncert)
+            elif i == 1:  # First abundance is required
+                raise ValueError("At least one abundance value is required")
+            else:
+                break  # Stop parsing pairs if abundance is missing
+
+        # Trim flags to match number of abundances found
+        flags = flags[: len(abundances)]
+
+        if not abundances:
+            raise ValueError("At least one abundance value is required")
+
+        return cls(abundances=abundances, uncertainties=uncertainties, flags=flags)
+
+    def to_lines(self) -> List[str]:
+        """Convert parameters to fixed-width format line.
+
+        Returns:
+            List containing single formatted line
+        """
+        parts = [
+            "SIABN",  # Identifier
+            " ",  # Column 6 spacing
+            str(self.flags[0].value),  # Flag for abundance 1
+            " ",  # Column 8 spacing
+            str(self.flags[1].value),  # Flag for abundance 2
+            str(self.flags[2].value),  # Flag for abundance 3
+        ]
+
+        # Add abundance-uncertainty pairs
+        for i in range(3):
+            if i < len(self.abundances):
+                parts.extend(
+                    [
+                        format_float(self.abundances[i], width=10),
+                        format_float(self.uncertainties[i], width=10),
+                    ]
+                )
+            else:
+                parts.extend([" " * 10, " " * 10])  # Pad with spaces if fewer than 3 pairs
+
         return ["".join(parts)]
 
 

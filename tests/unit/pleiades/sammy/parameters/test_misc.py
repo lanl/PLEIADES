@@ -9,6 +9,7 @@ from pleiades.sammy.parameters.misc import (
     EtaParameters,
     FinitParameters,
     GammaParameters,
+    SiabnParameters,
     TzeroParameters,
 )
 
@@ -431,6 +432,117 @@ class TestTzeroParameters:
         line = "TZERO 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03"  # No flight path
         params = TzeroParameters.from_lines([line])
         assert params.flight_path_length is None
+
+
+class TestSiabnParameters:
+    """Test suite for SIABN parameter parsing and formatting.
+
+    SIABN parameters specify abundances for self-indication transmission sample:
+    Cols  Format  Variable    Description
+    1-5   A       "SIABN"     Parameter identifier
+    7     I       IF1         Flag for SIABN(1)
+    9     I       IF2         Flag for SIABN(2)
+    10    I       IF3         Flag for SIABN(3)
+    11-20 F       SIABN(1)    Abundance for nuclide #1
+    21-30 F       DS(1)       Uncertainty on SIABN(1)
+    31-40 F       SIABN(2)    Abundance for nuclide #2
+    41-50 F       DS(2)       Uncertainty on SIABN(2)
+    51-60 F       SIABN(3)    Abundance for nuclide #3
+    61-70 F       DS(3)       Uncertainty on SIABN(3)
+
+    Notes:
+    - Repeat lines until all nuclides have been included
+    - Nuclides must be defined in card set 10 before card set 11
+    """
+
+    @pytest.fixture
+    def valid_siabn_line(self):
+        """Sample valid SIABN parameter line."""
+        return "SIABN 1 111.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03"
+        #       |     | |||         |         |         |         |         |
+        #       |     | |||         |         |         |         |         61-70: Uncertainty 3
+        #       |     | |||         |         |         |         51-60: Abundance 3
+        #       |     | |||         |         |         41-50: Uncertainty 2
+        #       |     | |||         |         31-40: Abundance 2
+        #       |     | |||         21-30: Uncertainty 1
+        #       |     | ||11-20: Abundance 1
+        #       |     | |10: Flag 3
+        #       |     | 9: Flag 2
+        #       |     7: Flag 1
+        #       1-5: "SIABN"
+
+    @pytest.fixture
+    def valid_siabn_params(self):
+        """Sample valid SIABN parameters."""
+        return SiabnParameters(
+            abundances=[1.234, 3.456, 5.678], uncertainties=[2.345e-3, 4.567e-3, 6.789e-3], flags=[VaryFlag.YES, VaryFlag.YES, VaryFlag.YES]
+        )
+
+    def test_parse_valid_line(self, valid_siabn_line):
+        """Test parsing of valid SIABN parameter line."""
+        # Check column number for each char
+        for i, char in enumerate(valid_siabn_line):
+            print(f"{i+1}: {char}")
+
+        params = SiabnParameters.from_lines([valid_siabn_line])
+        assert params.abundances[0] == pytest.approx(1.234)
+        assert params.abundances[1] == pytest.approx(3.456)
+        assert params.abundances[2] == pytest.approx(5.678)
+        assert params.uncertainties[0] == pytest.approx(2.345e-3)
+        assert params.uncertainties[1] == pytest.approx(4.567e-3)
+        assert params.uncertainties[2] == pytest.approx(6.789e-3)
+        assert params.flags[0] == VaryFlag.YES
+        assert params.flags[1] == VaryFlag.YES
+        assert params.flags[2] == VaryFlag.YES
+
+    def test_round_trip(self, valid_siabn_params):
+        """Test round-trip parsing and formatting of SIABN parameters."""
+        lines = valid_siabn_params.to_lines()
+        assert len(lines) == 1
+
+        for i, char in enumerate(lines[0]):
+            print(f"{i+1}: {char}")
+
+        params = SiabnParameters.from_lines(lines)
+        assert params == valid_siabn_params
+
+    def test_partial_data(self):
+        """Test parsing with only some abundances present."""
+        # Line with only 2 abundances
+        line = "SIABN 1 101.234E+00 2.345E-03 3.456E+00 4.567E-03"
+        params = SiabnParameters.from_lines([line])
+        assert len(params.abundances) == 2
+        assert len(params.uncertainties) == 2
+        assert len(params.flags) == 2
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "",  # Empty line
+            "SIABN x 111.234E+00 2.345E-03 3.456E+00 4.567E-03",  # Invalid flag 1
+            "SIABN 1 x11.234E+00 2.345E-03 3.456E+00 4.567E-03",  # Invalid flag 2
+            "SIABN 1 1x1.234E+00 2.345E-03 3.456E+00 4.567E-03",  # Invalid flag 3
+            "SIABN 1 11invalid   2.345E-03 3.456E+00 4.567E-03",  # Invalid abundance 1
+            "SIABX 1 111.234E+00 2.345E-03 3.456E+00 4.567E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_lines(self, invalid_line):
+        """Test parsing of invalid SIABN parameter lines."""
+        with pytest.raises(ValueError):
+            SiabnParameters.from_lines([invalid_line])
+
+    def test_required_values(self):
+        """Test that at least one abundance set must be provided."""
+        with pytest.raises(ValueError):
+            SiabnParameters(abundances=[], uncertainties=[], flags=[])
+
+        # Test that abundances and flags must match in length
+        with pytest.raises(ValueError):
+            SiabnParameters(
+                abundances=[1.234, 3.456],
+                uncertainties=[2.345e-3, 4.567e-3],
+                flags=[VaryFlag.YES],  # Only one flag for two abundances
+            )
 
 
 if __name__ == "__main__":
