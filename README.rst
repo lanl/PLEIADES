@@ -1,9 +1,8 @@
-.. image:: ./docs/images/PLEIADES.jpg
-   :alt: **PLEIADES:** Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY.
-   :align: center
-
 PLEIADES
 ========
+.. image:: https://results.pre-commit.ci/badge/github/lanl/PLEIADES/main.svg
+   :target: https://results.pre-commit.ci/latest/github/lanl/PLEIADES/main
+   :alt: pre-commit.ci status
 
 .. image:: https://readthedocs.org/projects/example-sphinx-basic/badge/?version=latest
    :target: https://pleiades-sammy.readthedocs.io/en/latest/
