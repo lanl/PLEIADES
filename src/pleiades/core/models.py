@@ -231,9 +231,7 @@ class Isotope(BaseModel):
         if self.thickness_unit == "mm":
             thickness_cm /= 10.0
 
-        return (
-            thickness_cm * self.density * CONSTANTS.avogadro_number / self.atomic_mass.value / 1e24
-        )  # Convert to atoms/barn
+        return thickness_cm * self.density * CONSTANTS.avogadro_number / self.atomic_mass.value / 1e24  # Convert to atoms/barn
 
 
 # Unit conversion functions

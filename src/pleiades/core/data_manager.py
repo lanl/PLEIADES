@@ -73,9 +73,7 @@ class NuclearDataManager:
 
         file_path = Path(filename)
         if file_path.suffix not in self._VALID_EXTENSIONS[category]:
-            raise ValueError(
-                f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}"
-            )
+            raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}")
 
         try:
             with resources.path(f"pleiades.data.{self._get_category_path(category)}", filename) as path:
