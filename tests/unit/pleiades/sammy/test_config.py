@@ -24,9 +24,7 @@ class TestLocalSammyConfig:
 
     def test_create_with_defaults(self, temp_working_dir):
         """Should create config with default values."""
-        config = LocalSammyConfig(
-            working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy")
-        )
+        config = LocalSammyConfig(working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy"))
         assert config.shell_path == Path("/bin/bash")
 
     def test_validate_sammy_in_path(self, temp_working_dir, monkeypatch):
@@ -37,18 +35,14 @@ class TestLocalSammyConfig:
 
         monkeypatch.setattr("shutil.which", mock_which)
 
-        config = LocalSammyConfig(
-            working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy")
-        )
+        config = LocalSammyConfig(working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy"))
         assert config.validate()
 
     def test_validate_sammy_not_in_path(self, temp_working_dir, monkeypatch):
         """Should raise error if SAMMY not in PATH."""
         monkeypatch.setattr("shutil.which", lambda _: None)
 
-        config = LocalSammyConfig(
-            working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy")
-        )
+        config = LocalSammyConfig(working_dir=temp_working_dir, output_dir=temp_working_dir / "output", sammy_executable=Path("sammy"))
         with pytest.raises(ConfigurationError) as exc:
             config.validate()
         assert "not found" in str(exc.value)
@@ -171,9 +165,7 @@ class TestNovaSammyConfig:
 
     def test_empty_url(self, temp_working_dir):
         """Should raise error for empty URL."""
-        config = NovaSammyConfig(
-            working_dir=temp_working_dir, output_dir=temp_working_dir / "output", url="", api_key="valid_api_key"
-        )
+        config = NovaSammyConfig(working_dir=temp_working_dir, output_dir=temp_working_dir / "output", url="", api_key="valid_api_key")
         with pytest.raises(ConfigurationError) as exc:
             config.validate()
         assert "NOVA service URL cannot be empty" in str(exc.value)
