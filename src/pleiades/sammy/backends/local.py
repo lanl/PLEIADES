@@ -81,10 +81,7 @@ class LocalSammyRunner(SammyRunner):
 
             if not success:
                 logger.error(f"SAMMY execution failed for {execution_id}")
-                error_message = (
-                    f"SAMMY execution failed with return code {process.returncode}. "
-                    "Check console output for details."
-                )
+                error_message = f"SAMMY execution failed with return code {process.returncode}. " "Check console output for details."
             else:
                 logger.info(f"SAMMY execution completed successfully for {execution_id}")
                 error_message = None
