@@ -109,6 +109,96 @@ class TestUserResolutionParameters:
         with pytest.raises(ValueError):
             UserResolutionParameters.from_lines([valid_header_line, invalid_line])
 
+    def test_parse_single_channel_line(self, valid_header_line, valid_channel_line):
+        """Test parsing of single CHANN parameter line."""
+        params = UserResolutionParameters.from_lines([valid_header_line, valid_channel_line])
+
+        # Check channel parameters
+        assert len(params.channel_energies) == 1
+        assert len(params.channel_widths) == 1
+        assert len(params.channel_uncertainties) == 1
+        assert len(params.channel_flags) == 1
+
+        assert params.channel_energies[0] == pytest.approx(1.234e3)
+        assert params.channel_widths[0] == pytest.approx(2.345)
+        assert params.channel_uncertainties[0] == pytest.approx(3.456e-3)
+        assert params.channel_flags[0] == VaryFlag.YES
+
+    def test_parse_multiple_channel_lines(self, valid_header_line):
+        """Test parsing of multiple CHANN parameter lines."""
+        lines = [
+            valid_header_line,
+            "CHANN 1    1.234E+03 2.345E+00 3.456E-03",
+            "CHANN 0    4.567E+03 5.678E+00 6.789E-03",
+            "CHANN 3    7.890E+03 8.901E+00 9.012E-03",
+        ]
+
+        params = UserResolutionParameters.from_lines(lines)
+
+        # Check all channel parameters are parsed
+        assert len(params.channel_energies) == 3
+        assert len(params.channel_widths) == 3
+        assert len(params.channel_uncertainties) == 3
+        assert len(params.channel_flags) == 3
+
+        # Check first channel
+        assert params.channel_energies[0] == pytest.approx(1.234e3)
+        assert params.channel_widths[0] == pytest.approx(2.345)
+        assert params.channel_uncertainties[0] == pytest.approx(3.456e-3)
+        assert params.channel_flags[0] == VaryFlag.YES
+
+        # Check second channel
+        assert params.channel_energies[1] == pytest.approx(4.567e3)
+        assert params.channel_widths[1] == pytest.approx(5.678)
+        assert params.channel_uncertainties[1] == pytest.approx(6.789e-3)
+        assert params.channel_flags[1] == VaryFlag.NO
+
+        # Check third channel
+        assert params.channel_energies[2] == pytest.approx(7.890e3)
+        assert params.channel_widths[2] == pytest.approx(8.901)
+        assert params.channel_uncertainties[2] == pytest.approx(9.012e-3)
+        assert params.channel_flags[2] == VaryFlag.PUP
+
+    def test_channel_line_formatting(self):
+        """Test formatting of CHANN parameters."""
+        params = UserResolutionParameters(
+            channel_energies=[1.234e3, 4.567e3],
+            channel_widths=[2.345, 5.678],
+            channel_uncertainties=[3.456e-3, 6.789e-3],
+            channel_flags=[VaryFlag.YES, VaryFlag.NO],
+        )
+
+        lines = params.to_lines()
+        assert len(lines) == 3  # Header + 2 channel lines
+        assert lines[0] == "USER-Defined resolution function"
+
+        # Check first channel line
+        assert lines[1].startswith("CHANN")
+        assert lines[1][6:7] == "1"  # Flag value
+
+        # Parse the formatted lines to verify values
+        parsed = UserResolutionParameters.from_lines(lines)
+        assert len(parsed.channel_energies) == 2
+        assert parsed.channel_energies[0] == pytest.approx(1.234e3)
+        assert parsed.channel_widths[0] == pytest.approx(2.345)
+        assert parsed.channel_uncertainties[0] == pytest.approx(3.456e-3)
+        assert parsed.channel_flags[0] == VaryFlag.YES
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "CHANN x    1.234E+03 2.345E+00 3.456E-03",  # Invalid flag
+            "CHANN 1    invalid   2.345E+00 3.456E-03",  # Invalid energy
+            "CHANN 1    1.234E+03 invalid   3.456E-03",  # Invalid width
+            "CHANN",  # Incomplete line
+            "CHANL 1    1.234E+03 2.345E+00 3.456E-03",  # Wrong identifier
+        ],
+    )
+    def test_parse_invalid_channel_line(self, valid_header_line, invalid_line):
+        """Test parsing of invalid CHANN parameter lines."""
+        with pytest.raises(ValueError):
+            UserResolutionParameters.from_lines([valid_header_line, invalid_line])
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

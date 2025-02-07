@@ -124,8 +124,31 @@ class UserResolutionParameters(BaseModel):
                 params.burst_flag = burst_flag
 
             elif line.startswith("CHANN"):
-                # TODO: Parse CHANN parameters
-                pass
+                # Verify identifier
+                identifier = line[FORMAT_SPECS["CHANN"]["identifier"]].strip()
+                if identifier != "CHANN":
+                    raise ValueError(f"Invalid CHANN identifier: {identifier}")
+
+                # Parse flag
+                try:
+                    flag = VaryFlag(int(line[FORMAT_SPECS["CHANN"]["flag"]].strip() or "0"))
+                except ValueError as e:
+                    raise ValueError(f"Invalid CHANN flag value: {e}")
+
+                # Parse required values
+                energy = safe_parse(line[FORMAT_SPECS["CHANN"]["energy"]])
+                width = safe_parse(line[FORMAT_SPECS["CHANN"]["width"]])
+                if energy is None or width is None:
+                    raise ValueError("Missing required energy or width value")
+
+                # Parse optional uncertainty
+                uncertainty = safe_parse(line[FORMAT_SPECS["CHANN"]["uncertainty"]])
+
+                # Append values to lists
+                params.channel_energies.append(energy)
+                params.channel_widths.append(width)
+                params.channel_uncertainties.append(uncertainty)
+                params.channel_flags.append(flag)
             elif line.startswith("FILE="):
                 # TODO: Parse FILE parameters
                 pass
@@ -152,7 +175,19 @@ class UserResolutionParameters(BaseModel):
             ]
             lines.append("".join(burst_parts))
 
-        # TODO: Add CHANN lines if parameters present
+        # Add CHANN lines if parameters present
+        for i in range(len(self.channel_energies)):
+            channel_parts = [
+                "CHANN",  # Identifier
+                " ",  # Column 6 spacing
+                format_vary(self.channel_flags[i]),  # Col 7
+                "   ",  # Columns 8-10 spacing
+                format_float(self.channel_energies[i], width=10),
+                format_float(self.channel_widths[i], width=10),
+                format_float(self.channel_uncertainties[i], width=10),
+            ]
+            lines.append("".join(channel_parts))
+
         # TODO: Add FILE lines if present
 
         return lines
