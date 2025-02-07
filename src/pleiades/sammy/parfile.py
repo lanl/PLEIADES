@@ -9,11 +9,14 @@ from pleiades.sammy.parameters import (
     BroadeningParameterCard,
     DataReductionCard,
     ExternalREntry,
+    IsotopeCard,
     NormalizationBackgroundCard,
     ORRESCard,
+    ParamagneticParameters,
     RadiusCard,
     ResonanceEntry,
     UnusedCorrelatedCard,
+    UserResolutionParameters,
 )
 
 
@@ -30,6 +33,10 @@ class SammyParameterFile(BaseModel):
     radius: Optional[RadiusCard] = Field(None, description="Radius parameters")
     data_reduction: Optional[DataReductionCard] = Field(None, description="Data reduction parameters")
     orres: Optional[ORRESCard] = Field(None, description="ORRES card parameters")
+    isotope: Optional[IsotopeCard] = Field(None, description="Isotope parameters")
+    paramagnetic: Optional[ParamagneticParameters] = Field(None, description="Paramagnetic parameters")
+    reonance: Optional[ResonanceEntry] = Field(None, description="Resonance parameters")
+    user_resolution: Optional[UserResolutionParameters] = Field(None, description="User-defined resolution function parameters")
 
     @classmethod
     def from_file(cls, file_path):
