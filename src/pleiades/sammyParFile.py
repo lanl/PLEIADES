@@ -500,13 +500,13 @@ class ParFile:
                 new_name = name
             elif self.name == "auto" and pp_count > 1:
                 name = self._filepath.stem[:6]
-                new_name = name + f"_{num+1}"
+                new_name = name + f"_{num + 1}"
             elif self.name != "auto" and pp_count == 1:
                 name = self.name[:8]
                 new_name = name
             elif self.name != "auto" and pp_count > 1:
                 name = self.name[:6]
-                new_name = name + f"_{num+1}"
+                new_name = name + f"_{num + 1}"
 
             for group in self.data["spin_group"]:
                 for channel in group[1:]:
@@ -860,7 +860,7 @@ class Update:
 
         # bump spin group data
         for group in self.parent.data["spin_group"]:
-            group[0]["group_number"] = f"{int(group[0]['group_number'])+increment:>3}"
+            group[0]["group_number"] = f"{int(group[0]['group_number']) + increment:>3}"
 
         # bump channel radii
         for rad in self.parent.data["channel_radii"]:
@@ -895,7 +895,7 @@ class Update:
         """
         # bump resonance_params
         for res in self.parent.data["resonance_params"]:
-            res["igroup"] = f"{int(res['igroup'])+increment:>2}"
+            res["igroup"] = f"{int(res['igroup']) + increment:>2}"
 
     def isotopic_weight(self) -> None:
         """Update the isotopic weight in the spin_group data"""
@@ -926,7 +926,7 @@ class Update:
                 ).ljust(78)
 
             iso_dict = {
-                "atomic_mass": f'{float(self.parent.data["particle_pairs"][0]["mass_b"]):>9}'[
+                "atomic_mass": f"{float(self.parent.data['particle_pairs'][0]['mass_b']):>9}"[
                     :9
                 ],
                 "abundance": f"{f'{self.parent.weight:.7f}':>9}"[:9],
@@ -1393,7 +1393,7 @@ class Update:
 
     def save_params_to_config(self) -> None:
         # write the self.data dictionary to a config.ini file
-        inifilename = f'{pathlib.Path(self.parent.filename).with_name("params.ini")}'
+        inifilename = f"{pathlib.Path(self.parent.filename).with_name('params.ini')}"
         with open(inifilename, "w") as fid:
             config = configparser.ConfigParser()
             config.optionxform = str
