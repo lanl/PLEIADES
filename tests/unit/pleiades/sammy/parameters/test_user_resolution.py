@@ -80,7 +80,7 @@ class TestUserResolutionParameters:
         params = UserResolutionParameters(burst_width=1.234, burst_uncertainty=2.345e-3, burst_flag=VaryFlag.YES)
 
         lines = params.to_lines()
-        assert len(lines) == 2
+        assert len(lines) == 3
         assert lines[0] == "USER-Defined resolution function"
 
         # Check burst line format
@@ -169,7 +169,7 @@ class TestUserResolutionParameters:
         )
 
         lines = params.to_lines()
-        assert len(lines) == 3  # Header + 2 channel lines
+        assert len(lines) == 4  # Header + 2 channel lines + blank line
         assert lines[0] == "USER-Defined resolution function"
 
         # Check first channel line
@@ -198,6 +198,121 @@ class TestUserResolutionParameters:
         """Test parsing of invalid CHANN parameter lines."""
         with pytest.raises(ValueError):
             UserResolutionParameters.from_lines([valid_header_line, invalid_line])
+
+    def test_parse_single_file_line(self, valid_header_line, valid_file_line):
+        """Test parsing of single FILE parameter line."""
+        params = UserResolutionParameters.from_lines([valid_header_line, valid_file_line])
+
+        # Check file parameters
+        assert len(params.filenames) == 1
+        assert params.filenames[0] == "resolution_data.txt"
+
+    def test_parse_multiple_file_lines(self, valid_header_line):
+        """Test parsing of multiple FILE parameter lines."""
+        lines = [valid_header_line, "FILE=resolution_data1.txt", "FILE=resolution_data2.txt", "FILE=resolution_data3.txt"]
+
+        params = UserResolutionParameters.from_lines(lines)
+
+        # Check all files are parsed
+        assert len(params.filenames) == 3
+        assert params.filenames[0] == "resolution_data1.txt"
+        assert params.filenames[1] == "resolution_data2.txt"
+        assert params.filenames[2] == "resolution_data3.txt"
+
+    def test_file_line_formatting(self):
+        """Test formatting of FILE parameters."""
+        params = UserResolutionParameters(filenames=["resolution_data1.txt", "resolution_data2.txt"])
+
+        lines = params.to_lines()
+        assert len(lines) == 4  # Header + 2 file lines + blank line
+        assert lines[0] == "USER-Defined resolution function"
+
+        # Check file lines
+        assert lines[1] == "FILE=resolution_data1.txt"
+        assert lines[2] == "FILE=resolution_data2.txt"
+
+        # Parse the formatted lines to verify values
+        parsed = UserResolutionParameters.from_lines(lines)
+        assert len(parsed.filenames) == 2
+        assert parsed.filenames[0] == "resolution_data1.txt"
+        assert parsed.filenames[1] == "resolution_data2.txt"
+
+    @pytest.mark.parametrize(
+        "invalid_line",
+        [
+            "FILE",  # Incomplete line
+            "FILE resolution_data.txt",  # Missing equals sign
+            "FILES=resolution_data.txt",  # Wrong identifier
+            "FILE=",  # Missing filename
+        ],
+    )
+    def test_parse_invalid_file_line(self, valid_header_line, invalid_line):
+        """Test parsing of invalid FILE parameter lines."""
+        with pytest.raises(ValueError):
+            UserResolutionParameters.from_lines([valid_header_line, invalid_line])
+
+    def test_complete_parameter_set(self, valid_header_line, valid_burst_line, valid_channel_line, valid_file_line):
+        """Test parsing of complete parameter set with all optional sections."""
+        lines = [valid_header_line, valid_burst_line, valid_channel_line, valid_file_line]
+
+        params = UserResolutionParameters.from_lines(lines)
+
+        # Check burst parameters
+        assert params.burst_width == pytest.approx(1.234)
+        assert params.burst_uncertainty == pytest.approx(2.345e-3)
+        assert params.burst_flag == VaryFlag.YES
+
+        # Check channel parameters
+        assert len(params.channel_energies) == 1
+        assert params.channel_energies[0] == pytest.approx(1.234e3)
+        assert params.channel_widths[0] == pytest.approx(2.345)
+        assert params.channel_uncertainties[0] == pytest.approx(3.456e-3)
+        assert params.channel_flags[0] == VaryFlag.YES
+
+        # Check file parameters
+        assert len(params.filenames) == 1
+        assert params.filenames[0] == "resolution_data.txt"
+
+    def test_blank_line_at_end(self):
+        """Test that formatted output includes blank line at end per spec."""
+        params = UserResolutionParameters(filenames=["test.dat"])
+
+        lines = params.to_lines()
+        assert len(lines) >= 2  # At least header, content, and blank line
+        assert lines[-1] == ""  # Last line should be blank
+
+    def test_mixed_section_order(self):
+        """Test that sections can appear in any order."""
+        lines = [
+            "USER-Defined resolution function",
+            "FILE=data1.txt",
+            "CHANN 1    1.000E+03 2.000E+00 3.000E-03",
+            "BURST 1    1.234E+00 2.345E-03",
+            "CHANN 0    2.000E+03 3.000E+00 4.000E-03",
+            "FILE=data2.txt",
+            "",  # blank line
+        ]
+
+        params = UserResolutionParameters.from_lines(lines)
+
+        # Verify all sections parsed correctly regardless of order
+        assert len(params.channel_energies) == 2
+        assert len(params.filenames) == 2
+        assert params.burst_width is not None
+
+        # Verify specific values
+        assert params.channel_energies[0] == pytest.approx(1000.0)
+        assert params.channel_energies[1] == pytest.approx(2000.0)
+        assert params.filenames == ["data1.txt", "data2.txt"]
+        assert params.burst_width == pytest.approx(1.234)
+
+    def test_maximum_filename_length(self):
+        """Test that filename field respects column limit."""
+        # Generate filename that's too long (>70 characters)
+        long_filename = "x" * 71
+
+        with pytest.raises(ValueError, match="exceeds maximum length"):
+            UserResolutionParameters.from_lines(["USER-Defined resolution function", f"FILE={long_filename}", ""])
 
 
 if __name__ == "__main__":

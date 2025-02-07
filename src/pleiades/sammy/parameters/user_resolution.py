@@ -22,17 +22,17 @@ from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary
 # Format definitions - column positions for each parameter type
 FORMAT_SPECS = {
     "BURST": {
-        "identifier": slice(0, 5),
-        "flag": slice(6, 7),
-        "width": slice(10, 20),
-        "uncertainty": slice(20, 30),
+        "identifier": slice(0, 5),  # "BURST"
+        "flag": slice(6, 7),  # IFBRST
+        "width": slice(10, 20),  # BURST value
+        "uncertainty": slice(20, 30),  # dBURST
     },
     "CHANN": {
-        "identifier": slice(0, 5),
-        "flag": slice(6, 7),
-        "energy": slice(10, 20),
-        "width": slice(20, 30),
-        "uncertainty": slice(30, 40),
+        "identifier": slice(0, 5),  # "CHANN"
+        "flag": slice(6, 7),  # ICH flag
+        "energy": slice(10, 20),  # ECRNCH
+        "width": slice(20, 30),  # CH value
+        "uncertainty": slice(30, 40),  # dCH
     },
     "FILE": {
         "identifier": slice(0, 5),  # "FILE="
@@ -149,9 +149,26 @@ class UserResolutionParameters(BaseModel):
                 params.channel_widths.append(width)
                 params.channel_uncertainties.append(uncertainty)
                 params.channel_flags.append(flag)
+
             elif line.startswith("FILE="):
-                # TODO: Parse FILE parameters
-                pass
+                # Verify identifier and format
+                identifier = line[FORMAT_SPECS["FILE"]["identifier"]].strip()
+                if identifier != "FILE=":
+                    raise ValueError(f"Invalid FILE identifier: {identifier}")
+
+                # Get raw filename by removing "FILE=" prefix
+                raw_filename = line[5:].strip()  # Everything after FILE=
+                if not raw_filename:
+                    raise ValueError("Missing filename")
+
+                # Check raw filename length before column slicing
+                if len(raw_filename) > 70:
+                    raise ValueError(f"Filename length ({len(raw_filename)}) exceeds maximum length (70 characters)")
+
+                # Now we can safely use the column slice knowing it won't truncate valid data
+                filename = line[FORMAT_SPECS["FILE"]["name"]].strip()
+                params.filenames.append(filename)
+
             else:
                 raise ValueError(f"Invalid line type: {line.strip()}")
 
@@ -188,7 +205,12 @@ class UserResolutionParameters(BaseModel):
             ]
             lines.append("".join(channel_parts))
 
-        # TODO: Add FILE lines if present
+        # Add FILE lines if present
+        for filename in self.filenames:
+            lines.append(f"FILE={filename}")
+
+        # Add required blank line at end per spec
+        lines.append("")
 
         return lines
 
