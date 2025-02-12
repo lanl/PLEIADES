@@ -149,6 +149,10 @@ def test_roundtrip():
     card = BroadeningParameterCard.from_lines(COMPLETE_CARD)
     output_lines = card.to_lines()
 
+    for i, line in enumerate(COMPLETE_CARD):
+        print(f"Original: {line}")
+        print(f"Output:   {output_lines[i]}")
+
     # Parse the output again
     reparsed_card = BroadeningParameterCard.from_lines(output_lines)
 
