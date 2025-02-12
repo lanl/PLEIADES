@@ -2,7 +2,7 @@
 """Top level parameter file handler for SAMMY."""
 
 from enum import Enum, auto
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +10,7 @@ from pleiades.sammy.parameters import (
     BroadeningParameterCard,
     DataReductionCard,
     ExternalREntry,
+    ExternalRFunction,
     IsotopeCard,
     NormalizationBackgroundCard,
     ORRESCard,
@@ -126,6 +127,120 @@ class SammyParameterFile(BaseModel):
 
         # Join all lines with newlines
         return "\n".join(lines)
+
+    @classmethod
+    def _get_card_class_with_header(cls, line: str):
+        """Get card class that matches the header line.
+
+        Args:
+            line: Input line to check
+
+        Returns:
+            tuple: (CardOrder enum, card class) if found, or (None, None)
+        """
+        card_checks = [
+            (CardOrder.BROADENING, BroadeningParameterCard),
+            (CardOrder.DATA_REDUCTION, DataReductionCard),
+            (CardOrder.EXTERNAL_R, ExternalRFunction),
+            (CardOrder.ISOTOPE, IsotopeCard),
+            (CardOrder.NORMALIZATION, NormalizationBackgroundCard),
+            (CardOrder.ORRES, ORRESCard),
+            (CardOrder.RADIUS, RadiusCard),
+            (CardOrder.USER_RESOLUTION, UserResolutionParameters),
+            (CardOrder.UNUSED_CORRELATED, UnusedCorrelatedCard),
+            (CardOrder.PARAMAGNETIC, ParamagneticParameters),
+        ]
+
+        for card_type, card_class in card_checks:
+            if hasattr(card_class, "is_header_line") and card_class.is_header_line(line):
+                return card_type, card_class
+
+        return None, None
+
+    @classmethod
+    def from_string(cls, content: str) -> "SammyParameterFile":
+        """Parse parameter file content into SammyParameterFile object.
+
+        Args:
+            content: String containing parameter file content
+
+        Returns:
+            SammyParameterFile: Parsed parameter file object
+
+        Raises:
+            ValueError: If content format is invalid
+        """
+        lines = content.splitlines()
+        if not lines:
+            raise ValueError("Empty parameter file content")
+
+        params = {}
+        current_card = None
+        card_lines = []
+
+        # Process lines
+        line_idx = 0
+        while line_idx < len(lines):
+            line = lines[line_idx]
+
+            # First non-empty line should be fudge factor
+            if not current_card and line.strip():
+                try:
+                    params["fudge"] = float(line.strip())
+                    line_idx += 1
+                    continue
+                except ValueError:
+                    # Not a fudge factor, try other cards
+                    pass
+
+            # Check for card headers
+            card_type, card_class = cls._get_card_class_with_header(line)
+            if card_class:
+                # Process previous card if exists
+                if current_card and card_lines:
+                    params[CardOrder.get_field_name(current_card)] = cls._parse_card(current_card, card_lines)
+
+                # Start new card
+                current_card = card_type
+                card_lines = [line]
+            else:
+                # Not a header, add to current card if exists
+                if current_card:
+                    card_lines.append(line)
+
+            line_idx += 1
+
+        # Process final card
+        if current_card and card_lines:
+            params[CardOrder.get_field_name(current_card)] = cls._parse_card(current_card, card_lines)
+
+        return cls(**params)
+
+    @classmethod
+    def _parse_card(cls, card_type: CardOrder, lines: List[str]):
+        """Parse a card's lines into the appropriate object."""
+        card_class = cls._get_card_class(card_type)
+        if not card_class:
+            raise ValueError(f"No parser implemented for card type: {card_type}")
+        return card_class.from_lines(lines)
+
+    @classmethod
+    def _get_card_class(cls, card_type: CardOrder):
+        """Get the card class for a given card type."""
+        card_map = {
+            CardOrder.RESONANCE: ResonanceEntry,
+            CardOrder.EXTERNAL_R: ExternalRFunction,
+            CardOrder.BROADENING: BroadeningParameterCard,
+            CardOrder.UNUSED_CORRELATED: UnusedCorrelatedCard,
+            CardOrder.NORMALIZATION: NormalizationBackgroundCard,
+            CardOrder.RADIUS: RadiusCard,
+            CardOrder.DATA_REDUCTION: DataReductionCard,
+            CardOrder.ORRES: ORRESCard,
+            CardOrder.ISOTOPE: IsotopeCard,
+            CardOrder.PARAMAGNETIC: ParamagneticParameters,
+            CardOrder.USER_RESOLUTION: UserResolutionParameters,
+        }
+        return card_map.get(card_type)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from pleiades.sammy.parameters.broadening import BroadeningParameterCard  # noqa: F401
 from pleiades.sammy.parameters.data_reduction import DataReductionCard  # noqa: F401
-from pleiades.sammy.parameters.external_r import ExternalREntry  # noqa: F401
+from pleiades.sammy.parameters.external_r import ExternalREntry, ExternalRFunction  # noqa: F401
 from pleiades.sammy.parameters.isotope import IsotopeCard  # noqa: F401
 from pleiades.sammy.parameters.normalization import NormalizationBackgroundCard  # noqa: F401
 from pleiades.sammy.parameters.orres import ORRESCard  # noqa: F401
