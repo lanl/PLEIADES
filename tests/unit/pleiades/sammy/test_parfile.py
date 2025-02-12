@@ -98,19 +98,20 @@ def test_roundtrip_single_card(single_card_input):
     assert parfile.broadening.parameters.flag_crfn == reparsed.broadening.parameters.flag_crfn
 
 
-# @pytest.mark.parametrize(
-#     "invalid_input,error_pattern",
-#     [
-#         ("", "Empty parameter file content"),
-#         ("abc\n", "Invalid fudge factor"),
-#         ("0.1\nINVALID card header\n", "Invalid card header"),
-#         ("0.1\nBROADening parameters may be varied\nINVALID DATA\n", "Failed to parse parameter line"),
-#     ]
-# )
-# def test_parse_errors(invalid_input, error_pattern):
-#     """Test error handling for invalid inputs."""
-#     with pytest.raises(ValueError, match=error_pattern):
-#         SammyParameterFile.from_string(invalid_input)
+@pytest.mark.parametrize(
+    "invalid_input,error_pattern",
+    [
+        ("", "Empty parameter file content"),
+        ("abc\n", "Invalid content"),
+        ("0.1\nINVALID card header\n", "Invalid content"),
+        ("0.1\nBROADening parameters may be varied\nINVALID DATA\n", "Failed to parse BROADENING card"),
+    ],
+)
+def test_parse_errors(invalid_input, error_pattern):
+    """Test error handling for invalid inputs."""
+    with pytest.raises(ValueError, match=error_pattern):
+        tmp = SammyParameterFile.from_string(invalid_input)
+        print(tmp)
 
 
 if __name__ == "__main__":

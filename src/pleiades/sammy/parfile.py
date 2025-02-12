@@ -207,6 +207,9 @@ class SammyParameterFile(BaseModel):
                 # Not a header, add to current card if exists
                 if current_card:
                     card_lines.append(line)
+                else:
+                    # Line is not numeric, not header, and not part of any card
+                    raise ValueError(f"Invalid content: {line}")
 
             line_idx += 1
 
@@ -222,7 +225,12 @@ class SammyParameterFile(BaseModel):
         card_class = cls._get_card_class(card_type)
         if not card_class:
             raise ValueError(f"No parser implemented for card type: {card_type}")
-        return card_class.from_lines(lines)
+
+        try:
+            return card_class.from_lines(lines)
+        except Exception as e:
+            # Convert any parsing error into ValueError with context
+            raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}") from e
 
     @classmethod
     def _get_card_class(cls, card_type: CardOrder):
