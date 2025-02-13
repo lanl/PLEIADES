@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Top level parameter file handler for SAMMY."""
 
+import pathlib
 from enum import Enum, auto
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +17,7 @@ from pleiades.sammy.parameters import (
     ORRESCard,
     ParamagneticParameters,
     RadiusCard,
-    ResonanceEntry,
+    ResonanceCard,
     UnusedCorrelatedCard,
     UserResolutionParameters,
 )
@@ -82,7 +83,7 @@ class SammyParameterFile(BaseModel):
     # REQUIRED CARDS
     fudge: float = Field(default=0.1, description="Fudge factor for initial uncertainties", ge=0.0, le=1.0)
     # OPTIONAL CARDS
-    resonance: Optional[ResonanceEntry] = Field(None, description="Resonance parameters")
+    resonance: Optional[ResonanceCard] = Field(None, description="Resonance parameters")
     external_r: Optional[ExternalREntry] = Field(None, description="External R matrix parameters")
     broadening: Optional[BroadeningParameterCard] = Field(None, description="Broadening parameters")
     unused_correlated: Optional[UnusedCorrelatedCard] = Field(None, description="Unused but correlated variables")
@@ -117,7 +118,7 @@ class SammyParameterFile(BaseModel):
 
             # Special handling for fudge factor
             if card_type == CardOrder.FUDGE:
-                lines.append(f"{value:10.4f}")
+                lines.append(f"{value:<10.4f}")
                 continue
 
             # For all other cards, use their to_lines() method
@@ -159,63 +160,76 @@ class SammyParameterFile(BaseModel):
 
     @classmethod
     def from_string(cls, content: str) -> "SammyParameterFile":
-        """Parse parameter file content into SammyParameterFile object.
+        """Parse content string into a parameter file object.
 
         Args:
-            content: String containing parameter file content
+            content: Content of the parameter file.
 
         Returns:
-            SammyParameterFile: Parsed parameter file object
-
-        Raises:
-            ValueError: If content format is invalid
+            SammyParameterFile: Parsed parameter file object.
         """
+        # Split content into lines
         lines = content.splitlines()
+
+        # Early exit for empty content
         if not lines:
             raise ValueError("Empty parameter file content")
 
+        # Initialize parameters
         params = {}
-        current_card = None
-        card_lines = []
 
-        # Process lines
-        line_idx = 0
-        while line_idx < len(lines):
-            line = lines[line_idx]
-
-            # First non-empty line should be fudge factor
-            if not current_card and line.strip():
+        # First parse out fudge factor if it exists
+        fudge_idx = None
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped:  # Skip empty lines
                 try:
-                    params["fudge"] = float(line.strip())
-                    line_idx += 1
-                    continue
+                    params["fudge"] = float(stripped)
+                    fudge_idx = i
+                    break
                 except ValueError:
-                    # Not a fudge factor, try other cards
-                    pass
+                    continue
+        # now remove the fudge factor line from the list to simplify grouping
+        # lines into cards
+        if fudge_idx is not None:
+            del lines[fudge_idx]
 
-            # Check for card headers
-            card_type, card_class = cls._get_card_class_with_header(line)
-            if card_class:
-                # Process previous card if exists
-                if current_card and card_lines:
-                    params[CardOrder.get_field_name(current_card)] = cls._parse_card(current_card, card_lines)
+        # Second, partition lines into group of lines based on blank lines
+        card_groups = []
+        current_group = []
 
-                # Start new card
-                current_card = card_type
-                card_lines = [line]
+        for line in lines:
+            if line.strip():
+                current_group.append(line)
             else:
-                # Not a header, add to current card if exists
-                if current_card:
-                    card_lines.append(line)
-                else:
-                    # Line is not numeric, not header, and not part of any card
-                    raise ValueError(f"Invalid content: {line}")
+                if current_group:  # Only add non-empty groups
+                    card_groups.append(current_group)
+                    current_group = []
 
-            line_idx += 1
+        if current_group:  # Don't forget last group
+            card_groups.append(current_group)
 
-        # Process final card
-        if current_card and card_lines:
-            params[CardOrder.get_field_name(current_card)] = cls._parse_card(current_card, card_lines)
+        # Process each group of lines
+        for group in card_groups:
+            if not group:  # Skip empty groups
+                continue
+
+            # Check first line for header to determine card type
+            card_type, card_class = cls._get_card_class_with_header(group[0])
+
+            if card_class:
+                # Process card with header
+                try:
+                    params[CardOrder.get_field_name(card_type)] = card_class.from_lines(group)
+                except Exception as e:
+                    raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}")
+            else:
+                # No header - check if it's a resonance table
+                try:
+                    # Try parsing as resonance table
+                    params["resonance"] = ResonanceCard.from_lines(group)
+                except Exception as e:
+                    raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
 
         return cls(**params)
 
@@ -229,6 +243,8 @@ class SammyParameterFile(BaseModel):
         try:
             return card_class.from_lines(lines)
         except Exception as e:
+            print(card_type)
+            print(lines)
             # Convert any parsing error into ValueError with context
             raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}") from e
 
@@ -236,7 +252,7 @@ class SammyParameterFile(BaseModel):
     def _get_card_class(cls, card_type: CardOrder):
         """Get the card class for a given card type."""
         card_map = {
-            CardOrder.RESONANCE: ResonanceEntry,
+            CardOrder.RESONANCE: ResonanceCard,
             CardOrder.EXTERNAL_R: ExternalRFunction,
             CardOrder.BROADENING: BroadeningParameterCard,
             CardOrder.UNUSED_CORRELATED: UnusedCorrelatedCard,
@@ -249,6 +265,55 @@ class SammyParameterFile(BaseModel):
             CardOrder.USER_RESOLUTION: UserResolutionParameters,
         }
         return card_map.get(card_type)
+
+    @classmethod
+    def from_file(cls, filepath: Union[str, pathlib.Path]) -> "SammyParameterFile":
+        """Read parameter file from disk.
+
+        Args:
+            filepath: Path to parameter file
+
+        Returns:
+            SammyParameterFile: Parsed parameter file object
+
+        Raises:
+            FileNotFoundError: If file does not exist
+            ValueError: If file content is invalid
+        """
+        filepath = pathlib.Path(filepath)
+        if not filepath.exists():
+            raise FileNotFoundError(f"Parameter file not found: {filepath}")
+
+        try:
+            content = filepath.read_text()
+            return cls.from_string(content)
+        except UnicodeDecodeError as e:
+            raise ValueError(f"Failed to read parameter file - invalid encoding: {e}")
+        except Exception as e:
+            raise ValueError(f"Failed to parse parameter file: {e}")
+
+    def to_file(self, filepath: Union[str, pathlib.Path]) -> None:
+        """Write parameter file to disk.
+
+        Args:
+            filepath: Path to write parameter file
+
+        Raises:
+            OSError: If file cannot be written
+            ValueError: If content cannot be formatted
+        """
+        filepath = pathlib.Path(filepath)
+
+        # Create parent directories if they don't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            content = self.to_string()
+            filepath.write_text(content)
+        except OSError as e:
+            raise OSError(f"Failed to write parameter file: {e}")
+        except Exception as e:
+            raise ValueError(f"Failed to format parameter file content: {e}")
 
 
 if __name__ == "__main__":
