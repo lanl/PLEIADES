@@ -727,8 +727,8 @@ class RadiusCardKeyword(BaseModel):
 
             elif key == "flags":
                 if isinstance(value, list):
-                    params["vary_effective"] = VaryFlag(value[0])
-                    params["vary_true"] = VaryFlag(value[1])
+                    params["vary_effective"] = VaryFlag(int(value[0]))
+                    params["vary_true"] = VaryFlag(int(value[1]))
                 else:
                     params["vary_effective"] = VaryFlag(value)
                     params["vary_true"] = VaryFlag(value)
