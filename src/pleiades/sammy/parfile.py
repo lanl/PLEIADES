@@ -214,14 +214,8 @@ class SammyParameterFile(BaseModel):
             if not group:  # Skip empty groups
                 continue
 
-            for line in group:
-                print(line)
-
             # Check first line for header to determine card type
             card_type, card_class = cls._get_card_class_with_header(group[0])
-
-            print(card_type, card_class)
-            print("-----")
 
             if card_class:
                 # Process card with header
