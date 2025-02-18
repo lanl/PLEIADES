@@ -229,6 +229,9 @@ class SammyParameterFile(BaseModel):
                     # Try parsing as resonance table
                     params["resonance"] = ResonanceCard.from_lines(group)
                 except Exception as e:
+                    print(f"Failed to parse card without header: {str(e)}")
+                    print(f"Line: {group[0]}")
+                    print(f"Lines: {group}")
                     raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
 
         return cls(**params)
