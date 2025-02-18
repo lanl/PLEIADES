@@ -2,7 +2,7 @@
 """Data class for card 01::resonance."""
 
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -133,6 +133,58 @@ class ResonanceEntry(BaseModel):
             line = f"{line[:slice_obj.start]}{formatted_value}{line[slice_obj.stop:]}"
 
         return line.rstrip()
+
+
+class ResonanceCard(BaseModel):
+    """Container for a complete set of resonance entries (Card Set 1).
+
+    Card Set 1 is unique as it has no header, contains multiple resonance entries,
+    and is terminated by a blank line.
+
+    Attributes:
+        entries: List of resonance parameter entries
+    """
+
+    entries: List[ResonanceEntry] = Field(default_factory=list)
+
+    @classmethod
+    def from_lines(cls, lines: List[str]) -> "ResonanceCard":
+        """Parse resonance entries from lines.
+
+        Args:
+            lines: List of resonance entry lines
+
+        Returns:
+            ResonanceCard: Container with parsed entries
+
+        Raises:
+            ValueError: If any line cannot be parsed as a resonance entry
+        """
+        entries = []
+        for line in lines:
+            if line.strip():  # Skip blank lines
+                try:
+                    entry = ResonanceEntry.from_str(line)
+                    entries.append(entry)
+                except Exception as e:
+                    raise ValueError(f"Failed to parse resonance entry: {str(e)}\nLine: {line}")
+
+        if not entries:
+            raise ValueError("No valid resonance entries found")
+
+        return cls(entries=entries)
+
+    def to_lines(self) -> List[str]:
+        """Convert entries to fixed-width format lines.
+
+        Returns:
+            List[str]: Formatted lines including blank terminator
+        """
+        lines = []
+        for entry in self.entries:
+            lines.append(entry.to_str())
+        lines.append("")  # Blank line terminator
+        return lines
 
 
 if __name__ == "__main__":

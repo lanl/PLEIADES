@@ -200,6 +200,9 @@ class BroadeningParameters(BaseModel):
             format_float(self.deltal, width=9),
             format_float(self.deltag, width=9),
             format_float(self.deltae, width=9),
+        ]
+        main_seg = " ".join(main_parts)
+        flag_parts = [
             format_vary(self.flag_crfn),
             format_vary(self.flag_temp),
             format_vary(self.flag_thick),
@@ -207,31 +210,32 @@ class BroadeningParameters(BaseModel):
             format_vary(self.flag_deltag),
             format_vary(self.flag_deltae),
         ]
-        lines.append(" ".join(main_parts))
+        flag_seg = " ".join(flag_parts)
+        main_line = f"{main_seg}  {flag_seg}"
+        lines.append(main_line)
 
         # Add uncertainties line if any uncertainties are present
         if any(getattr(self, f"d_{param}") is not None for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]):
             unc_parts = [
-                format_float(getattr(self, f"d_{param}", 0.0), width=10)
-                for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]
+                format_float(getattr(self, f"d_{param}", 0.0), width=9) for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]
             ]
-            lines.append("".join(unc_parts))
+            lines.append(" ".join(unc_parts))
 
         # Add Gaussian parameters if present
         if self.deltc1 is not None and self.deltc2 is not None:
             gaussian_parts = [
-                format_float(self.deltc1, width=10),
-                format_float(self.deltc2, width=10),
-                " " * 50,  # Padding
+                format_float(self.deltc1, width=9),
+                format_float(self.deltc2, width=9),
+                " " * 40,  # Padding
                 format_vary(self.flag_deltc1),
                 format_vary(self.flag_deltc2),
             ]
-            lines.append("".join(gaussian_parts))
+            lines.append(" ".join(gaussian_parts))
 
             # Add Gaussian uncertainties if present
             if self.d_deltc1 is not None or self.d_deltc2 is not None:
-                gaussian_unc_parts = [format_float(self.d_deltc1 or 0.0, width=10), format_float(self.d_deltc2 or 0.0, width=10)]
-                lines.append("".join(gaussian_unc_parts))
+                gaussian_unc_parts = [format_float(self.d_deltc1 or 0.0, width=9), format_float(self.d_deltc2 or 0.0, width=9)]
+                lines.append(" ".join(gaussian_unc_parts))
 
         return lines
 

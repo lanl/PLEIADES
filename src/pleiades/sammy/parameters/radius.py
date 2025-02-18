@@ -727,8 +727,8 @@ class RadiusCardKeyword(BaseModel):
 
             elif key == "flags":
                 if isinstance(value, list):
-                    params["vary_effective"] = VaryFlag(value[0])
-                    params["vary_true"] = VaryFlag(value[1])
+                    params["vary_effective"] = VaryFlag(int(value[0]))
+                    params["vary_true"] = VaryFlag(int(value[1]))
                 else:
                     params["vary_effective"] = VaryFlag(value)
                     params["vary_true"] = VaryFlag(value)
@@ -855,6 +855,27 @@ class RadiusCard(BaseModel):
     absolute_uncertainty: Optional[float] = None
 
     @classmethod
+    def is_header_line(cls, line: str) -> bool:
+        """Check if line is a valid radius parameter header line.
+
+        Args:
+            line: Input line to check
+
+        Returns:
+            bool: True if line matches any valid radius header format
+        """
+        line_upper = line.strip().upper()
+
+        # Check all valid header formats
+        valid_headers = [
+            "RADIUS PARAMETERS FOLLOW",  # Standard/Alternate fixed width
+            "RADII ARE IN KEY-WORD FORMAT",  # Keyword format
+            "CHANNEL RADIUS PARAMETERS FOLLOW",  # Alternative keyword format
+        ]
+
+        return any(header in line_upper for header in valid_headers)
+
+    @classmethod
     def detect_format(cls, lines: List[str]) -> RadiusFormat:
         """Detect format from input lines."""
         if not lines:
@@ -891,7 +912,7 @@ class RadiusCard(BaseModel):
         else:
             return cls(parameters=RadiusCardDefault.from_lines(lines).parameters)
 
-    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.DEFAULT) -> List[str]:
+    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.KEYWORD) -> List[str]:
         """Write radius card in specified format."""
         if radius_format == RadiusFormat.KEYWORD:
             return RadiusCardKeyword(
