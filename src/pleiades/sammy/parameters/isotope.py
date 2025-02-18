@@ -354,10 +354,9 @@ class IsotopeCard(BaseModel):
             line: Input line to check
 
         Returns:
-            bool: True if line matches any valid header format
+            bool: True if the first 5 characters of the line are 'ISOTO'
         """
-        line_upper = line.strip().upper()
-        return any(header.upper() in line_upper for header in CARD_10_HEADERS)
+        return line.strip().upper().startswith("ISOTO")
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> "IsotopeCard":
