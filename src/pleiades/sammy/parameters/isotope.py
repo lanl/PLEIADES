@@ -33,6 +33,8 @@ Cols    Format  Variable    Description
 41-45   I       IGRISO     Second spin group number
 ...etc for up to 9 groups per line
 
+NOTE: the extended format is currently not supported with pleiades.
+
 Continuation lines are indicated by "-1" in columns 79-80 (standard format)
 or column 80 (extended format). These lines contain only additional spin
 group numbers in the same format as the parent line.
@@ -54,10 +56,19 @@ from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary
 # Format definitions for standard format (<99 spin groups)
 # Each numeric field has specific width requirements
 FORMAT_STANDARD = {
-    "mass": slice(0, 10),  # AMUISO: Atomic mass (amu)
-    "abundance": slice(10, 20),  # PARISO: Fractional abundance
-    "uncertainty": slice(20, 30),  # DELISO: Uncertainty on abundance
-    "flag": slice(30, 32),  # IFLISO: Treatment flag
+    "mass": slice(0, 10),           # AMUISO: Atomic mass (amu)
+    "abundance": slice(10, 20),     # PARISO: Fractional abundance
+    "uncertainty": slice(20, 30),   # DELISO: Uncertainty on abundance
+    "flag": slice(30, 32),          # IFLISO: Treatment flag
+}
+
+# Spin group number positions
+# Standard format: 2 columns per group starting at col 33
+SPIN_GROUP_STANDARD = {
+    "width": 2,                     # Character width of each group number
+    "start": 32,                    # Start of first group
+    "per_line": 24,                 # Max groups per line
+    "cont_marker": slice(78, 80),   # "-1" indicates continuation
 }
 
 # Format for extended format (>99 spin groups)
@@ -66,16 +77,6 @@ FORMAT_EXTENDED = {
     "abundance": slice(10, 20),  # PARISO: Fractional abundance
     "uncertainty": slice(20, 30),  # DELISO: Uncertainty on abundance
     "flag": slice(30, 35),  # IFLISO: Treatment flag
-}
-
-# Spin group number positions
-# Standard format: 2 columns per group starting at col 33
-# Extended format: 5 columns per group starting at col 36
-SPIN_GROUP_STANDARD = {
-    "width": 2,
-    "start": 32,
-    "per_line": 24,  # Max groups per line
-    "cont_marker": slice(78, 80),  # "-1" indicates continuation
 }
 
 SPIN_GROUP_EXTENDED = {
@@ -177,8 +178,9 @@ class IsotopeParameters(BaseModel):
         if not lines or not lines[0].strip():
             raise ValueError("No valid parameter line provided")
 
-        # Parse main parameters from first line
-        format_dict = FORMAT_EXTENDED if extended else FORMAT_STANDARD
+        # Set format to standard. 
+        format_dict = FORMAT_STANDARD # NOTE: EXTENDED format is currently not supported.
+
         main_line = f"{lines[0]:<80}"  # Pad to full width
 
         params = {}
@@ -195,6 +197,7 @@ class IsotopeParameters(BaseModel):
 
         # Parse flag
         flag_str = main_line[format_dict["flag"]].strip() or "0"
+
         try:
             params["flag"] = VaryFlag(int(flag_str))
         except (ValueError, TypeError):
@@ -202,7 +205,7 @@ class IsotopeParameters(BaseModel):
 
         # Parse spin groups
         spin_groups = []
-        group_format = SPIN_GROUP_EXTENDED if extended else SPIN_GROUP_STANDARD
+        group_format = SPIN_GROUP_STANDARD #NOTE: EXTENDED format is currently not supported.
 
         # Helper function to parse groups from a line
         def parse_groups(line: str, start_pos: int = None, continuation: bool = False) -> List[int]:
@@ -216,6 +219,7 @@ class IsotopeParameters(BaseModel):
             Returns:
                 List of parsed group numbers
             """
+
             groups = []
             pos = start_pos if start_pos is not None else group_format["start"]
 
@@ -233,6 +237,7 @@ class IsotopeParameters(BaseModel):
                     if group is not None:
                         groups.append(group)
                 pos += width
+
             return groups
 
         # Parse groups from first line
@@ -246,6 +251,7 @@ class IsotopeParameters(BaseModel):
             spin_groups.extend(parse_groups(line, start_pos=0, continuation=True))
 
         params["spin_groups"] = spin_groups
+        
         return cls(**params)
 
     def to_lines(self, extended: bool = False) -> List[str]:
@@ -318,6 +324,9 @@ class IsotopeCard(BaseModel):
         isotopes (List[IsotopeParameters]): List of isotope parameter sets
         extended (bool): Whether to use extended format for >99 spin groups
 
+    NOTE: Fixed formats for both standard and extended are defined in the IsotopeParameters class.
+
+
     Example:
         >>> lines = [
         ...     "ISOTOpic abundances and masses",
@@ -330,21 +339,6 @@ class IsotopeCard(BaseModel):
 
     isotopes: List[IsotopeParameters] = Field(default_factory=list)
     extended: bool = Field(default=False, description="Use extended format for >99 spin groups")
-
-    @model_validator(mode="after")
-    def validate_abundances(self) -> "IsotopeCard":
-        """Validate that total abundance doesn't exceed 1.0.
-
-        Returns:
-            IsotopeCard: Self if validation passes
-
-        Raises:
-            ValueError: If total abundance > 1.0
-        """
-        total = sum(iso.abundance for iso in self.isotopes)
-        if total > 1.0:
-            raise ValueError(f"Total abundance {total} exceeds 1.0")
-        return self
 
     @classmethod
     def is_header_line(cls, line: str) -> bool:
@@ -385,28 +379,22 @@ class IsotopeCard(BaseModel):
 
         # Check if we need extended format
         extended = False
-        for line in content_lines:
-            # Look for any spin group number > 99 in the data
-            numbers = [int(n) for n in line.split() if n.strip().isdigit()]
-            if any(abs(n) > 99 for n in numbers):
-                extended = True
-                break
 
         # Parse isotopes
         isotopes = []
         current_lines = []
 
         for line in content_lines:
-            # If line starts with a number, it's a new isotope
-            if line.strip() and line[0].isdigit():
-                if current_lines:
-                    isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
-                current_lines = []
-            current_lines.append(line)
 
-        # Don't forget the last isotope
-        if current_lines:
-            isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
+            current_lines.append(line)
+            
+            # check if characters 79-80 is a "-1". this means that there are more spin groups in the next line.
+            if line[78:80] == "-1": continue
+            
+            # Otherwise the are no more lines for spin groups, so process the current lines.
+            else:
+                isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
+                current_lines = []
 
         return cls(isotopes=isotopes, extended=extended)
 
