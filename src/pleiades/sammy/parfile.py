@@ -323,10 +323,11 @@ class SammyParameterFile(BaseModel):
                 value = getattr(self, field_name)
                 if value is not None:
                     print(f"{field_name}:")
-                    if card_type == CardOrder.FUDGE:
-                        print(f"  Fudge factor: {value}")
+                    if isinstance(value, list):
+                        for index, item in enumerate(value):
+                            print(f"  {field_name}[{index}]: {item}")
                     else:
-                        print(value)
+                        print(f"  {value}")
 
 if __name__ == "__main__":
     print("TODO: usage example for SAMMY parameter file handling")
