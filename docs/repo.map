@@ -1,89 +1,77 @@
 PLEIADES
-├── LICENSE
-├── pleiades.egg-info
-├── scripts
-├── pleiades
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── utils
-│   ├── __pycache__
-│   ├── core
-│   │   ├── transmission.py
-│   │   ├── constants.py
-│   │   ├── __init__.py
-│   │   ├── models.py
-│   │   ├── data_manager.py
-│   │   └── __pycache__
-│   ├── sammy
-│   │   ├── interface.py
-│   │   ├── config.py
-│   │   ├── __init__.py
-│   │   ├── factory.py
-│   │   ├── parfile.py
-│   │   ├── backends
-│   │   │   ├── nova_ornl.py
-│   │   │   ├── __init__.py
-│   │   │   ├── local.py
-│   │   │   ├── docker.py
-│   │   │   └── __pycache__
-│   │   ├── parameters
-│   │   │   ├── unused_var.py
-│   │   │   ├── paramagnetic.py
-│   │   │   ├── orres.py
-│   │   │   ├── normalization.py
-│   │   │   ├── misc.py
-│   │   │   ├── helper.py
-│   │   │   ├── external_r.py
-│   │   │   ├── data_reduction.py
-│   │   │   ├── user_resolution.py
-│   │   │   ├── resonance.py
-│   │   │   ├── resolution.py
-│   │   │   ├── radius.py
-│   │   │   ├── last.py
-│   │   │   ├── det_efficiency.py
-│   │   │   ├── broadening.py
-│   │   │   ├── background.py
-│   │   │   ├── __init__.py
-│   │   │   ├── isotope.py
-│   │   │   └── __pycache__
-│   │   └── __pycache__
-│   └── data
-├── examples
-├── environment.yaml
-├── docs
-│   └── repo.map
 ├── .readthedocs.yaml
 ├── .gitignore
-├── .github
-├── legacy
-├── src
-│   └── pleiades
+├── .pre-commit-config.yaml
 ├── pyproject.toml
 ├── poetry.lock
-├── paper
-├── tests
-│   ├── unit
-│   │   ├── pleiades
-│   │   ├── conftest.py
-│   │   └── __pycache__
-│   ├── data
-│   │   ├── config
-│   │   ├── ex012
-│   │   └── __pycache__
-│   └── __pycache__
+├── LICENSE
+├── environment.yaml
+├── pleiades.egg-info
 ├── README.rst
-├── .pre-commit-config.yaml
-├── notebook
-│   ├── sammy.param
-│   │   ├── example.ipynb
-│   │   └── __pycache__
-│   ├── samexm
-│   │   ├── ex012
-│   │   │   ├── ex012.ipynb
-│   │   │   ├── ex012a.par
-│   │   ├── ex027
-│   │   │   ├── ex027a.endf
-│   │   └── __pycache__
-│   └── __pycache__
-├── .git
-└── ..
+├── src/
+│   └── pleiades
+|       ├── __init__.py
+|       ├── __main__.py
+|       ├── utils/
+|       ├── data/
+|       |   ├── cross-sections/
+|       |   ├── isotopes/
+|       |   └── resonances/
+|       ├── core/
+|       │   ├── transmission.py
+|       │   ├── constants.py
+|       │   ├── __init__.py
+|       │   ├── models.py
+|       │   └── data_manager.py
+|       └── sammy/
+|           ├── interface.py
+|           ├── config.py
+|           ├── __init__.py
+|           ├── factory.py
+|           ├── parfile.py
+|           ├── backends/  
+|           │   ├── nova_ornl.py
+|           │   ├── __init__.py
+|           │   ├── local.py
+|           │   └── docker.py
+|           └── parameters/
+|               ├── unused_var.py
+|               ├── paramagnetic.py
+|               ├── orres.py
+|               ├── normalization.py
+|               ├── misc.py
+|               ├── helper.py
+|               ├── external_r.py
+|               ├── data_reduction.py
+|               ├── user_resolution.py
+|               ├── resonance.py
+|               ├── resolution.py
+|               ├── radius.py
+|               ├── last.py
+|               ├── det_efficiency.py
+|               ├── broadening.py
+|               ├── background.py
+|               ├── __init__.py
+|               └── isotope.py
+├── examples/
+├── scripts/
+├── docs/
+│   └── repo.map
+├── legacy/
+├── paper/
+├── tests/
+│   ├── unit/
+│   │   ├── pleiades
+│   │   └── conftest.py
+│   └── data/
+│       ├── config
+│       └── ex012 
+└── notebook/
+    ├── sammy.param/
+    │   └── example.ipynb
+    └── samexm/
+        ├── ex012/
+        │   ├── ex012.ipynb
+        │   └── ex012a.par
+        └── ex027/
+            └── ex027a.endf
