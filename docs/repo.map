@@ -74,5 +74,16 @@ PLEIADES
 ├── README.rst
 ├── .pre-commit-config.yaml
 ├── notebook
+│   ├── sammy.param
+│   │   ├── example.ipynb
+│   │   └── __pycache__
+│   ├── samexm
+│   │   ├── ex012
+│   │   │   ├── ex012.ipynb
+│   │   │   ├── ex012a.par
+│   │   ├── ex027
+│   │   │   ├── ex027a.endf
+│   │   └── __pycache__
+│   └── __pycache__
 ├── .git
 └── ..
