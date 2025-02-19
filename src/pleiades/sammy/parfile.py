@@ -80,9 +80,8 @@ class SammyParameterFile(BaseModel):
     combinations of cards based on the analysis needs.
     """
 
-    # REQUIRED CARDS
-    fudge: float = Field(default=0.1, description="Fudge factor for initial uncertainties", ge=0.0, le=1.0)
-    # OPTIONAL CARDS
+    # CARDS for parameter file object
+    fudge: Optional[float] = Field(None, description="Fudge factor for initial uncertainties", ge=0.0, le=1.0)
     resonance: Optional[ResonanceCard] = Field(None, description="Resonance parameters")
     external_r: Optional[ExternalREntry] = Field(None, description="External R matrix parameters")
     broadening: Optional[BroadeningParameterCard] = Field(None, description="Broadening parameters")
@@ -93,7 +92,6 @@ class SammyParameterFile(BaseModel):
     orres: Optional[ORRESCard] = Field(None, description="ORRES card parameters")
     paramagnetic: Optional[ParamagneticParameters] = Field(None, description="Paramagnetic parameters")
     user_resolution: Optional[UserResolutionParameters] = Field(None, description="User-defined resolution function parameters")
-    # TODO: Need to verify by Sammy experts on whether the following are mandatory or optional
     isotope: Optional[IsotopeCard] = Field(None, description="Isotope parameters")
 
     def to_string(self) -> str:
@@ -178,22 +176,6 @@ class SammyParameterFile(BaseModel):
         # Initialize parameters
         params = {}
 
-        # First parse out fudge factor if it exists
-        fudge_idx = None
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped:  # Skip empty lines
-                try:
-                    params["fudge"] = float(stripped)
-                    fudge_idx = i
-                    break
-                except ValueError:
-                    continue
-        # now remove the fudge factor line from the list to simplify grouping
-        # lines into cards
-        if fudge_idx is not None:
-            del lines[fudge_idx]
-
         # Second, partition lines into group of lines based on blank lines
         card_groups = []
         current_group = []
@@ -202,16 +184,19 @@ class SammyParameterFile(BaseModel):
             if line.strip():
                 current_group.append(line)
             else:
-                if current_group:  # Only add non-empty groups
+                # Only add non-empty groups
+                if current_group:  
                     card_groups.append(current_group)
                     current_group = []
 
-        if current_group:  # Don't forget last group
-            card_groups.append(current_group)
+        # Don't forget last group
+        if current_group: card_groups.append(current_group)
 
         # Process each group of lines
         for group in card_groups:
-            if not group:  # Skip empty groups
+            
+            # Skip empty groups
+            if not group:  
                 continue
 
             # Check first line for header to determine card type
@@ -222,15 +207,23 @@ class SammyParameterFile(BaseModel):
                 try:
                     params[CardOrder.get_field_name(card_type)] = card_class.from_lines(group)
                 except Exception as e:
-                    raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}")
+                    raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
             else:
-                # No header - check if it's a resonance table
-                try:
-                    # Try parsing as resonance table
-                    params["resonance"] = ResonanceCard.from_lines(group)
-                except Exception as e:
-                    print(f"Failed to parse card without header: {str(e)}")
-                    raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
+
+                # check if group if fudge factor
+                if len(group) == 1:
+                    try:
+                        params["fudge"] = float(group[0])
+                    except ValueError as e:
+                        raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
+                else:
+                    #check if it's a resonance table
+                    try:
+                        # Try parsing as resonance table
+                        params["resonance"] = ResonanceCard.from_lines(group)
+                    except Exception as e:
+                        print(f"Failed to parse card without header: {str(e)}")
+                        raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
 
         return cls(**params)
 
@@ -247,7 +240,7 @@ class SammyParameterFile(BaseModel):
             print(card_type)
             print(lines)
             # Convert any parsing error into ValueError with context
-            raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}") from e
+            raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\n") from e
 
     @classmethod
     def _get_card_class(cls, card_type: CardOrder):
@@ -291,7 +284,7 @@ class SammyParameterFile(BaseModel):
         except UnicodeDecodeError as e:
             raise ValueError(f"Failed to read parameter file - invalid encoding: {e}")
         except Exception as e:
-            raise ValueError(f"Failed to parse parameter file: {e}")
+            raise ValueError(f"Failed to parse parameter file: {filepath}\n {e}")
 
     def to_file(self, filepath: Union[str, pathlib.Path]) -> None:
         """Write parameter file to disk.
@@ -316,6 +309,24 @@ class SammyParameterFile(BaseModel):
         except Exception as e:
             raise ValueError(f"Failed to format parameter file content: {e}")
 
+    def print_parameters(self) -> None:
+        """Print the details of the parameter file."""
+        print("Sammy Parameter File Details:")
+
+        # check if any cards are present
+        if all(value is None for value in self.dict().values()):
+            print("No cards present in the parameter file.")
+            return
+        else:
+            for card_type in CardOrder:
+                field_name = CardOrder.get_field_name(card_type)
+                value = getattr(self, field_name)
+                if value is not None:
+                    print(f"{field_name}:")
+                    if card_type == CardOrder.FUDGE:
+                        print(f"  Fudge factor: {value}")
+                    else:
+                        print(value)
 
 if __name__ == "__main__":
     print("TODO: usage example for SAMMY parameter file handling")
