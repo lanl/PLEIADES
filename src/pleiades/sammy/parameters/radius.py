@@ -18,14 +18,46 @@ from pleiades.utils.logger import Logger, _log_and_raise_error, get_current_clas
 log_file_path = os.path.join(os.getcwd(), 'pleiades-par.log')
 logger = Logger(__name__, log_file=log_file_path)
 
-class OrbitalMomentum(str, Enum):
-    """Valid values for orbital angular momentum specification."""
+####################################################################################################
+# Header flages and format definitions
+####################################################################################################
+CARD_7_HEADER = "RADIUs parameters follow"
+CARD_7A_HEADER = "RADII are in KEY-WORD format"
+CARD_7_ALT_HEADER = "RADIUs parameters follow"
 
-    ODD = "ODD"
-    EVEN = "EVEN"
-    ALL = "ALL"
+# Format definitions for fixed-width fields
+FORMAT_DEFAULT = {
+    "pareff": slice(0, 10),  # Effective radius (Fermi)
+    "partru": slice(10, 20),  # True radius (Fermi)
+    "ichan": slice(20, 21),  # Channel indicator
+    "ifleff": slice(21, 22),  # Flag for PAREFF
+    "ifltru": slice(22, 24),  # Flag for PARTRU
+    # Spin groups start at col 24, 2 cols each
+    # After IX=0 marker, channel numbers use 2 cols each
+}
+
+# Format definitions for fixed-width fields
+FORMAT_ALTERNATE = {
+    "pareff": slice(0, 10),  # Radius for potential scattering
+    "partru": slice(10, 20),  # Radius for penetrabilities
+    "ichan": slice(20, 25),  # Channel indicator (5 cols)
+    "ifleff": slice(25, 30),  # Flag for PAREFF (5 cols)
+    "ifltru": slice(30, 35),  # Flag for PARTRU (5 cols)
+    # Spin groups start at col 35, 5 cols each
+    # After IX=0 marker, channel numbers use 5 cols each
+}
+
+class RadiusFormat(Enum):
+    """Supported formats for radius parameter cards."""
+
+    DEFAULT = "default"  # Fixed width (<99 spin groups)
+    ALTERNATE = "alternate"  # Fixed width (>=99 spin groups)
+    KEYWORD = "keyword"  # Keyword based
 
 
+####################################################################################################
+# RadiusParameters class and its corresponding Container class
+####################################################################################################
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters used in SAMMY calculations.
 
@@ -192,22 +224,51 @@ class RadiusParameters(BaseModel):
 
         return self
 
-
-# Format definitions for fixed-width fields
-FORMAT_DEFAULT = {
-    "pareff": slice(0, 10),  # Effective radius (Fermi)
-    "partru": slice(10, 20),  # True radius (Fermi)
-    "ichan": slice(20, 21),  # Channel indicator
-    "ifleff": slice(21, 22),  # Flag for PAREFF
-    "ifltru": slice(22, 24),  # Flag for PARTRU
-    # Spin groups start at col 24, 2 cols each
-    # After IX=0 marker, channel numbers use 2 cols each
-}
-
-CARD_7_HEADER = "RADIUs parameters follow"
-
+    def __repr__(self) -> str:
+        """Return a string representation of the radius parameters."""
+        return (
+            f"RadiusParameters("
+            f"effective_radius={self.effective_radius}, "
+            f"true_radius={self.true_radius}, "
+            f"channel_mode={self.channel_mode}, "
+            f"vary_effective={self.vary_effective}, "
+            f"vary_true={self.vary_true}, "
+            f"spin_groups={self.spin_groups}, "
+            f"channels={self.channels})"
+        )
 
 
+class RadiusParametersContainer:
+    """Container for multiple RadiusParameters entries."""
+
+    def __init__(self):
+        self.entries = []
+
+    def add_parameters(self, params: RadiusParameters):
+        """Add a RadiusParameters entry to the container."""
+        self.entries.append(params)
+
+    def remove_parameters(self, index: int):
+        """Remove a RadiusParameters entry from the container by index."""
+        if 0 <= index < len(self.entries):
+            self.entries.pop(index)
+        else:
+            raise IndexError("Index out of range")
+
+    def print_all_parameters(self):
+        """Print all RadiusParameters entries in the container."""
+        for i, params in enumerate(self.entries):
+            print(f"Entry {i + 1}:")
+            print(params)
+            print()
+
+    def __repr__(self) -> str:
+        """Return a string representation of the container."""
+        return f"RadiusParametersContainer(entries={self.entries})"
+
+####################################################################################################
+# Card variant classes for different formats (default, alternate, keyword)
+####################################################################################################
 class RadiusCardDefault(BaseModel):
     """Handler for default format radius parameter cards (Card Set 7).
 
@@ -436,20 +497,6 @@ class RadiusCardDefault(BaseModel):
         return lines
 
 
-# Format definitions for fixed-width fields
-FORMAT_ALTERNATE = {
-    "pareff": slice(0, 10),  # Radius for potential scattering
-    "partru": slice(10, 20),  # Radius for penetrabilities
-    "ichan": slice(20, 25),  # Channel indicator (5 cols)
-    "ifleff": slice(25, 30),  # Flag for PAREFF (5 cols)
-    "ifltru": slice(30, 35),  # Flag for PARTRU (5 cols)
-    # Spin groups start at col 35, 5 cols each
-    # After IX=0 marker, channel numbers use 5 cols each
-}
-
-CARD_7_ALT_HEADER = "RADIUs parameters follow"
-
-
 class RadiusCardAlternate(BaseModel):
     """Handler for alternate format radius parameter cards (Card Set 7 alternate).
 
@@ -664,9 +711,6 @@ class RadiusCardAlternate(BaseModel):
         return lines
 
 
-CARD_7A_HEADER = "RADII are in KEY-WORD format"
-
-
 class RadiusCardKeyword(BaseModel):
     """Handler for keyword-based radius parameter cards (Card Set 7a).
 
@@ -839,14 +883,9 @@ class RadiusCardKeyword(BaseModel):
         return lines
 
 
-class RadiusFormat(Enum):
-    """Supported formats for radius parameter cards."""
-
-    DEFAULT = "default"  # Fixed width (<99 spin groups)
-    ALTERNATE = "alternate"  # Fixed width (>=99 spin groups)
-    KEYWORD = "keyword"  # Keyword based
-
-
+####################################################################################################
+# RadiusCard Class (what is called in parfile.py)
+####################################################################################################
 class RadiusCard(BaseModel):
     """Main handler for SAMMY radius parameter cards.
 
@@ -889,10 +928,10 @@ class RadiusCard(BaseModel):
             bool: True if line matches any valid radius header format
         """
         # set location for logger
-        location = "RadiusCard.is_header_line()"
+        where_am_i = "RadiusCard.is_header_line()"
         line_upper = line.strip().upper()
 
-        logger.debug(f"{location}: {line_upper}")
+        logger.debug(f"{where_am_i}: {line_upper}")
 
         # Check all valid header formats
         valid_headers = [
@@ -906,26 +945,27 @@ class RadiusCard(BaseModel):
     @classmethod
     def detect_format(cls, lines: List[str]) -> RadiusFormat:
         """Detect format from input lines."""
+        where_am_i = "RadiusCard.detect_format()"
         if not lines:
             _log_and_raise_error(logger, "No lines provided", ValueError)
 
         # Grab header from lines (suppose to be the first line)
         header = lines[0].strip().upper()
-        logger.debug(f"RadiusCard.detect_format(): Header line: {header}")
+        logger.debug(f"{where_am_i}: Header line: {header}")
 
         if "KEY-WORD" in header:
-            logger.info("RadiusCard.detect_format(): Detected keyword format")
+            logger.info(f"{where_am_i}: Detected keyword format")
             return RadiusFormat.KEYWORD
         elif "RADIU" in header:
             # Check format by examining spin group columns
             content_line = next((l for l in lines[1:] if l.strip()), "")  # noqa: E741
-            logger.debug(f"RadiusCard.detect_format(): Content line: {content_line}")
+            logger.debug(f"{where_am_i}: Content line: {content_line}")
 
             if len(content_line) >= 35 and content_line[25:30].strip():  # 5-col format
-                logger.info("RadiusCard.detect_format(): Detected alternate format")
+                logger.info(f"{where_am_i}: Detected alternate format")
                 return RadiusFormat.ALTERNATE
             
-            logger.info("RadiusCard.detect_format(): Detected default format")
+            logger.info(f"{where_am_i}: Detected default format")
             return RadiusFormat.DEFAULT
 
         _log_and_raise_error(logger, "Invalid header format", ValueError)
@@ -933,14 +973,15 @@ class RadiusCard(BaseModel):
     @classmethod
     def from_lines(cls, lines: List[str]) -> "RadiusCard":
         """Parse radius card from lines in any format."""
+        where_am_i = "RadiusCard.from_lines()"
 
-        logger.info("RadiusCard.from_lines(): Attempting to parse radius card from lines")
+        logger.info(f"{where_am_i}: Attempting to parse radius card from lines")
         format_type = cls.detect_format(lines)
 
         try:
             if format_type == RadiusFormat.KEYWORD:
                 keyword_card = RadiusCardKeyword.from_lines(lines)
-                logger.info("RadiusCard.from_lines(): Successfully parsed radius card in keyword format")
+                logger.info(f"{where_am_i}: Successfully parsed radius card in keyword format")
                 return cls(
                     parameters=keyword_card.parameters,
                     particle_pair=keyword_card.particle_pair,
@@ -950,20 +991,21 @@ class RadiusCard(BaseModel):
                 )
             elif format_type == RadiusFormat.ALTERNATE:
                 radius_card = cls(parameters=RadiusCardAlternate.from_lines(lines).parameters)
-                logger.info("RadiusCard.from_lines(): Successfully parsed radius card from lines in alternate format")
+                logger.info(f"{where_am_i}: Successfully parsed radius card from lines in alternate format")
                 return radius_card
             else:
                 radius_card = cls(parameters=RadiusCardDefault.from_lines(lines).parameters)
-                logger.info("RadiusCard.from_lines(): Successfully parsed radius card from lines in default format")
+                logger.info(f"{where_am_i}: Successfully parsed radius card from lines in default format")
                 return radius_card
             
         except Exception as e:
-            logger.error(f"Failed to parse radius card: {str(e)}\nLines: {lines}")
+            logger.error(f"{where_am_i}Failed to parse radius card: {str(e)}\nLines: {lines}")
             raise ValueError(f"Failed to parse radius card: {str(e)}\nLines: {lines}")
 
     def to_lines(self, radius_format: RadiusFormat = RadiusFormat.KEYWORD) -> List[str]:
         """Write radius card in specified format."""
-        logger.info(f"RadiusCard.to_lines(): Writing radius card in format: {radius_format}")
+        where_am_i = "RadiusCard.to_lines()"
+        logger.info(f"{where_am_i}: Writing radius card in format: {radius_format}")
         try:
             if radius_format == RadiusFormat.KEYWORD:
                 lines = RadiusCardKeyword(
@@ -978,11 +1020,11 @@ class RadiusCard(BaseModel):
             else:
                 lines = RadiusCardDefault(parameters=self.parameters).to_lines()
             
-            logger.info("RadiusCard.to_lines(): Successfully wrote radius card")
+            logger.info(f"{where_am_i}: Successfully wrote radius card")
             return lines
         
         except Exception as e:
-            logger.error(f"RadiusCard.to_lines(): Failed to write radius card: {str(e)}")
+            logger.error(f"{where_am_i}: Failed to write radius card: {str(e)}")
             raise
 
     @classmethod
@@ -1014,16 +1056,7 @@ class RadiusCard(BaseModel):
         Returns:
             RadiusCard: Created card instance
         """
-        logger.info("RadiusCard.from_values(): Creating RadiusCard from values")
-        logger.debug(f"RadiusCard.from_values(): Effective radius: {effective_radius}")
-        logger.debug(f"RadiusCard.from_values(): True radius: {true_radius}")
-        logger.debug(f"RadiusCard.from_values(): Spin groups: {spin_groups}")
-        logger.debug(f"RadiusCard.from_values(): Channels: {channels}")
-        logger.debug(f"RadiusCard.from_values(): Particle pair: {particle_pair}")
-        logger.debug(f"RadiusCard.from_values(): Orbital momentum: {orbital_momentum}")
-        logger.debug(f"RadiusCard.from_values(): Relative uncertainty: {relative_uncertainty}")
-        logger.debug(f"RadiusCard.from_values(): Absolute uncertainty: {absolute_uncertainty}")
-        logger.debug(f"RadiusCard.from_values(): Additional kwargs: {kwargs}")
+        where_am_i = "RadiusCard.from_values()"
 
         # Separate parameters and extras
         params = {
@@ -1044,10 +1077,24 @@ class RadiusCard(BaseModel):
             absolute_uncertainty=absolute_uncertainty,
         )
 
-        logger.info("RadiusCard.from_values(): Successfully created RadiusCard")
+        logger.info(f"{where_am_i}: Successfully created RadiusCard")
         return card
 
 
+####################################################################################################
+# IDK what this is for!
+####################################################################################################
+class OrbitalMomentum(str, Enum):
+    """Valid values for orbital angular momentum specification."""
+
+    ODD = "ODD"
+    EVEN = "EVEN"
+    ALL = "ALL"
+
+
+####################################################################################################
+# main function
+####################################################################################################
 if __name__ == "__main__":
     # Example usage
     card = RadiusCard.from_values(effective_radius=3.2, true_radius=3.2, spin_groups=[1, 2, 3])
