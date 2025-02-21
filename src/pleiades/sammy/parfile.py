@@ -22,13 +22,11 @@ from pleiades.sammy.parameters import (
     UserResolutionParameters,
 )
 
-# 
-from pleiades.utils.logging import Logger
+from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), 'pleiades.log')
+log_file_path = os.path.join(os.getcwd(), 'pleiades-par.log')
 logger = Logger(__name__, log_file=log_file_path)
-
 
 class CardOrder(Enum):
     """Defines the standard order of cards in SAMMY parameter files.
@@ -110,6 +108,8 @@ class SammyParameterFile(BaseModel):
         The output follows the standard card order from Table VI B.2.
         Each card is separated by appropriate blank lines.
         """
+
+        logger.info("SammyParameterFile.to_string(): Attempting to convert parameter file to string format")
         lines = []
 
         # Process each card type in standard order
@@ -130,9 +130,12 @@ class SammyParameterFile(BaseModel):
             card_lines = value.to_lines()
             if card_lines:  # Only add non-empty line lists
                 lines.extend(card_lines)
+                logger.debug(f"SammyParameterFile.to_string(): Added lines for {card_type.name} card")
 
         # Join all lines with newlines
-        return "\n".join(lines)
+        result = "\n".join(lines)
+        logger.info("SammyParameterFile.to_string(): Successfully converted parameter file to string format")
+        return result
 
     @classmethod
     def _get_card_class_with_header(cls, line: str):
@@ -159,11 +162,10 @@ class SammyParameterFile(BaseModel):
 
         for card_type, card_class in card_checks:
             if hasattr(card_class, "is_header_line") and card_class.is_header_line(line):
-                print("parfile.py - SammyParameterFile - _get_card_class_with_header() ================")
-                print(f"card_type:{card_type}\t card_class:{card_class}")
-                print("==============================================================================")
+                logger.debug(f"SammyParameterFile._get_card_class_with_header(): card_type:{card_type}\t card_class:{card_class}")
                 return card_type, card_class
 
+        logger.info(f"SammyParameterFile._get_card_class_with_header(): No matches found for {line}")
         return None, None
 
     @classmethod
@@ -181,7 +183,7 @@ class SammyParameterFile(BaseModel):
 
         # Early exit for empty content
         if not lines:
-            raise ValueError("Empty parameter file content")
+            _log_and_raise_error("Empty parameter file content", ValueError)
 
         # Initialize parameters
         params = {}
@@ -216,7 +218,9 @@ class SammyParameterFile(BaseModel):
                 # Process card with header
                 try:
                     params[CardOrder.get_field_name(card_type)] = card_class.from_lines(group)
+                    logger.info(f"SammyParameterFile.from_string(): Successfully parsed {card_type.name} card")
                 except Exception as e:
+                    logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
             else:
 
@@ -224,31 +228,39 @@ class SammyParameterFile(BaseModel):
                 if len(group) == 1:
                     try:
                         params["fudge"] = float(group[0])
+                        logger.info("SammyParameterFile.from_string(): Successfully parsed fudge factor")
                     except ValueError as e:
+                        logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
                         raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
                 else:
                     #check if it's a resonance table
                     try:
                         # Try parsing as resonance table
                         params["resonance"] = ResonanceCard.from_lines(group)
+                        logger.info("SammyParameterFile.from_string(): Successfully parsed resonance table")
                     except Exception as e:
-                        print(f"Failed to parse card without header: {str(e)}")
+                        logger.error(f"Failed to parse card without header: {str(e)}\nLines: {group}")
                         raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
 
+        logger.info("SammyParameterFile.from_string(): Successfully parsed all parameter file content from string")
         return cls(**params)
 
     @classmethod
     def _parse_card(cls, card_type: CardOrder, lines: List[str]):
         """Parse a card's lines into the appropriate object."""
+        logger.info(f"SammyParameterFile._parse_card(): Attempting to parse card of type: {card_type.name}")
+        
         card_class = cls._get_card_class(card_type)
+        
         if not card_class:
-            raise ValueError(f"No parser implemented for card type: {card_type}")
+            _log_and_raise_error(f"No parser implemented for card type: {card_type}", ValueError)
 
         try:
-            return card_class.from_lines(lines)
+            parsed_card = card_class.from_lines(lines)
+            logger.info(f"Successfully parsed card of type: {card_type.name}")
+            return parsed_card
         except Exception as e:
-            print(card_type)
-            print(lines)
+            logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {lines}")
             # Convert any parsing error into ValueError with context
             raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\n") from e
 
@@ -285,16 +297,20 @@ class SammyParameterFile(BaseModel):
             ValueError: If file content is invalid
         """
         filepath = pathlib.Path(filepath)
+        logger.info(f"SammyParameterFile.from_file(): Attempting to read parameter file from: {filepath}")
+
         if not filepath.exists():
-            raise FileNotFoundError(f"Parameter file not found: {filepath}")
+            _log_and_raise_error(f"Parameter file not found: {filepath}", FileNotFoundError)
 
         try:
             content = filepath.read_text()
+            logger.info(f"SammyParameterFile.from_file(): Successfully read content in file: {filepath}")
             return cls.from_string(content)
+        
         except UnicodeDecodeError as e:
-            raise ValueError(f"Failed to read parameter file - invalid encoding: {e}")
+            _log_and_raise_error(f"Failed to read parameter file - invalid encoding: {e}", ValueError)
         except Exception as e:
-            raise ValueError(f"Failed to parse parameter file: {filepath}\n {e}")
+            _log_and_raise_error(f"Failed to parse parameter file: {filepath}\n {e}", ValueError)
 
     def to_file(self, filepath: Union[str, pathlib.Path]) -> None:
         """Write parameter file to disk.
@@ -307,6 +323,7 @@ class SammyParameterFile(BaseModel):
             ValueError: If content cannot be formatted
         """
         filepath = pathlib.Path(filepath)
+        logger.info(f"SammyParameterFile.to_file(): Attempting to write parameter file to: {filepath}")
 
         # Create parent directories if they don't exist
         filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -314,13 +331,18 @@ class SammyParameterFile(BaseModel):
         try:
             content = self.to_string()
             filepath.write_text(content)
+            logger.info(f"SammyParameterFile.to_file(): Successfully wrote parameter file to: {filepath}")
+
         except OSError as e:
-            raise OSError(f"Failed to write parameter file: {e}")
+            _log_and_raise_error(f"Failed to write parameter file: {e}", OSError)
         except Exception as e:
-            raise ValueError(f"Failed to format parameter file content: {e}")
+            _log_and_raise_error(f"Failed to format parameter file content: {e}", ValueError)
 
     def print_parameters(self) -> None:
         """Print the details of the parameter file."""
+        
+        logger.info("SammyParameterFile.print_parameters(): Printing out Sammy Parameter Detials")
+        
         print("Sammy Parameter File Details:")
 
         # check if any cards are present
