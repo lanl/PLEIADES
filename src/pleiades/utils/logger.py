@@ -3,17 +3,20 @@ import inspect
 
 def get_current_class_and_function():
     """
-    Get the name of the current class and function from the call stack.
+    Get the name of the current function and the parent object from the call stack.
     
     Returns:
-        str: The name of the class and function in the format 'ClassName.function_name()'
-             or 'function_name()' if not called within a class.
+        str: The name of the function and the parent object in the format 'ParentObject.function_name()'
+             or 'function_name()' if not called within an object.
     """
     frame = inspect.currentframe().f_back.f_back
-    class_name = frame.f_locals.get('self', None).__class__.__name__ if 'self' in frame.f_locals else None
+    parent_object = None
+    if 'self' in frame.f_locals:
+        parent_object = frame.f_locals['self']
     function_name = frame.f_code.co_name
-    if class_name:
-        return f"{class_name}.{function_name}()"
+    
+    if parent_object:
+        return f"{parent_object}.{function_name}()"
     else:
         return f"{function_name}()"
 
