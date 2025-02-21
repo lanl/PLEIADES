@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Top level parameter file handler for SAMMY."""
 
-import pathlib
+import pathlib, os
 from enum import Enum, auto
 from typing import List, Optional, Union
 
@@ -21,6 +21,13 @@ from pleiades.sammy.parameters import (
     UnusedCorrelatedCard,
     UserResolutionParameters,
 )
+
+# 
+from pleiades.utils.logging import Logger
+
+# Initialize logger with file logging
+log_file_path = os.path.join(os.getcwd(), 'pleiades.log')
+logger = Logger(__name__, log_file=log_file_path)
 
 
 class CardOrder(Enum):
@@ -152,6 +159,9 @@ class SammyParameterFile(BaseModel):
 
         for card_type, card_class in card_checks:
             if hasattr(card_class, "is_header_line") and card_class.is_header_line(line):
+                print("parfile.py - SammyParameterFile - _get_card_class_with_header() ================")
+                print(f"card_type:{card_type}\t card_class:{card_class}")
+                print("==============================================================================")
                 return card_type, card_class
 
         return None, None
