@@ -134,7 +134,7 @@ class SammyParameterFile(BaseModel):
             card_lines = value.to_lines()
             if card_lines:  # Only add non-empty line lists
                 lines.extend(card_lines)
-                logger.debug(f"{where_am_i}: Added lines for {card_type.name} card")
+                logger.info(f"{where_am_i}: Added lines for {card_type.name} card")
 
         # Join all lines with newlines
         result = "\n".join(lines)
@@ -168,7 +168,7 @@ class SammyParameterFile(BaseModel):
 
         for card_type, card_class in card_checks:
             if hasattr(card_class, "is_header_line") and card_class.is_header_line(line):
-                logger.debug(f"{where_am_i}: card_type:{card_type}\t card_class:{card_class}")
+                logger.info(f"{where_am_i}: card_type:{card_type}\t card_class:{card_class}")
                 return card_type, card_class
 
         logger.info(f"{where_am_i}: No matches found for {line}")
@@ -226,7 +226,7 @@ class SammyParameterFile(BaseModel):
                 # Process card with header
                 try:
                     params[CardOrder.get_field_name(card_type)] = card_class.from_lines(group)
-                    logger.info(f"{where_am_i}: Successfully parsed {card_type.name} card")
+                    logger.info(f"{where_am_i}: Successfully parsed {card_type.name} card\n {'-'*80}")
                 except Exception as e:
                     logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
@@ -236,7 +236,7 @@ class SammyParameterFile(BaseModel):
                 if len(group) == 1:
                     try:
                         params["fudge"] = float(group[0])
-                        logger.info(f"{where_am_i}: Successfully parsed fudge factor")
+                        logger.info(f"{where_am_i}: Successfully parsed fudge factor\n {'-'*80}")
                     except ValueError as e:
                         logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
                         raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
@@ -245,12 +245,12 @@ class SammyParameterFile(BaseModel):
                     try:
                         # Try parsing as resonance table
                         params["resonance"] = ResonanceCard.from_lines(group)
-                        logger.info(f"{where_am_i}: Successfully parsed resonance table")
+                        logger.info(f"{where_am_i}: Successfully parsed resonance table\n {'-'*80}")
                     except Exception as e:
                         logger.error(f"Failed to parse card without header: {str(e)}\nLines: {group}")
                         raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
 
-        logger.info(f"{where_am_i}: Successfully parsed all parameter file content from string")
+        logger.info(f"{where_am_i}: Successfully parsed all parameter file content from string\n {'='*80}")
         return cls(**params)
 
     @classmethod
