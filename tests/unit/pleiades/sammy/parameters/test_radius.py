@@ -79,7 +79,6 @@ def test_basic_fixed_width_format():
     # Access the RadiusParameters object in the parameters list
     params = card.parameters[0]
 
-
     # Verify parsed values
     assert params.effective_radius == pytest.approx(3.200)
     assert params.true_radius == pytest.approx(3.200)
@@ -106,6 +105,7 @@ def test_basic_fixed_width_format():
     assert content_line[24:26] == " 1"  # First spin group
     assert content_line[26:28] == " 2"  # Second spin group
     assert content_line[28:30] == " 3"  # Third spin group
+
 
 @pytest.mark.skip(reason="Alternate fixed-width format is unsupported at the moment")
 def test_alternate_fixed_width_format():
@@ -159,6 +159,7 @@ def test_alternate_fixed_width_format():
     assert content_line[40:45] == "  102"  # Second spin group (5 cols)
     assert content_line[45:50] == "  103"  # Third spin group (5 cols)
 
+
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_basic_radius_keyword_format():
     """Test basic keyword format parsing with single radius value."""
@@ -189,6 +190,7 @@ Group= 1
     assert any(line.startswith("Radius= 3.2") for line in output_lines)
     assert any(line.startswith("Group= 1") for line in output_lines)
 
+
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_separate_radii_keyword_format():
     """Test keyword format parsing with different effective/true radius values."""
@@ -212,6 +214,7 @@ Group= 1 2 3
     output_lines = card.to_lines(radius_format=RadiusFormat.KEYWORD)
     print("\nGenerated output:")
     print("\n".join(output_lines))
+
 
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_uncertainties_keyword_format():
@@ -239,6 +242,7 @@ Group= 1
     assert any(line.startswith("Relative= 0.05") for line in output_lines)
     assert any(line.startswith("Absolute= 0.002") for line in output_lines)
 
+
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_particle_pair_keyword_format():
     """Test keyword format parsing with particle pair and orbital momentum."""
@@ -263,6 +267,7 @@ Flags= 1 3
     assert any(line.startswith("PP= n+16O") for line in output_lines)
     assert any("L= all" in line for line in output_lines)
 
+
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_groups_channels_keyword_format():
     """Test keyword format parsing with group and channel specifications."""
@@ -286,6 +291,7 @@ Group= 1 Channels= 1 2 3
     output_lines = card.to_lines(radius_format=RadiusFormat.KEYWORD)
     print("\nGenerated output:")
     print("\n".join(output_lines))
+
 
 @pytest.mark.skip(reason="Alternate keyword format is unsupported at the moment")
 def test_invalid_keyword_format():
@@ -380,7 +386,6 @@ def test_radius_with_extras():
 
     # Verify that there is only one set of parameters in the card
     assert len(card.parameters) == 1
-
 
     # Verify core parameters
     assert card.parameters[0].effective_radius == pytest.approx(3.200)

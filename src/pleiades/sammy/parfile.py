@@ -22,46 +22,47 @@ from pleiades.sammy.parameters import (
     UnusedCorrelatedCard,
     UserResolutionParameters,
 )
-from pleiades.utils.logger import Logger, _log_and_raise_error
+from pleiades.utils.logger import Logger
 
 # Initialize logger with file logging
 log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
 logger = Logger(__name__, log_file=log_file_path)
 
 # Header lines for card sets in the PARameter file
-# NOTE: If a card is not implemented, the value is None  
+# NOTE: If a card is not implemented, the value is None
 parFile_header_card_class = {
-        "EXTERnal R-function parameters follow": ExternalRFunction,
-        "R-EXTernal parameters follow": ExternalRFunction,
-        "BROADening parameters may be varied": BroadeningParameterCard,
-        "UNUSEd but correlated variables": UnusedCorrelatedCard,
-        "NORMAlization and background": NormalizationBackgroundCard,
-        "RADIUs parameters follow": RadiusCard,
-        "RADII are in KEY-WORD format": RadiusCard,
-        "CHANNel radius parameters follow": RadiusCard,
-        "DATA reduction parameters are next": DataReductionCard,
-        "ORRES": ORRESCard,
-        "ISOTOpic abundances and masses": IsotopeCard,
-        "NUCLIde abundances and masses": IsotopeCard,
-        "MISCEllaneous parameters follow": None,  # Not implemented
-        "PARAMagnetic cross section parameters follow": ParamagneticParameters,
-        "BACKGround functions": None,  # Not implemented
-        "RPI Resolution function": None,  # Not implemented
-        "GEEL resolution function": None,  # Not implemented
-        "GELINa resolution": None,  # Not implemented
-        "NTOF resolution function": None,  # Not implemented
-        "RPI Transmission resolution function": None,  # Not implemented
-        "RPI Capture resolution function": None,  # Not implemented
-        "GEEL DEFAUlts": None,  # Not implemented
-        "GELINa DEFAUlts": None,  # Not implemented
-        "NTOF DEFAUlts": None,  # Not implemented
-        "DETECtor efficiencies": None,  # Not implemented
-        "USER-Defined resolution function": UserResolutionParameters,
-        "COVARiance matrix is in binary form in another file": None,  # Not implemented
-        "EXPLIcit uncertainties and correlations follow": None,  # Not implemented
-        "RELATive uncertainties follow": None,  # Not implemented
-        "PRIOR uncertainties follow in key-word format": None,  # Not implemented
-    }
+    "EXTERnal R-function parameters follow": ExternalRFunction,
+    "R-EXTernal parameters follow": ExternalRFunction,
+    "BROADening parameters may be varied": BroadeningParameterCard,
+    "UNUSEd but correlated variables": UnusedCorrelatedCard,
+    "NORMAlization and background": NormalizationBackgroundCard,
+    "RADIUs parameters follow": RadiusCard,
+    "RADII are in KEY-WORD format": RadiusCard,
+    "CHANNel radius parameters follow": RadiusCard,
+    "DATA reduction parameters are next": DataReductionCard,
+    "ORRES": ORRESCard,
+    "ISOTOpic abundances and masses": IsotopeCard,
+    "NUCLIde abundances and masses": IsotopeCard,
+    "MISCEllaneous parameters follow": None,  # Not implemented
+    "PARAMagnetic cross section parameters follow": ParamagneticParameters,
+    "BACKGround functions": None,  # Not implemented
+    "RPI Resolution function": None,  # Not implemented
+    "GEEL resolution function": None,  # Not implemented
+    "GELINa resolution": None,  # Not implemented
+    "NTOF resolution function": None,  # Not implemented
+    "RPI Transmission resolution function": None,  # Not implemented
+    "RPI Capture resolution function": None,  # Not implemented
+    "GEEL DEFAUlts": None,  # Not implemented
+    "GELINa DEFAUlts": None,  # Not implemented
+    "NTOF DEFAUlts": None,  # Not implemented
+    "DETECtor efficiencies": None,  # Not implemented
+    "USER-Defined resolution function": UserResolutionParameters,
+    "COVARiance matrix is in binary form in another file": None,  # Not implemented
+    "EXPLIcit uncertainties and correlations follow": None,  # Not implemented
+    "RELATive uncertainties follow": None,  # Not implemented
+    "PRIOR uncertainties follow in key-word format": None,  # Not implemented
+}
+
 
 class CardOrder(Enum):
     """Defines the standard order of cards in SAMMY parameter files.
@@ -145,7 +146,7 @@ class SammyParameterFile(BaseModel):
         """
         where_am_i = "SammyParameterFile.to_string()"
 
-        #logger.info(f"{where_am_i}: Attempting to convert parameters to string format")
+        # logger.info(f"{where_am_i}: Attempting to convert parameters to string format")
         lines = []
 
         # Process each card type in standard order
@@ -224,7 +225,7 @@ class SammyParameterFile(BaseModel):
         # Split content into lines
         lines = content.splitlines()
 
-        logger.info(f"{where_am_i}: Attempting to parse parameter file content from string {lines}")    
+        logger.info(f"{where_am_i}: Attempting to parse parameter file content from string {lines}")
 
         # Early exit for empty content
         if not lines:
@@ -238,11 +239,10 @@ class SammyParameterFile(BaseModel):
 
         # read and append lines to resonance_or_fudge_factor_content until we find a header line
         for line in lines:
-            
             # Check if line matches any keys in parFile_header_card_class
             if line in parFile_header_card_class.keys():
                 card_type, card_class = cls._get_card_class_with_header(line)
-                
+
                 # if so then you have pasted the resonances and fudge factor
                 if card_class:
                     break
@@ -290,9 +290,9 @@ class SammyParameterFile(BaseModel):
             except Exception as e:
                 logger.error(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
                 raise ValueError(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
-                
+
         # remove the resonance_or_fudge_factor_content from the lines
-        lines = lines[len(resonance_or_fudge_factor_content):]
+        lines = lines[len(resonance_or_fudge_factor_content) :]
 
         # Second, partition lines into group of lines based on blank lines
         card_groups = []
@@ -329,7 +329,7 @@ class SammyParameterFile(BaseModel):
                 except Exception as e:
                     logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
-            
+
             # If card type is not implemented, then throw an error stating card type is not implemented yet
             else:
                 logger.error(f"{where_am_i}: Card type not implemented: {group[0]}")
