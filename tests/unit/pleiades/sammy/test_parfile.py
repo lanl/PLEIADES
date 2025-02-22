@@ -59,6 +59,8 @@ def test_parse_single_card(single_card_input):
     """Test parsing file with fudge factor and single broadening card."""
     parfile = SammyParameterFile.from_string(single_card_input)
 
+    print(parfile)
+
     # Check fudge factor
     assert parfile.fudge == pytest.approx(0.1)
 
@@ -267,10 +269,15 @@ class TestFileIO:
         print(loaded_parfile.radius)
         assert loaded_parfile.radius is not None
         assert orig_parfile.radius is not None
-        assert loaded_parfile.radius.parameters.effective_radius == pytest.approx(orig_parfile.radius.parameters.effective_radius)
-        assert loaded_parfile.radius.parameters.true_radius == pytest.approx(orig_parfile.radius.parameters.true_radius)
-        assert loaded_parfile.radius.parameters.spin_groups == orig_parfile.radius.parameters.spin_groups
-        assert loaded_parfile.radius.parameters.vary_effective == orig_parfile.radius.parameters.vary_effective
+
+        # both original and loaded radius parameters should be length 1
+        assert len(loaded_parfile.radius.parameters) == 1
+        assert len(orig_parfile.radius.parameters) == 1
+
+        assert loaded_parfile.radius.parameters[0].effective_radius == pytest.approx(orig_parfile.radius.parameters[0].effective_radius)
+        assert loaded_parfile.radius.parameters[0].true_radius == pytest.approx(orig_parfile.radius.parameters[0].true_radius)
+        assert loaded_parfile.radius.parameters[0].spin_groups == orig_parfile.radius.parameters[0].spin_groups
+        assert loaded_parfile.radius.parameters[0].vary_effective == orig_parfile.radius.parameters[0].vary_effective
 
         # Compare data reduction parameters
         assert loaded_parfile.data_reduction is not None
