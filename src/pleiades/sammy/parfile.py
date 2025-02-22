@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """Top level parameter file handler for SAMMY."""
 
-import pathlib, os
+import os
+import pathlib
 from enum import Enum, auto
 from typing import List, Optional, Union
 
@@ -21,12 +22,12 @@ from pleiades.sammy.parameters import (
     UnusedCorrelatedCard,
     UserResolutionParameters,
 )
-
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), 'pleiades-par.log')
+log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
 logger = Logger(__name__, log_file=log_file_path)
+
 
 class CardOrder(Enum):
     """Defines the standard order of cards in SAMMY parameter files.
@@ -115,11 +116,10 @@ class SammyParameterFile(BaseModel):
 
         # Process each card type in standard order
         for card_type in CardOrder:
-
             field_name = CardOrder.get_field_name(card_type)
             value = getattr(self, field_name)
 
-            #print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
+            # print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
 
             # Skip None values (optional cards not present)
             if value is None:
@@ -185,7 +185,7 @@ class SammyParameterFile(BaseModel):
             SammyParameterFile: Parsed parameter file object.
         """
         where_am_i = "SammyParameterFile.from_string()"
-        
+
         # Split content into lines
         lines = content.splitlines()
 
@@ -205,18 +205,18 @@ class SammyParameterFile(BaseModel):
                 current_group.append(line)
             else:
                 # Only add non-empty groups
-                if current_group:  
+                if current_group:
                     card_groups.append(current_group)
                     current_group = []
 
         # Don't forget last group
-        if current_group: card_groups.append(current_group)
+        if current_group:
+            card_groups.append(current_group)
 
         # Process each group of lines
         for group in card_groups:
-            
             # Skip empty groups
-            if not group:  
+            if not group:
                 continue
 
             # Check first line for header to determine card type
@@ -231,7 +231,6 @@ class SammyParameterFile(BaseModel):
                     logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
             else:
-
                 # check if group if fudge factor
                 if len(group) == 1:
                     try:
@@ -241,7 +240,7 @@ class SammyParameterFile(BaseModel):
                         logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
                         raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
                 else:
-                    #check if it's a resonance table
+                    # check if it's a resonance table
                     try:
                         # Try parsing as resonance table
                         params["resonance"] = ResonanceCard.from_lines(group)
@@ -259,9 +258,9 @@ class SammyParameterFile(BaseModel):
         where_am_i = "SammyParameterFile._parse_card()"
 
         logger.info(f"{where_am_i}: Attempting to parse card of type: {card_type.name}")
-        
+
         card_class = cls._get_card_class(card_type)
-        
+
         if not card_class:
             _log_and_raise_error(f"No parser implemented for card type: {card_type}", ValueError)
 
@@ -309,7 +308,7 @@ class SammyParameterFile(BaseModel):
         where_am_i = "SammyParameterFile.from_file()"
 
         filepath = pathlib.Path(filepath)
-        
+
         logger.info(f"{where_am_i}: Attempting to read parameter file from: {filepath}")
 
         if not filepath.exists():
@@ -319,7 +318,7 @@ class SammyParameterFile(BaseModel):
             content = filepath.read_text()
             logger.info(f"{where_am_i}: Successfully read content in file: {filepath}")
             return cls.from_string(content)
-        
+
         except UnicodeDecodeError as e:
             _log_and_raise_error(f"Failed to read parameter file - invalid encoding: {e}", ValueError)
         except Exception as e:
@@ -354,9 +353,9 @@ class SammyParameterFile(BaseModel):
 
     def print_parameters(self) -> None:
         """Print the details of the parameter file."""
-        
+
         logger.info("SammyParameterFile.print_parameters(): Printing out Sammy Parameter Detials")
-        
+
         print("Sammy Parameter File Details:")
 
         # check if any cards are present
@@ -376,13 +375,14 @@ class SammyParameterFile(BaseModel):
                         print(f"  {value}")
 
                     # Print format and header if available
-                    if hasattr(value, 'to_lines') and hasattr(value, 'detect_format'):
+                    if hasattr(value, "to_lines") and hasattr(value, "detect_format"):
                         lines = value.to_lines()
                         format_type = value.detect_format(lines)
                         print(f"  Format: {format_type}")
                         print(f"  Header: {lines[0]}")
                     else:
                         print("  No format detection available for this card.")
+
 
 if __name__ == "__main__":
     print("TODO: usage example for SAMMY parameter file handling")

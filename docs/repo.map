@@ -29,7 +29,7 @@ PLEIADES
 |           ├── __init__.py
 |           ├── factory.py
 |           ├── parfile.py
-|           ├── backends/  
+|           ├── backends/
 |           │   ├── nova_ornl.py
 |           │   ├── __init__.py
 |           │   ├── local.py
@@ -65,7 +65,7 @@ PLEIADES
 │   │   └── conftest.py
 │   └── data/
 │       ├── config
-│       └── ex012 
+│       └── ex012
 └── notebook/
     ├── sammy.param/
     │   └── example.ipynb
