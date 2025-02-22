@@ -524,6 +524,7 @@ class RadiusCardAlternate(BaseModel):
             List[int]: List of parsed integers, stopping at first invalid value
         """
         where_am_i = "RadiusCardAlternate._parse_numbers_from_line()"
+        logger.info(f"{where_am_i}: Parsing fixed-width integers from line")
 
         numbers = []
         pos = start_pos
@@ -551,6 +552,7 @@ class RadiusCardAlternate(BaseModel):
             Handles continuation lines (-1 marker) and IX=0 marker for channels
         """
         where_am_i = "RadiusCardAlternate._parse_spin_groups_and_channels()"
+        logger.info(f"{where_am_i}: Parsing spin groups and channels from lines")
 
         spin_groups = []
         channels = None
@@ -593,17 +595,20 @@ class RadiusCardAlternate(BaseModel):
             ValueError: If lines are invalid or required data is missing
         """
         where_am_i = "RadiusCardAlternate.from_lines()"
+        logger.info(f"{where_am_i}: Parsing radius parameters from lines")
 
         if not lines:
             raise ValueError("No lines provided")
 
         # Validate header
         if not cls.is_header_line(lines[0]):
+            logger.error(f"{where_am_i}: Invalid header line: {lines[0]}")
             raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Get content lines (skip header and trailing blank)
         content_lines = [line for line in lines[1:] if line.strip()]
         if not content_lines:
+            logger.error(f"{where_am_i}: No parameter lines found")
             raise ValueError("No parameter lines found")
 
         # Parse first line for main parameters
@@ -611,6 +616,7 @@ class RadiusCardAlternate(BaseModel):
 
         # Ensure line is long enough
         if len(main_line) < 35:  # Minimum length for main parameters
+            logger.error(f"{where_am_i}: Parameter line too short")
             raise ValueError("Parameter line too short")
 
         # Parse main parameters
@@ -625,12 +631,14 @@ class RadiusCardAlternate(BaseModel):
             params["vary_effective"] = VaryFlag(int(main_line[FORMAT_ALTERNATE["ifleff"]].strip() or "0"))
             params["vary_true"] = VaryFlag(int(main_line[FORMAT_ALTERNATE["ifltru"]].strip() or "0"))
         except ValueError:
+            logger.error(f"{where_am_i}: Invalid vary flags")
             raise ValueError("Invalid vary flags")
 
         # Parse spin groups and channels
         spin_groups, channels = cls._parse_spin_groups_and_channels(content_lines)
 
         if not spin_groups:
+            logger.error(f"{where_am_i}: No spin groups found")
             raise ValueError("No spin groups found")
 
         params["spin_groups"] = spin_groups
@@ -640,8 +648,10 @@ class RadiusCardAlternate(BaseModel):
         try:
             parameters = RadiusParameters(**params)
         except ValueError as e:
+            logger.error(f"{where_am_i}: Invalid parameter values: {e}")
             raise ValueError(f"Invalid parameter values: {e}")
 
+        logger.info(f"{where_am_i}: Successfully parsed radius parameters")
         return cls(parameters=parameters)
 
     def to_lines(self) -> List[str]:
