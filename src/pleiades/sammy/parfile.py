@@ -110,13 +110,16 @@ class SammyParameterFile(BaseModel):
         """
         where_am_i = "SammyParameterFile.to_string()"
 
-        logger.info(f"{where_am_i}: Attempting to convert parameter file to string format")
+        logger.info(f"{where_am_i}: Attempting to convert parameters to string format")
         lines = []
 
         # Process each card type in standard order
         for card_type in CardOrder:
+
             field_name = CardOrder.get_field_name(card_type)
             value = getattr(self, field_name)
+
+            #print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
 
             # Skip None values (optional cards not present)
             if value is None:
@@ -371,6 +374,15 @@ class SammyParameterFile(BaseModel):
                             print(f"  {field_name}[{index}]: {item}")
                     else:
                         print(f"  {value}")
+
+                    # Print format and header if available
+                    if hasattr(value, 'to_lines') and hasattr(value, 'detect_format'):
+                        lines = value.to_lines()
+                        format_type = value.detect_format(lines)
+                        print(f"  Format: {format_type}")
+                        print(f"  Header: {lines[0]}")
+                    else:
+                        print("  No format detection available for this card.")
 
 if __name__ == "__main__":
     print("TODO: usage example for SAMMY parameter file handling")
