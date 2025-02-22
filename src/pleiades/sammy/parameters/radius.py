@@ -456,7 +456,7 @@ class RadiusCardDefault(BaseModel):
         where_am_i = "RadiusCardDefault.to_lines()"
        
         logger.info(f"{where_am_i}: Converting radius parameters to lines")
-        lines = [CARD_7_HEADER]
+        lines = []
 
         for params in self.parameters:
             # Format main parameters
@@ -499,9 +499,6 @@ class RadiusCardDefault(BaseModel):
                 for channel in params.channels:
                     channel_line += f"{channel:2d}"
                 lines.append(channel_line)
-
-        # Add trailing blank line
-        lines.append("")
 
         logger.info(f"{where_am_i}: Successfully converted radius parameters to lines")
         return lines
@@ -681,7 +678,7 @@ class RadiusCardAlternate(BaseModel):
         """
         where_am_i = "RadiusCardAlternate.to_lines()"
 
-        lines = [CARD_7_ALT_HEADER]
+        lines = []
 
         # Format main parameters
         main_parts = [
@@ -871,7 +868,7 @@ class RadiusCardKeyword(BaseModel):
             List[str]: Lines in keyword format
         """
         where_am_i = "RadiusCardKeyword.to_lines()"
-        lines = [CARD_7A_HEADER]
+        lines = []
 
         # Add radius values
         if self.parameters.true_radius == self.parameters.effective_radius:
@@ -1039,13 +1036,17 @@ class RadiusCard(BaseModel):
             logger.error(f"{where_am_i}Failed to parse radius card: {str(e)}\nLines: {lines}")
             raise ValueError(f"Failed to parse radius card: {str(e)}\nLines: {lines}")
 
-    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.KEYWORD) -> List[str]:
+    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.DEFAULT) -> List[str]:
         """Write radius card in specified format."""
         where_am_i = "RadiusCard.to_lines()"
         logger.info(f"{where_am_i}: Writing radius card in format: {radius_format}")
+
+        # Print out the radius parameters
+        print(f"{where_am_i}: Radius parameters: {self.parameters}")
+
         try:
             if radius_format == RadiusFormat.KEYWORD:
-                lines = []
+                lines = [CARD_7A_HEADER]
                 for param in self.parameters:
                     lines.extend(RadiusCardKeyword(
                         parameters=param,
@@ -1055,13 +1056,16 @@ class RadiusCard(BaseModel):
                         absolute_uncertainty=self.absolute_uncertainty,
                     ).to_lines())
             elif radius_format == RadiusFormat.ALTERNATE:
-                lines = []
+                lines = [CARD_7_ALT_HEADER]
                 for param in self.parameters:
                     lines.extend(RadiusCardAlternate(parameters=param).to_lines())
             else:
-                lines = []
+                lines = [CARD_7_HEADER]
                 for param in self.parameters:
                     lines.extend(RadiusCardDefault(parameters=[param]).to_lines())
+            
+            # Add trailing blank line
+            lines.append("")
             
             logger.info(f"{where_am_i}: Successfully wrote radius card")
             return lines
