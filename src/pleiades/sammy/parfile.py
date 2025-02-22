@@ -182,6 +182,7 @@ class SammyParameterFile(BaseModel):
             SammyParameterFile: Parsed parameter file object.
         """
         where_am_i = "SammyParameterFile.from_string()"
+        
         # Split content into lines
         lines = content.splitlines()
 
@@ -303,7 +304,9 @@ class SammyParameterFile(BaseModel):
             ValueError: If file content is invalid
         """
         where_am_i = "SammyParameterFile.from_file()"
+
         filepath = pathlib.Path(filepath)
+        
         logger.info(f"{where_am_i}: Attempting to read parameter file from: {filepath}")
 
         if not filepath.exists():
