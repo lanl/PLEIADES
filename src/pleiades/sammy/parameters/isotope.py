@@ -340,7 +340,7 @@ class IsotopeCard(BaseModel):
         """
         where_am_i = "IsotopeCard.is_header_line()"
         logger.info(f"{where_am_i}: Checking if valid header line: {line}")
-        return line.strip().upper().startswith("ISOTO")
+        return line.strip().upper().startswith("ISOTO") or line.strip().upper().startswith("NUCLI")
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> "IsotopeCard":
