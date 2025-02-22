@@ -399,50 +399,61 @@ class RadiusCardDefault(BaseModel):
             logger.error(f"{where_am_i}: No parameter lines found")
             raise ValueError("No parameter lines found")
 
-        # Parse first line for main parameters
-        main_line = content_lines[0]
-
-        # Ensure line is long enough
-        if len(main_line) < 24:  # Minimum length for main parameters
-            logger.error(f"{where_am_i}: Parameter line too short")
-            raise ValueError("Parameter line too short")
-
-        # Parse main parameters
+        # Initialize parameters
         params = {
-            "effective_radius": safe_parse(main_line[FORMAT_DEFAULT["pareff"]]),
-            "true_radius": safe_parse(main_line[FORMAT_DEFAULT["partru"]]),
-            "channel_mode": safe_parse(main_line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0,
+            "effective_radius": None,
+            "true_radius": None,
+            "channel_mode": None,
+            "vary_effective": None,
+            "vary_true": None,
+            "spin_groups": [],
+            "channels": None,
         }
 
-        # Parse flags
-        try:
-            params["vary_effective"] = VaryFlag(int(main_line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
-            params["vary_true"] = VaryFlag(int(main_line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
-            logger.info(f"{where_am_i}: Successfully parsed flags")
-        except ValueError:
-            logger.error(f"{where_am_i}: Invalid vary flags")
-            raise ValueError("Invalid vary flags")
+        # Parse each line for main parameters and spin groups
+        for line in content_lines:
+            # Ensure line is long enough
+            if len(line) < 24:  # Minimum length for main parameters
+                logger.error(f"{where_am_i}: Parameter line too short")
+                raise ValueError("Parameter line too short")
 
-        # Parse spin groups and channels
-        spin_groups, channels = cls._parse_spin_groups_and_channels(content_lines)
+            # Parse main parameters if not already set
+            if params["effective_radius"] is None:
+                params["effective_radius"] = safe_parse(line[FORMAT_DEFAULT["pareff"]])
+                params["true_radius"] = safe_parse(line[FORMAT_DEFAULT["partru"]])
+                params["channel_mode"] = safe_parse(line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0
 
-        if not spin_groups:
+                # Parse flags
+                try:
+                    params["vary_effective"] = VaryFlag(int(line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
+                    params["vary_true"] = VaryFlag(int(line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
+                    logger.info(f"{where_am_i}: Successfully parsed flags")
+                except ValueError:
+                    logger.error(f"{where_am_i}: Invalid vary flags")
+                    raise ValueError("Invalid vary flags")
+
+            # Parse spin groups and channels
+            spin_groups, channels = cls._parse_spin_groups_and_channels([line])
+            params["spin_groups"].extend(spin_groups)
+            if channels:
+                params["channels"] = channels
+
+        if not params["spin_groups"]:
             logger.error(f"{where_am_i}: No spin groups found")
             raise ValueError("No spin groups found")
 
-        params["spin_groups"] = spin_groups
-        params["channels"] = channels
-
+        print(params)
         # Create parameters object
         try:
             parameters = RadiusParameters(**params)
-            #logger.info(f"{where_am_i}: Successfully created radius parameters")
+            logger.info(f"{where_am_i}: Successfully created radius parameters")
 
         except ValueError as e:
             logger.error(f"{where_am_i}: Invalid parameter values: {e}")
             raise ValueError(f"Invalid parameter values: {e}")
 
         logger.info(f"{where_am_i}: Successfully parsed radius parameters")
+        
         return cls(parameters=parameters)
 
     def to_lines(self) -> List[str]:
@@ -978,19 +989,23 @@ class RadiusCard(BaseModel):
         header = lines[0].strip().upper()
         logger.debug(f"{where_am_i}: Header line: {header}")
 
+        # Check for valid header formats
+        # If KEY-WORD is in the header, it is a keyword format
         if "KEY-WORD" in header:
             logger.info(f"{where_am_i}: Detected keyword format!")
             return RadiusFormat.KEYWORD
+        
+        # If DEFAULT or ALTERNATE card formats then "RADIUS" should be in the header
         elif "RADIU" in header:
             # Check format by examining spin group columns
             content_line = next((l for l in lines[1:] if l.strip()), "")  # noqa: E741
-            logger.debug(f"{where_am_i}: Content line: {content_line}")
-
+            
+            # Check for alternate format (5-column integer values)
             if len(content_line) >= 35 and content_line[25:30].strip():  # 5-col format
-                logger.info(f"{where_am_i}: Detected alternate format!")
+                logger.info(f"{where_am_i}: Detected ALTERNATE format based on {content_line}")
                 return RadiusFormat.ALTERNATE
             
-            logger.info(f"{where_am_i}: Detected default format!")
+            logger.info(f"{where_am_i}: Detected DEFAULT format based on {content_line}")
             return RadiusFormat.DEFAULT
 
         _log_and_raise_error(logger, "Invalid header format...", ValueError)
@@ -1003,6 +1018,7 @@ class RadiusCard(BaseModel):
         logger.info(f"{where_am_i}: Attempting to parse radius card from lines")
         format_type = cls.detect_format(lines)
 
+        # Try reading in the radius card based on the determined format 
         try:
             if format_type == RadiusFormat.KEYWORD:
                 keyword_card = RadiusCardKeyword.from_lines(lines)
