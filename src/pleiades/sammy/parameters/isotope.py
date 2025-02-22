@@ -45,13 +45,17 @@ Notes:
 - Masses must be > 0
 - Spin groups must be valid for the model
 """
-
-import logging
+import os
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import Logger, _log_and_raise_error
+
+# Initialize logger with file logging
+log_file_path = os.path.join(os.getcwd(), 'pleiades-par.log')
+logger = Logger(__name__, log_file=log_file_path)
 
 # Format definitions for standard format (<99 spin groups)
 # Each numeric field has specific width requirements
@@ -131,15 +135,16 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If spin group validation fails
         """
+        where_am_i = "IsotopeParameters.validate_groups()"
         max_standard = 99  # Maximum group number for standard format
 
         for group in self.spin_groups:
             if group == 0:
-                raise ValueError("Spin group number cannot be 0")
+                _log_and_raise_error(logger, f"Spin group number cannot be 0",ValueError)
 
             # Check if we need extended format
             if abs(group) > max_standard:
-                logging.debug(f"Group number {group} requires extended format")
+                logger.info(f"{where_am_i}:Group number {group} requires extended format")
 
         return self
 
@@ -167,8 +172,12 @@ class IsotopeParameters(BaseModel):
             ... ]
             >>> params = IsotopeParameters.from_lines(lines)
         """
+        where_am_i = "IsotopeParameters.from_lines()"
+
+        logger.info(f"{where_am_i}: Attempting to parse isotope parameters from lines")
+
         if not lines or not lines[0].strip():
-            raise ValueError("No valid parameter line provided")
+            _log_and_raise_error(logger, "No valid parameter line provided", ValueError)
 
         # Set format to standard. 
         format_dict = FORMAT_STANDARD # NOTE: EXTENDED format is currently not supported.
@@ -181,7 +190,7 @@ class IsotopeParameters(BaseModel):
         for field in ["mass", "abundance"]:
             value = safe_parse(main_line[format_dict[field]])
             if value is None:
-                raise ValueError(f"Failed to parse required field: {field}")
+                _log_and_raise_error(logger, f"Failed to parse required field: {field}", ValueError)
             params[field] = value
 
         # Parse optional uncertainty
@@ -193,6 +202,7 @@ class IsotopeParameters(BaseModel):
         try:
             params["flag"] = VaryFlag(int(flag_str))
         except (ValueError, TypeError):
+            _log_and_raise_error(logger, f"Invalid flag value: {flag_str}", ValueError)
             params["flag"] = VaryFlag.NO
 
         # Parse spin groups
@@ -254,15 +264,10 @@ class IsotopeParameters(BaseModel):
 
         Returns:
             List[str]: Formatted lines with proper fixed-width spacing
-
-        Example:
-            >>> params = IsotopeParameters(mass=16.0, abundance=0.99835,
-            ...                           uncertainty=0.00002, flag=VaryFlag.NO,
-            ...                           spin_groups=[1, 2, 3, 4, 5, 6])
-            >>> lines = params.to_lines()
-            >>> print(lines[0])
-            "16.000    0.99835   0.00002    0  1  2  3"
         """
+        where_am_i = "IsotopeParameters.to_lines()"
+        logger.info(f"{where_am_i}: Attempting to convert isotope parameters to lines")
+
         # Select format based on mode
         group_format = SPIN_GROUP_EXTENDED if extended else SPIN_GROUP_STANDARD
         format_dict = FORMAT_EXTENDED if extended else FORMAT_STANDARD
@@ -316,17 +321,8 @@ class IsotopeCard(BaseModel):
         isotopes (List[IsotopeParameters]): List of isotope parameter sets
         extended (bool): Whether to use extended format for >99 spin groups
 
-    NOTE: Fixed formats for both standard and extended are defined in the IsotopeParameters class.
-
-
-    Example:
-        >>> lines = [
-        ...     "ISOTOpic abundances and masses",
-        ...     "16.000    0.99835   0.00002    0  1  2  3",
-        ...     "17.000    0.00165   0.00001    0  4  5  6",
-        ...     ""
-        ... ]
-        >>> card = IsotopeCard.from_lines(lines)
+    NOTE:   Fixed formats for both standard and extended are defined in the 
+            IsotopeParameters class. But only using the standard format for now.
     """
 
     isotopes: List[IsotopeParameters] = Field(default_factory=list)
@@ -342,6 +338,8 @@ class IsotopeCard(BaseModel):
         Returns:
             bool: True if the first 5 characters of the line are 'ISOTO'
         """
+        where_am_i = "IsotopeCard.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if valid header line: {line}")
         return line.strip().upper().startswith("ISOTO")
 
     @classmethod
@@ -357,17 +355,20 @@ class IsotopeCard(BaseModel):
         Raises:
             ValueError: If no valid header found or invalid format
         """
+        where_am_i = "IsotopeCard.from_lines()"
+        logger.info(f"{where_am_i}: Attempting to parse isotope card from lines")
+
         if not lines:
-            raise ValueError("No lines provided")
+            _log_and_raise_error(logger, "No lines provided", ValueError)
 
         # Validate header
         if not cls.is_header_line(lines[0]):
-            raise ValueError(f"Invalid header line: {lines[0]}")
+            _log_and_raise_error(logger, f"Invalid header line: {lines[0]}", ValueError)
 
         # Remove header and trailing blank lines
         content_lines = [line for line in lines[1:] if line.strip()]
         if not content_lines:
-            raise ValueError("No parameter lines found")
+            _log_and_raise_error(logger, "No parameter lines found", ValueError)
 
         # Check if we need extended format
         extended = False
