@@ -57,7 +57,7 @@
             - Parameters:
                 - header: str
             - Returns: Type[BaseModel]
-        - from_string 
+        - from_string
             @classmethod
             - Parameters:
                 - data: str
@@ -72,7 +72,7 @@
             - Parameters:
                 - card_name: str
             - Returns: Type[BaseModel]
-        - from_file 
+        - from_file
             @classmethod
             - Parameters:
                 - file_path: Union[str, pathlib.Path]

@@ -37,9 +37,9 @@ class UnsupportedFormatError(ValueError):
 
 class ResonanceEntry(BaseModel):
     """This class handles the parameters for a single resonance entry in Card Set 1 of a SAMMY parameter file.
-    
+
     Single resonance entry for SAMMY parameter file (strict format)
-    
+
     Attributes:
         resonance_energy: Resonance energy Eλ (eV)
         capture_width: Capture width Γγ (milli-eV)
@@ -47,10 +47,10 @@ class ResonanceEntry(BaseModel):
         channel1_width: Particle width for channel 1 (milli-eV)
         channel2_width: Particle width for channel 2 (milli-eV)
         channel3_width: Particle width for channel 3 (milli-eV)
-        NOTE:   If any particle width Γ is negative, SAMMY uses abs(Γ) 
+        NOTE:   If any particle width Γ is negative, SAMMY uses abs(Γ)
                 for the width and set the associated amplitude γ to be negative.
 
-        vary_energy:    Flag indicating if resonance energy is varied 
+        vary_energy:    Flag indicating if resonance energy is varied
         vary_capture_width: Flag indicating if capture width is varied
         vary_channel1: Flag indicating if channel 1 width is varied
         vary_channel2: Flag indicating if channel 2 width is varied
@@ -58,11 +58,11 @@ class ResonanceEntry(BaseModel):
         NOTE:   0 = no, 1 = yes, 3 = PUP (PUP = Partially Unknown Parameter)
 
         igroup: Quantum numbers group number (or spin_groups)
-        NOTE:   If IGROUP is negative or greater than 50, this resonance will be 
+        NOTE:   If IGROUP is negative or greater than 50, this resonance will be
                 omitted from the calculation.
-        
+
         x_value: Special value used to detect multi-line entries (unsupported)
-    
+
     """
 
     resonance_energy: float = Field(description="Resonance energy Eλ (eV)")

@@ -45,6 +45,7 @@ Notes:
 - Masses must be > 0
 - Spin groups must be valid for the model
 """
+
 import os
 from typing import List, Optional
 
@@ -54,25 +55,25 @@ from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), 'pleiades-par.log')
+log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
 logger = Logger(__name__, log_file=log_file_path)
 
 # Format definitions for standard format (<99 spin groups)
 # Each numeric field has specific width requirements
 FORMAT_STANDARD = {
-    "mass": slice(0, 10),           # AMUISO: Atomic mass (amu)
-    "abundance": slice(10, 20),     # PARISO: Fractional abundance
-    "uncertainty": slice(20, 30),   # DELISO: Uncertainty on abundance
-    "flag": slice(30, 32),          # IFLISO: Treatment flag
+    "mass": slice(0, 10),  # AMUISO: Atomic mass (amu)
+    "abundance": slice(10, 20),  # PARISO: Fractional abundance
+    "uncertainty": slice(20, 30),  # DELISO: Uncertainty on abundance
+    "flag": slice(30, 32),  # IFLISO: Treatment flag
 }
 
 # Spin group number positions
 # Standard format: 2 columns per group starting at col 33
 SPIN_GROUP_STANDARD = {
-    "width": 2,                     # Character width of each group number
-    "start": 32,                    # Start of first group
-    "per_line": 24,                 # Max groups per line
-    "cont_marker": slice(78, 80),   # "-1" indicates continuation
+    "width": 2,  # Character width of each group number
+    "start": 32,  # Start of first group
+    "per_line": 24,  # Max groups per line
+    "cont_marker": slice(78, 80),  # "-1" indicates continuation
 }
 
 # Format for extended format (>99 spin groups)
@@ -140,7 +141,7 @@ class IsotopeParameters(BaseModel):
 
         for group in self.spin_groups:
             if group == 0:
-                _log_and_raise_error(logger, f"Spin group number cannot be 0",ValueError)
+                _log_and_raise_error(logger, "Spin group number cannot be 0", ValueError)
 
             # Check if we need extended format
             if abs(group) > max_standard:
@@ -179,8 +180,8 @@ class IsotopeParameters(BaseModel):
         if not lines or not lines[0].strip():
             _log_and_raise_error(logger, "No valid parameter line provided", ValueError)
 
-        # Set format to standard. 
-        format_dict = FORMAT_STANDARD # NOTE: EXTENDED format is currently not supported.
+        # Set format to standard.
+        format_dict = FORMAT_STANDARD  # NOTE: EXTENDED format is currently not supported.
 
         main_line = f"{lines[0]:<80}"  # Pad to full width
 
@@ -207,7 +208,7 @@ class IsotopeParameters(BaseModel):
 
         # Parse spin groups
         spin_groups = []
-        group_format = SPIN_GROUP_STANDARD #NOTE: EXTENDED format is currently not supported.
+        group_format = SPIN_GROUP_STANDARD  # NOTE: EXTENDED format is currently not supported.
 
         # Helper function to parse groups from a line
         def parse_groups(line: str, start_pos: int = None, continuation: bool = False) -> List[int]:
@@ -253,7 +254,7 @@ class IsotopeParameters(BaseModel):
             spin_groups.extend(parse_groups(line, start_pos=0, continuation=True))
 
         params["spin_groups"] = spin_groups
-        
+
         return cls(**params)
 
     def to_lines(self, extended: bool = False) -> List[str]:
@@ -321,7 +322,7 @@ class IsotopeCard(BaseModel):
         isotopes (List[IsotopeParameters]): List of isotope parameter sets
         extended (bool): Whether to use extended format for >99 spin groups
 
-    NOTE:   Fixed formats for both standard and extended are defined in the 
+    NOTE:   Fixed formats for both standard and extended are defined in the
             IsotopeParameters class. But only using the standard format for now.
     """
 
@@ -378,12 +379,12 @@ class IsotopeCard(BaseModel):
         current_lines = []
 
         for line in content_lines:
-
             current_lines.append(line)
-            
+
             # check if characters 79-80 is a "-1". this means that there are more spin groups in the next line.
-            if line[78:80] == "-1": continue
-            
+            if line[78:80] == "-1":
+                continue
+
             # Otherwise the are no more lines for spin groups, so process the current lines.
             else:
                 isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
