@@ -238,34 +238,6 @@ class RadiusParameters(BaseModel):
         )
 
 
-class RadiusParametersContainer:
-    """Container for multiple RadiusParameters entries."""
-
-    def __init__(self):
-        self.entries = []
-
-    def add_parameters(self, params: RadiusParameters):
-        """Add a RadiusParameters entry to the container."""
-        self.entries.append(params)
-
-    def remove_parameters(self, index: int):
-        """Remove a RadiusParameters entry from the container by index."""
-        if 0 <= index < len(self.entries):
-            self.entries.pop(index)
-        else:
-            raise IndexError("Index out of range")
-
-    def print_all_parameters(self):
-        """Print all RadiusParameters entries in the container."""
-        for i, params in enumerate(self.entries):
-            print(f"Entry {i + 1}:")
-            print(params)
-            print()
-
-    def __repr__(self) -> str:
-        """Return a string representation of the container."""
-        return f"RadiusParametersContainer(entries={self.entries})"
-
 ####################################################################################################
 # Card variant classes for different formats (default, alternate, keyword)
 ####################################################################################################
@@ -298,7 +270,7 @@ class RadiusCardDefault(BaseModel):
             bool: True if line is a valid header
         """
         where_am_i = "RadiusCardDefault.is_header_line()"
-        logger.debug(f"{where_am_i}: Checking if header line - {line}")
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return line.strip().upper().startswith("RADIU")
 
     @staticmethod
@@ -534,7 +506,7 @@ class RadiusCardAlternate(BaseModel):
             bool: True if line is a valid header
         """
         where_am_i = "RadiusCardAlternate.is_header_line()"
-        logger.debug(f"{where_am_i}: Checking if header line - {line}")
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return line.strip().upper().startswith("RADIU")
 
     @staticmethod
@@ -959,7 +931,7 @@ class RadiusCard(BaseModel):
         
         line_upper = line.strip().upper()
 
-        logger.debug(f"{where_am_i}: {line_upper}")
+        logger.info(f"{where_am_i}: {line_upper}")
 
         # Check all valid header formats
         valid_headers = [
@@ -980,7 +952,7 @@ class RadiusCard(BaseModel):
 
         # Grab header from lines (suppose to be the first line)
         header = lines[0].strip().upper()
-        logger.debug(f"{where_am_i}: Header line: {header}")
+        logger.info(f"{where_am_i}: Header line: {header}")
 
         # Check for valid header formats
         # If KEY-WORD is in the header, it is a keyword format
@@ -1040,9 +1012,6 @@ class RadiusCard(BaseModel):
         """Write radius card in specified format."""
         where_am_i = "RadiusCard.to_lines()"
         logger.info(f"{where_am_i}: Writing radius card in format: {radius_format}")
-
-        # Print out the radius parameters
-        print(f"{where_am_i}: Radius parameters: {self.parameters}")
 
         try:
             if radius_format == RadiusFormat.KEYWORD:
