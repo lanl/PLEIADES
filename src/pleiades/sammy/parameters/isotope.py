@@ -108,14 +108,6 @@ class IsotopeParameters(BaseModel):
         flag (VaryFlag): Treatment flag for abundance (-2=use input, 0=fixed, 1=vary, 3=PUP)
         spin_groups (List[int]): List of spin group numbers (negative values indicate omitted resonances)
 
-    Example:
-        Standard format line:
-        "16.000    0.99835   0.00002    0  1  2  3"
-                                          ^  ^  ^  ^ spin groups (2 cols each)
-                                       ^^ flag
-                              ^^^^^^^ uncertainty
-                     ^^^^^^^ abundance
-            ^^^^^^^ mass
     """
 
     mass: float = Field(description="Atomic mass in amu", gt=0)
