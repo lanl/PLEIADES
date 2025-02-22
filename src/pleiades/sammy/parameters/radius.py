@@ -728,12 +728,14 @@ class RadiusCardKeyword(BaseModel):
     def is_header_line(cls, line: str) -> bool:
         """Check if line is a valid header line."""
         where_am_i = "RadiusCardKeyword.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return "RADII" in line.upper() and "KEY-WORD" in line.upper()
 
     @staticmethod
     def _parse_values(value_str: str) -> List[str]:
         """Parse space/comma separated values."""
         where_am_i = "RadiusCardKeyword._parse_values()"
+        logger.info(f"{where_am_i}: Parsing values from string: {value_str}")
         return [v for v in re.split(r"[,\s]+", value_str.strip()) if v]
 
     @classmethod
@@ -751,10 +753,12 @@ class RadiusCardKeyword(BaseModel):
         """
         where_am_i = "RadiusCardKeyword.from_lines()"
         if not lines:
+            logger.error(f"{where_am_i}: No lines provided")
             raise ValueError("No lines provided")
 
         # Validate header
         if not cls.is_header_line(lines[0]):
+            logger.error(f"{where_am_i}: Invalid header line: {lines[0]}")
             raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Parse parameters for RadiusParameters
@@ -842,6 +846,7 @@ class RadiusCardKeyword(BaseModel):
             List[str]: Lines in keyword format
         """
         where_am_i = "RadiusCardKeyword.to_lines()"
+        logger.info(f"{where_am_i}: Converting radius parameters to lines")
         lines = []
 
         # Add radius values
