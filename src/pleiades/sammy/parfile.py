@@ -28,6 +28,40 @@ from pleiades.utils.logger import Logger, _log_and_raise_error
 log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
 logger = Logger(__name__, log_file=log_file_path)
 
+# Header lines for card sets in the PARameter file
+# NOTE: If a card is not implemented, the value is None  
+parFile_header_card_class = {
+        "EXTERnal R-function parameters follow": ExternalRFunction,
+        "R-EXTernal parameters follow": ExternalRFunction,
+        "BROADening parameters may be varied": BroadeningParameterCard,
+        "UNUSEd but correlated variables": UnusedCorrelatedCard,
+        "NORMAlization and background": NormalizationBackgroundCard,
+        "RADIUs parameters follow": RadiusCard,
+        "RADII are in KEY-WORD format": RadiusCard,
+        "CHANNel radius parameters follow": RadiusCard,
+        "DATA reduction parameters are next": DataReductionCard,
+        "ORRES": ORRESCard,
+        "ISOTOpic abundances and masses": IsotopeCard,
+        "NUCLIde abundances and masses": IsotopeCard,
+        "MISCEllaneous parameters follow": None,  # Not implemented
+        "PARAMagnetic cross section parameters follow": ParamagneticParameters,
+        "BACKGround functions": None,  # Not implemented
+        "RPI Resolution function": None,  # Not implemented
+        "GEEL resolution function": None,  # Not implemented
+        "GELINa resolution": None,  # Not implemented
+        "NTOF resolution function": None,  # Not implemented
+        "RPI Transmission resolution function": None,  # Not implemented
+        "RPI Capture resolution function": None,  # Not implemented
+        "GEEL DEFAUlts": None,  # Not implemented
+        "GELINa DEFAUlts": None,  # Not implemented
+        "NTOF DEFAUlts": None,  # Not implemented
+        "DETECtor efficiencies": None,  # Not implemented
+        "USER-Defined resolution function": UserResolutionParameters,
+        "COVARiance matrix is in binary form in another file": None,  # Not implemented
+        "EXPLIcit uncertainties and correlations follow": None,  # Not implemented
+        "RELATive uncertainties follow": None,  # Not implemented
+        "PRIOR uncertainties follow in key-word format": None,  # Not implemented
+    }
 
 class CardOrder(Enum):
     """Defines the standard order of cards in SAMMY parameter files.
@@ -111,7 +145,7 @@ class SammyParameterFile(BaseModel):
         """
         where_am_i = "SammyParameterFile.to_string()"
 
-        logger.info(f"{where_am_i}: Attempting to convert parameters to string format")
+        #logger.info(f"{where_am_i}: Attempting to convert parameters to string format")
         lines = []
 
         # Process each card type in standard order
@@ -119,7 +153,7 @@ class SammyParameterFile(BaseModel):
             field_name = CardOrder.get_field_name(card_type)
             value = getattr(self, field_name)
 
-            # print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
+            print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
 
             # Skip None values (optional cards not present)
             if value is None:
@@ -153,6 +187,7 @@ class SammyParameterFile(BaseModel):
         """
         where_am_i = "SammyParameterFile._get_card_class_with_header()"
 
+        # Check each card class for header line match
         card_checks = [
             (CardOrder.BROADENING, BroadeningParameterCard),
             (CardOrder.DATA_REDUCTION, DataReductionCard),
@@ -189,12 +224,75 @@ class SammyParameterFile(BaseModel):
         # Split content into lines
         lines = content.splitlines()
 
+        logger.info(f"{where_am_i}: Attempting to parse parameter file content from string {lines}")    
+
         # Early exit for empty content
         if not lines:
-            _log_and_raise_error("Empty parameter file content", ValueError)
+            logger.error(f"{where_am_i}: Empty parameter file content")
+            raise ValueError("Empty parameter file content")
 
         # Initialize parameters
         params = {}
+
+        resonance_or_fudge_factor_content = []
+
+        # read and append lines to resonance_or_fudge_factor_content until we find a header line
+        for line in lines:
+            
+            # Check if line matches any keys in parFile_header_card_class
+            if line in parFile_header_card_class.keys():
+                card_type, card_class = cls._get_card_class_with_header(line)
+                
+                # if so then you have pasted the resonances and fudge factor
+                if card_class:
+                    break
+            # if not then append the line to resonance_or_fudge_factor_content
+            else:
+                resonance_or_fudge_factor_content.append(line)
+
+        logger.info(f"{where_am_i}: res_fudge_content: {resonance_or_fudge_factor_content}")
+
+        # need to split further into resonances and fudge factor
+        resonances_entries = []
+        fudge_factor = None
+
+        for line in resonance_or_fudge_factor_content:
+            # check if anycharacters exsist beyound 1-11
+            if line[11:].strip():
+                # if so, then it is a resonance entry
+                resonances_entries.append(line)
+            # check if line is just newline char
+            elif not line.strip():
+                continue
+
+            # Otherwise it is a fudge factor
+            else:
+                # strip line of "\n" and convert to float
+                fudge_factor = line.strip()
+
+        logger.info(f"{where_am_i}: resonances_entries: {resonances_entries}")
+        logger.info(f"{where_am_i}: fudge_factor: {fudge_factor}")
+
+        # attempt to assign fudge factor to params
+        if fudge_factor:
+            try:
+                params["fudge"] = float(fudge_factor)
+                logger.info(f"{where_am_i}: Successfully parsed fudge factor\n {'-'*80}")
+            except ValueError as e:
+                logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {fudge_factor}")
+                raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {fudge_factor}")
+
+        # if resonance_entries is not empty then attempt to assign to params
+        if resonances_entries:
+            try:
+                params["resonance"] = ResonanceCard.from_lines(resonances_entries)
+                logger.info(f"{where_am_i}: Successfully parsed resonance table\n {'-'*80}")
+            except Exception as e:
+                logger.error(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
+                raise ValueError(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
+                
+        # remove the resonance_or_fudge_factor_content from the lines
+        lines = lines[len(resonance_or_fudge_factor_content):]
 
         # Second, partition lines into group of lines based on blank lines
         card_groups = []
@@ -222,6 +320,7 @@ class SammyParameterFile(BaseModel):
             # Check first line for header to determine card type
             card_type, card_class = cls._get_card_class_with_header(group[0])
 
+            # Check if card type is implemented
             if card_class:
                 # Process card with header
                 try:
@@ -230,24 +329,11 @@ class SammyParameterFile(BaseModel):
                 except Exception as e:
                     logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
+            
+            # If card type is not implemented, then throw an error stating card type is not implemented yet
             else:
-                # check if group if fudge factor
-                if len(group) == 1:
-                    try:
-                        params["fudge"] = float(group[0])
-                        logger.info(f"{where_am_i}: Successfully parsed fudge factor\n {'-'*80}")
-                    except ValueError as e:
-                        logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
-                        raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {group}")
-                else:
-                    # check if it's a resonance table
-                    try:
-                        # Try parsing as resonance table
-                        params["resonance"] = ResonanceCard.from_lines(group)
-                        logger.info(f"{where_am_i}: Successfully parsed resonance table\n {'-'*80}")
-                    except Exception as e:
-                        logger.error(f"Failed to parse card without header: {str(e)}\nLines: {group}")
-                        raise ValueError(f"Failed to parse card without header: {str(e)}\nLines: {group}")
+                logger.error(f"{where_am_i}: Card type not implemented: {group[0]}")
+                raise ValueError(f"Card type not implemented: {group[0]}")
 
         logger.info(f"{where_am_i}: Successfully parsed all parameter file content from string\n {'='*80}")
         return cls(**params)
@@ -262,7 +348,8 @@ class SammyParameterFile(BaseModel):
         card_class = cls._get_card_class(card_type)
 
         if not card_class:
-            _log_and_raise_error(f"No parser implemented for card type: {card_type}", ValueError)
+            logger.error(f"{where_am_i}: No parser implemented for card type: {card_type}")
+            raise ValueError(f"No parser implemented for card type: {card_type}")
 
         try:
             parsed_card = card_class.from_lines(lines)
@@ -312,7 +399,8 @@ class SammyParameterFile(BaseModel):
         logger.info(f"{where_am_i}: Attempting to read parameter file from: {filepath}")
 
         if not filepath.exists():
-            _log_and_raise_error(f"Parameter file not found: {filepath}", FileNotFoundError)
+            logger.error(f"{where_am_i}: Parameter file not found: {filepath}")
+            raise FileNotFoundError(f"Parameter file not found: {filepath}")
 
         try:
             content = filepath.read_text()
@@ -320,9 +408,11 @@ class SammyParameterFile(BaseModel):
             return cls.from_string(content)
 
         except UnicodeDecodeError as e:
-            _log_and_raise_error(f"Failed to read parameter file - invalid encoding: {e}", ValueError)
+            logger.error(f"{where_am_i}: Failed to read parameter file - invalid encoding: {e}")
+            raise ValueError(f"Failed to read parameter file - invalid encoding: {e}")
         except Exception as e:
-            _log_and_raise_error(f"Failed to parse parameter file: {filepath}\n {e}", ValueError)
+            logger.error(f"{where_am_i}: Failed to parse parameter file: {filepath}\n {e}")
+            raise ValueError(f"Failed to parse parameter file: {filepath}\n {e}")
 
     def to_file(self, filepath: Union[str, pathlib.Path]) -> None:
         """Write parameter file to disk.
@@ -347,9 +437,11 @@ class SammyParameterFile(BaseModel):
             logger.info(f"{where_am_i}: Successfully wrote parameter file to: {filepath}")
 
         except OSError as e:
-            _log_and_raise_error(f"Failed to write parameter file: {e}", OSError)
+            logger.error(f"{where_am_i}: Failed to write parameter file: {e}")
+            raise OSError(f"Failed to write parameter file: {e}")
         except Exception as e:
-            _log_and_raise_error(f"Failed to format parameter file content: {e}", ValueError)
+            logger.error(f"{where_am_i}: Failed to format parameter file content: {e}")
+            raise ValueError(f"Failed to format parameter file content: {e}")
 
     def print_parameters(self) -> None:
         """Print the details of the parameter file."""
