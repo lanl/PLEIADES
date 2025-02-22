@@ -285,7 +285,7 @@ class RadiusCardDefault(BaseModel):
         For larger systems, use RadiusCardAlternate.
     """
 
-    parameters: RadiusParameters
+    parameters: List[RadiusParameters]
 
     @classmethod
     def is_header_line(cls, line: str) -> bool:
@@ -326,11 +326,11 @@ class RadiusCardDefault(BaseModel):
         return numbers
 
     @classmethod
-    def _parse_spin_groups_and_channels(cls, lines: List[str]) -> Tuple[List[int], Optional[List[int]]]:
-        """Parse spin groups and optional channels from lines.
+    def _parse_spin_groups_and_channels(cls, line: str) -> Tuple[List[int], Optional[List[int]]]:
+        """Parse spin groups and optional channels from a line.
 
         Args:
-            lines: List of input lines containing spin groups/channels
+            line: Input line containing spin groups/channels
 
         Returns:
             Tuple containing:
@@ -341,30 +341,29 @@ class RadiusCardDefault(BaseModel):
             Handles continuation lines (-1 marker) and IX=0 marker for channels
         """
         where_am_i = "RadiusCardDefault._parse_spin_groups_and_channels()"
-        logger.info(f"{where_am_i}: Parsing spin groups and channels")
+        logger.info(f"{where_am_i}: Parsing spin groups and channels from line: {line}")
+        
         spin_groups = []
         channels = None
 
-        for line in lines:
-            # Parse numbers 2 columns each starting at position 24
-            numbers = cls._parse_numbers_from_line(line, 24, 2)
+        # Parse numbers 2 columns each starting at position 24
+        numbers = cls._parse_numbers_from_line(line, 24, 2)
+        logger.info(f"{where_am_i}: Parsed numbers: {numbers}")
 
-            if not numbers:
-                continue
+        if not numbers:
+            return spin_groups, channels
 
-            # Check for continuation marker (-1)
-            if numbers[-1] == -1:
-                spin_groups.extend(numbers[:-1])
-                continue
-
+        # Check for continuation marker (-1)
+        if numbers[-1] == -1:
+            spin_groups.extend(numbers[:-1])
+        else:
             # Check for IX=0 marker (indicates channels follow)
             if 0 in numbers:
                 zero_index = numbers.index(0)
                 spin_groups.extend(numbers[:zero_index])
                 channels = numbers[zero_index + 1 :]
-                break
-
-            spin_groups.extend(numbers)
+            else:
+                spin_groups.extend(numbers)
 
         return spin_groups, channels
 
@@ -399,16 +398,8 @@ class RadiusCardDefault(BaseModel):
             logger.error(f"{where_am_i}: No parameter lines found")
             raise ValueError("No parameter lines found")
 
-        # Initialize parameters
-        params = {
-            "effective_radius": None,
-            "true_radius": None,
-            "channel_mode": None,
-            "vary_effective": None,
-            "vary_true": None,
-            "spin_groups": [],
-            "channels": None,
-        }
+        # Initialize list to hold RadiusParameters objects
+        radius_parameters_list = []
 
         # Parse each line for main parameters and spin groups
         for line in content_lines:
@@ -417,44 +408,44 @@ class RadiusCardDefault(BaseModel):
                 logger.error(f"{where_am_i}: Parameter line too short")
                 raise ValueError("Parameter line too short")
 
-            # Parse main parameters if not already set
-            if params["effective_radius"] is None:
-                params["effective_radius"] = safe_parse(line[FORMAT_DEFAULT["pareff"]])
-                params["true_radius"] = safe_parse(line[FORMAT_DEFAULT["partru"]])
-                params["channel_mode"] = safe_parse(line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0
+            # Parse main parameters
+            params = {
+                "effective_radius": safe_parse(line[FORMAT_DEFAULT["pareff"]]),
+                "true_radius": safe_parse(line[FORMAT_DEFAULT["partru"]]),
+                "channel_mode": safe_parse(line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0,
+            }
 
-                # Parse flags
-                try:
-                    params["vary_effective"] = VaryFlag(int(line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
-                    params["vary_true"] = VaryFlag(int(line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
-                    logger.info(f"{where_am_i}: Successfully parsed flags")
-                except ValueError:
-                    logger.error(f"{where_am_i}: Invalid vary flags")
-                    raise ValueError("Invalid vary flags")
+            # Parse flags
+            try:
+                params["vary_effective"] = VaryFlag(int(line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
+                params["vary_true"] = VaryFlag(int(line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
+                logger.info(f"{where_am_i}: Successfully parsed flags")
+            except ValueError:
+                logger.error(f"{where_am_i}: Invalid vary flags")
+                raise ValueError("Invalid vary flags")
 
             # Parse spin groups and channels
-            spin_groups, channels = cls._parse_spin_groups_and_channels([line])
-            params["spin_groups"].extend(spin_groups)
-            if channels:
-                params["channels"] = channels
+            spin_groups, channels = cls._parse_spin_groups_and_channels(line)
 
-        if not params["spin_groups"]:
-            logger.error(f"{where_am_i}: No spin groups found")
-            raise ValueError("No spin groups found")
+            if not spin_groups:
+                logger.error(f"{where_am_i}: No spin groups found")
+                raise ValueError("No spin groups found")
 
-        print(params)
-        # Create parameters object
-        try:
-            parameters = RadiusParameters(**params)
-            logger.info(f"{where_am_i}: Successfully created radius parameters")
+            params["spin_groups"] = spin_groups
+            params["channels"] = channels
 
-        except ValueError as e:
-            logger.error(f"{where_am_i}: Invalid parameter values: {e}")
-            raise ValueError(f"Invalid parameter values: {e}")
+            # Create parameters object
+            try:
+                parameters = RadiusParameters(**params)
+                logger.info(f"{where_am_i}: Successfully created radius parameters")
+                radius_parameters_list.append(parameters)
+            except ValueError as e:
+                logger.error(f"{where_am_i}: Invalid parameter values: {e}")
+                raise ValueError(f"Invalid parameter values: {e}")
 
         logger.info(f"{where_am_i}: Successfully parsed radius parameters")
         
-        return cls(parameters=parameters)
+        return cls(parameters=radius_parameters_list)
 
     def to_lines(self) -> List[str]:
         """Convert the card to fixed-width format lines.
@@ -467,46 +458,47 @@ class RadiusCardDefault(BaseModel):
         logger.info(f"{where_am_i}: Converting radius parameters to lines")
         lines = [CARD_7_HEADER]
 
-        # Format main parameters
-        main_parts = [
-            format_float(self.parameters.effective_radius, width=10),
-            format_float(self.parameters.true_radius, width=10),
-            str(self.parameters.channel_mode),
-            format_vary(self.parameters.vary_effective),
-            format_vary(self.parameters.vary_true),
-        ]
+        for params in self.parameters:
+            # Format main parameters
+            main_parts = [
+                format_float(params.effective_radius, width=10),
+                format_float(params.true_radius, width=10),
+                str(params.channel_mode),
+                format_vary(params.vary_effective),
+                format_vary(params.vary_true),
+            ]
 
-        # Add spin groups (up to 28 per line)
-        spin_groups = self.parameters.spin_groups
-        spin_group_lines = []
+            # Add spin groups (up to 28 per line)
+            spin_groups = params.spin_groups
+            spin_group_lines = []
 
-        current_line = []
-        for group in spin_groups:
-            current_line.append(f"{group:2d}")
-            if len(current_line) == 28:  # Max groups per line
+            current_line = []
+            for group in spin_groups:
+                current_line.append(f"{group:2d}")
+                if len(current_line) == 28:  # Max groups per line
+                    spin_group_lines.append("".join(current_line))
+                    current_line = []
+
+            # Add any remaining groups
+            if current_line:
                 spin_group_lines.append("".join(current_line))
-                current_line = []
 
-        # Add any remaining groups
-        if current_line:
-            spin_group_lines.append("".join(current_line))
+            # Combine main parameters with first line of spin groups
+            if spin_group_lines:
+                first_line = "".join(main_parts)
+                if len(spin_group_lines[0]) > 0:
+                    first_line += spin_group_lines[0]
+                lines.append(first_line)
 
-        # Combine main parameters with first line of spin groups
-        if spin_group_lines:
-            first_line = "".join(main_parts)
-            if len(spin_group_lines[0]) > 0:
-                first_line += spin_group_lines[0]
-            lines.append(first_line)
+                # Add remaining spin group lines
+                lines.extend(spin_group_lines[1:])
 
-            # Add remaining spin group lines
-            lines.extend(spin_group_lines[1:])
-
-        # Add channels if present
-        if self.parameters.channels:
-            channel_line = "0"  # IX=0 marker
-            for channel in self.parameters.channels:
-                channel_line += f"{channel:2d}"
-            lines.append(channel_line)
+            # Add channels if present
+            if params.channels:
+                channel_line = "0"  # IX=0 marker
+                for channel in params.channels:
+                    channel_line += f"{channel:2d}"
+                lines.append(channel_line)
 
         # Add trailing blank line
         lines.append("")
@@ -929,9 +921,13 @@ class RadiusCard(BaseModel):
     Example:
         # Create new parameters
         card = RadiusCard(
-            effective_radius=3.2,
-            true_radius=3.2,
-            spin_groups=[1, 2, 3]
+            parameters=[
+                RadiusParameters(
+                    effective_radius=3.2,
+                    true_radius=3.2,
+                    spin_groups=[1, 2, 3]
+                )
+            ]
         )
 
         # Write in desired format
@@ -939,11 +935,11 @@ class RadiusCard(BaseModel):
 
         # Or read from template and modify
         card = RadiusCard.from_lines(template_lines)
-        card.parameters.effective_radius = 3.5
+        card.parameters[0].effective_radius = 3.5
         lines = card.to_lines(format=RadiusFormat.DEFAULT)
     """
 
-    parameters: RadiusParameters
+    parameters: List[RadiusParameters]
 
     # Optional keyword format extras
     particle_pair: Optional[str] = None
@@ -1024,14 +1020,14 @@ class RadiusCard(BaseModel):
                 keyword_card = RadiusCardKeyword.from_lines(lines)
                 logger.info(f"{where_am_i}: Successfully parsed radius card in keyword format")
                 return cls(
-                    parameters=keyword_card.parameters,
+                    parameters=[keyword_card.parameters],
                     particle_pair=keyword_card.particle_pair,
                     orbital_momentum=keyword_card.orbital_momentum,
                     relative_uncertainty=keyword_card.relative_uncertainty,
                     absolute_uncertainty=keyword_card.absolute_uncertainty,
                 )
             elif format_type == RadiusFormat.ALTERNATE:
-                radius_card = cls(parameters=RadiusCardAlternate.from_lines(lines).parameters)
+                radius_card = cls(parameters=[RadiusCardAlternate.from_lines(lines).parameters])
                 logger.info(f"{where_am_i}: Successfully parsed radius card from lines in alternate format")
                 return radius_card
             else:
@@ -1049,17 +1045,23 @@ class RadiusCard(BaseModel):
         logger.info(f"{where_am_i}: Writing radius card in format: {radius_format}")
         try:
             if radius_format == RadiusFormat.KEYWORD:
-                lines = RadiusCardKeyword(
-                    parameters=self.parameters,
-                    particle_pair=self.particle_pair,
-                    orbital_momentum=self.orbital_momentum,
-                    relative_uncertainty=self.relative_uncertainty,
-                    absolute_uncertainty=self.absolute_uncertainty,
-                ).to_lines()
+                lines = []
+                for param in self.parameters:
+                    lines.extend(RadiusCardKeyword(
+                        parameters=param,
+                        particle_pair=self.particle_pair,
+                        orbital_momentum=self.orbital_momentum,
+                        relative_uncertainty=self.relative_uncertainty,
+                        absolute_uncertainty=self.absolute_uncertainty,
+                    ).to_lines())
             elif radius_format == RadiusFormat.ALTERNATE:
-                lines = RadiusCardAlternate(parameters=self.parameters).to_lines()
+                lines = []
+                for param in self.parameters:
+                    lines.extend(RadiusCardAlternate(parameters=param).to_lines())
             else:
-                lines = RadiusCardDefault(parameters=self.parameters).to_lines()
+                lines = []
+                for param in self.parameters:
+                    lines.extend(RadiusCardDefault(parameters=[param]).to_lines())
             
             logger.info(f"{where_am_i}: Successfully wrote radius card")
             return lines
@@ -1111,7 +1113,7 @@ class RadiusCard(BaseModel):
 
         # Create card with both parameters and extras
         card = cls(
-            parameters=RadiusParameters(**params),
+            parameters=[RadiusParameters(**params)],
             particle_pair=particle_pair,
             orbital_momentum=orbital_momentum,
             relative_uncertainty=relative_uncertainty,
