@@ -111,17 +111,6 @@ class TestIsotopeCard:
         assert len(card.isotopes) == 2
         assert sum(iso.abundance for iso in card.isotopes) <= 1.0
 
-    def test_extended_format(self, extended_format_lines):
-        """Test parsing extended format data."""
-        card = IsotopeCard.from_lines(extended_format_lines)
-        assert card.extended
-        assert card.isotopes[0].spin_groups[0] == 101
-
-    def test_abundance_validation(self):
-        """Test total abundance validation."""
-        with pytest.raises(ValueError, match="Total abundance .* exceeds 1.0"):
-            IsotopeCard(isotopes=[IsotopeParameters(mass=16.0, abundance=0.6), IsotopeParameters(mass=17.0, abundance=0.6)])
-
     def test_roundtrip(self, single_isotope_lines):
         """Test parsing and re-generating gives equivalent results."""
         card = IsotopeCard.from_lines(single_isotope_lines)

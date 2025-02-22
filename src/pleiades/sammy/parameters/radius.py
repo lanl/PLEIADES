@@ -5,6 +5,7 @@ This module handles both fixed-width (Card Set 7) and keyword-based (Card Set 7a
 for radius parameters in SAMMY parameter files.
 """
 
+import os
 import re
 from enum import Enum
 from typing import List, Optional, Tuple, Union
@@ -12,16 +13,53 @@ from typing import List, Optional, Tuple, Union
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, parse_keyword_pairs_to_dict, safe_parse
+from pleiades.utils.logger import Logger, _log_and_raise_error
+
+# Initialize logger with file logging
+log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
+logger = Logger(__name__, log_file=log_file_path)
+
+####################################################################################################
+# Header flages and format definitions
+####################################################################################################
+CARD_7_HEADER = "RADIUs parameters follow"
+CARD_7A_HEADER = "RADII are in KEY-WORD format"
+CARD_7_ALT_HEADER = "RADIUs parameters follow"
+
+# Format definitions for fixed-width fields
+FORMAT_DEFAULT = {
+    "pareff": slice(0, 10),  # Effective radius (Fermi)
+    "partru": slice(10, 20),  # True radius (Fermi)
+    "ichan": slice(20, 21),  # Channel indicator
+    "ifleff": slice(21, 22),  # Flag for PAREFF
+    "ifltru": slice(22, 24),  # Flag for PARTRU
+    # Spin groups start at col 24, 2 cols each
+    # After IX=0 marker, channel numbers use 2 cols each
+}
+
+# Format definitions for fixed-width fields
+FORMAT_ALTERNATE = {
+    "pareff": slice(0, 10),  # Radius for potential scattering
+    "partru": slice(10, 20),  # Radius for penetrabilities
+    "ichan": slice(20, 25),  # Channel indicator (5 cols)
+    "ifleff": slice(25, 30),  # Flag for PAREFF (5 cols)
+    "ifltru": slice(30, 35),  # Flag for PARTRU (5 cols)
+    # Spin groups start at col 35, 5 cols each
+    # After IX=0 marker, channel numbers use 5 cols each
+}
 
 
-class OrbitalMomentum(str, Enum):
-    """Valid values for orbital angular momentum specification."""
+class RadiusFormat(Enum):
+    """Supported formats for radius parameter cards."""
 
-    ODD = "ODD"
-    EVEN = "EVEN"
-    ALL = "ALL"
+    DEFAULT = "default"  # Fixed width (<99 spin groups)
+    ALTERNATE = "alternate"  # Fixed width (>=99 spin groups)
+    KEYWORD = "keyword"  # Keyword based
 
 
+####################################################################################################
+# RadiusParameters class and its corresponding Container class
+####################################################################################################
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters used in SAMMY calculations.
 
@@ -188,21 +226,23 @@ class RadiusParameters(BaseModel):
 
         return self
 
+    def __repr__(self) -> str:
+        """Return a string representation of the radius parameters."""
+        return (
+            f"RadiusParameters("
+            f"effective_radius={self.effective_radius}, "
+            f"true_radius={self.true_radius}, "
+            f"channel_mode={self.channel_mode}, "
+            f"vary_effective={self.vary_effective}, "
+            f"vary_true={self.vary_true}, "
+            f"spin_groups={self.spin_groups}, "
+            f"channels={self.channels})"
+        )
 
-# Format definitions for fixed-width fields
-FORMAT_DEFAULT = {
-    "pareff": slice(0, 10),  # Effective radius (Fermi)
-    "partru": slice(10, 20),  # True radius (Fermi)
-    "ichan": slice(20, 21),  # Channel indicator
-    "ifleff": slice(21, 22),  # Flag for PAREFF
-    "ifltru": slice(22, 24),  # Flag for PARTRU
-    # Spin groups start at col 24, 2 cols each
-    # After IX=0 marker, channel numbers use 2 cols each
-}
 
-CARD_7_HEADER = "RADIUs parameters follow"
-
-
+####################################################################################################
+# Card variant classes for different formats (default, alternate, keyword)
+####################################################################################################
 class RadiusCardDefault(BaseModel):
     """Handler for default format radius parameter cards (Card Set 7).
 
@@ -219,7 +259,7 @@ class RadiusCardDefault(BaseModel):
         For larger systems, use RadiusCardAlternate.
     """
 
-    parameters: RadiusParameters
+    parameters: List[RadiusParameters]
 
     @classmethod
     def is_header_line(cls, line: str) -> bool:
@@ -231,6 +271,8 @@ class RadiusCardDefault(BaseModel):
         Returns:
             bool: True if line is a valid header
         """
+        where_am_i = "RadiusCardDefault.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return line.strip().upper().startswith("RADIU")
 
     @staticmethod
@@ -245,6 +287,8 @@ class RadiusCardDefault(BaseModel):
         Returns:
             List[int]: List of parsed integers, stopping at first invalid value
         """
+        where_am_i = "RadiusCardDefault._parse_numbers_from_line()"
+        logger.info(f"{where_am_i}: Parsing fixed-width integers from line")
         numbers = []
         pos = start_pos
         while pos + width <= len(line):
@@ -256,11 +300,11 @@ class RadiusCardDefault(BaseModel):
         return numbers
 
     @classmethod
-    def _parse_spin_groups_and_channels(cls, lines: List[str]) -> Tuple[List[int], Optional[List[int]]]:
-        """Parse spin groups and optional channels from lines.
+    def _parse_spin_groups_and_channels(cls, line: str) -> Tuple[List[int], Optional[List[int]]]:
+        """Parse spin groups and optional channels from a line.
 
         Args:
-            lines: List of input lines containing spin groups/channels
+            line: Input line containing spin groups/channels
 
         Returns:
             Tuple containing:
@@ -270,29 +314,30 @@ class RadiusCardDefault(BaseModel):
         Note:
             Handles continuation lines (-1 marker) and IX=0 marker for channels
         """
+        where_am_i = "RadiusCardDefault._parse_spin_groups_and_channels()"
+        logger.info(f"{where_am_i}: Parsing spin groups and channels from line: {line}")
+
         spin_groups = []
         channels = None
 
-        for line in lines:
-            # Parse numbers 2 columns each starting at position 24
-            numbers = cls._parse_numbers_from_line(line, 24, 2)
+        # Parse numbers 2 columns each starting at position 24
+        numbers = cls._parse_numbers_from_line(line, 24, 2)
+        logger.info(f"{where_am_i}: Parsed numbers: {numbers}")
 
-            if not numbers:
-                continue
+        if not numbers:
+            return spin_groups, channels
 
-            # Check for continuation marker (-1)
-            if numbers[-1] == -1:
-                spin_groups.extend(numbers[:-1])
-                continue
-
+        # Check for continuation marker (-1)
+        if numbers[-1] == -1:
+            spin_groups.extend(numbers[:-1])
+        else:
             # Check for IX=0 marker (indicates channels follow)
             if 0 in numbers:
                 zero_index = numbers.index(0)
                 spin_groups.extend(numbers[:zero_index])
                 channels = numbers[zero_index + 1 :]
-                break
-
-            spin_groups.extend(numbers)
+            else:
+                spin_groups.extend(numbers)
 
         return spin_groups, channels
 
@@ -309,55 +354,72 @@ class RadiusCardDefault(BaseModel):
         Raises:
             ValueError: If lines are invalid or required data is missing
         """
+        where_am_i = "RadiusCardDefault.from_lines()"
+
+        logger.info(f"{where_am_i}: Parsing radius parameters from lines")
         if not lines:
+            logger.error(f"{where_am_i}: No lines provided")
             raise ValueError("No lines provided")
 
         # Validate header
         if not cls.is_header_line(lines[0]):
+            logger.error(f"{where_am_i}: Invalid header line: {lines[0]}")
             raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Get content lines (skip header and trailing blank)
         content_lines = [line for line in lines[1:] if line.strip()]
         if not content_lines:
+            logger.error(f"{where_am_i}: No parameter lines found")
             raise ValueError("No parameter lines found")
 
-        # Parse first line for main parameters
-        main_line = content_lines[0]
+        # Initialize list to hold RadiusParameters objects
+        radius_parameters_list = []
 
-        # Ensure line is long enough
-        if len(main_line) < 24:  # Minimum length for main parameters
-            raise ValueError("Parameter line too short")
+        # Parse each line for main parameters and spin groups
+        for line in content_lines:
+            # Ensure line is long enough
+            if len(line) < 24:  # Minimum length for main parameters
+                logger.error(f"{where_am_i}: Parameter line too short")
+                raise ValueError("Parameter line too short")
 
-        # Parse main parameters
-        params = {
-            "effective_radius": safe_parse(main_line[FORMAT_DEFAULT["pareff"]]),
-            "true_radius": safe_parse(main_line[FORMAT_DEFAULT["partru"]]),
-            "channel_mode": safe_parse(main_line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0,
-        }
+            # Parse main parameters
+            params = {
+                "effective_radius": safe_parse(line[FORMAT_DEFAULT["pareff"]]),
+                "true_radius": safe_parse(line[FORMAT_DEFAULT["partru"]]),
+                "channel_mode": safe_parse(line[FORMAT_DEFAULT["ichan"]], as_int=True) or 0,
+            }
 
-        # Parse flags
-        try:
-            params["vary_effective"] = VaryFlag(int(main_line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
-            params["vary_true"] = VaryFlag(int(main_line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
-        except ValueError:
-            raise ValueError("Invalid vary flags")
+            # Parse flags
+            try:
+                params["vary_effective"] = VaryFlag(int(line[FORMAT_DEFAULT["ifleff"]].strip() or "0"))
+                params["vary_true"] = VaryFlag(int(line[FORMAT_DEFAULT["ifltru"]].strip() or "0"))
+                logger.info(f"{where_am_i}: Successfully parsed flags")
+            except ValueError:
+                logger.error(f"{where_am_i}: Invalid vary flags")
+                raise ValueError("Invalid vary flags")
 
-        # Parse spin groups and channels
-        spin_groups, channels = cls._parse_spin_groups_and_channels(content_lines)
+            # Parse spin groups and channels
+            spin_groups, channels = cls._parse_spin_groups_and_channels(line)
 
-        if not spin_groups:
-            raise ValueError("No spin groups found")
+            if not spin_groups:
+                logger.error(f"{where_am_i}: No spin groups found")
+                raise ValueError("No spin groups found")
 
-        params["spin_groups"] = spin_groups
-        params["channels"] = channels
+            params["spin_groups"] = spin_groups
+            params["channels"] = channels
 
-        # Create parameters object
-        try:
-            parameters = RadiusParameters(**params)
-        except ValueError as e:
-            raise ValueError(f"Invalid parameter values: {e}")
+            # Create parameters object
+            try:
+                parameters = RadiusParameters(**params)
+                logger.info(f"{where_am_i}: Successfully created radius parameters")
+                radius_parameters_list.append(parameters)
+            except ValueError as e:
+                logger.error(f"{where_am_i}: Invalid parameter values: {e}")
+                raise ValueError(f"Invalid parameter values: {e}")
 
-        return cls(parameters=parameters)
+        logger.info(f"{where_am_i}: Successfully parsed radius parameters")
+
+        return cls(parameters=radius_parameters_list)
 
     def to_lines(self) -> List[str]:
         """Convert the card to fixed-width format lines.
@@ -365,67 +427,55 @@ class RadiusCardDefault(BaseModel):
         Returns:
             List[str]: Lines including header
         """
-        lines = [CARD_7_HEADER]
+        where_am_i = "RadiusCardDefault.to_lines()"
 
-        # Format main parameters
-        main_parts = [
-            format_float(self.parameters.effective_radius, width=10),
-            format_float(self.parameters.true_radius, width=10),
-            str(self.parameters.channel_mode),
-            format_vary(self.parameters.vary_effective),
-            format_vary(self.parameters.vary_true),
-        ]
+        logger.info(f"{where_am_i}: Converting radius parameters to lines")
+        lines = []
 
-        # Add spin groups (up to 28 per line)
-        spin_groups = self.parameters.spin_groups
-        spin_group_lines = []
+        for params in self.parameters:
+            # Format main parameters
+            main_parts = [
+                format_float(params.effective_radius, width=10),
+                format_float(params.true_radius, width=10),
+                str(params.channel_mode),
+                format_vary(params.vary_effective),
+                format_vary(params.vary_true),
+            ]
 
-        current_line = []
-        for group in spin_groups:
-            current_line.append(f"{group:2d}")
-            if len(current_line) == 28:  # Max groups per line
+            # Add spin groups (up to 28 per line)
+            spin_groups = params.spin_groups
+            spin_group_lines = []
+
+            current_line = []
+            for group in spin_groups:
+                current_line.append(f"{group:2d}")
+                if len(current_line) == 28:  # Max groups per line
+                    spin_group_lines.append("".join(current_line))
+                    current_line = []
+
+            # Add any remaining groups
+            if current_line:
                 spin_group_lines.append("".join(current_line))
-                current_line = []
 
-        # Add any remaining groups
-        if current_line:
-            spin_group_lines.append("".join(current_line))
+            # Combine main parameters with first line of spin groups
+            if spin_group_lines:
+                first_line = "".join(main_parts)
+                if len(spin_group_lines[0]) > 0:
+                    first_line += spin_group_lines[0]
+                lines.append(first_line)
 
-        # Combine main parameters with first line of spin groups
-        if spin_group_lines:
-            first_line = "".join(main_parts)
-            if len(spin_group_lines[0]) > 0:
-                first_line += spin_group_lines[0]
-            lines.append(first_line)
+                # Add remaining spin group lines
+                lines.extend(spin_group_lines[1:])
 
-            # Add remaining spin group lines
-            lines.extend(spin_group_lines[1:])
+            # Add channels if present
+            if params.channels:
+                channel_line = "0"  # IX=0 marker
+                for channel in params.channels:
+                    channel_line += f"{channel:2d}"
+                lines.append(channel_line)
 
-        # Add channels if present
-        if self.parameters.channels:
-            channel_line = "0"  # IX=0 marker
-            for channel in self.parameters.channels:
-                channel_line += f"{channel:2d}"
-            lines.append(channel_line)
-
-        # Add trailing blank line
-        lines.append("")
-
+        logger.info(f"{where_am_i}: Successfully converted radius parameters to lines")
         return lines
-
-
-# Format definitions for fixed-width fields
-FORMAT_ALTERNATE = {
-    "pareff": slice(0, 10),  # Radius for potential scattering
-    "partru": slice(10, 20),  # Radius for penetrabilities
-    "ichan": slice(20, 25),  # Channel indicator (5 cols)
-    "ifleff": slice(25, 30),  # Flag for PAREFF (5 cols)
-    "ifltru": slice(30, 35),  # Flag for PARTRU (5 cols)
-    # Spin groups start at col 35, 5 cols each
-    # After IX=0 marker, channel numbers use 5 cols each
-}
-
-CARD_7_ALT_HEADER = "RADIUs parameters follow"
 
 
 class RadiusCardAlternate(BaseModel):
@@ -457,6 +507,8 @@ class RadiusCardAlternate(BaseModel):
         Returns:
             bool: True if line is a valid header
         """
+        where_am_i = "RadiusCardAlternate.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return line.strip().upper().startswith("RADIU")
 
     @staticmethod
@@ -471,6 +523,9 @@ class RadiusCardAlternate(BaseModel):
         Returns:
             List[int]: List of parsed integers, stopping at first invalid value
         """
+        where_am_i = "RadiusCardAlternate._parse_numbers_from_line()"
+        logger.info(f"{where_am_i}: Parsing fixed-width integers from line")
+
         numbers = []
         pos = start_pos
         while pos + width <= len(line):
@@ -496,8 +551,12 @@ class RadiusCardAlternate(BaseModel):
         Note:
             Handles continuation lines (-1 marker) and IX=0 marker for channels
         """
+        where_am_i = "RadiusCardAlternate._parse_spin_groups_and_channels()"
+        logger.info(f"{where_am_i}: Parsing spin groups and channels from lines")
+
         spin_groups = []
         channels = None
+        logger.info(f"{where_am_i}: parsing spin groups and channels")
 
         for line in lines:
             # Parse numbers 5 columns each starting at position 35
@@ -535,16 +594,21 @@ class RadiusCardAlternate(BaseModel):
         Raises:
             ValueError: If lines are invalid or required data is missing
         """
+        where_am_i = "RadiusCardAlternate.from_lines()"
+        logger.info(f"{where_am_i}: Parsing radius parameters from lines")
+
         if not lines:
             raise ValueError("No lines provided")
 
         # Validate header
         if not cls.is_header_line(lines[0]):
+            logger.error(f"{where_am_i}: Invalid header line: {lines[0]}")
             raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Get content lines (skip header and trailing blank)
         content_lines = [line for line in lines[1:] if line.strip()]
         if not content_lines:
+            logger.error(f"{where_am_i}: No parameter lines found")
             raise ValueError("No parameter lines found")
 
         # Parse first line for main parameters
@@ -552,6 +616,7 @@ class RadiusCardAlternate(BaseModel):
 
         # Ensure line is long enough
         if len(main_line) < 35:  # Minimum length for main parameters
+            logger.error(f"{where_am_i}: Parameter line too short")
             raise ValueError("Parameter line too short")
 
         # Parse main parameters
@@ -566,12 +631,14 @@ class RadiusCardAlternate(BaseModel):
             params["vary_effective"] = VaryFlag(int(main_line[FORMAT_ALTERNATE["ifleff"]].strip() or "0"))
             params["vary_true"] = VaryFlag(int(main_line[FORMAT_ALTERNATE["ifltru"]].strip() or "0"))
         except ValueError:
+            logger.error(f"{where_am_i}: Invalid vary flags")
             raise ValueError("Invalid vary flags")
 
         # Parse spin groups and channels
         spin_groups, channels = cls._parse_spin_groups_and_channels(content_lines)
 
         if not spin_groups:
+            logger.error(f"{where_am_i}: No spin groups found")
             raise ValueError("No spin groups found")
 
         params["spin_groups"] = spin_groups
@@ -581,8 +648,10 @@ class RadiusCardAlternate(BaseModel):
         try:
             parameters = RadiusParameters(**params)
         except ValueError as e:
+            logger.error(f"{where_am_i}: Invalid parameter values: {e}")
             raise ValueError(f"Invalid parameter values: {e}")
 
+        logger.info(f"{where_am_i}: Successfully parsed radius parameters")
         return cls(parameters=parameters)
 
     def to_lines(self) -> List[str]:
@@ -591,7 +660,9 @@ class RadiusCardAlternate(BaseModel):
         Returns:
             List[str]: Lines including header
         """
-        lines = [CARD_7_ALT_HEADER]
+        where_am_i = "RadiusCardAlternate.to_lines()"
+
+        lines = []
 
         # Format main parameters
         main_parts = [
@@ -640,9 +711,6 @@ class RadiusCardAlternate(BaseModel):
         return lines
 
 
-CARD_7A_HEADER = "RADII are in KEY-WORD format"
-
-
 class RadiusCardKeyword(BaseModel):
     """Handler for keyword-based radius parameter cards (Card Set 7a).
 
@@ -659,6 +727,8 @@ class RadiusCardKeyword(BaseModel):
     """
 
     parameters: RadiusParameters
+
+    # Optional keyword format extras
     particle_pair: Optional[str] = None
     orbital_momentum: Optional[List[Union[int, str]]] = None
     relative_uncertainty: Optional[float] = None
@@ -667,11 +737,15 @@ class RadiusCardKeyword(BaseModel):
     @classmethod
     def is_header_line(cls, line: str) -> bool:
         """Check if line is a valid header line."""
+        where_am_i = "RadiusCardKeyword.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if header line - {line}")
         return "RADII" in line.upper() and "KEY-WORD" in line.upper()
 
     @staticmethod
     def _parse_values(value_str: str) -> List[str]:
         """Parse space/comma separated values."""
+        where_am_i = "RadiusCardKeyword._parse_values()"
+        logger.info(f"{where_am_i}: Parsing values from string: {value_str}")
         return [v for v in re.split(r"[,\s]+", value_str.strip()) if v]
 
     @classmethod
@@ -687,11 +761,14 @@ class RadiusCardKeyword(BaseModel):
         Raises:
             ValueError: If lines are invalid or required data is missing
         """
+        where_am_i = "RadiusCardKeyword.from_lines()"
         if not lines:
+            logger.error(f"{where_am_i}: No lines provided")
             raise ValueError("No lines provided")
 
         # Validate header
         if not cls.is_header_line(lines[0]):
+            logger.error(f"{where_am_i}: Invalid header line: {lines[0]}")
             raise ValueError(f"Invalid header line: {lines[0]}")
 
         # Parse parameters for RadiusParameters
@@ -778,7 +855,9 @@ class RadiusCardKeyword(BaseModel):
         Returns:
             List[str]: Lines in keyword format
         """
-        lines = [CARD_7A_HEADER]
+        where_am_i = "RadiusCardKeyword.to_lines()"
+        logger.info(f"{where_am_i}: Converting radius parameters to lines")
+        lines = []
 
         # Add radius values
         if self.parameters.true_radius == self.parameters.effective_radius:
@@ -815,14 +894,9 @@ class RadiusCardKeyword(BaseModel):
         return lines
 
 
-class RadiusFormat(Enum):
-    """Supported formats for radius parameter cards."""
-
-    DEFAULT = "default"  # Fixed width (<99 spin groups)
-    ALTERNATE = "alternate"  # Fixed width (>=99 spin groups)
-    KEYWORD = "keyword"  # Keyword based
-
-
+####################################################################################################
+# RadiusCard Class (what is called in parfile.py)
+####################################################################################################
 class RadiusCard(BaseModel):
     """Main handler for SAMMY radius parameter cards.
 
@@ -833,9 +907,13 @@ class RadiusCard(BaseModel):
     Example:
         # Create new parameters
         card = RadiusCard(
-            effective_radius=3.2,
-            true_radius=3.2,
-            spin_groups=[1, 2, 3]
+            parameters=[
+                RadiusParameters(
+                    effective_radius=3.2,
+                    true_radius=3.2,
+                    spin_groups=[1, 2, 3]
+                )
+            ]
         )
 
         # Write in desired format
@@ -843,11 +921,12 @@ class RadiusCard(BaseModel):
 
         # Or read from template and modify
         card = RadiusCard.from_lines(template_lines)
-        card.parameters.effective_radius = 3.5
+        card.parameters[0].effective_radius = 3.5
         lines = card.to_lines(format=RadiusFormat.DEFAULT)
     """
 
-    parameters: RadiusParameters
+    parameters: List[RadiusParameters]
+
     # Optional keyword format extras
     particle_pair: Optional[str] = None
     orbital_momentum: Optional[List[Union[int, str]]] = None
@@ -864,7 +943,12 @@ class RadiusCard(BaseModel):
         Returns:
             bool: True if line matches any valid radius header format
         """
+        # set location for logger
+        where_am_i = "RadiusCard.is_header_line()"
+
         line_upper = line.strip().upper()
+
+        logger.info(f"{where_am_i}: {line_upper}")
 
         # Check all valid header formats
         valid_headers = [
@@ -878,54 +962,105 @@ class RadiusCard(BaseModel):
     @classmethod
     def detect_format(cls, lines: List[str]) -> RadiusFormat:
         """Detect format from input lines."""
-        if not lines:
-            raise ValueError("No lines provided")
+        where_am_i = "RadiusCard.detect_format()"
 
+        if not lines:
+            _log_and_raise_error(logger, "No lines provided", ValueError)
+
+        # Grab header from lines (suppose to be the first line)
         header = lines[0].strip().upper()
+        logger.info(f"{where_am_i}: Header line: {header}")
+
+        # Check for valid header formats
+        # If KEY-WORD is in the header, it is a keyword format
         if "KEY-WORD" in header:
+            logger.info(f"{where_am_i}: Detected keyword format!")
             return RadiusFormat.KEYWORD
+
+        # If DEFAULT or ALTERNATE card formats then "RADIUS" should be in the header
         elif "RADIU" in header:
             # Check format by examining spin group columns
             content_line = next((l for l in lines[1:] if l.strip()), "")  # noqa: E741
+
+            # Check for alternate format (5-column integer values)
             if len(content_line) >= 35 and content_line[25:30].strip():  # 5-col format
+                logger.info(f"{where_am_i}: Detected ALTERNATE format based on {content_line}")
                 return RadiusFormat.ALTERNATE
+
+            logger.info(f"{where_am_i}: Detected DEFAULT format based on {content_line}")
             return RadiusFormat.DEFAULT
 
-        raise ValueError("Invalid header format")
+        _log_and_raise_error(logger, "Invalid header format...", ValueError)
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> "RadiusCard":
         """Parse radius card from lines in any format."""
+        where_am_i = "RadiusCard.from_lines()"
+
+        logger.info(f"{where_am_i}: Attempting to parse radius card from lines")
         format_type = cls.detect_format(lines)
 
-        if format_type == RadiusFormat.KEYWORD:
-            keyword_card = RadiusCardKeyword.from_lines(lines)
-            return cls(
-                parameters=keyword_card.parameters,
-                particle_pair=keyword_card.particle_pair,
-                orbital_momentum=keyword_card.orbital_momentum,
-                relative_uncertainty=keyword_card.relative_uncertainty,
-                absolute_uncertainty=keyword_card.absolute_uncertainty,
-            )
-        elif format_type == RadiusFormat.ALTERNATE:
-            return cls(parameters=RadiusCardAlternate.from_lines(lines).parameters)
-        else:
-            return cls(parameters=RadiusCardDefault.from_lines(lines).parameters)
+        # Try reading in the radius card based on the determined format
+        try:
+            if format_type == RadiusFormat.KEYWORD:
+                keyword_card = RadiusCardKeyword.from_lines(lines)
+                logger.info(f"{where_am_i}: Successfully parsed radius card in keyword format")
+                return cls(
+                    parameters=[keyword_card.parameters],
+                    particle_pair=keyword_card.particle_pair,
+                    orbital_momentum=keyword_card.orbital_momentum,
+                    relative_uncertainty=keyword_card.relative_uncertainty,
+                    absolute_uncertainty=keyword_card.absolute_uncertainty,
+                )
+            elif format_type == RadiusFormat.ALTERNATE:
+                radius_card = cls(parameters=[RadiusCardAlternate.from_lines(lines).parameters])
+                logger.info(f"{where_am_i}: Successfully parsed radius card from lines in alternate format")
+                return radius_card
+            else:
+                radius_card = cls(parameters=RadiusCardDefault.from_lines(lines).parameters)
+                logger.info(f"{where_am_i}: Successfully parsed radius card from lines in default format")
+                return radius_card
 
-    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.KEYWORD) -> List[str]:
+        except Exception as e:
+            logger.error(f"{where_am_i}Failed to parse radius card: {str(e)}\nLines: {lines}")
+            raise ValueError(f"Failed to parse radius card: {str(e)}\nLines: {lines}")
+
+    def to_lines(self, radius_format: RadiusFormat = RadiusFormat.DEFAULT) -> List[str]:
         """Write radius card in specified format."""
-        if radius_format == RadiusFormat.KEYWORD:
-            return RadiusCardKeyword(
-                parameters=self.parameters,
-                particle_pair=self.particle_pair,
-                orbital_momentum=self.orbital_momentum,
-                relative_uncertainty=self.relative_uncertainty,
-                absolute_uncertainty=self.absolute_uncertainty,
-            ).to_lines()
-        elif radius_format == RadiusFormat.ALTERNATE:
-            return RadiusCardAlternate(parameters=self.parameters).to_lines()
-        else:
-            return RadiusCardDefault(parameters=self.parameters).to_lines()
+        where_am_i = "RadiusCard.to_lines()"
+        logger.info(f"{where_am_i}: Writing radius card in format: {radius_format}")
+
+        try:
+            if radius_format == RadiusFormat.KEYWORD:
+                lines = [CARD_7A_HEADER]
+                for param in self.parameters:
+                    lines.extend(
+                        RadiusCardKeyword(
+                            parameters=param,
+                            particle_pair=self.particle_pair,
+                            orbital_momentum=self.orbital_momentum,
+                            relative_uncertainty=self.relative_uncertainty,
+                            absolute_uncertainty=self.absolute_uncertainty,
+                        ).to_lines()
+                    )
+            elif radius_format == RadiusFormat.ALTERNATE:
+                lines = [CARD_7_ALT_HEADER]
+                for param in self.parameters:
+                    lines.extend(RadiusCardAlternate(parameters=param).to_lines())
+            else:
+                lines = [CARD_7_HEADER]
+                for param in self.parameters:
+                    lines.extend(RadiusCardDefault(parameters=[param]).to_lines())
+
+            # Add trailing blank line
+            lines.append("")
+
+            logger.info(f"{where_am_i}: Successfully wrote radius card")
+            return lines
+
+        except Exception as e:
+            logger.error(f"{where_am_i}: Failed to write radius card: {str(e)}")
+            raise ValueError(f"Failed to write radius card: {str(e)}")
 
     @classmethod
     def from_values(
@@ -956,6 +1091,8 @@ class RadiusCard(BaseModel):
         Returns:
             RadiusCard: Created card instance
         """
+        where_am_i = "RadiusCard.from_values()"
+
         # Separate parameters and extras
         params = {
             "effective_radius": effective_radius,
@@ -967,15 +1104,32 @@ class RadiusCard(BaseModel):
         params.update(kwargs)  # Only parameter-specific kwargs
 
         # Create card with both parameters and extras
-        return cls(
-            parameters=RadiusParameters(**params),
+        card = cls(
+            parameters=[RadiusParameters(**params)],
             particle_pair=particle_pair,
             orbital_momentum=orbital_momentum,
             relative_uncertainty=relative_uncertainty,
             absolute_uncertainty=absolute_uncertainty,
         )
 
+        logger.info(f"{where_am_i}: Successfully created RadiusCard")
+        return card
 
+
+####################################################################################################
+# IDK what this is for!
+####################################################################################################
+class OrbitalMomentum(str, Enum):
+    """Valid values for orbital angular momentum specification."""
+
+    ODD = "ODD"
+    EVEN = "EVEN"
+    ALL = "ALL"
+
+
+####################################################################################################
+# main function
+####################################################################################################
 if __name__ == "__main__":
     # Example usage
     card = RadiusCard.from_values(effective_radius=3.2, true_radius=3.2, spin_groups=[1, 2, 3])

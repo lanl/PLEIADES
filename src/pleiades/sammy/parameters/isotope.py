@@ -33,6 +33,8 @@ Cols    Format  Variable    Description
 41-45   I       IGRISO     Second spin group number
 ...etc for up to 9 groups per line
 
+NOTE: the extended format is currently not supported with pleiades.
+
 Continuation lines are indicated by "-1" in columns 79-80 (standard format)
 or column 80 (extended format). These lines contain only additional spin
 group numbers in the same format as the parent line.
@@ -44,12 +46,17 @@ Notes:
 - Spin groups must be valid for the model
 """
 
-import logging
+import os
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import Logger, _log_and_raise_error
+
+# Initialize logger with file logging
+log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
+logger = Logger(__name__, log_file=log_file_path)
 
 # Format definitions for standard format (<99 spin groups)
 # Each numeric field has specific width requirements
@@ -60,22 +67,21 @@ FORMAT_STANDARD = {
     "flag": slice(30, 32),  # IFLISO: Treatment flag
 }
 
+# Spin group number positions
+# Standard format: 2 columns per group starting at col 33
+SPIN_GROUP_STANDARD = {
+    "width": 2,  # Character width of each group number
+    "start": 32,  # Start of first group
+    "per_line": 24,  # Max groups per line
+    "cont_marker": slice(78, 80),  # "-1" indicates continuation
+}
+
 # Format for extended format (>99 spin groups)
 FORMAT_EXTENDED = {
     "mass": slice(0, 10),  # AMUISO: Atomic mass (amu)
     "abundance": slice(10, 20),  # PARISO: Fractional abundance
     "uncertainty": slice(20, 30),  # DELISO: Uncertainty on abundance
     "flag": slice(30, 35),  # IFLISO: Treatment flag
-}
-
-# Spin group number positions
-# Standard format: 2 columns per group starting at col 33
-# Extended format: 5 columns per group starting at col 36
-SPIN_GROUP_STANDARD = {
-    "width": 2,
-    "start": 32,
-    "per_line": 24,  # Max groups per line
-    "cont_marker": slice(78, 80),  # "-1" indicates continuation
 }
 
 SPIN_GROUP_EXTENDED = {
@@ -107,14 +113,6 @@ class IsotopeParameters(BaseModel):
         flag (VaryFlag): Treatment flag for abundance (-2=use input, 0=fixed, 1=vary, 3=PUP)
         spin_groups (List[int]): List of spin group numbers (negative values indicate omitted resonances)
 
-    Example:
-        Standard format line:
-        "16.000    0.99835   0.00002    0  1  2  3"
-                                          ^  ^  ^  ^ spin groups (2 cols each)
-                                       ^^ flag
-                              ^^^^^^^ uncertainty
-                     ^^^^^^^ abundance
-            ^^^^^^^ mass
     """
 
     mass: float = Field(description="Atomic mass in amu", gt=0)
@@ -138,15 +136,16 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If spin group validation fails
         """
+        where_am_i = "IsotopeParameters.validate_groups()"
         max_standard = 99  # Maximum group number for standard format
 
         for group in self.spin_groups:
             if group == 0:
-                raise ValueError("Spin group number cannot be 0")
+                _log_and_raise_error(logger, "Spin group number cannot be 0", ValueError)
 
             # Check if we need extended format
             if abs(group) > max_standard:
-                logging.debug(f"Group number {group} requires extended format")
+                logger.info(f"{where_am_i}:Group number {group} requires extended format")
 
         return self
 
@@ -174,11 +173,16 @@ class IsotopeParameters(BaseModel):
             ... ]
             >>> params = IsotopeParameters.from_lines(lines)
         """
-        if not lines or not lines[0].strip():
-            raise ValueError("No valid parameter line provided")
+        where_am_i = "IsotopeParameters.from_lines()"
 
-        # Parse main parameters from first line
-        format_dict = FORMAT_EXTENDED if extended else FORMAT_STANDARD
+        logger.info(f"{where_am_i}: Attempting to parse isotope parameters from lines")
+
+        if not lines or not lines[0].strip():
+            _log_and_raise_error(logger, "No valid parameter line provided", ValueError)
+
+        # Set format to standard.
+        format_dict = FORMAT_STANDARD  # NOTE: EXTENDED format is currently not supported.
+
         main_line = f"{lines[0]:<80}"  # Pad to full width
 
         params = {}
@@ -187,7 +191,7 @@ class IsotopeParameters(BaseModel):
         for field in ["mass", "abundance"]:
             value = safe_parse(main_line[format_dict[field]])
             if value is None:
-                raise ValueError(f"Failed to parse required field: {field}")
+                _log_and_raise_error(logger, f"Failed to parse required field: {field}", ValueError)
             params[field] = value
 
         # Parse optional uncertainty
@@ -195,14 +199,16 @@ class IsotopeParameters(BaseModel):
 
         # Parse flag
         flag_str = main_line[format_dict["flag"]].strip() or "0"
+
         try:
             params["flag"] = VaryFlag(int(flag_str))
         except (ValueError, TypeError):
+            _log_and_raise_error(logger, f"Invalid flag value: {flag_str}", ValueError)
             params["flag"] = VaryFlag.NO
 
         # Parse spin groups
         spin_groups = []
-        group_format = SPIN_GROUP_EXTENDED if extended else SPIN_GROUP_STANDARD
+        group_format = SPIN_GROUP_STANDARD  # NOTE: EXTENDED format is currently not supported.
 
         # Helper function to parse groups from a line
         def parse_groups(line: str, start_pos: int = None, continuation: bool = False) -> List[int]:
@@ -216,6 +222,7 @@ class IsotopeParameters(BaseModel):
             Returns:
                 List of parsed group numbers
             """
+
             groups = []
             pos = start_pos if start_pos is not None else group_format["start"]
 
@@ -233,6 +240,7 @@ class IsotopeParameters(BaseModel):
                     if group is not None:
                         groups.append(group)
                 pos += width
+
             return groups
 
         # Parse groups from first line
@@ -246,6 +254,7 @@ class IsotopeParameters(BaseModel):
             spin_groups.extend(parse_groups(line, start_pos=0, continuation=True))
 
         params["spin_groups"] = spin_groups
+
         return cls(**params)
 
     def to_lines(self, extended: bool = False) -> List[str]:
@@ -256,15 +265,10 @@ class IsotopeParameters(BaseModel):
 
         Returns:
             List[str]: Formatted lines with proper fixed-width spacing
-
-        Example:
-            >>> params = IsotopeParameters(mass=16.0, abundance=0.99835,
-            ...                           uncertainty=0.00002, flag=VaryFlag.NO,
-            ...                           spin_groups=[1, 2, 3, 4, 5, 6])
-            >>> lines = params.to_lines()
-            >>> print(lines[0])
-            "16.000    0.99835   0.00002    0  1  2  3"
         """
+        where_am_i = "IsotopeParameters.to_lines()"
+        logger.info(f"{where_am_i}: Attempting to convert isotope parameters to lines")
+
         # Select format based on mode
         group_format = SPIN_GROUP_EXTENDED if extended else SPIN_GROUP_STANDARD
         format_dict = FORMAT_EXTENDED if extended else FORMAT_STANDARD
@@ -318,33 +322,12 @@ class IsotopeCard(BaseModel):
         isotopes (List[IsotopeParameters]): List of isotope parameter sets
         extended (bool): Whether to use extended format for >99 spin groups
 
-    Example:
-        >>> lines = [
-        ...     "ISOTOpic abundances and masses",
-        ...     "16.000    0.99835   0.00002    0  1  2  3",
-        ...     "17.000    0.00165   0.00001    0  4  5  6",
-        ...     ""
-        ... ]
-        >>> card = IsotopeCard.from_lines(lines)
+    NOTE:   Fixed formats for both standard and extended are defined in the
+            IsotopeParameters class. But only using the standard format for now.
     """
 
     isotopes: List[IsotopeParameters] = Field(default_factory=list)
     extended: bool = Field(default=False, description="Use extended format for >99 spin groups")
-
-    @model_validator(mode="after")
-    def validate_abundances(self) -> "IsotopeCard":
-        """Validate that total abundance doesn't exceed 1.0.
-
-        Returns:
-            IsotopeCard: Self if validation passes
-
-        Raises:
-            ValueError: If total abundance > 1.0
-        """
-        total = sum(iso.abundance for iso in self.isotopes)
-        if total > 1.0:
-            raise ValueError(f"Total abundance {total} exceeds 1.0")
-        return self
 
     @classmethod
     def is_header_line(cls, line: str) -> bool:
@@ -354,10 +337,11 @@ class IsotopeCard(BaseModel):
             line: Input line to check
 
         Returns:
-            bool: True if line matches any valid header format
+            bool: True if the first 5 characters of the line are 'ISOTO'
         """
-        line_upper = line.strip().upper()
-        return any(header.upper() in line_upper for header in CARD_10_HEADERS)
+        where_am_i = "IsotopeCard.is_header_line()"
+        logger.info(f"{where_am_i}: Checking if valid header line: {line}")
+        return line.strip().upper().startswith("ISOTO") or line.strip().upper().startswith("NUCLI")
 
     @classmethod
     def from_lines(cls, lines: List[str]) -> "IsotopeCard":
@@ -372,42 +356,39 @@ class IsotopeCard(BaseModel):
         Raises:
             ValueError: If no valid header found or invalid format
         """
+        where_am_i = "IsotopeCard.from_lines()"
+        logger.info(f"{where_am_i}: Attempting to parse isotope card from lines")
+
         if not lines:
-            raise ValueError("No lines provided")
+            _log_and_raise_error(logger, "No lines provided", ValueError)
 
         # Validate header
         if not cls.is_header_line(lines[0]):
-            raise ValueError(f"Invalid header line: {lines[0]}")
+            _log_and_raise_error(logger, f"Invalid header line: {lines[0]}", ValueError)
 
         # Remove header and trailing blank lines
         content_lines = [line for line in lines[1:] if line.strip()]
         if not content_lines:
-            raise ValueError("No parameter lines found")
+            _log_and_raise_error(logger, "No parameter lines found", ValueError)
 
         # Check if we need extended format
         extended = False
-        for line in content_lines:
-            # Look for any spin group number > 99 in the data
-            numbers = [int(n) for n in line.split() if n.strip().isdigit()]
-            if any(abs(n) > 99 for n in numbers):
-                extended = True
-                break
 
         # Parse isotopes
         isotopes = []
         current_lines = []
 
         for line in content_lines:
-            # If line starts with a number, it's a new isotope
-            if line.strip() and line[0].isdigit():
-                if current_lines:
-                    isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
-                current_lines = []
             current_lines.append(line)
 
-        # Don't forget the last isotope
-        if current_lines:
-            isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
+            # check if characters 79-80 is a "-1". this means that there are more spin groups in the next line.
+            if line[78:80] == "-1":
+                continue
+
+            # Otherwise the are no more lines for spin groups, so process the current lines.
+            else:
+                isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
+                current_lines = []
 
         return cls(isotopes=isotopes, extended=extended)
 

@@ -178,7 +178,7 @@ class Isotope(BaseModel):
     atomic_mass: Mass
     thickness: NonNegativeFloat
     thickness_unit: str = Field(pattern=r"^(cm|mm|atoms/cm2)$")
-    abundance: float = Field(ge=0.0, le=1.0)
+    abundance: float = Field(ge=0.0)
     density: NonNegativeFloat
     density_unit: str = Field(default="g/cm3", pattern=r"^g/cm3$")
 
