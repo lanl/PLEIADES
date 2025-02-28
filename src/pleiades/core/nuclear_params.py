@@ -159,15 +159,18 @@ class RadiusParameters(BaseModel):
         """
         if self.vary_true == VaryFlag.USE_FROM_PARFILE:
             if self.true_radius != self.effective_radius:
+                logger.error(f"True radius {self.true_radius} does not match effective radius {self.effective_radius}")
                 raise ValueError("When vary_true is USE_FROM_PARFILE (-1), true_radius must match effective_radius")
 
         # Special cases for true_radius
         if self.true_radius == 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                logger.error("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
                 raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
 
         if self.true_radius < 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                logger.error("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
                 raise ValueError("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
 
         return self
@@ -287,5 +290,28 @@ class IsotopeParameters(BaseModel):
             if resonance.igroup not in self.spin_groups:
                 logger.info(f"{where_am_i}:Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
                 raise ValueError(f"Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_radius_parameters(self) -> "IsotopeParameters":
+        """Validate that radius parameter spin groups match isotope spin groups.
+
+        Validates:
+        - Each spin group in radius parameters is in the list of isotope spin groups
+
+        Returns:
+            IsotopeParameters: Self if validation passes
+
+        Raises:
+            ValueError: If radius parameter spin group validation fails
+        """
+        where_am_i = "IsotopeParameters.validate_radius_parameters()"
+
+        for radius in self.radius_parameters:
+            for group in radius.spin_groups:
+                if group not in self.spin_groups:
+                    logger.info(f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
+                    raise ValueError(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
 
         return self
