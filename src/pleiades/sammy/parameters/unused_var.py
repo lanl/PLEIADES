@@ -6,7 +6,7 @@ from typing import List
 
 from pydantic import BaseModel, Field, model_validator
 
-from pleiades.sammy.parameters.helper import safe_parse
+from pleiades.core.helper import safe_parse
 
 # Format definitions for fixed-width fields
 # Name line has 8 possible 5-character fields separated by 5 spaces

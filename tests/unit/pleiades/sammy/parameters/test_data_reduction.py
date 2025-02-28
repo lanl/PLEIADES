@@ -1,7 +1,7 @@
 import pytest
 
 from pleiades.sammy.parameters.data_reduction import DataReductionCard, DataReductionParameter
-from pleiades.sammy.parameters.helper import VaryFlag
+from pleiades.core.helper import VaryFlag
 
 
 def test_parameter_parsing():

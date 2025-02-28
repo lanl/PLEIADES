@@ -3,7 +3,7 @@
 
 import pytest
 
-from pleiades.sammy.parameters.helper import VaryFlag
+from pleiades.core.helper import VaryFlag
 from pleiades.sammy.parameters.normalization import NormalizationBackgroundCard, NormalizationParameters
 
 # Test data with proper 10-char width formatting
