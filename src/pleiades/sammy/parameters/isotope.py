@@ -51,7 +51,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from pleiades.core.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging

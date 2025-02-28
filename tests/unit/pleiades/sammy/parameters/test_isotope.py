@@ -3,7 +3,7 @@
 
 import pytest
 
-from pleiades.core.helper import VaryFlag
+from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.isotope import IsotopeCard, IsotopeParameters
 
 

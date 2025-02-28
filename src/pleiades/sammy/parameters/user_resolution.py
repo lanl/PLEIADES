@@ -17,7 +17,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from pleiades.core.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 
 # Format definitions - column positions for each parameter type
 FORMAT_SPECS = {

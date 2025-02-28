@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator, field_validator
-from pleiades.core.helper import VaryFlag
+from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
 
 logger = Logger(__name__)

@@ -4,7 +4,7 @@
 import pytest
 
 from pleiades.sammy.parameters.broadening import BroadeningParameterCard, BroadeningParameters
-from pleiades.core.helper import VaryFlag
+from pleiades.utils.helper import VaryFlag
 
 # Test data with proper 10-char width formatting
 MAIN_ONLY_LINE = "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0"
