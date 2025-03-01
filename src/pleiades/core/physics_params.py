@@ -19,9 +19,11 @@ class EnergyParameters(BaseModel):
     Returns:
         _type_: _description_
     """
-    min_energy: float = Field(description="Minimum energy (eV)")
+    min_energy: float = Field(description="Minimum energy for this data set(eV)")
     max_energy: float = Field(description="Maximum energy (eV)")
-    number_of_energy_points: int = Field(description="Number of energy points",default=10001)
+    number_of_energy_points: int = Field(description="Number of points to be used in generating artificial energy grid",default=10001)
+    number_of_extra_points = int = Field(description="Number of extra points to be added between each pair of data points for auxiliary energy grid",default=0)
+    number_of_small_res_points = int = Field(description="Number of points to be added to auxiliary energy grid across small resonances",default=0)
 
 class NormalizationParameters(BaseModel):
     """Parameters for normalization and background for one angle.
@@ -154,3 +156,27 @@ class UserResolutionParameters(BaseModel):
     channel_uncertainties: List[Optional[float]] = Field(default_factory=list, description="Channel uncertainties")
     channel_flags: List[VaryFlag] = Field(default_factory=list, description="Channel flags")
     filenames: List[str] = Field(default_factory=list, description="Resolution function filenames")
+
+
+class PhysicsParameters(BaseModel):
+    """Container for all physics parameters.
+
+    Attributes:
+        energy_parameters: Parameters for energy bounds and sampling
+        normalization_parameters: Parameters for normalization and background
+        broadening_parameters: Parameters for broadening
+        user_resolution_parameters: User-defined resolution function parameters
+    """
+
+    energy_parameters: EnergyParameters = Field(description="Energy parameters")
+    normalization_parameters: NormalizationParameters = Field(description="Normalization parameters")
+    broadening_parameters: BroadeningParameters = Field(description="Broadening parameters")
+    user_resolution_parameters: UserResolutionParameters = Field(description="User-defined resolution function parameters")
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.validate_gaussian_parameters()
+    
+    def validate_gaussian_parameters(self) -> None:
+        """Validate that if any Gaussian parameter is present, both are present."""
+        self.broadening_parameters.validate_gaussian_parameters()
