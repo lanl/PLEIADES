@@ -1,57 +1,66 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from utils.helper import VaryFlag
+from pydantic import BaseModel, Field, model_validator, field_validator
 
+# NOTE: Some physics parameters are not supported in the current version of the code
 
-class BackgroundType(str, Enum):
-    """Types of background functions available."""
+class EnergyParameters(BaseModel):
+    """ Paramters for energy bounds and sampling 
 
-    CONST = "CONST"  # Constant background
-    EXPON = "EXPON"  # Exponential background
-    POWER = "POWER"  # Power law background
-    EXPLN = "EXPLN"  # Exponential with logarithmic terms
-    T_PNT = "T-PNT"  # Point-wise linear in time
-    E_PNT = "E-PNT"  # Point-wise linear in energy
-    TFILE = "TFILE"  # Time function from file
-    EFILE = "EFILE"  # Energy function from file
-    AETOB = "AETOB"  # Power of energy
+    Args:
+        BaseModel (_type_): _description_
 
+    Raises:
+        ValueError: _description_
+        ValueError: _description_
 
-class BackgroundParameters(BaseModel):
-    """Container for Card Set 13 background function parameters.
+    Returns:
+        _type_: _description_
+    """
+    min_energy: float = Field(description="Minimum energy (eV)")
+    max_energy: float = Field(description="Maximum energy (eV)")
+    number_of_energy_points: int = Field(description="Number of energy points",default=10001)
 
-    Currently unimplemented - placeholder for future development.
+class NormalizationParameters(BaseModel):
+    """Parameters for normalization and background for one angle.
 
-    Format specification from Table VI B.2:
-    Cols    Format  Variable    Description
-    1-80    A       WHAT        "BACKGround functions"
+    Contains:
+    - Normalization and background values
+    - Their uncertainties (optional)
+    - Flags indicating whether each parameter should be varied
 
-    Followed by one or more background function definitions.
+    Note on fixed-width format:
+    Each numeric field in the file uses a 10-column width with a 9+1 pattern:
+    - 9 characters for the actual numeric data (e.g. "1.2340E+00")
+    - 1 character for space separator
     """
 
-    type: BackgroundType = Field(..., description="Type of background function")
+    # Main parameters
+    anorm: float = Field(description="Normalization (dimensionless)")
+    backa: float = Field(description="Constant background")
+    backb: float = Field(description="Background proportional to 1/E")
+    backc: float = Field(description="Background proportional to √E")
+    backd: float = Field(description="Exponential background coefficient")
+    backf: float = Field(description="Exponential decay constant")
 
-    @classmethod
-    def from_lines(cls, lines: List[str]) -> "BackgroundParameters":
-        """Parse background parameters from fixed-width format lines.
+    # Optional uncertainties
+    d_anorm: Optional[float] = Field(None, description="Uncertainty on ANORM")
+    d_backa: Optional[float] = Field(None, description="Uncertainty on BACKA")
+    d_backb: Optional[float] = Field(None, description="Uncertainty on BACKB")
+    d_backc: Optional[float] = Field(None, description="Uncertainty on BACKC")
+    d_backd: Optional[float] = Field(None, description="Uncertainty on BACKD")
+    d_backf: Optional[float] = Field(None, description="Uncertainty on BACKF")
 
-        Args:
-            lines: List of input lines for background parameters
-
-        Raises:
-            NotImplementedError: This class is not yet implemented
-        """
-        raise NotImplementedError("Card Set 13 background parameter parsing is not yet implemented")
-
-    def to_lines(self) -> List[str]:
-        """Convert parameters to fixed-width format lines.
-
-        Raises:
-            NotImplementedError: This class is not yet implemented
-        """
-        raise NotImplementedError("Card Set 13 background parameter formatting is not yet implemented")
-
+    # Vary flags
+    flag_anorm: VaryFlag = Field(default=VaryFlag.NO)
+    flag_backa: VaryFlag = Field(default=VaryFlag.NO)
+    flag_backb: VaryFlag = Field(default=VaryFlag.NO)
+    flag_backc: VaryFlag = Field(default=VaryFlag.NO)
+    flag_backd: VaryFlag = Field(default=VaryFlag.NO)
+    flag_backf: VaryFlag = Field(default=VaryFlag.NO)
+    
 
 class BroadeningParameters(BaseModel):
     """Container for a single set of broadening parameters.
@@ -112,3 +121,36 @@ class BroadeningParameters(BaseModel):
             if self.flag_deltc1 is None or self.flag_deltc2 is None:
                 raise ValueError("Flags must be specified for DELTC1 and DELTC2 if present")
         return self
+
+class UserResolutionParameters(BaseModel):
+    """Container for User-Defined Resolution Function parameters.
+
+    Attributes:
+        type: Parameter type identifier (always "USER")
+        burst_width: Square burst width value (ns), optional
+        burst_uncertainty: Uncertainty on burst width, optional
+        burst_flag: Flag for varying burst width
+        channel_energies: List of energies for channel widths
+        channel_widths: List of channel width values
+        channel_uncertainties: List of uncertainties on channel widths
+        channel_flags: List of flags for varying channel widths
+        filenames: List of data file names
+    """
+    
+    class UserDefinedResolutionType(str, Enum):
+        """Enumeration of user defined resolution types."""
+
+        USER = "USER"  # Header identifier
+        BURST = "BURST"
+        CHANN = "CHANN"
+        FILE = "FILE="
+
+    type: UserDefinedResolutionType = UserDefinedResolutionType.USER
+    burst_width: Optional[float] = Field(None, description="Square burst width (ns)")
+    burst_uncertainty: Optional[float] = Field(None, description="Uncertainty on burst width")
+    burst_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for burst width")
+    channel_energies: List[float] = Field(default_factory=list, description="Energies for channels")
+    channel_widths: List[float] = Field(default_factory=list, description="Channel width values")
+    channel_uncertainties: List[Optional[float]] = Field(default_factory=list, description="Channel uncertainties")
+    channel_flags: List[VaryFlag] = Field(default_factory=list, description="Channel flags")
+    filenames: List[str] = Field(default_factory=list, description="Resolution function filenames")
