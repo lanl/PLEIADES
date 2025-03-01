@@ -234,6 +234,7 @@ class IsotopeParameters(BaseModel):
 
     """
 
+    isotope_name: str = Field(description="Isotope name")
     mass: float = Field(description="Atomic mass in amu", gt=0)
     abundance: float = Field(description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(None, description="Uncertainty on abundance")
@@ -313,5 +314,40 @@ class IsotopeParameters(BaseModel):
                 if group not in self.spin_groups:
                     logger.info(f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
                     raise ValueError(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
+
+        return self
+    
+class nuclearParameters(BaseModel):
+    """Container for nuclear parameters used in SAMMY calculations.
+
+    Attributes:
+        isotopes (List[IsotopeParameters]): List of isotope parameters
+
+    """
+
+    isotopes: List[IsotopeParameters] = Field(default_factory=list, description="List of isotope parameters")
+
+    @model_validator(mode="after")
+    def validate_isotopes(self) -> "nuclearParameters":
+        """Validate isotope parameters.
+
+        Validates:
+        - Each isotope has a unique mass
+        - Each isotope has a unique abundance   
+        """
+        where_am_i = "nuclear_params.validate_isotopes()"
+
+        # Check for duplicate isotope names
+        names = [iso.isotope_name for iso in self.isotopes]
+        if len(names) != len(set(names)):
+            logger.info(f"{where_am_i}:Duplicate isotope names found")
+            raise ValueError("Duplicate isotope names found")
+
+        # Check for duplicate masses
+        masses = [iso.mass for iso in self.isotopes]
+        if len(masses) != len(set(masses)):
+            logger.info(f"{where_am_i}:Duplicate masses found")
+            raise ValueError("Duplicate masses found")
+
 
         return self
