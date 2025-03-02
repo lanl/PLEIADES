@@ -41,32 +41,39 @@ input_quantum_numbers_options = [
 # Parameters input control for prior covariance matrix:
 # Define the prior parameter covariance matrix
 input_covariance_matrix_options = [
-    ["IGNORE INPUT BINARY covariance file","IGNORE"],
-    "ENERGY UNCERTAINTIES are at end of line in par file",
+        ["IGNORE INPUT BINARY covariance file","IGNORE"],
+        "ENERGY UNCERTAINTIES are at end of line in par file",
     ----------------------------
-    ["RETROACTIVE OLD PARAmeter file new covariance","RETROACTIVE","U COVARIANCE MATRIX is correct, p is not"],
-    "P COVARIANCE MATRIX is correct, u is not",
+        ["RETROACTIVE OLD PARAmeter file new covariance",
+        "RETROACTIVE",
+        "U COVARIANCE MATRIX is correct, p is not"],
+        "P COVARIANCE MATRIX is correct, u is not",
     ----------------------------
-    "MODIFY P COVARIANCE matrix before using",
+        "MODIFY P COVARIANCE matrix before using",
     ----------------------------
-    "INITIAL DIAGONAL U Covariance",
-    "INITIAL DIAGONAL P Covariance",
+        "INITIAL DIAGONAL U Covariance",
+        "INITIAL DIAGONAL P Covariance",
     ----------------------------
-    ["PERMIT NON POSITIVE definite parameter covariance matrices","PERMIT ZERO UNCERTAInties on parameters"],
+        ["PERMIT NON POSITIVE definite parameter covariance matrices",
+        "PERMIT ZERO UNCERTAInties on parameters"],
     ----------------------------
-    ["READ COMPACT COVARIAnces for parameter priors","READ COMPACT CORRELAtions for parameter priors","COMPACT CORRELATIONS are to be read and used","COMPACT COVARIANCES are to be read and used"], 
-    ["PARAMETER COVARIANCE matrix is in endf format","ENDF COVARIANCE MATRix is to be read and Used"],
+        ["READ COMPACT COVARIAnces for parameter priors",
+        "READ COMPACT CORRELAtions for parameter priors",
+        "COMPACT CORRELATIONS are to be read and used",
+        "COMPACT COVARIANCES are to be read and used"], 
+        ["PARAMETER COVARIANCE matrix is in endf format",
+        "ENDF COVARIANCE MATRix is to be read and Used"],
     ----------------------------
-    "USE LEAST SQUARES TO define prior parameter covariance matrix"
+        "USE LEAST SQUARES TO define prior parameter covariance matrix"
     ]
 
 # Parameters output control for parameter covariance matrix
 # Define the method of output for the parameter covariance matrix
 output_covariance_matrix_options = [
     ----------------------------
-    ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
-    ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
-    "PUT COVARIANCE MATRIx into endf file 32"
+        ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
+        ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
+        "PUT COVARIANCE MATRIx into endf file 32"
     ----------------------------
     ]
 
@@ -74,35 +81,41 @@ output_covariance_matrix_options = [
 # Define the format for the experimental data
 experimental_data_input_options = [
     ----------------------------
-    *"DATA ARE IN ORIGINAL multi-style format",
-    ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
-    ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
-    "DATA ARE IN STANDARD odf format",
-    "DATA ARE IN ODF FILE",
-    ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
+    *   "DATA ARE IN ORIGINAL multi-style format",
+        ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
+        ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
+        "DATA ARE IN STANDARD odf format",
+        "DATA ARE IN ODF FILE",
+        ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
     ----------------------------
-    "DIFFERENTIAL DATA ARe in ascii file",
+        "DIFFERENTIAL DATA ARe in ascii file",
     ----------------------------
-    *"DO NOT DIVIDE DATA Into regions",
-    "DIVIDE DATA INTO REGions with a fixed number of data points per region"
+    *   "DO NOT DIVIDE DATA Into regions",
+        "DIVIDE DATA INTO REGions with a fixed number of data points per region"
     ----------------------------
     ]
 
 # Experimental data input control for covariance matrix
 # Define the format for input of data covariance matrix
 covariance_matrix_data_input_options = [
-    "IMPLICIT DATA COVARIance is wanted" or "IDC",
-    "USER SUPPLIED IMPLICit data covariance matrix" or "USER IDC",
-    "PUP COVARIANCE IS IN an ascii file",
-    "CREATE PUP FILE FROM varied parameters used in this run",
-    "ADD CONSTANT TERM TO data covariance " or "ADD CONSTANT TO DATA covariance matrix",
-    "DO NOT ADD CONSTANT term to data covariance",
-    "USE DEFAULT FOR CONStant term to add to data covariance",
-    "USE TEN PERCENT DATA uncertainty "or "ADD TEN PERCENT DATA uncertainty",
-    "DATA COVARIANCE IS Diagonal"
-    "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
-    "DATA COVARIANCE FILE is named YYYYYY.YYY", 
-    "FREE FORMAT DATA COVariance YYYYYY.YYY",
+    ----------------------------
+        ["IMPLICIT DATA COVARIance is wanted","IDC"],
+        ["USER SUPPLIED IMPLICit data covariance matrix","USER IDC"],
+    ----------------------------
+        "PUP COVARIANCE IS IN an ascii file",
+    ----------------------------
+        "CREATE PUP FILE FROM varied parameters used in this run",
+    ----------------------------
+        ["ADD CONSTANT TERM TO data covariance ","ADD CONSTANT TO DATA covariance matrix"],
+    *   "DO NOT ADD CONSTANT term to data covariance",
+        "USE DEFAULT FOR CONStant term to add to data covariance",
+    ----------------------------
+        "USE TEN PERCENT DATA uncertainty "or "ADD TEN PERCENT DATA uncertainty",
+    ----------------------------
+    *   "DATA COVARIANCE IS Diagonal"
+        "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
+        "DATA COVARIANCE FILE is named YYYYYY.YYY", 
+        "FREE FORMAT DATA COVariance YYYYYY.YYY",
     ]
 
 # Experimental data angular distribution otpions
