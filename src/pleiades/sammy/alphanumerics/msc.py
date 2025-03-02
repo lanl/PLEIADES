@@ -65,7 +65,7 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
     do_not_calculate_y0: bool = Field(default=False, description="DO NOT CALCULATE Y0")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
+    mutually_exclusive_groups: List[List[str]] = [
         ["do_not_include_self_shielding", "use_self_shielding_only", "use_single_scattering_plus_self_shielding", "include_double_scattering_corrections"],
         ["infinite_slab", "finite_slab"],
         ["make_new_file_with_edge_effects", "file_with_edge_effects_already_exists"],

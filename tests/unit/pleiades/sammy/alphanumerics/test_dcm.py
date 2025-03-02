@@ -16,14 +16,14 @@ def test_default_option():
     assert options.data_off_diagonal is False
     assert options.data_covariance_file is False
     assert options.free_format_data_covariance is False
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT term to data covariance", "DATA COVARIANCE IS Diagonal"]
+    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE IS DIAGONAL"]
 
 def test_valid_option_with_single_boolean():
     """Test a valid option with a single boolean flag."""
     options = CovarianceMatrixOptions(user_supplied_implicit_data_covariance=True)
     assert options.implicit_data_covariance is False
     assert options.user_supplied_implicit_data_covariance is True
-    assert options.get_alphanumeric_commands() == ["USER SUPPLIED IMPLICIT data covariance matrix", "DO NOT ADD CONSTANT term to data covariance", "DATA COVARIANCE IS Diagonal"]
+    assert options.get_alphanumeric_commands() == ["USER SUPPLIED IMPLICIT DATA COVARIANCE MATRIX", "DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE IS DIAGONAL"]
 
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
@@ -41,14 +41,14 @@ def test_valid_combination_of_options_1():
     assert options.data_off_diagonal is True
     assert options.add_constant_term is True
     assert options.do_not_add_constant_term is False
-    assert options.get_alphanumeric_commands() == ["ADD CONSTANT TERM TO data covariance", "DATA HAS OFF-DIAGONAL contribution to covariance matrix of the form (a+bEi) (a+bEj)"]
+    assert options.get_alphanumeric_commands() == ["ADD CONSTANT TERM TO DATA COVARIANCE", "DATA HAS OFF-DIAGONAL CONTRIBUTION TO COVARIANCE MATRIX OF THE FORM (A+BEI) (A+BEJ)"]
 
 def test_valid_combination_of_options_2():
     """Test a valid combination of options."""
     options = CovarianceMatrixOptions(use_ten_percent_uncertainty=True, implicit_data_covariance=True)
     assert options.use_ten_percent_uncertainty is True
     assert options.implicit_data_covariance is True
-    assert options.get_alphanumeric_commands() == ["IMPLICIT DATA COVARIANCE is wanted", "DO NOT ADD CONSTANT term to data covariance", "USE TEN PERCENT DATA uncertainty or ADD TEN PERCENT DATA uncertainty", "DATA COVARIANCE IS Diagonal"] 
+    assert options.get_alphanumeric_commands() == ["IMPLICIT DATA COVARIANCE IS WANTED", "DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "USE TEN PERCENT DATA UNCERTAINTY OR ADD TEN PERCENT DATA UNCERTAINTY", "DATA COVARIANCE IS DIAGONAL"] 
     
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
@@ -63,19 +63,19 @@ def test_switching_options():
     """Test switching options."""
     options = CovarianceMatrixOptions()
     assert options.data_covariance_diagonal is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT term to data covariance", "DATA COVARIANCE IS Diagonal"]
+    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE IS DIAGONAL"]
 
     options = CovarianceMatrixOptions(data_off_diagonal=True)
     assert options.data_off_diagonal is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT term to data covariance", "DATA HAS OFF-DIAGONAL contribution to covariance matrix of the form (a+bEi) (a+bEj)"]
+    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA HAS OFF-DIAGONAL CONTRIBUTION TO COVARIANCE MATRIX OF THE FORM (A+BEI) (A+BEJ)"]
 
     options = CovarianceMatrixOptions(data_covariance_file=True)
     assert options.data_covariance_file is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT term to data covariance", "DATA COVARIANCE FILE is named YYYYYY.YYY"]
+    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE FILE IS NAMED YYYYYY.YYY"]
 
     options = CovarianceMatrixOptions(free_format_data_covariance=True)
     assert options.free_format_data_covariance is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT term to data covariance", "FREE FORMAT DATA COVARIANCE YYYYYY.YYY"]
+    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "FREE FORMAT DATA COVARIANCE YYYYYY.YYY"]
 
 if __name__ == "__main__":
     pytest.main()

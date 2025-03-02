@@ -48,7 +48,7 @@ class CovarianceMatrixOptions(BaseModel):
     free_format_data_covariance: bool = Field(default=False, description="FREE FORMAT DATA COVARIANCE YYYYYY.YYY")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
+    mutually_exclusive_groups: List[List[str]] = [
         ["implicit_data_covariance", "user_supplied_implicit_data_covariance"],
         ["pup_covariance_ascii"],
         ["create_pup_file"],
@@ -92,27 +92,27 @@ class CovarianceMatrixOptions(BaseModel):
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.implicit_data_covariance:
-            commands.append("IMPLICIT DATA COVARIANCE is wanted")
+            commands.append("IMPLICIT DATA COVARIANCE IS WANTED")
         if self.user_supplied_implicit_data_covariance:
-            commands.append("USER SUPPLIED IMPLICIT data covariance matrix")
+            commands.append("USER SUPPLIED IMPLICIT DATA COVARIANCE MATRIX")
         if self.pup_covariance_ascii:
-            commands.append("PUP COVARIANCE IS IN an ascii file")
+            commands.append("PUP COVARIANCE IS IN AN ASCII FILE")
         if self.create_pup_file:
-            commands.append("CREATE PUP FILE FROM varied parameters used in this run")
+            commands.append("CREATE PUP FILE FROM VARIED PARAMETERS USED IN THIS RUN")
         if self.add_constant_term:
-            commands.append("ADD CONSTANT TERM TO data covariance")
+            commands.append("ADD CONSTANT TERM TO DATA COVARIANCE")
         if self.do_not_add_constant_term:
-            commands.append("DO NOT ADD CONSTANT term to data covariance")
+            commands.append("DO NOT ADD CONSTANT TERM TO DATA COVARIANCE")
         if self.use_default_constant_term:
-            commands.append("USE DEFAULT FOR CONSTANT term to add to data covariance")
+            commands.append("USE DEFAULT FOR CONSTANT TERM TO ADD TO DATA COVARIANCE")
         if self.use_ten_percent_uncertainty:
-            commands.append("USE TEN PERCENT DATA uncertainty or ADD TEN PERCENT DATA uncertainty")
+            commands.append("USE TEN PERCENT DATA UNCERTAINTY OR ADD TEN PERCENT DATA UNCERTAINTY")
         if self.data_covariance_diagonal:
-            commands.append("DATA COVARIANCE IS Diagonal")
+            commands.append("DATA COVARIANCE IS DIAGONAL")
         if self.data_off_diagonal:
-            commands.append("DATA HAS OFF-DIAGONAL contribution to covariance matrix of the form (a+bEi) (a+bEj)")
+            commands.append("DATA HAS OFF-DIAGONAL CONTRIBUTION TO COVARIANCE MATRIX OF THE FORM (A+BEI) (A+BEJ)")
         if self.data_covariance_file:
-            commands.append("DATA COVARIANCE FILE is named YYYYYY.YYY")
+            commands.append("DATA COVARIANCE FILE IS NAMED YYYYYY.YYY")
         if self.free_format_data_covariance:
             commands.append("FREE FORMAT DATA COVARIANCE YYYYYY.YYY")
         return commands
