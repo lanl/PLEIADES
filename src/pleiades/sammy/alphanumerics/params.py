@@ -1,85 +1,122 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import List, ClassVar
 
 """
 # Parameters input control for quantum numbers
 # Define which type of input is to be used for spin group information and other parameters
 input_quantum_numbers_options = [
-    --------------
-    *"USE NEW SPIN GROUP Format", 
-    "PARTICLE PAIR DEFINItions are used",
-    "KEY-WORD PARTICLE-PAir definitions are given",
-    --------------
-    --------------
-    "QUANTUM NUMBERS ARE in parameter file",
-    "PUT QUANTUM NUMBERS into parameter file"
-    --------------,
-    ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
-    "USE I4 FORMAT TO REAd spin group number",
-    "INPUT IS ENDF/B FILE",
-    "USE ENERGY RANGE FROm endf/b file 2",
-    "FLAG ALL RESONANCE Parameters"
+    ----------------------------
+    *   "USE NEW SPIN GROUP Format", 
+        "PARTICLE PAIR DEFINItions are used",
+        "KEY-WORD PARTICLE-PAir definitions are given",
+    ----------------------------
+    ----------------------------
+        "QUANTUM NUMBERS ARE in parameter file",
+        "PUT QUANTUM NUMBERS into parameter file"
+    ----------------------------,
+        ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
+    ----------------------------,
+        "USE I4 FORMAT TO REAd spin group number",
+    ----------------------------,
+        "INPUT IS ENDF/B FILE",
+    ----------------------------,
+        "USE ENERGY RANGE FROm endf/b file 2",
+    ----------------------------,
+        "FLAG ALL RESONANCE Parameters"
     ]
 
 """
 
 class QuantumNumbersOptions(BaseModel):
-    """ Model to enforce mutually exclusive selection of quantum numbers input options using boolean flags. """
-    
-    # Boolean flags for mutual exclusivity
-    new_spin_group_format: bool = Field(default=True, description="Use new spin group format")
-    particle_pair_definitions: bool = Field(default=False, description="Particle pair definitions are used")
-    keyword_particle_pair_definitions: bool = Field(default=False, description="Keyword particle-pair definitions are given")
-    quantum_numbers_in_parameter_file: bool = Field(default=False, description="Quantum numbers are in parameter file")
-    put_quantum_numbers_into_parameter_file: bool = Field(default=False, description="Put quantum numbers into parameter file")
-    spin_of_incident_particle_is_plus: bool = Field(default=False, description="Spin of incident particle is +")
-    spin_of_incident_particle_is_minus: bool = Field(default=False, description="Spin of incident particle is -")
-    i4_format_to_read_spin_group_number: bool = Field(default=False, description="Use I4 format to read spin group number")
-    input_is_endf_b_file: bool = Field(default=False, description="Input is ENDF/B file")
-    use_energy_range_from_endf_b_file_2: bool = Field(default=False, description="Use energy range from ENDF/B file 2")
-    flag_all_resonance_parameters: bool = Field(default=False, description="Flag all resonance parameters")
+    model_config = ConfigDict(validate_default=True)
 
-    def get_alphanumeric_commands(self):
+    new_spin_group_format: bool = Field(default=True, description="USE NEW SPIN GROUP Format")
+    particle_pair_definitions: bool = Field(default=False, description="PARTICLE PAIR DEFINItions are used")
+    keyword_particle_pair_definitions: bool = Field(default=False, description="KEY-WORD PARTICLE-PAir definitions are given")
+    quantum_numbers_in_parameter_file: bool = Field(default=False, description="QUANTUM NUMBERS ARE in parameter file")
+    put_quantum_numbers_into_parameter_file: bool = Field(default=False, description="PUT QUANTUM NUMBERS into parameter file")
+    spin_of_incident_particle_is_plus: bool = Field(default=False, description="SPIN OF INCIDENT PARticle is +")
+    spin_of_incident_particle_is_minus: bool = Field(default=False, description="SPIN OF INCIDENT PARticle is -")
+    i4_format_to_read_spin_group_number: bool = Field(default=False, description="USE I4 FORMAT TO REAd spin group number")
+    input_is_endf_b_file: bool = Field(default=False, description="INPUT IS ENDF/B FILE")
+    use_energy_range_from_endf_b_file_2: bool = Field(default=False, description="USE ENERGY RANGE FROm endf/b file 2")
+    flag_all_resonance_parameters: bool = Field(default=False, description="FLAG ALL RESONANCE Parameters")
+
+    # Define mutually exclusive groups as a class attribute
+    mutually_exclusive_groups: List[List[str]] = [
+        ["new_spin_group_format", "particle_pair_definitions", "keyword_particle_pair_definitions"],
+        ["quantum_numbers_in_parameter_file", "put_quantum_numbers_into_parameter_file"],
+        ["spin_of_incident_particle_is_plus", "spin_of_incident_particle_is_minus"],
+        ["i4_format_to_read_spin_group_number"],
+        ["input_is_endf_b_file"], 
+        ["use_energy_range_from_endf_b_file_2"],
+        ["flag_all_resonance_parameters"]
+    ]
+
+    @model_validator(mode="after")
+    def enforce_exclusivity(self) -> "QuantumNumbersOptions":
+        for group in self.mutually_exclusive_groups:
+            true_fields = [f for f in group if getattr(self, f)]
+            if not true_fields:
+                continue
+
+            user_true = [f for f in true_fields if f in self.model_fields_set]
+            default_true = [f for f in true_fields if f not in self.model_fields_set]
+
+            # If >1 user-specified in same group => error
+            if len(user_true) > 1:
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+
+            # If exactly 1 user-specified => turn off all defaults in that group
+            if len(user_true) == 1:
+                for f in default_true:
+                    setattr(self, f, False)
+                continue
+
+            # If all True fields are defaults, and more than 1 => error
+            if len(default_true) > 1:
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+        return self
+
+    def get_alphanumeric_commands(self) -> List[str]:
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.new_spin_group_format:
-            commands.append("USE NEW SPIN GROUP FORMAT")
+            commands.append("USE NEW SPIN GROUP Format")
         if self.particle_pair_definitions:
-            commands.append("PARTICLE PAIR DEFINITIONS")
+            commands.append("PARTICLE PAIR DEFINItions are used")
         if self.keyword_particle_pair_definitions:
-            commands.append("KEY-WORD PARTICLE-PAIR DEFINITIONS")
+            commands.append("KEY-WORD PARTICLE-PAir definitions are given")
         if self.quantum_numbers_in_parameter_file:
-            commands.append("QUANTUM NUMBERS IN PARAMETER FILE")
+            commands.append("QUANTUM NUMBERS ARE in parameter file")
         if self.put_quantum_numbers_into_parameter_file:
-            commands.append("PUT QUANTUM NUMBERS INTO PARAMETER FILE")
+            commands.append("PUT QUANTUM NUMBERS into parameter file")
         if self.spin_of_incident_particle_is_plus:
-            commands.append("SPIN OF INCIDENT PARTICLE IS +")
+            commands.append("SPIN OF INCIDENT PARticle is +")
         if self.spin_of_incident_particle_is_minus:
-            commands.append("SPIN OF INCIDENT PARTICLE IS -")
+            commands.append("SPIN OF INCIDENT PARticle is -")
         if self.i4_format_to_read_spin_group_number:
-            commands.append("I4 FORMAT TO READ SPIN GROUP NUMBER")
+            commands.append("USE I4 FORMAT TO REAd spin group number")
         if self.input_is_endf_b_file:
             commands.append("INPUT IS ENDF/B FILE")
         if self.use_energy_range_from_endf_b_file_2:
-            commands.append("USE ENERGY RANGE FROM ENDF/B FILE 2")
+            commands.append("USE ENERGY RANGE FROm endf/b file 2")
         if self.flag_all_resonance_parameters:
-            commands.append("FLAG ALL RESONANCE PARAMETERS")
+            commands.append("FLAG ALL RESONANCE Parameters")
         return commands
 
-    @model_validator(mode='after')
-    def check_exclusivity(cls, values):
-        """Ensure that only one quantum numbers input option is selected using boolean flags."""
-        mutually_exclusive_groups = [
-            ["new_spin_group_format", "particle_pair_definitions", "keyword_particle_pair_definitions"],
-            ["quantum_numbers_in_parameter_file", "put_quantum_numbers_into_parameter_file"],
-            ["spin_of_incident_particle_is_plus", "spin_of_incident_particle_is_minus"],
-            ["i4_format_to_read_spin_group_number"],
-            ["input_is_endf_b_file", "use_energy_range_from_endf_b_file_2"],
-            ["flag_all_resonance_parameters"]
-        ]
-
-        for group in mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(values, key)]
-            if len(selected_flags) > 1:
-                raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
-
-        return values
+# Example usage
+if __name__ == "__main__":
+    try:
+        options = QuantumNumbersOptions(
+            new_spin_group_format=True,
+            particle_pair_definitions=True  # This should raise a ValueError
+        )
+    except ValueError as e:
+        print(e)
