@@ -1,19 +1,19 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
     These notes are taken from the SAMMY manual. 
-    - * denotes a default options
-    - Mutually exclusive options are grouped together starting and ending with --------------
-    - options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting and ending with --------------
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
-    Broadening options: 
-    Is broadening wanted
-    broadening_options = [ 
-        --------------
-        * "BROADENING IS WANTED",
-        "BROADENING IS NOT WAnted"
-        --------------
+        Broadening options: 
+        Is broadening wanted
+        broadening_options = [ 
+        ----------------------------
+            * "BROADENING IS WANTED",
+            "BROADENING IS NOT WAnted"
+        ----------------------------
         ]
 
 """

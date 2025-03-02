@@ -3,41 +3,42 @@ from typing import List
 
 """
     These notes are taken from the SAMMY manual. 
-    -  * denotes a default options
-    - Mutually exclusive options are grouped together starting with ------ and ending with ------
-    - options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
-    Multiple scattering corrections
-    Define how the multiple-scattering corrections are to proceed
-    multiple_scattering_corrections_options = [
-    ----------------------------
-    *   ["DO NOT INCLUDE SELF-shielding multiple-scattering corrections","NO SELF-SHIELDING ANd multiple-scattering corrections"],
-        ["USE SELF SHIELDING Only no scattering","SELF SHIELD","INCLUDE ONLY SELF SHielding and not Multiple scattering"],
-        ["USE SINGLE SCATTERINg plus self shielding","SINGLE"],
-        ["INCLUDE DOUBLE SCATTering corrections","USE MULTIPLE SCATTERing plus single scattering","DOUBLE","MULTIPLE"],
-    ----------------------------
-        ["INFINITE SLAB","NO FINITE-SIZE CORREctions to single scattering"],
-    *   ["FINITE SLAB","FINITE SIZE CORRECTIons to single scattering"],
-    ----------------------------
-    *   "MAKE NEW FILE WITH Edge effects",
-        "FILE WITH EDGE EFFECts already exists",
-    ----------------------------
-        "MAKE PLOT FILE OF MUltiple scattering pieces",
-    ----------------------------
-        ["NORMALIZE AS CROSS Section rather than yield","CROSS SECTION"],
-        ["NORMALIZE AS YIELD Rather than cross section","YIELD"],
-        "NORMALIZE AS (1-E)SIgma",
-    ----------------------------
-        "PRINT MULTIPLE SCATTering corrections",
-        ["PREPARE INPUT FOR MOnte carlo simulation","MONTE CARLO"],
-        "Y2 VALUES ARE TABULAted",
-    ----------------------------
-        "USE QUADRATIC INTERPolation for y1",
-        "USE LINEAR INTERPOLAtion for y1",
-    ----------------------------
-        ["VERSION 7.0.0 FOR Multiple scattering","V7"],
-    ----------------------------
-        "DO NOT CALCULATE Y0"
-    ]
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting with ------ and ending with ------
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+    
+        Multiple scattering corrections
+        Define how the multiple-scattering corrections are to proceed
+        multiple_scattering_corrections_options = [
+        ----------------------------
+        *   ["DO NOT INCLUDE SELF-shielding multiple-scattering corrections","NO SELF-SHIELDING ANd multiple-scattering corrections"],
+            ["USE SELF SHIELDING Only no scattering","SELF SHIELD","INCLUDE ONLY SELF SHielding and not Multiple scattering"],
+            ["USE SINGLE SCATTERINg plus self shielding","SINGLE"],
+            ["INCLUDE DOUBLE SCATTering corrections","USE MULTIPLE SCATTERing plus single scattering","DOUBLE","MULTIPLE"],
+        ----------------------------
+            ["INFINITE SLAB","NO FINITE-SIZE CORREctions to single scattering"],
+        *   ["FINITE SLAB","FINITE SIZE CORRECTIons to single scattering"],
+        ----------------------------
+        *   "MAKE NEW FILE WITH Edge effects",
+            "FILE WITH EDGE EFFECts already exists",
+        ----------------------------
+            "MAKE PLOT FILE OF MUltiple scattering pieces",
+        ----------------------------
+            ["NORMALIZE AS CROSS Section rather than yield","CROSS SECTION"],
+            ["NORMALIZE AS YIELD Rather than cross section","YIELD"],
+            "NORMALIZE AS (1-E)SIgma",
+        ----------------------------
+            "PRINT MULTIPLE SCATTering corrections",
+            ["PREPARE INPUT FOR MOnte carlo simulation","MONTE CARLO"],
+            "Y2 VALUES ARE TABULAted",
+        ----------------------------
+            "USE QUADRATIC INTERPolation for y1",
+            "USE LINEAR INTERPOLAtion for y1",
+        ----------------------------
+            ["VERSION 7.0.0 FOR Multiple scattering","V7"],
+        ----------------------------
+            "DO NOT CALCULATE Y0"
+        ]
 
 """
 

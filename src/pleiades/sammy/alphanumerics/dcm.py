@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
     These notes are taken from the SAMMY manual. 
@@ -7,28 +7,28 @@ from typing import List, ClassVar
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   Options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
 
-    Experimental data input control for covariance matrix
-    Define the format for input of data covariance matrix
-    covariance_matrix_data_input_options = [
-    ----------------------------
-        ["IMPLICIT DATA COVARIance is wanted","IDC"],
-        ["USER SUPPLIED IMPLICit data covariance matrix","USER IDC"],
-    ----------------------------
-        "PUP COVARIANCE IS IN an ascii file",
-    ----------------------------
-        "CREATE PUP FILE FROM varied parameters used in this run",
-    ----------------------------
-        ["ADD CONSTANT TERM TO data covariance ","ADD CONSTANT TO DATA covariance matrix"],
-    *   "DO NOT ADD CONSTANT term to data covariance",
-        "USE DEFAULT FOR CONStant term to add to data covariance",
-    ----------------------------
-        "USE TEN PERCENT DATA uncertainty "or "ADD TEN PERCENT DATA uncertainty",
-    ----------------------------
-    *   "DATA COVARIANCE IS Diagonal"
-        "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
-        "DATA COVARIANCE FILE is named YYYYYY.YYY", 
-        "FREE FORMAT DATA COVariance YYYYYY.YYY",
-    ]
+        Experimental data input control for covariance matrix
+        Define the format for input of data covariance matrix
+        covariance_matrix_data_input_options = [
+        ----------------------------
+            ["IMPLICIT DATA COVARIance is wanted","IDC"],
+            ["USER SUPPLIED IMPLICit data covariance matrix","USER IDC"],
+        ----------------------------
+            "PUP COVARIANCE IS IN an ascii file",
+        ----------------------------
+            "CREATE PUP FILE FROM varied parameters used in this run",
+        ----------------------------
+            ["ADD CONSTANT TERM TO data covariance ","ADD CONSTANT TO DATA covariance matrix"],
+        *   "DO NOT ADD CONSTANT term to data covariance",
+            "USE DEFAULT FOR CONStant term to add to data covariance",
+        ----------------------------
+            "USE TEN PERCENT DATA uncertainty "or "ADD TEN PERCENT DATA uncertainty",
+        ----------------------------
+        *   "DATA COVARIANCE IS Diagonal"
+            "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
+            "DATA COVARIANCE FILE is named YYYYYY.YYY", 
+            "FREE FORMAT DATA COVariance YYYYYY.YYY",
+        ]
 """
 
 class CovarianceMatrixOptions(BaseModel):

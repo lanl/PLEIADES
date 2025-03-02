@@ -1,28 +1,28 @@
-from typing import List
 from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import List
 
 """
     These notes are taken from the SAMMY manual. 
-    - * denotes a default options
-    - Mutually exclusive options are grouped together starting with -------------- and ending with -------------
-    - options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting with -------------- and ending with -------------
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
-    # Experimental data input control
-    # Define the format for the experimental data
-    experimental_data_input_options = [
-        --------------
-        *"DATA ARE IN ORIGINAL multi-style format",
-        ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
-        ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
-        "DATA ARE IN STANDARD odf format",
-        "DATA ARE IN ODF FILE",
-        ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
-        --------------
-        "DIFFERENTIAL DATA ARe in ascii file",
-        --------------
-        *"DO NOT DIVIDE DATA Into regions",
-        "DIVIDE DATA INTO REGions with a fixed number of data points per region"
-        --------------
+    #   Experimental data input control
+    #   Define the format for the experimental data
+        experimental_data_input_options = [
+        ----------------------------
+            *"DATA ARE IN ORIGINAL multi-style format",
+            ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
+            ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
+            "DATA ARE IN STANDARD odf format",
+            "DATA ARE IN ODF FILE",
+            ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
+        ----------------------------
+            "DIFFERENTIAL DATA ARe in ascii file",
+        ----------------------------
+            *"DO NOT DIVIDE DATA Into regions",
+            "DIVIDE DATA INTO REGions with a fixed number of data points per region"
+        ----------------------------
         ]
 """
 
