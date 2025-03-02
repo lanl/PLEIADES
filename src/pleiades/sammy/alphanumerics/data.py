@@ -43,7 +43,8 @@ class ExperimentalDataInputOptions(BaseModel):
 
     # Mutually exclusive groups
     mutually_exclusive_groups: List[List[str]] = [
-        [   "data_in_original_multi_style_format",
+        [
+            "data_in_original_multi_style_format",
             "data_format_is_one_point_per_line",
             "use_csisrs_format_for_data",
             "use_twenty_significant_digits",
@@ -52,8 +53,11 @@ class ExperimentalDataInputOptions(BaseModel):
             "data_are_endf_b_file",
             "use_endf_b_energies_and_data",
         ],
-        [   "differential_data_are_in_ascii_file"],
-        [   "do_not_divide_data_into_regions",
+        [
+            "differential_data_are_in_ascii_file"
+        ],
+        [
+            "do_not_divide_data_into_regions",
             "divide_data_into_regions",
         ],
     ]
@@ -93,27 +97,27 @@ class ExperimentalDataInputOptions(BaseModel):
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.data_in_original_multi_style_format:
-            commands.append("DATA ARE IN ORIGINAL multi-style format")
+            commands.append("DATA ARE IN ORIGINAL MULTI-STYLE FORMAT")
         if self.data_format_is_one_point_per_line:
-            commands.append("DATA FORMAT IS ONE Point per line")
+            commands.append("DATA FORMAT IS ONE POINT PER LINE")
         if self.use_csisrs_format_for_data:
-            commands.append("USE CSISRS FORMAT For data")
+            commands.append("USE CSISRS FORMAT FOR DATA")
         if self.use_twenty_significant_digits:
-            commands.append("USE TWENTY SIGNIFICANT digits")
+            commands.append("USE TWENTY SIGNIFICANT DIGITS")
         if self.data_are_in_standard_odf_format:
-            commands.append("DATA ARE IN STANDARD odf format")
+            commands.append("DATA ARE IN STANDARD ODF FORMAT")
         if self.data_are_in_odf_file:
             commands.append("DATA ARE IN ODF FILE")
         if self.data_are_endf_b_file:
             commands.append("DATA ARE ENDF/B FILE")
         if self.use_endf_b_energies_and_data:
-            commands.append("USE ENDF/B ENERGIES and data, with MAT=9999")
+            commands.append("USE ENDF/B ENERGIES AND DATA, WITH MAT=9999")
         if self.differential_data_are_in_ascii_file:
-            commands.append("DIFFERENTIAL DATA ARE in ascii file")
+            commands.append("DIFFERENTIAL DATA ARE IN ASCII FILE")
         if self.do_not_divide_data_into_regions:
-            commands.append("DO NOT DIVIDE DATA Into regions")
+            commands.append("DO NOT DIVIDE DATA INTO REGIONS")
         if self.divide_data_into_regions:
-            commands.append("DIVIDE DATA INTO REGions with a fixed number of data points per region")
+            commands.append("DIVIDE DATA INTO REGIONS WITH A FIXED NUMBER OF DATA POINTS PER REGION")
         return commands
 
 
