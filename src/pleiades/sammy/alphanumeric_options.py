@@ -1,49 +1,22 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, field_validator, root_validator
 from typing import List, Union, Optional
 
+
+
 class AlphanumericOptions(BaseModel):
-    """A Class that holds all possible alphanumeric options for SAMMY fitting."""
+    """ SAMMY relies on the use of alphanumeric commands to govern the operations it will perform. 
+        These commands, which are in English, are located in card set 3 of the INPut file. 
+        Commands are divided into 23 different categories (not all represented here)
 
-    # Commands for R-matrix approximation
-    r_matrix_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
-        "UNRESOLVED RESONANCE region",
-        ["FRITZ FROEHNERS FITAcs", "FITACS"],
-        ["REICH-MOORE FORMALISm is wanted", "MORE ACCURATE REICHmoore", "XCT"],
-        ["ORIGINAL REICH-MOORE formalism", "CRO"],
-        ["MULTILEVEL BREITWIGner is wanted", "MLBW FORMALISM IS WAnted", "MLBW"],
-        ["SINGLE LEVEL BREITWigner is wanted", "SLBW FORMALISM IS WAnted", "SLBW"],
-        "REDUCED WIDTH AMPLITudes are used for input"
+
+        
+    """
+
+    general_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
+        "",
+        ["UNRESOLVED RESONANCE region","FRITZ FROEHNERS FITAcs", "FITACS"]
     ])
 
-    # Parameters input control for quantum numbers
-    input_quantum_numbers_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
-        "USE NEW SPIN GROUP Format",
-        "PARTICLE PAIR DEFINItions are used",
-        "KEY-WORD PARTICLE-PAir definitions are given",
-        "QUANTUM NUMBERS ARE in parameter file",
-        "PUT QUANTUM NUMBERS into parameter file",
-        ["SPIN OF INCIDENT PARticle is +", "SPIN OF INCIDENT PARticle is -"],
-        "USE I4 FORMAT TO REAd spin group number",
-        "INPUT IS ENDF/B FILE",
-        "USE ENERGY RANGE FROm endf/b file 2",
-        "FLAG ALL RESONANCE Parameters"
-    ])
-
-    # Parameters input control for prior covariance matrix
-    input_covariance_matrix_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
-        ["IGNORE INPUT BINARY covariance file", "IGNORE"],
-        "ENERGY UNCERTAINTIES are at end of line in par file",
-        ["RETROACTIVE OLD PARAmeter file new covariance", "RETROACTIVE", "U COVARIANCE MATRIX is correct, p is not"],
-        "P COVARIANCE MATRIX is correct, u is not",
-        "MODIFY P COVARIANCE matrix before using",
-        "INITIAL DIAGONAL U Covariance",
-        "INITIAL DIAGONAL P Covariance",
-        ["PERMIT NON POSITIVE definite parameter covariance matrices", "PERMIT ZERO UNCERTAInties on parameters"],
-        ["READ COMPACT COVARIAnces for parameter priors", "READ COMPACT CORRELAtions for parameter priors", 
-         "COMPACT CORRELATIONS are to be read and used", "COMPACT COVARIANCES are to be read and used"],
-        ["PARAMETER COVARIANCE matrix is in endf format", "ENDF COVARIANCE MATRix is to be read and Used"],
-        "USE LEAST SQUARES TO define prior parameter covariance matrix"
-    ])
 
     # Parameters output control for parameter covariance matrix
     output_covariance_matrix_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
@@ -164,3 +137,98 @@ class AlphanumericOptions(BaseModel):
         "DO NOT PRINT PHASE Shifts",
         "PRINT PHASE SHIFTS For input parameters"
     ])
+
+    @root_validator(pre=True)
+    def check_mutually_exclusive_options(cls, values):
+        # Check mutually exclusive options for r_matrix_options
+        r_matrix_options = values.get('r_matrix_options', [])
+        r_matrix_mutually_exclusive_groups = [
+            ["REICH-MOORE FORMALISm is wanted", "MORE ACCURATE REICHmoore", "XCT"],
+            ["ORIGINAL REICH-MOORE formalism", "CRO"],
+            ["MULTILEVEL BREITWIGner is wanted", "MLBW FORMALISM IS WAnted", "MLBW"],
+            ["SINGLE LEVEL BREITWigner is wanted", "SLBW FORMALISM IS WAnted", "SLBW"],
+            ["REDUCED WIDTH AMPLITudes are used for input"]
+        ]
+        cls._check_mutually_exclusive(r_matrix_options, r_matrix_mutually_exclusive_groups)
+
+        # Check mutually exclusive options for input_quantum_numbers_options
+        input_quantum_numbers_options = values.get('input_quantum_numbers_options', [])
+        input_quantum_numbers_mutually_exclusive_groups = [
+            ["USE NEW SPIN GROUP Format", "PARTICLE PAIR DEFINItions are used", "KEY-WORD PARTICLE-PAir definitions are given"]
+        ]
+        cls._check_mutually_exclusive(input_quantum_numbers_options, input_quantum_numbers_mutually_exclusive_groups)
+
+        return values
+
+    @staticmethod
+    def _check_mutually_exclusive(options, mutually_exclusive_groups):
+        selected_options = set()
+        for group in mutually_exclusive_groups:
+            group_set = set(group)
+            selected_in_group = group_set.intersection(options)
+            if len(selected_in_group) > 1:
+                raise ValueError(f"Mutually exclusive options selected: {selected_in_group}")
+            selected_options.update(selected_in_group)
+
+    # validator for alphanumeric options
+    @model_validator(mode="after")
+    def validate_alphanumeric_options(self) -> "AlphanumericOptions":
+        """Validate that the alphanumeric options are unique."""
+        # Check if all options are unique
+        all_options = [
+            self.r_matrix_options, self.input_quantum_numbers_options, self.input_covariance_matrix_options,
+            self.output_covariance_matrix_options, self.experimental_data_input_options, 
+            self.covariance_matrix_data_input_options, self.broadening_options, self.doppler_broadening_options,
+            self.multiple_scattering_corrections_options, self.bayes_solution_options, self.lpt_file_options
+        ]
+        all_options_flat = [item for sublist in all_options if sublist is not None for item in sublist]
+        if len(all_options_flat) != len(set(all_options_flat)):
+            raise ValueError("All alphanumeric options must be unique")
+        return self
+
+    # validate that all fields are strings
+    @field_validator(mode="after")
+    def validate_fields_are_strings(self) -> "AlphanumericOptions":
+        """Validate that all fields are strings."""
+        all_options = [
+            self.r_matrix_options, self.input_quantum_numbers_options, self.input_covariance_matrix_options,
+            self.output_covariance_matrix_options, self.experimental_data_input_options, 
+            self.covariance_matrix_data_input_options, self.broadening_options, self.doppler_broadening_options,
+            self.multiple_scattering_corrections_options, self.bayes_solution_options, self.lpt_file_options
+        ]
+        for option in all_options:
+            if option is not None:
+                for item in option:
+                    if isinstance(item, list):
+                        for subitem in item:
+                            if not isinstance(subitem, str):
+                                raise ValueError("All fields must be strings")
+                    elif not isinstance(item, str):
+                        raise ValueError("All fields must be strings")
+        return self
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

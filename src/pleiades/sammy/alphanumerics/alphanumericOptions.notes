@@ -58,8 +58,13 @@ input_covariance_matrix_options = [
 
 # Parameters output control for parameter covariance matrix
 # Define the method of output for the parameter covariance matrix
-output_covariance_matrix_options = ["WRITE CORRELATIONS Into compact format" or "WRITE COVARIANCES INto compact format" or "PUT CORRELATIONS INTo compact format" or "PUT COVARIANCES INTO compact format",
-"PUT COVARIANCE MATRIx into endf file 32"]
+output_covariance_matrix_options = [
+    --------------
+    ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
+    ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
+    "PUT COVARIANCE MATRIx into endf file 32"
+    --------------
+    ]
 
 # Experimental data input control
 # Define the format for the experimental data
