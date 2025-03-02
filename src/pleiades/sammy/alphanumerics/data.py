@@ -43,8 +43,7 @@ class ExperimentalDataInputOptions(BaseModel):
 
     # Mutually exclusive groups
     mutually_exclusive_groups: List[List[str]] = [
-        [
-            "data_in_original_multi_style_format",
+        [   "data_in_original_multi_style_format",
             "data_format_is_one_point_per_line",
             "use_csisrs_format_for_data",
             "use_twenty_significant_digits",
@@ -53,13 +52,8 @@ class ExperimentalDataInputOptions(BaseModel):
             "data_are_endf_b_file",
             "use_endf_b_energies_and_data",
         ],
-        
-        [   
-            "differential_data_are_in_ascii_file"
-        ],
-
-        [
-            "do_not_divide_data_into_regions",
+        [   "differential_data_are_in_ascii_file"],
+        [   "do_not_divide_data_into_regions",
             "divide_data_into_regions",
         ],
     ]

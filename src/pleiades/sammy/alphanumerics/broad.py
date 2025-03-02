@@ -25,7 +25,7 @@ class BroadeningOptions(BaseModel):
     broadening_is_not_wanted: bool = Field(default=False, description="BROADENING IS NOT WANTED")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
+    mutually_exclusive_groups: List[List[str]] = [
         ["broadening_is_wanted", "broadening_is_not_wanted"]
     ]
 
