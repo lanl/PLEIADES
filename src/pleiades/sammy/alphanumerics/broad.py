@@ -1,10 +1,10 @@
-from pydantic import BaseModel, Field, model_validator
-from typing import ClassVar
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import List, ClassVar
 
 """
     These notes are taken from the SAMMY manual. 
     - * denotes a default options
-    - Mutually exclusive options are grouped together starting with -------------- and ending with -------------
+    - Mutually exclusive options are grouped together starting and ending with --------------
     - options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
     Broadening options: 
@@ -19,33 +19,48 @@ from typing import ClassVar
 """
 
 class BroadeningOptions(BaseModel):
-    """Model to enforce mutually exclusive selection of broadening options using boolean flags."""
-    
-    # Boolean flags for mutual exclusivity
+    model_config = ConfigDict(validate_default=True)
+
     broadening_is_wanted: bool = Field(default=True, description="BROADENING IS WANTED")
-    broadening_is_not_wanted: bool = Field(default=False, description="BROADENING IS NOT WAnted")
+    broadening_is_not_wanted: bool = Field(default=False, description="BROADENING IS NOT WANTED")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[list[list[str]]] = [
+    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
         ["broadening_is_wanted", "broadening_is_not_wanted"]
     ]
-    
-    def __init__(self, **data):
-        super().__init__(**data)
-        for name, value in data.items():
-            self.__setattr__(name, value)
-        self.check_exclusivity()
 
-    def __setattr__(self, name, value):
-        """Custom setattr to handle mutually exclusive options."""
+    @model_validator(mode="after")
+    def enforce_exclusivity(self) -> "BroadeningOptions":
         for group in self.mutually_exclusive_groups:
-            if name in group and value is True:
-                for option in group:
-                    if option != name:
-                        self.__dict__[option] = False
-        self.__dict__[name] = value
+            true_fields = [f for f in group if getattr(self, f)]
+            if not true_fields:
+                continue
 
-    def get_alphanumeric_commands(self):
+            user_true = [f for f in true_fields if f in self.model_fields_set]
+            default_true = [f for f in true_fields if f not in self.model_fields_set]
+
+            # If >1 user-specified in same group => error
+            if len(user_true) > 1:
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+
+            # If exactly 1 user-specified => turn off all defaults in that group
+            if len(user_true) == 1:
+                for f in default_true:
+                    setattr(self, f, False)
+                continue
+
+            # If all True fields are defaults, and more than 1 => error
+            if len(default_true) > 1:
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+        return self
+
+    def get_alphanumeric_commands(self) -> List[str]:
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.broadening_is_wanted:
@@ -54,17 +69,12 @@ class BroadeningOptions(BaseModel):
             commands.append("BROADENING IS NOT WANTED")
         return commands
 
-    def check_exclusivity(self):
-        """Ensure that only one broadening option is selected using boolean flags."""
-        for group in self.mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(self, key)]
-            if len(selected_flags) > 1:
-                raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
-
 # Example usage
-try:
-    options = BroadeningOptions(
-        broadening_is_wanted=True,
-    )
-except ValueError as e:
-    print(e)
+if __name__ == "__main__":
+    try:
+        options = BroadeningOptions(
+            broadening_is_wanted=True,
+            broadening_is_not_wanted=True  # This should raise a ValueError
+        )
+    except ValueError as e:
+        print(e)
