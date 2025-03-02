@@ -1,15 +1,15 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
-    # These notes are taken from the SAMMY manual. 
-    # * denotes a default options
-    # Mutually exclusive options are grouped together starting with ------ and ending with ------
-    # options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+    These notes are taken from the SAMMY manual. 
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting with ------ and ending with ------
+    -   options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
     
-    # Parameters input control for prior covariance matrix:
-    # Define the prior parameter covariance matrix
-    input_covariance_matrix_options = [
+        Parameters input control for prior covariance matrix:
+        Define the prior parameter covariance matrix
+        input_covariance_matrix_options = [
         ----------------------------
             ["IGNORE INPUT BINARY covariance file","IGNORE"],
             "ENERGY UNCERTAINTIES are at end of line in par file",
@@ -61,7 +61,7 @@ class CovarianceMatrixOptions(BaseModel):
     use_least_squares_to_define_prior_parameter_covariance_matrix: bool = Field(default=False, description="USE LEAST SQUARES TO define prior parameter covariance matrix")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
+    mutually_exclusive_groups: List[List[str]] = [
         ["ignore_input_binary_covariance_file","energy_uncertainties_at_end_of_line_in_par_file"],
         ["retroactive_old_parameter_file_new_covariance", "p_covariance_matrix_is_correct_u_is_not"],
         ["modify_p_covariance_matrix_before_using"],

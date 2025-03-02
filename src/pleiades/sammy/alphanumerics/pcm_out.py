@@ -1,16 +1,21 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
-# Parameters output control for parameter covariance matrix
-# Define the method of output for the parameter covariance matrix
-output_covariance_matrix_options = [
-    --------------
-    ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
-    ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
-    "PUT COVARIANCE MATRIx into endf file 32"
-    --------------
-    ]
+    These notes are taken from the SAMMY manual. 
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting with ------ and ending with ------
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+    
+        Parameters output control for parameter covariance matrix
+        Define the method of output for the parameter covariance matrix
+        output_covariance_matrix_options = [
+        ----------------------------
+            ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
+            ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
+            "PUT COVARIANCE MATRIx into endf file 32"
+        ----------------------------
+        ]
 """
 
 class CovarianceMatrixOutputOptions(BaseModel):

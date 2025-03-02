@@ -11,7 +11,7 @@ from typing import List
         Is broadening wanted
         broadening_options = [ 
         ----------------------------
-            * "BROADENING IS WANTED",
+        *   "BROADENING IS WANTED",
             "BROADENING IS NOT WAnted"
         ----------------------------
         ]

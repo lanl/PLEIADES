@@ -1,29 +1,34 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
-# Parameters input control for quantum numbers
-# Define which type of input is to be used for spin group information and other parameters
-input_quantum_numbers_options = [
-    ----------------------------
-    *   "USE NEW SPIN GROUP Format", 
-        "PARTICLE PAIR DEFINItions are used",
-        "KEY-WORD PARTICLE-PAir definitions are given",
-    ----------------------------
-    ----------------------------
-        "QUANTUM NUMBERS ARE in parameter file",
-        "PUT QUANTUM NUMBERS into parameter file"
-    ----------------------------,
-        ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
-    ----------------------------,
-        "USE I4 FORMAT TO REAd spin group number",
-    ----------------------------,
-        "INPUT IS ENDF/B FILE",
-    ----------------------------,
-        "USE ENERGY RANGE FROm endf/b file 2",
-    ----------------------------,
-        "FLAG ALL RESONANCE Parameters"
-    ]
+    These notes are taken from the SAMMY manual. 
+    -   * denotes a default options
+    -   Mutually exclusive options are grouped together starting with ------ and ending with ------
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+    
+        Parameters input control for quantum numbers
+        Define which type of input is to be used for spin group information and other parameters
+        input_quantum_numbers_options = [
+        ----------------------------
+        *   "USE NEW SPIN GROUP Format", 
+            "PARTICLE PAIR DEFINItions are used",
+            "KEY-WORD PARTICLE-PAir definitions are given",
+        ----------------------------
+        ----------------------------
+            "QUANTUM NUMBERS ARE in parameter file",
+            "PUT QUANTUM NUMBERS into parameter file"
+        ----------------------------,
+            ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
+        ----------------------------,
+            "USE I4 FORMAT TO REAd spin group number",
+        ----------------------------,
+            "INPUT IS ENDF/B FILE",
+        ----------------------------,
+            "USE ENERGY RANGE FROm endf/b file 2",
+        ----------------------------,
+            "FLAG ALL RESONANCE Parameters"
+        ]
 
 """
 
