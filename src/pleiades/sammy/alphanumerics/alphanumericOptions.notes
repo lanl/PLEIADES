@@ -36,17 +36,25 @@ input_quantum_numbers_options = [
 
 # Parameters input control for prior covariance matrix:
 # Define the prior parameter covariance matrix
-input_covariance_matrix_options = ["IGNORE INPUT BINARY covariance file" or "IGNORE",
-"ENERGY UNCERTAINTIES are at end of line in par file",
-"RETROACTIVE OLD PARAmeter file new covariance" or "RETROACTIVE" or "U COVARIANCE MATRIX is correct, p is not",
-"P COVARIANCE MATRIX is correct, u is not",
-"MODIFY P COVARIANCE matrix before using",
-"INITIAL DIAGONAL U Covariance",
-"INITIAL DIAGONAL P Covariance",
-"PERMIT NON POSITIVE definite parameter covariance matrices" or "PERMIT ZERO UNCERTAInties on parameters",
-"READ COMPACT COVARIAnces for parameter priors" or "READ COMPACT CORRELAtions for parameter priors" or "COMPACT CORRELATIONS are to be read and used" or "COMPACT COVARIANCES are to be read and used", 
-"PARAMETER COVARIANCE matrix is in endf format" or "ENDF COVARIANCE MATRix is to be read and Used",
-"USE LEAST SQUARES TO define prior parameter covariance matrix"]
+input_covariance_matrix_options = [
+    ["IGNORE INPUT BINARY covariance file","IGNORE"],
+    "ENERGY UNCERTAINTIES are at end of line in par file",
+    --------------
+    ["RETROACTIVE OLD PARAmeter file new covariance","RETROACTIVE","U COVARIANCE MATRIX is correct, p is not"],
+    "P COVARIANCE MATRIX is correct, u is not",
+    --------------
+    "MODIFY P COVARIANCE matrix before using",
+    --------------
+    "INITIAL DIAGONAL U Covariance",
+    "INITIAL DIAGONAL P Covariance",
+    --------------
+    ["PERMIT NON POSITIVE definite parameter covariance matrices","PERMIT ZERO UNCERTAInties on parameters"],
+    --------------
+    ["READ COMPACT COVARIAnces for parameter priors","READ COMPACT CORRELAtions for parameter priors","COMPACT CORRELATIONS are to be read and used","COMPACT COVARIANCES are to be read and used"], 
+    ["PARAMETER COVARIANCE matrix is in endf format","ENDF COVARIANCE MATRix is to be read and Used"],
+    --------------
+    "USE LEAST SQUARES TO define prior parameter covariance matrix"
+    ]
 
 # Parameters output control for parameter covariance matrix
 # Define the method of output for the parameter covariance matrix
