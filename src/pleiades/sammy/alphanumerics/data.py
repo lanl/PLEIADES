@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, model_validator
-from typing import ClassVar
+from typing import List
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 """
     These notes are taken from the SAMMY manual. 
@@ -27,9 +27,8 @@ from typing import ClassVar
 """
 
 class ExperimentalDataInputOptions(BaseModel):
-    """Model to enforce mutually exclusive selection of experimental data input options using boolean flags."""
-    
-    # Boolean flags for mutual exclusivity
+    model_config = ConfigDict(validate_default=True)
+
     data_in_original_multi_style_format: bool = Field(default=True, description="DATA ARE IN ORIGINAL multi-style format")
     data_format_is_one_point_per_line: bool = Field(default=False, description="DATA FORMAT IS ONE Point per line")
     use_csisrs_format_for_data: bool = Field(default=False, description="USE CSISRS FORMAT For data")
@@ -42,28 +41,61 @@ class ExperimentalDataInputOptions(BaseModel):
     do_not_divide_data_into_regions: bool = Field(default=True, description="DO NOT DIVIDE DATA Into regions")
     divide_data_into_regions: bool = Field(default=False, description="DIVIDE DATA INTO REGions with a fixed number of data points per region")
 
-    # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[list[list[str]]] = [
-        ["data_in_original_multi_style_format", "data_format_is_one_point_per_line", "use_csisrs_format_for_data", "use_twenty_significant_digits", "data_are_in_standard_odf_format", "data_are_in_odf_file", "data_are_endf_b_file", "use_endf_b_energies_and_data"],
-        ["do_not_divide_data_into_regions", "divide_data_into_regions"]
+    # Mutually exclusive groups
+    mutually_exclusive_groups: List[List[str]] = [
+        [
+            "data_in_original_multi_style_format",
+            "data_format_is_one_point_per_line",
+            "use_csisrs_format_for_data",
+            "use_twenty_significant_digits",
+            "data_are_in_standard_odf_format",
+            "data_are_in_odf_file",
+            "data_are_endf_b_file",
+            "use_endf_b_energies_and_data",
+        ],
+        
+        [   
+            "differential_data_are_in_ascii_file"
+        ],
+
+        [
+            "do_not_divide_data_into_regions",
+            "divide_data_into_regions",
+        ],
     ]
-    
-    def __init__(self, **data):
-        super().__init__(**data)
-        for name, value in data.items():
-            self.__setattr__(name, value)
-        self.check_exclusivity()
 
-    def __setattr__(self, name, value):
-        """Custom setattr to handle mutually exclusive options."""
+    @model_validator(mode="after")
+    def enforce_exclusivity(self) -> "ExperimentalDataInputOptions":
         for group in self.mutually_exclusive_groups:
-            if name in group and value is True:
-                for option in group:
-                    if option != name:
-                        super().__setattr__(option, False)
-        super().__setattr__(name, value)
+            true_fields = [f for f in group if getattr(self, f)]
+            if not true_fields:
+                continue
 
-    def get_alphanumeric_commands(self):
+            user_true = [f for f in true_fields if f in self.model_fields_set]
+            default_true = [f for f in true_fields if f not in self.model_fields_set]
+
+            # If >1 user-specified in same group => error
+            if len(user_true) > 1:
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+
+            # If exactly 1 user-specified => turn off all defaults in that group
+            if len(user_true) == 1:
+                for f in default_true:
+                    setattr(self, f, False)
+                continue
+
+            # If all True fields are defaults, and more than 1 => error
+            if len(default_true) > 1:
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+        return self
+
+    def get_alphanumeric_commands(self) -> List[str]:
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.data_in_original_multi_style_format:
@@ -90,18 +122,15 @@ class ExperimentalDataInputOptions(BaseModel):
             commands.append("DIVIDE DATA INTO REGions with a fixed number of data points per region")
         return commands
 
-    def check_exclusivity(self):
-        """Ensure that only one experimental data input option is selected using boolean flags."""
-        for group in self.mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(self, key)]
-            if len(selected_flags) > 1:
-                raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
 
-# Example usage
-try:
-    options = ExperimentalDataInputOptions(
-        data_in_original_multi_style_format=True,
-        data_format_is_one_point_per_line=True  # This will automatically switch off data_in_original_multi_style_format
-    )
-except ValueError as e:
-    print(e)
+if __name__ == "__main__":
+    # Example usage:
+    # Create an instance
+    opts = ExperimentalDataInputOptions(use_twenty_significant_digits=True)
+    # Print out the final model
+    print(opts.model_dump())
+    # Get the commands
+    commands_list = opts.get_alphanumeric_commands()
+    print("\nAlphanumeric commands:")
+    for c in commands_list:
+        print(f"  - {c}")
