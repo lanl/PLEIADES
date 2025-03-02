@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from typing import List, ClassVar
+from typing import List
 
 """
     These notes are taken from the SAMMY manual. 
@@ -112,41 +112,41 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.do_not_include_self_shielding:
-            commands.append("DO NOT INCLUDE SELF-shielding multiple-scattering corrections")
+            commands.append("DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS")
         if self.use_self_shielding_only:
-            commands.append("USE SELF SHIELDING Only no scattering")
+            commands.append("USE SELF SHIELDING ONLY NO SCATTERING")
         if self.use_single_scattering_plus_self_shielding:
-            commands.append("USE SINGLE SCATTERINg plus self shielding")
+            commands.append("USE SINGLE SCATTERING PLUS SELF SHIELDING")
         if self.include_double_scattering_corrections:
-            commands.append("INCLUDE DOUBLE SCATTering corrections")
+            commands.append("INCLUDE DOUBLE SCATTERING CORRECTIONS")
         if self.infinite_slab:
             commands.append("INFINITE SLAB")
         if self.finite_slab:
             commands.append("FINITE SLAB")
         if self.make_new_file_with_edge_effects:
-            commands.append("MAKE NEW FILE WITH Edge effects")
+            commands.append("MAKE NEW FILE WITH EDGE EFFECTS")
         if self.file_with_edge_effects_already_exists:
-            commands.append("FILE WITH EDGE EFFECts already exists")
+            commands.append("FILE WITH EDGE EFFECTS ALREADY EXISTS")
         if self.make_plot_file_of_multiple_scattering_pieces:
-            commands.append("MAKE PLOT FILE OF MUltiple scattering pieces")
+            commands.append("MAKE PLOT FILE OF MULTIPLE SCATTERING PIECES")
         if self.normalize_as_cross_section:
-            commands.append("NORMALIZE AS CROSS Section rather than yield")
+            commands.append("NORMALIZE AS CROSS SECTION RATHER THAN YIELD")
         if self.normalize_as_yield:
-            commands.append("NORMALIZE AS YIELD Rather than cross section")
+            commands.append("NORMALIZE AS YIELD RATHER THAN CROSS SECTION")
         if self.normalize_as_1_minus_e_sigma:
-            commands.append("NORMALIZE AS (1-E)SIgma")
+            commands.append("NORMALIZE AS (1-E)SIGMA")
         if self.print_multiple_scattering_corrections:
-            commands.append("PRINT MULTIPLE SCATTering corrections")
+            commands.append("PRINT MULTIPLE SCATTERING CORRECTIONS")
         if self.prepare_input_for_monte_carlo_simulation:
-            commands.append("PREPARE INPUT FOR MOnte carlo simulation")
+            commands.append("PREPARE INPUT FOR MONTE CARLO SIMULATION")
         if self.y2_values_are_tabulated:
-            commands.append("Y2 VALUES ARE TABULAted")
+            commands.append("Y2 VALUES ARE TABULATED")
         if self.use_quadratic_interpolation_for_y1:
-            commands.append("USE QUADRATIC INTERPolation for y1")
+            commands.append("USE QUADRATIC INTERPOLATION FOR Y1")
         if self.use_linear_interpolation_for_y1:
-            commands.append("USE LINEAR INTERPOLAtion for y1")
+            commands.append("USE LINEAR INTERPOLATION FOR Y1")
         if self.version_7_for_multiple_scattering:
-            commands.append("VERSION 7.0.0 FOR Multiple scattering")
+            commands.append("VERSION 7.0.0 FOR MULTIPLE SCATTERING")
         if self.do_not_calculate_y0:
             commands.append("DO NOT CALCULATE Y0")
         return commands

@@ -24,9 +24,9 @@ def test_default_option():
     assert options.version_7_for_multiple_scattering is False
     assert options.do_not_calculate_y0 is False
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
 def test_valid_option_with_single_boolean():
@@ -37,9 +37,9 @@ def test_valid_option_with_single_boolean():
     assert options.use_single_scattering_plus_self_shielding is False
     assert options.include_double_scattering_corrections is False
     assert options.get_alphanumeric_commands() == [
-        "USE SELF SHIELDING Only no scattering",
+        "USE SELF SHIELDING ONLY NO SCATTERING",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
 def test_mutually_exclusive_options_1():
@@ -61,11 +61,11 @@ def test_valid_combination_of_options_1():
     assert options.use_quadratic_interpolation_for_y1 is True
     assert options.use_linear_interpolation_for_y1 is False
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "NORMALIZE AS YIELD Rather than cross section",
-        "USE QUADRATIC INTERPolation for y1"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "NORMALIZE AS YIELD RATHER THAN CROSS SECTION",
+        "USE QUADRATIC INTERPOLATION FOR Y1"
     ]
 
 def test_valid_combination_of_options_2():
@@ -74,9 +74,9 @@ def test_valid_combination_of_options_2():
     assert options.include_double_scattering_corrections is True
     assert options.file_with_edge_effects_already_exists is True
     assert options.get_alphanumeric_commands() == [
-        "INCLUDE DOUBLE SCATTering corrections",
+        "INCLUDE DOUBLE SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "FILE WITH EDGE EFFECts already exists"
+        "FILE WITH EDGE EFFECTS ALREADY EXISTS"
     ]
 
 def test_invalid_option():
@@ -93,111 +93,111 @@ def test_switching_options():
     options = MultipleScatteringCorrectionsOptions()
     assert options.do_not_include_self_shielding is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(use_self_shielding_only=True)
     assert options.use_self_shielding_only is True
     assert options.get_alphanumeric_commands() == [
-        "USE SELF SHIELDING Only no scattering",
+        "USE SELF SHIELDING ONLY NO SCATTERING",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(use_single_scattering_plus_self_shielding=True)
     assert options.use_single_scattering_plus_self_shielding is True
     assert options.get_alphanumeric_commands() == [
-        "USE SINGLE SCATTERINg plus self shielding",
+        "USE SINGLE SCATTERING PLUS SELF SHIELDING",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(include_double_scattering_corrections=True)
     assert options.include_double_scattering_corrections is True
     assert options.get_alphanumeric_commands() == [
-        "INCLUDE DOUBLE SCATTering corrections",
+        "INCLUDE DOUBLE SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(infinite_slab=True)
     assert options.infinite_slab is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "INFINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects"
+        "MAKE NEW FILE WITH EDGE EFFECTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(file_with_edge_effects_already_exists=True)
     assert options.file_with_edge_effects_already_exists is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "FILE WITH EDGE EFFECts already exists"
+        "FILE WITH EDGE EFFECTS ALREADY EXISTS"
     ]
 
     options = MultipleScatteringCorrectionsOptions(normalize_as_cross_section=True)
     assert options.normalize_as_cross_section is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "NORMALIZE AS CROSS Section rather than yield"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "NORMALIZE AS CROSS SECTION RATHER THAN YIELD"
     ]
 
     options = MultipleScatteringCorrectionsOptions(normalize_as_yield=True)
     assert options.normalize_as_yield is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "NORMALIZE AS YIELD Rather than cross section"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "NORMALIZE AS YIELD RATHER THAN CROSS SECTION"
     ]
 
     options = MultipleScatteringCorrectionsOptions(normalize_as_1_minus_e_sigma=True)
     assert options.normalize_as_1_minus_e_sigma is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "NORMALIZE AS (1-E)SIgma"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "NORMALIZE AS (1-E)SIGMA"
     ]
 
     options = MultipleScatteringCorrectionsOptions(use_quadratic_interpolation_for_y1=True)
     assert options.use_quadratic_interpolation_for_y1 is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "USE QUADRATIC INTERPolation for y1"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "USE QUADRATIC INTERPOLATION FOR Y1"
     ]
 
     options = MultipleScatteringCorrectionsOptions(use_linear_interpolation_for_y1=True)
     assert options.use_linear_interpolation_for_y1 is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "USE LINEAR INTERPOLAtion for y1"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "USE LINEAR INTERPOLATION FOR Y1"
     ]
 
     options = MultipleScatteringCorrectionsOptions(version_7_for_multiple_scattering=True)
     assert options.version_7_for_multiple_scattering is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
-        "VERSION 7.0.0 FOR Multiple scattering"
+        "MAKE NEW FILE WITH EDGE EFFECTS",
+        "VERSION 7.0.0 FOR MULTIPLE SCATTERING"
     ]
 
     options = MultipleScatteringCorrectionsOptions(do_not_calculate_y0=True)
     assert options.do_not_calculate_y0 is True
     assert options.get_alphanumeric_commands() == [
-        "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
+        "DO NOT INCLUDE SELF-SHIELDING MULTIPLE-SCATTERING CORRECTIONS",
         "FINITE SLAB",
-        "MAKE NEW FILE WITH Edge effects",
+        "MAKE NEW FILE WITH EDGE EFFECTS",
         "DO NOT CALCULATE Y0"
     ]
 
