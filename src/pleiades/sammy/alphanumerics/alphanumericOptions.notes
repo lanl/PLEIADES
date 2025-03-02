@@ -1,27 +1,41 @@
-# These Notes are taken from the SAMMY manual. 
+# These notes are taken from the SAMMY manual. 
+# * denotes a default options
+# Mutually exclusive options are grouped together starting with -------------- and ending with -------------
+# options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
 
-# Commands for R-matrix approximation:
-r_matrix_options = ["UNRESOLVED RESONANCE region",
-"FRITZ FROEHNERS FITAcs" or "FITACS", 
-"REICH-MOORE FORMALISm is wanted" or "MORE ACCURATE REICHmoore" or "XCT",
-"ORIGINAL REICH-MOORE formalism" or "CRO",
-"MULTILEVEL BREITWIGner is wanted" or "MLBW FORMALISM IS WAnted" or "MLBW",
-"SINGLE LEVEL BREITWigner is wanted" or "SLBW FORMALISM IS WAnted" or "SLBW", 
-"REDUCED WIDTH AMPLITudes are used for input"]
+# Commands for R-matrix approximation
+# Define which approximation to the R-matrix is to be used for this calculation
+r_matrix_options = [
+    --------------
+    *["REICH-MOORE FORMALISm is wanted","MORE ACCURATE REICHmoore","XCT"],
+    ["ORIGINAL REICH-MOORE formalism","CRO"],
+    ["MULTILEVEL BREITWIGner is wanted","MLBW FORMALISM IS WAnted","MLBW"],
+    ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"], 
+    "REDUCED WIDTH AMPLITudes are used for input"
+    --------------
+    ]
 
-# Parameters input control for quantum numbers:
-input_quantum_numbers_options = ["USE NEW SPIN GROUP Format", 
-"PARTICLE PAIR DEFINItions are used",
-"KEY-WORD PARTICLE-PAir definitions are given",
-"QUANTUM NUMBERS ARE in parameter file",
-"PUT QUANTUM NUMBERS into parameter file",
-"SPIN OF INCIDENT PARticle is +" or "SPIN OF INCIDENT PARticle is -",
-"USE I4 FORMAT TO REAd spin group number",
-"INPUT IS ENDF/B FILE",
-"USE ENERGY RANGE FROm endf/b file 2",
-"FLAG ALL RESONANCE Parameters"]
+# Parameters input control for quantum numbers
+# Define which type of input is to be used for spin group information and other parameters
+input_quantum_numbers_options = [
+    --------------
+    *"USE NEW SPIN GROUP Format", 
+    "PARTICLE PAIR DEFINItions are used",
+    "KEY-WORD PARTICLE-PAir definitions are given",
+    --------------
+    --------------
+    "QUANTUM NUMBERS ARE in parameter file",
+    "PUT QUANTUM NUMBERS into parameter file"
+    --------------,
+    ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
+    "USE I4 FORMAT TO REAd spin group number",
+    "INPUT IS ENDF/B FILE",
+    "USE ENERGY RANGE FROm endf/b file 2",
+    "FLAG ALL RESONANCE Parameters"
+    ]
 
 # Parameters input control for prior covariance matrix:
+# Define the prior parameter covariance matrix
 input_covariance_matrix_options = ["IGNORE INPUT BINARY covariance file" or "IGNORE",
 "ENERGY UNCERTAINTIES are at end of line in par file",
 "RETROACTIVE OLD PARAmeter file new covariance" or "RETROACTIVE" or "U COVARIANCE MATRIX is correct, p is not",
@@ -35,10 +49,12 @@ input_covariance_matrix_options = ["IGNORE INPUT BINARY covariance file" or "IGN
 "USE LEAST SQUARES TO define prior parameter covariance matrix"]
 
 # Parameters output control for parameter covariance matrix
+# Define the method of output for the parameter covariance matrix
 output_covariance_matrix_options = ["WRITE CORRELATIONS Into compact format" or "WRITE COVARIANCES INto compact format" or "PUT CORRELATIONS INTo compact format" or "PUT COVARIANCES INTO compact format",
 "PUT COVARIANCE MATRIx into endf file 32"]
 
-# Experimental data input control:
+# Experimental data input control
+# Define the format for the experimental data
 experimental_data_input_options = ["DATA ARE IN ORIGINAL multi-style format",
 "DATA FORMAT IS ONE Point per line" or "USE CSISRS FORMAT FOr data" or "CSISRS",
 "USE TWENTY SIGNIFICAnt digits" or "TWENTY",
@@ -49,7 +65,8 @@ experimental_data_input_options = ["DATA ARE IN ORIGINAL multi-style format",
 "DO NOT DIVIDE DATA Into regions",
 "DIVIDE DATA INTO REGions with a fixed number of data points per region"]
 
-# Experimental data input control for covariance matrix:
+# Experimental data input control for covariance matrix
+# Define the format for input of data covariance matrix
 covariance_matrix_data_input_options = ["IMPLICIT DATA COVARIance is wanted" or "IDC",
 "USER SUPPLIED IMPLICit data covariance matrix" or "USER IDC",
 "PUP COVARIANCE IS IN an ascii file",
@@ -64,14 +81,18 @@ covariance_matrix_data_input_options = ["IMPLICIT DATA COVARIance is wanted" or 
 "FREE FORMAT DATA COVariance YYYYYY.YYY",
 ]
 
-# Skipping Experimental data angular distribution otpions
+# Experimental data angular distribution otpions
+# Define frames of references and other details for angle-differential calculations
+# Not supported at the moment.
 
-# Broadening options:
+# Broadening options
+# Is broadening wanted
 broadening_options = [ "BROADENING IS WANTED",
 "BROADENING IS NOT WAnted"
 ]
 
-# Doppler Broadening options:
+# Doppler Broadening options
+# Define which version of Doppler broadening is to be used
 doppler_broadening_options = ["USE FREE GAS MODEL Of doppler broadening" or "FGM",
 "USE LEAL-HWANG DOPPLer broadening",
 "HIGH ENERGY GAUSSIAN approximation for Doppler broadening" or "USE MULTI-STYLE DOPPler broadening" or "HEGA",
@@ -80,6 +101,7 @@ doppler_broadening_options = ["USE FREE GAS MODEL Of doppler broadening" or "FGM
 ]
 
 # Multiple scattering corrections
+# Define how the multiple-scattering corrections are to proceed
 multiple_scattering_corrections_options = ["DO NOT INCLUDE SELF-shielding multiple-scattering corrections" or "NO SELF-SHIELDING ANd multiple-scattering corrections",
 "USE SELF SHIELDING Only no scattering" or "SELF SHIELD" or "INCLUDE ONLY SELF SHielding and not Multiple scattering",
 "USE SINGLE SCATTERINg plus self shielding" or "SINGLE",
@@ -101,6 +123,7 @@ multiple_scattering_corrections_options = ["DO NOT INCLUDE SELF-shielding multip
 "DO NOT CALCULATE Y0"]
 
 # Bayes solution options
+# Define details of the fitting procedure
 bayes_solution_options = ["SOLVE BAYES EQUATIONs", 
 "DO NOT SOLVE BAYES Equations", 
 "LET SAMMY CHOOSE WHIch inversion scheme to use",
@@ -113,6 +136,7 @@ bayes_solution_options = ["SOLVE BAYES EQUATIONs",
 "USE REMEMBERED ORIGInal parameter values"]
 
 # Options for printing into SAMMY.LPT
+# Define what information will be printed in output file SAMMY.LPT
 lpt_file_options = ["DO NOT PRINT ANY INPut parameters",
 "PRINT ALL INPUT PARAmeters",
 "PRINT VARIED INPUT Parameters",
