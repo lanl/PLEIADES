@@ -42,22 +42,41 @@ def test_valid_option_with_single_boolean():
         "MAKE NEW FILE WITH Edge effects"
     ]
 
-def test_mutually_exclusive_options():
+def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         MultipleScatteringCorrectionsOptions(do_not_include_self_shielding=True, use_self_shielding_only=True)
 
-def test_valid_combination_of_options():
+def test_mutually_exclusive_options_2():
+    """Test mutually exclusive options."""
+    with pytest.raises(ValueError):
+        MultipleScatteringCorrectionsOptions(normalize_as_cross_section=True, normalize_as_yield=True)
+
+def test_valid_combination_of_options_1():
     """Test a valid combination of options."""
-    options = MultipleScatteringCorrectionsOptions(normalize_as_yield=True)
+    options = MultipleScatteringCorrectionsOptions(normalize_as_yield=True, use_quadratic_interpolation_for_y1=True)
     assert options.normalize_as_cross_section is False
     assert options.normalize_as_yield is True
     assert options.normalize_as_1_minus_e_sigma is False
+    assert options.use_quadratic_interpolation_for_y1 is True
+    assert options.use_linear_interpolation_for_y1 is False
     assert options.get_alphanumeric_commands() == [
         "DO NOT INCLUDE SELF-shielding multiple-scattering corrections",
         "FINITE SLAB",
         "MAKE NEW FILE WITH Edge effects",
-        "NORMALIZE AS YIELD Rather than cross section"
+        "NORMALIZE AS YIELD Rather than cross section",
+        "USE QUADRATIC INTERPolation for y1"
+    ]
+
+def test_valid_combination_of_options_2():
+    """Test a valid combination of options."""
+    options = MultipleScatteringCorrectionsOptions(include_double_scattering_corrections=True, file_with_edge_effects_already_exists=True)
+    assert options.include_double_scattering_corrections is True
+    assert options.file_with_edge_effects_already_exists is True
+    assert options.get_alphanumeric_commands() == [
+        "INCLUDE DOUBLE SCATTering corrections",
+        "FINITE SLAB",
+        "FILE WITH EDGE EFFECts already exists"
     ]
 
 def test_invalid_option():

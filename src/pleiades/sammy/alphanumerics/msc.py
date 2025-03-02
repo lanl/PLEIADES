@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import ClassVar
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import List, ClassVar
 
 """
     These notes are taken from the SAMMY manual. 
@@ -42,9 +42,8 @@ from typing import ClassVar
 """
 
 class MultipleScatteringCorrectionsOptions(BaseModel):
-    """Model to enforce mutually exclusive selection of multiple scattering corrections options using boolean flags."""
-    
-    # Boolean flags for mutual exclusivity
+    model_config = ConfigDict(validate_default=True)
+
     do_not_include_self_shielding: bool = Field(default=True, description="DO NOT INCLUDE SELF-shielding multiple-scattering corrections")
     use_self_shielding_only: bool = Field(default=False, description="USE SELF SHIELDING Only no scattering")
     use_single_scattering_plus_self_shielding: bool = Field(default=False, description="USE SINGLE SCATTERINg plus self shielding")
@@ -66,30 +65,50 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
     do_not_calculate_y0: bool = Field(default=False, description="DO NOT CALCULATE Y0")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[list[list[str]]] = [
+    mutually_exclusive_groups: ClassVar[List[List[str]]] = [
         ["do_not_include_self_shielding", "use_self_shielding_only", "use_single_scattering_plus_self_shielding", "include_double_scattering_corrections"],
         ["infinite_slab", "finite_slab"],
         ["make_new_file_with_edge_effects", "file_with_edge_effects_already_exists"],
+        ["make_plot_file_of_multiple_scattering_pieces"],
         ["normalize_as_cross_section", "normalize_as_yield", "normalize_as_1_minus_e_sigma"],
-        ["use_quadratic_interpolation_for_y1", "use_linear_interpolation_for_y1"]
+        ["print_multiple_scattering_corrections", "prepare_input_for_monte_carlo_simulation", "y2_values_are_tabulated"],
+        ["use_quadratic_interpolation_for_y1", "use_linear_interpolation_for_y1"],
+        ["version_7_for_multiple_scattering"],
+        ["do_not_calculate_y0"]
     ]
-    
-    def __init__(self, **data):
-        super().__init__(**data)
-        for name, value in data.items():
-            self.__setattr__(name, value)
-        self.check_exclusivity()
 
-    def __setattr__(self, name, value):
-        """Custom setattr to handle mutually exclusive options."""
+    @model_validator(mode="after")
+    def enforce_exclusivity(self) -> "MultipleScatteringCorrectionsOptions":
         for group in self.mutually_exclusive_groups:
-            if name in group and value is True:
-                for option in group:
-                    if option != name:
-                        self.__dict__[option] = False
-        self.__dict__[name] = value
+            true_fields = [f for f in group if getattr(self, f)]
+            if not true_fields:
+                continue
 
-    def get_alphanumeric_commands(self):
+            user_true = [f for f in true_fields if f in self.model_fields_set]
+            default_true = [f for f in true_fields if f not in self.model_fields_set]
+
+            # If >1 user-specified in same group => error
+            if len(user_true) > 1:
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+
+            # If exactly 1 user-specified => turn off all defaults in that group
+            if len(user_true) == 1:
+                for f in default_true:
+                    setattr(self, f, False)
+                continue
+
+            # If all True fields are defaults, and more than 1 => error
+            if len(default_true) > 1:
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+        return self
+
+    def get_alphanumeric_commands(self) -> List[str]:
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.do_not_include_self_shielding:
@@ -132,18 +151,12 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
             commands.append("DO NOT CALCULATE Y0")
         return commands
 
-    def check_exclusivity(self):
-        """Ensure that only one multiple scattering corrections option is selected using boolean flags."""
-        for group in self.mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(self, key)]
-            if len(selected_flags) > 1:
-                raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
-
 # Example usage
-try:
-    options = MultipleScatteringCorrectionsOptions(
-        do_not_include_self_shielding=True,
-        use_self_shielding_only=True  # This will automatically switch off do_not_include_self_shielding
-    )
-except ValueError as e:
-    print(e)
+if __name__ == "__main__":
+    try:
+        options = MultipleScatteringCorrectionsOptions(
+            do_not_include_self_shielding=True,
+            use_self_shielding_only=True  # This should raise a ValueError
+        )
+    except ValueError as e:
+        print(e)
