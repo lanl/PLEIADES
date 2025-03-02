@@ -17,18 +17,6 @@ class AlphanumericOptions(BaseModel):
         ["UNRESOLVED RESONANCE region","FRITZ FROEHNERS FITAcs", "FITACS"]
     ])
 
-    # Experimental data input control
-    experimental_data_input_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
-        "DATA ARE IN ORIGINAL multi-style format",
-        ["DATA FORMAT IS ONE Point per line", "USE CSISRS FORMAT FOr data", "CSISRS"],
-        ["USE TWENTY SIGNIFICAnt digits", "TWENTY"],
-        "DATA ARE IN STANDARD odf format",
-        "DATA ARE IN ODF FILE",
-        ["DATA ARE ENDF/B FILE", "USE ENDF/B ENERGIES and data, with MAT=9999"],
-        "DIFFERENTIAL DATA ARe in ascii file",
-        "DO NOT DIVIDE DATA Into regions",
-        "DIVIDE DATA INTO REGions with a fixed number of data points per region"
-    ])
 
     # Experimental data input control for covariance matrix
     covariance_matrix_data_input_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
@@ -44,12 +32,6 @@ class AlphanumericOptions(BaseModel):
         "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
         "DATA COVARIANCE FILE is named YYYYYY.YYY",
         "FREE FORMAT DATA COVariance YYYYYY.YYY"
-    ])
-
-    # Broadening options
-    broadening_options: Optional[List[str]] = Field(default_factory=lambda: [
-        "BROADENING IS WANTED",
-        "BROADENING IS NOT WAnted"
     ])
 
     # Doppler Broadening options
