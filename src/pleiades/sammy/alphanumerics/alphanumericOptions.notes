@@ -3,6 +3,23 @@
 # Mutually exclusive options are grouped together starting with ------ and ending with ------
 # options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
 
+# We have tried to implement the exclusivity logic in the following way while still adhering to defaults
+#   Defaults:
+#   -   option_one=True and option_six=True by default; all others default to False.
+#   -   If the user provides no input, you end up with {option_one=True, option_six=True}.
+#   After Validator:
+#   -   Runs once Pydantic finishes building the model (including defaults + user-supplied data).
+#   -   Looks at each of the mutually_exclusive_groups.
+#   -   For each group:
+#   	-   Collects which fields ended up True.
+#   	-   Separates them into user-specified vs. default (using f in self.model_fields_set to detect 
+#           if the user explicitly set that field).
+#   	-   Case A: If more than one user-specified field is True in the same group → raise ValueError.
+#   	-   Case B: If exactly one user-specified field is True in that group → turn off any default fields 
+#           that are True in that group. The user’s choice “wins.”
+#   	-   Case C: If no user-specified fields are True (all True fields in that group are defaults) 
+#           but there’s more than one → raise ValueError. Otherwise, it’s fine. 
+
 # Commands for R-matrix approximation
 # Define which approximation to the R-matrix is to be used for this calculation
 r_matrix_options = [
