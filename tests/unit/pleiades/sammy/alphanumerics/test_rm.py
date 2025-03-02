@@ -21,12 +21,17 @@ def test_valid_option_with_single_boolean():
     assert r_matrix_options.reduced_width_amplitudes is False
     assert r_matrix_options.get_alphanumeric_commands() == ["ORIGINAL REICH-MOORE FORMALISM"]
 
-def test_mutually_exclusive_options():
+def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         RMatrixOptions(reich_moore=True, original_reich_moore=True)
 
-def test_valid_combination_of_options():
+def test_mutually_exclusive_options_2():
+    """Test mutually exclusive options."""
+    with pytest.raises(ValueError):
+        RMatrixOptions(multilevel_breit_wigner=True, single_level_breit_wigner=True)
+
+def test_valid_set_of_options_1():
     """Test a valid combination of options."""
     r_matrix_options = RMatrixOptions(reduced_width_amplitudes=True)
     assert r_matrix_options.reich_moore is False
@@ -35,6 +40,16 @@ def test_valid_combination_of_options():
     assert r_matrix_options.single_level_breit_wigner is False
     assert r_matrix_options.reduced_width_amplitudes is True
     assert r_matrix_options.get_alphanumeric_commands() == ["REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT"]
+
+def test_valid_set_of_options_2():
+    """Test a valid combination of options."""
+    r_matrix_options = RMatrixOptions(multilevel_breit_wigner=True)
+    assert r_matrix_options.reich_moore is False
+    assert r_matrix_options.original_reich_moore is False
+    assert r_matrix_options.multilevel_breit_wigner is True
+    assert r_matrix_options.single_level_breit_wigner is False
+    assert r_matrix_options.reduced_width_amplitudes is False
+    assert r_matrix_options.get_alphanumeric_commands() == ["MULTILEVEL BREIT-WIGNER FORMALISM IS WANTED"]
 
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""

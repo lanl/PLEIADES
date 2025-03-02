@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field 
-from typing import ClassVar
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import List, ClassVar
 
 """
 # These notes are taken from the SAMMY manual. 
@@ -21,36 +21,56 @@ r_matrix_options = [
 """
 
 class RMatrixOptions(BaseModel):
-    """Model to enforce mutually exclusive selection of R-matrix approximations using boolean flags."""
-    
-    # Boolean flags for mutual exclusivity
-    reich_moore: bool = Field(default=True, description="REICH-MOORE formalism is wanted")
-    original_reich_moore: bool = Field(default=False, description="ORIGINAL REICH-MOORE formalism")
-    multilevel_breit_wigner: bool = Field(default=False, description="MULTILEVEL BREIT-WIGNER formalism is wanted")
-    single_level_breit_wigner: bool = Field(default=False, description="SINGLE LEVEL BREIT-WIGNER formalism is wanted")
-    reduced_width_amplitudes: bool = Field(default=False, description="REDUCED WIDTH AMPLITUDES are used for input")
+    model_config = ConfigDict(validate_default=True)
+
+    reich_moore: bool = Field(default=True, description="REICH-MOORE FORMALISM IS WANTED")
+    original_reich_moore: bool = Field(default=False, description="ORIGINAL REICH-MOORE FORMALISM")
+    multilevel_breit_wigner: bool = Field(default=False, description="MULTILEVEL BREIT-WIGNER FORMALISM IS WANTED")
+    single_level_breit_wigner: bool = Field(default=False, description="SINGLE LEVEL BREIT-WIGNER FORMALISM IS WANTED")
+    reduced_width_amplitudes: bool = Field(default=False, description="REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
 
     # Define mutually exclusive groups as a class attribute
-    mutually_exclusive_groups: ClassVar[list[list[str]]] = [
-        ["reich_moore", "original_reich_moore", "multilevel_breit_wigner", "single_level_breit_wigner", "reduced_width_amplitudes"]
+    mutually_exclusive_groups: List[List[str]] = [
+        [   "reich_moore", 
+            "original_reich_moore", 
+            "multilevel_breit_wigner", 
+            "single_level_breit_wigner", 
+            "reduced_width_amplitudes"
+        ]
     ]
-    
-    def __init__(self, **data):
-        super().__init__(**data)
-        for name, value in data.items():
-            self.__setattr__(name, value)
-        self.check_exclusivity()
 
-    def __setattr__(self, name, value):
-        """Custom setattr to handle mutually exclusive options."""
+    @model_validator(mode="after")
+    def enforce_exclusivity(self) -> "RMatrixOptions":
         for group in self.mutually_exclusive_groups:
-            if name in group and value is True:
-                for option in group:
-                    if option != name:
-                        super().__setattr__(option, False)
-        super().__setattr__(name, value)
+            true_fields = [f for f in group if getattr(self, f)]
+            if not true_fields:
+                continue
 
-    def get_alphanumeric_commands(self):
+            user_true = [f for f in true_fields if f in self.model_fields_set]
+            default_true = [f for f in true_fields if f not in self.model_fields_set]
+
+            # If >1 user-specified in same group => error
+            if len(user_true) > 1:
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+
+            # If exactly 1 user-specified => turn off all defaults in that group
+            if len(user_true) == 1:
+                for f in default_true:
+                    setattr(self, f, False)
+                continue
+
+            # If all True fields are defaults, and more than 1 => error
+            if len(default_true) > 1:
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. "
+                    f"Only one allowed."
+                )
+        return self
+
+    def get_alphanumeric_commands(self) -> List[str]:
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
         if self.reich_moore:
@@ -65,18 +85,12 @@ class RMatrixOptions(BaseModel):
             commands.append("REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
         return commands
 
-    def check_exclusivity(self):
-        """Ensure that only one R-matrix approximation is selected using boolean flags."""
-        for group in self.mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(self, key)]
-            if len(selected_flags) > 1:
-                raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
-
 # Example usage
-try:
-    options = RMatrixOptions(
-        reich_moore=True,
-        original_reich_moore=True  # This will automatically switch off reich_moore
-    )
-except ValueError as e:
-    print(e)
+if __name__ == "__main__":
+    try:
+        options = RMatrixOptions(
+            reich_moore=True,
+            original_reich_moore=True  # This should raise a ValueError
+        )
+    except ValueError as e:
+        print(e)
