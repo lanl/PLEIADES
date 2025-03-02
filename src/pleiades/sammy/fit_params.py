@@ -3,12 +3,8 @@ from pydantic import BaseModel, Field, constr
 from pleiades.core.nuclear_params import nuclearParameters
 from pleiades.core.physics_params import PhysicsParameters
 
-from pleiades.sammy.alphanumerics import (
-    rm,
-    params,
-    pcm_in,
-    pcm_out
-)
+from pleiades.sammy import alphanumerics
+
 #Fitting comman
 
 
@@ -51,9 +47,9 @@ class AlphanumericParameters(BaseModel):
         r_matrix_options: R-matrix approximation options
         input_covariance_matrix_options: Prior covariance matrix input options
     """    
-    r_matrix_options: rm.RMatrixOptions = Field(description="R-matrix approximation options")
-    input_covariance_matrix_options: pcm_in.CovarianceMatrixOptions = Field(description="Prior covariance matrix input options")
-    quantum_parameter_options: params.ParameterOptions = Field(description="Parameter options")
+    r_matrix_options: alphanumerics.rm.RMatrixOptions = Field(description="R-matrix approximation options")
+    input_covariance_matrix_options: alphanumerics.pcm_in.CovarianceMatrixOptions = Field(description="Prior covariance matrix input options")
+    quantum_parameter_options: alphanumerics.params.ParameterOptions = Field(description="Parameter options")
 
 
 class dataParameters(BaseModel):
