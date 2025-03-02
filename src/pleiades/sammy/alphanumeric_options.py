@@ -17,14 +17,6 @@ class AlphanumericOptions(BaseModel):
         ["UNRESOLVED RESONANCE region","FRITZ FROEHNERS FITAcs", "FITACS"]
     ])
 
-
-    # Parameters output control for parameter covariance matrix
-    output_covariance_matrix_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
-        ["WRITE CORRELATIONS Into compact format", "WRITE COVARIANCES INto compact format",
-         "PUT CORRELATIONS INTo compact format", "PUT COVARIANCES INTO compact format"],
-        "PUT COVARIANCE MATRIx into endf file 32"
-    ])
-
     # Experimental data input control
     experimental_data_input_options: Optional[List[Union[str, List[str]]]] = Field(default_factory=lambda: [
         "DATA ARE IN ORIGINAL multi-style format",
