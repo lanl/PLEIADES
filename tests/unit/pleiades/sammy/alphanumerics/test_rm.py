@@ -45,5 +45,27 @@ def test_invalid_option():
             multilevel_breit_wigner=True
         )
 
+def test_switching_options():
+    """Test switching options."""
+    r_matrix_options = RMatrixOptions()
+    assert r_matrix_options.reich_moore is True
+    assert r_matrix_options.get_alphanumeric_commands() == ["REICH-MOORE FORMALISM IS WANTED"]
+
+    r_matrix_options = RMatrixOptions(original_reich_moore=True)
+    assert r_matrix_options.original_reich_moore is True
+    assert r_matrix_options.get_alphanumeric_commands() == ["ORIGINAL REICH-MOORE FORMALISM"]
+
+    r_matrix_options = RMatrixOptions(multilevel_breit_wigner=True)
+    assert r_matrix_options.multilevel_breit_wigner is True
+    assert r_matrix_options.get_alphanumeric_commands() == ["MULTILEVEL BREIT-WIGNER FORMALISM IS WANTED"]
+
+    r_matrix_options = RMatrixOptions(single_level_breit_wigner=True)
+    assert r_matrix_options.single_level_breit_wigner is True
+    assert r_matrix_options.get_alphanumeric_commands() == ["SINGLE LEVEL BREIT-WIGNER FORMALISM IS WANTED"]
+
+    r_matrix_options = RMatrixOptions(reduced_width_amplitudes=True)
+    assert r_matrix_options.reduced_width_amplitudes is True
+    assert r_matrix_options.get_alphanumeric_commands() == ["REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT"]
+
 if __name__ == "__main__":
     pytest.main()

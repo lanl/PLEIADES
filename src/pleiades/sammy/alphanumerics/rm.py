@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
+from typing import ClassVar
 
 """
 # These notes are taken from the SAMMY manual. 
@@ -29,6 +30,26 @@ class RMatrixOptions(BaseModel):
     single_level_breit_wigner: bool = Field(default=False, description="SINGLE LEVEL BREIT-WIGNER formalism is wanted")
     reduced_width_amplitudes: bool = Field(default=False, description="REDUCED WIDTH AMPLITUDES are used for input")
 
+    # Define mutually exclusive groups as a class attribute
+    mutually_exclusive_groups: ClassVar[list[list[str]]] = [
+        ["reich_moore", "original_reich_moore", "multilevel_breit_wigner", "single_level_breit_wigner", "reduced_width_amplitudes"]
+    ]
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        for name, value in data.items():
+            self.__setattr__(name, value)
+        self.check_exclusivity()
+
+    def __setattr__(self, name, value):
+        """Custom setattr to handle mutually exclusive options."""
+        for group in self.mutually_exclusive_groups:
+            if name in group and value is True:
+                for option in group:
+                    if option != name:
+                        super().__setattr__(option, False)
+        super().__setattr__(name, value)
+
     def get_alphanumeric_commands(self):
         """Return the list of alphanumeric commands based on the selected options."""
         commands = []
@@ -44,16 +65,18 @@ class RMatrixOptions(BaseModel):
             commands.append("REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
         return commands
 
-    @model_validator(mode='after')
-    def check_exclusivity(cls, values):
+    def check_exclusivity(self):
         """Ensure that only one R-matrix approximation is selected using boolean flags."""
-        mutually_exclusive_groups = [
-            ["reich_moore", "original_reich_moore", "multilevel_breit_wigner", "single_level_breit_wigner", "reduced_width_amplitudes"]
-        ]
-
-        for group in mutually_exclusive_groups:
-            selected_flags = [key for key in group if getattr(values, key)]
+        for group in self.mutually_exclusive_groups:
+            selected_flags = [key for key in group if getattr(self, key)]
             if len(selected_flags) > 1:
                 raise ValueError(f"Only one option can be selected from the group: {selected_flags}")
 
-        return values
+# Example usage
+try:
+    options = RMatrixOptions(
+        reich_moore=True,
+        original_reich_moore=True  # This will automatically switch off reich_moore
+    )
+except ValueError as e:
+    print(e)
