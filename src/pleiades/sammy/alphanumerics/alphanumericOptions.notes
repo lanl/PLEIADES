@@ -68,15 +68,21 @@ output_covariance_matrix_options = [
 
 # Experimental data input control
 # Define the format for the experimental data
-experimental_data_input_options = ["DATA ARE IN ORIGINAL multi-style format",
-"DATA FORMAT IS ONE Point per line" or "USE CSISRS FORMAT FOr data" or "CSISRS",
-"USE TWENTY SIGNIFICAnt digits" or "TWENTY",
-"DATA ARE IN STANDARD odf format",
-"DATA ARE IN ODF FILE",
-"DATA ARE ENDF/B FILE" or "USE ENDF/B ENERGIES and data, with MAT=9999",
-"DIFFERENTIAL DATA ARe in ascii file",
-"DO NOT DIVIDE DATA Into regions",
-"DIVIDE DATA INTO REGions with a fixed number of data points per region"]
+experimental_data_input_options = [
+    --------------
+    *"DATA ARE IN ORIGINAL multi-style format",
+    ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
+    ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
+    "DATA ARE IN STANDARD odf format",
+    "DATA ARE IN ODF FILE",
+    ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
+    --------------
+    "DIFFERENTIAL DATA ARe in ascii file",
+    --------------
+    *"DO NOT DIVIDE DATA Into regions",
+    "DIVIDE DATA INTO REGions with a fixed number of data points per region"
+    --------------
+    ]
 
 # Experimental data input control for covariance matrix
 # Define the format for input of data covariance matrix
@@ -100,8 +106,11 @@ covariance_matrix_data_input_options = ["IMPLICIT DATA COVARIance is wanted" or 
 
 # Broadening options
 # Is broadening wanted
-broadening_options = [ "BROADENING IS WANTED",
-"BROADENING IS NOT WAnted"
+broadening_options = [ 
+    --------------
+    *"BROADENING IS WANTED",
+    "BROADENING IS NOT WAnted"
+    --------------
 ]
 
 # Doppler Broadening options
