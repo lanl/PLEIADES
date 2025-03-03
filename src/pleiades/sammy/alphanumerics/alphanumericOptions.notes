@@ -195,16 +195,25 @@ multiple_scattering_corrections_options = [
 
 # Bayes solution options
 # Define details of the fitting procedure
-bayes_solution_options = ["SOLVE BAYES EQUATIONs", 
-"DO NOT SOLVE BAYES Equations", 
-"LET SAMMY CHOOSE WHIch inversion scheme to use",
-"USE (N+V) INVERSION scheme" or "NPV",
-"USE (I+Q) INVERSION scheme" or "IPQ",
-"USE (M+W) INVERSION scheme" or "MPW",
-"USE LEAST SQUARES TO define prior parameter covariance matrix",
-"TAKE BABY STEPS WITH least-squares method",
-"REMEMBER ORIGINAL PArameter values",
-"USE REMEMBERED ORIGInal parameter values"]
+bayes_solution_options = [
+    ----------------------------
+    *   "SOLVE BAYES EQUATIONs", 
+        "DO NOT SOLVE BAYES Equations", 
+    ----------------------------
+    *   "LET SAMMY CHOOSE WHIch inversion scheme to use",
+        "USE (N+V) INVERSION scheme" or "NPV",
+        "USE (I+Q) INVERSION scheme" or "IPQ",
+        "USE (M+W) INVERSION scheme" or "MPW",
+    ----------------------------
+        "USE LEAST SQUARES TO define prior parameter covariance matrix",
+    ----------------------------
+        "TAKE BABY STEPS WITH least-squares method",
+    ----------------------------
+        "REMEMBER ORIGINAL PArameter values",
+    ----------------------------
+        "USE REMEMBERED ORIGInal parameter values"
+    ----------------------------
+    ]
 
 # Options for printing into SAMMY.LPT
 # Define what information will be printed in output file SAMMY.LPT
