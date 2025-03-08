@@ -33,6 +33,7 @@ from typing import List
 """
 
 class QuantumNumbersOptions(BaseModel):
+    """ Define which type of input is to be used for spin group information and other parameters """
     model_config = ConfigDict(validate_default=True)
 
     new_spin_group_format: bool = Field(default=True, description="USE NEW SPIN GROUP Format")
