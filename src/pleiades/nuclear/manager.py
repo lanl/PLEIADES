@@ -204,16 +204,17 @@ class NuclearDataManager:
                     
                     # if the isotope (Element-MassNum) is found in the isotopes.info file then set abundance and spin
                     if data[3] == element and int(data[1]) == mass_number:
+                        isotope_info.atomic_number = int(data[0])
                         isotope_info.abundance = float(data[7])
                         isotope_info.spin = float(data[5])
                         return
 
-    def get_mat_number(self, isotope: IsotopeIdentifier) -> Optional[int]:
+    def get_mat_number(self, isotope: IsotopeInfo) -> Optional[int]:
         """
         Get ENDF MAT number for an isotope.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            isotope: IsotopeInfo instance
 
         Returns:
             ENDF MAT number if found, None otherwise
