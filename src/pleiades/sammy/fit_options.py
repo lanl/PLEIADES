@@ -1,4 +1,5 @@
 from enum import Enum
+from pydantic import BaseModel, Field
 """
 This module defines various enumerations and a data model for configuring fit options in the SAMMY code.
 SAMMY is a software tool used for the analysis of neutron-induced reactions, particularly in the context of 
@@ -22,7 +23,7 @@ Usage:
 This module is intended to be used as part of the SAMMY codebase, where it provides a clear and structured 
 way to manage the various configuration options required for running SAMMY simulations.
 """
-from pydantic import BaseModel, Field
+
 
 """ Fit options for SAMMY """
 
