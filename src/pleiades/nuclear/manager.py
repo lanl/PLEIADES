@@ -135,30 +135,21 @@ class NuclearDataManager:
         isotope = IsotopeInfo.from_string(isotope_str)
         
         # get the mass of the isotope from the mass.mas20 file
-        mass_data = self.get_mass_data(isotope)
+        isotope.mass_data = self.get_mass_data(isotope.element, isotope.mass_number)
         
+        # check if the isotope is a stable isotope with known abundance and spin
+        isotope.abundance, isotope.spin = self.get_abundance_and_spins(isotope.element, isotope.mass_number)
         
-        # Check if isotope is a stable isotope with a known abundance and spin
-        with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
-            for line in f:
-                line = line.strip()
-                if line and line[0].isdigit():
-                    data = line.split()
-                    
-                    # if the isotope is found in the isotopes.info file then set the abundance and spin
-                    if data[3] == isotope.element and int(data[1]) == isotope.mass_number:
-                        isotope.abundance = float(data[7])
-                        isotope.spin = float(data[5])
-                        break
         return isotope
         
 
-    def get_mass_data(self, isotope: IsotopeIdentifier) -> Optional[IsotopeMassData]:
+    def get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
         """
         Extract mass data for an isotope from the mass.mas20 file.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            element (str): Element symbol
+            mass_number (int): Mass number
 
         Returns:
             IsotopeMassData containing atomic mass, mass uncertainty
@@ -173,7 +164,7 @@ class NuclearDataManager:
                     next(f)
 
                 for line in f:
-                    if (isotope.element in line[:25]) and (str(isotope.mass_number) in line[:25]):
+                    if (element in line[:25]) and (str(mass_number) in line[:25]):
                         # Parse the line according to mass.mas20 format
                         atomic_mass_coarse = line[106:109].replace("*", "nan").replace("#", ".0")
                         atomic_mass_fine = line[110:124].replace("*", "nan").replace("#", ".0")
@@ -191,8 +182,32 @@ class NuclearDataManager:
                         )
                 return None
         except Exception as e:
-            logger.error(f"Error reading mass data for {isotope}: {str(e)}")
+            logger.error(f"Error reading mass data for {element}-{mass_number}: {str(e)}")
             raise
+
+    def check_and_set_abundance_and_spins(self, isotope_info: IsotopeInfo) -> None:
+        """
+        Set the abundance and spin of an isotope from the isotopes.info file.
+
+        Args:
+            isotope_info: IsotopeInfo object to modify
+        """
+        element = isotope_info.element
+        mass_number = isotope_info.mass_number
+
+        # Check if isotope is a stable isotope with a known abundance and spin
+        with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
+            for line in f:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    data = line.split()
+                    
+                    # if the isotope (Element-MassNum) is found in the isotopes.info file then set abundance and spin
+                    if data[3] == element and int(data[1]) == mass_number:
+                        isotope_info.abundance = float(data[7])
+                        isotope_info.spin = float(data[5])
+                        return
+        
 
     def read_cross_section_data(self, filename: str, isotope: IsotopeIdentifier) -> List[CrossSectionPoint]:
         """
