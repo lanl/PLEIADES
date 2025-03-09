@@ -70,6 +70,7 @@ class IsotopeInfo(BaseModel):
     mass_data: Optional[IsotopeMassData] = Field(description="Isotope mass data", default=None)
     abundance: Optional[float] = Field(ge=0, default=None)
     spin: Optional[float] = Field(default=None)
+    material_number: Optional[int] = Field(default=None)
     
     @classmethod
     def from_string(cls, isotope_str: str) -> "IsotopeInfo":
@@ -88,24 +89,6 @@ class IsotopeInfo(BaseModel):
     def __str__(self) -> str:
         """Convert to string format 'element-mass_number'."""
         return f"{self.element}-{self.mass_number}" 
-
-class IsotopeIdentifier(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    element: str = Field(pattern=r"^[A-Z][a-z]?$")
-    mass_number: int = Field(gt=0)
-
-    @classmethod
-    def from_string(cls, isotope_str: str) -> "IsotopeIdentifier":
-        match = re.match(r"([A-Za-z]+)-(\d+)", isotope_str)
-        if not match:
-            raise ValueError("Invalid isotope format")
-        return cls(element=match.group(1).capitalize(), mass_number=int(match.group(2)))
-
-    def __str__(self) -> str:
-        """Convert to string format 'element-mass_number'."""
-        return f"{self.element}-{self.mass_number}"
-
 
 class CrossSectionPoint(BaseModel):
     model_config = ConfigDict(frozen=True)
