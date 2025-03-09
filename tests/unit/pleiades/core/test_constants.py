@@ -13,7 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from pleiades.core.constants import CONSTANTS
-from pleiades.core.models import Mass, UnitType
+from pleiades.nuclear.models import Mass, UnitType
 
 
 def test_constants_immutability():
