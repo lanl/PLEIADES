@@ -173,7 +173,7 @@ class IsotopeCard(BaseModel):
 
             # Otherwise the are no more lines for spin groups, so process the current lines.
             else:
-                from pleiades.core.nuclear import IsotopeParameters  # Delayed import to avoid circular import
+                from pleiades.nuclear.parameters import IsotopeParameters  # Delayed import to avoid circular import
                 isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
                 current_lines = []
 
