@@ -68,7 +68,7 @@ class IsotopeInfo(BaseModel):
     atomic_number: int = Field(gt=0)
     mass_number: int = Field(gt=0)
     element: str = Field(description="Element symbol")
-    atomic_mass: IsotopeMassData = Field(description="Isotope mass data")
+    mass_data: IsotopeMassData = Field(description="Isotope mass data")
     abundance: Optional[float] = Field(ge=0, default=None)
     spin: Optional[float] = Field(default=None)
     
