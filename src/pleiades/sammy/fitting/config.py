@@ -3,9 +3,9 @@ from pydantic import BaseModel, Field, constr
 from pleiades.core.nuclear_params import nuclearParameters
 from pleiades.core.physics_params import PhysicsParameters
 from pleiades.sammy.data.options import dataParameters
-from pleiades.sammy.fit_options import FitOptions
+from pleiades.sammy.fitting.options import FitOptions
 
-class FitParameters(BaseModel):
+class FitConfig(BaseModel):
     """Container for fit parameters including nuclear and physics parameters.
 
     Attributes:
