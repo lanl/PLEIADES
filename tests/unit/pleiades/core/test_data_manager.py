@@ -4,7 +4,7 @@
 # tests/unit/pleiades/core/test_data_manager.py
 import pytest
 
-from pleiades.core.data_manager import NuclearDataManager
+from pleiades.nuclear.manager import NuclearDataManager
 from pleiades.core.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
 
 

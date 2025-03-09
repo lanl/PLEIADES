@@ -1,6 +1,6 @@
 import pytest
 from pleiades.sammy.fitting.config import FitConfig
-from pleiades.core.nuclear import nuclearParameters
+from pleiades.nuclear.parameters import nuclearParameters
 from pleiades.core.experimental import PhysicsParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.options import FitOptions, RMatrixOptions, SpinGroupOptions, QuantumNumbersOptions, DataFormatOptions, BroadeningTypeOptions
