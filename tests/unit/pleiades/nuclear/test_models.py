@@ -4,7 +4,7 @@
 import pytest
 from pydantic import ValidationError
 
-from pleiades.core.models import (
+from pleiades.nuclear.models import (
     CrossSectionPoint,
     Isotope,
     IsotopeIdentifier,
