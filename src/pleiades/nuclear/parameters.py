@@ -1,7 +1,8 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator, field_validator
 
-from pleiades.nuclear.manager import get_isotope_info, get_mass_data
+from pleiades.nuclear.manager import NuclearDataManager
+from pleiades.nuclear.models import IsotopeIdentifier
 
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
@@ -241,11 +242,11 @@ class IsotopeParameters(BaseModel):
     mass: float = Field(description="Atomic mass in amu", gt=0)
     abundance: float = Field(description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(None, description="Uncertainty on abundance")
-    flag: VaryFlag = Field(default=VaryFlag.NO, description="Treatment flag for abundance")
-    spin_groups: List[int] = Field(default_factory=list, description="Spin group numbers")
-    resonances: List[ResonanceEntry] = Field(default_factory=list, description="List of resonance entries")
-    radius_parameters: List[RadiusParameters] = Field(default_factory=list, description="List of radius parameters")
-
+    flag: Optional[VaryFlag] = Field(default=None, description="Treatment flag for abundance")
+    spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
+    resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
+    radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
+    
     @classmethod
     def from_name(cls, isotope_name: str) -> "IsotopeParameters":
         """Create an IsotopeParameters object from isotope name.
@@ -256,14 +257,35 @@ class IsotopeParameters(BaseModel):
         Returns:
             IsotopeParameters: IsotopeParameters object with isotope name
         """
+        # Convert to uppercase
         isotope_name = isotope_name.upper()
-        # Get mass data from the manager
-        mass = get_mass_data(isotope_name)
+        
+        # Create an instance of NuclearDataManager
+        manager = NuclearDataManager()
+        
+        # Convert isotope_name to IsotopeIdentifier
+        isotope_identifier = IsotopeIdentifier.from_string(isotope_name)
+        
+       # Get mass data from the manager
+        mass_data = manager.get_mass_data(isotope_identifier)
+        mass = mass_data.atomic_mass if mass_data else None
+        
+        # Get abundance data from the manager
+        isotope_info = manager.get_isotope_info(isotope_identifier)
+        abundance = isotope_info.abundance if isotope_info else None
+        
+        
 
-        
-        
-        
-        return cls(isotope_name=isotope_name)
+        return cls(
+            isotope_name=isotope_name,
+            mass=mass,
+            abundance=abundance,
+            uncertainty=None,  # Default value
+            flag=None,  # Default value
+            spin_groups=[],  # Default value
+            resonances=[],  # Default value
+            radius_parameters=[]  # Default value
+        )
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
