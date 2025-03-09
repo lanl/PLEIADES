@@ -1,18 +1,19 @@
 import pytest
-from pleiades.sammy.fit_options import FitOptions, RMatrixOptions, SpinGroupOptions, QuantumNumbersOptions, DataFormatOptions, BroadeningTypeOptions, PrintInputOptions
+from pleiades.sammy.fit_options import FitOptions, RMatrixOptions, SpinGroupOptions, QuantumNumbersOptions, DataFormatOptions, BroadeningTypeOptions, PrintInputOptions, DataTypeOptions
 
 def test_fit_options_defaults():
     # Create an instance of FitOptions with default values
     fit_options = FitOptions()
 
     # Check default values
+    assert fit_options.DataType == DataTypeOptions.TRANSMISSION
     assert fit_options.RMatrix == RMatrixOptions.REICH_MOORE_FORMALISM
     assert fit_options.SpinGroupFormat == SpinGroupOptions.USE_NEW_SPIN_GROUP
     assert fit_options.QuantumNumbers == QuantumNumbersOptions.Q_NUMBERS_IN_PARAM_FILE
     assert fit_options.input_is_endf_b_file_2 == False
     assert fit_options.DataFormat == DataFormatOptions.DATA_IN_ORIGINAL_MULTI_FORMAT
     assert fit_options.ImplementBroadeningOption == False
-    assert fit_options.BroadeningType == None
+    assert fit_options.BroadeningType == BroadeningTypeOptions.FREE_GAS_MODEL
     assert fit_options.SolveBayesEquation == False
     assert fit_options.PrintInputDataInLPT == False
     assert fit_options.PrintInputParamsInLPT == PrintInputOptions.DO_NOT_PRINT_ANY_INPUT
@@ -20,6 +21,7 @@ def test_fit_options_defaults():
 def test_fit_options_custom_values():
     # Create an instance of FitOptions with custom values
     fit_options = FitOptions(
+        DataType=DataTypeOptions.CAPTURE,
         RMatrix=RMatrixOptions.ORIGINAL_REICH_MOORE,
         SpinGroupFormat=SpinGroupOptions.PARTICLE_PAIR_DEFINITION,
         QuantumNumbers=QuantumNumbersOptions.PUT_Q_NUMBERS_IN_PARAM_FILE,
@@ -33,6 +35,7 @@ def test_fit_options_custom_values():
     )
 
     # Check custom values
+    assert fit_options.DataType == DataTypeOptions.CAPTURE
     assert fit_options.RMatrix == RMatrixOptions.ORIGINAL_REICH_MOORE
     assert fit_options.SpinGroupFormat == SpinGroupOptions.PARTICLE_PAIR_DEFINITION
     assert fit_options.QuantumNumbers == QuantumNumbersOptions.PUT_Q_NUMBERS_IN_PARAM_FILE
@@ -43,20 +46,6 @@ def test_fit_options_custom_values():
     assert fit_options.SolveBayesEquation == True
     assert fit_options.PrintInputDataInLPT == True
     assert fit_options.PrintInputParamsInLPT == PrintInputOptions.PRINT_ALL_INPUT
-
-def test_broadening_type_default():
-    # Create an instance of FitOptions with ImplementBroadeningOption set to True and no BroadeningType
-    fit_options = FitOptions(ImplementBroadeningOption=True)
-
-    # Check that BroadeningType is set to FREE_GAS_MODEL
-    assert fit_options.BroadeningType == BroadeningTypeOptions.FREE_GAS_MODEL
-
-def test_broadening_type_none():
-    # Create an instance of FitOptions with ImplementBroadeningOption set to False
-    fit_options = FitOptions(ImplementBroadeningOption=False)
-
-    # Check that BroadeningType is set to None
-    assert fit_options.BroadeningType == None
 
 if __name__ == "__main__":
     pytest.main()
