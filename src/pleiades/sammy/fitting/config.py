@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, Field, constr
-from pleiades.core.nuclear_params import nuclearParameters
-from pleiades.core.physics_params import PhysicsParameters
+from pleiades.core.nuclear import nuclearParameters
+from pleiades.core.experimental import PhysicsParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.options import FitOptions
 
