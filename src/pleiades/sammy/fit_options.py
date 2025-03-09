@@ -40,25 +40,10 @@ class PrintInputOptions(str, Enum):
     PRINT_ALL_INPUT = "PRINT ALL INPUT"
     PRINT_VARIED_INPUT = "PRINT VARIED INPUT"
 
-class DataTypeOptions(str, Enum):
-    TRANSMISSION = "TRANSMISSION"
-    TOTAL_CROSS_SECTION = "TOTAL CROSS SECTION"
-    SCATTERING = "SCATTERING"
-    ELASTIC = "ELASTIC"
-    DIFFERENTIAL_ELASTIC = "DIFFERENTIAL ELASTIC"
-    DIFFERENTIAL_REACTION = "DIFFERENTIAL REACTION"
-    REACTION = "REACTION"
-    INELASTIC_SCATTERING = "INELASTIC SCATTERING"
-    FISSION = "FISSION"
-    CAPTURE = "CAPTURE"
-    SELF_INDICATION = "SELF INDICATION"
-    INTEGRAL = "INTEGRAL"
-    COMBINATION = "COMBINATION"
 
 # a class to hold all the fit options
 class FitOptions(BaseModel):
     """Container for fit options with SAMMY"""
-    DataType: DataTypeOptions = Field(description="Type of the data", default=DataTypeOptions.TRANSMISSION)
     RMatrix: RMatrixOptions = Field(description="R-matrix option for the calculation", default=RMatrixOptions.REICH_MOORE_FORMALISM)
     SpinGroupFormat: SpinGroupOptions = Field(description="Parameter input options", default=SpinGroupOptions.USE_NEW_SPIN_GROUP)
     QuantumNumbers: QuantumNumbersOptions = Field(description="Quantum numbers options", default=QuantumNumbersOptions.Q_NUMBERS_IN_PARAM_FILE)
