@@ -62,13 +62,12 @@ class IsotopeInfo(BaseModel):
     __str__() -> str:
         Convert the IsotopeInfo instance to a string in the format 'element-mass_number'.
     """
-    model_config = ConfigDict(frozen=True)
 
     name: str = Field(description="Isotope name")
-    atomic_number: int = Field(gt=0)
     mass_number: int = Field(gt=0)
     element: str = Field(description="Element symbol")
-    mass_data: IsotopeMassData = Field(description="Isotope mass data")
+    atomic_number: Optional[int] = Field(gt=0, default=None)
+    mass_data: Optional[IsotopeMassData] = Field(description="Isotope mass data", default=None)
     abundance: Optional[float] = Field(ge=0, default=None)
     spin: Optional[float] = Field(default=None)
     
@@ -89,7 +88,6 @@ class IsotopeInfo(BaseModel):
     def __str__(self) -> str:
         """Convert to string format 'element-mass_number'."""
         return f"{self.element}-{self.mass_number}" 
-
 
 class IsotopeIdentifier(BaseModel):
     model_config = ConfigDict(frozen=True)
