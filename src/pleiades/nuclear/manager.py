@@ -138,7 +138,7 @@ class NuclearDataManager:
         isotope.mass_data = self.get_mass_data(isotope.element, isotope.mass_number)
         
         # check if the isotope is a stable isotope with known abundance and spin
-        isotope.abundance, isotope.spin = self.get_abundance_and_spins(isotope.element, isotope.mass_number)
+        self.check_and_set_abundance_and_spins(isotope)
         
         return isotope
         
@@ -207,58 +207,6 @@ class NuclearDataManager:
                         isotope_info.abundance = float(data[7])
                         isotope_info.spin = float(data[5])
                         return
-        
-
-    def read_cross_section_data(self, filename: str, isotope: IsotopeIdentifier) -> List[CrossSectionPoint]:
-        """
-        Read cross-section data from a .tot file for a specific isotope.
-
-        Args:
-            filename: Name of the cross-section file
-            isotope: IsotopeIdentifier instance
-
-        Returns:
-            List of CrossSectionPoint containing energy and cross-section values
-
-        Raises:
-            ValueError: If isotope data not found or file format is invalid
-        """
-        try:
-            data_points = []
-            isotope_found = False
-            capture_data = False
-
-            # Convert to string format expected in file (e.g., "U-238")
-            isotope_str = str(isotope)
-
-            with self.get_file_path(DataCategory.CROSS_SECTIONS, filename).open() as f:
-                for line in f:
-                    if isotope_str.upper() in line:
-                        isotope_found = True
-                    elif isotope_found and "#data..." in line:
-                        capture_data = True
-                    elif isotope_found and "//" in line:
-                        break
-                    elif capture_data and not line.startswith("#"):
-                        try:
-                            energy_MeV, xs = line.split()  # noqa: N806
-                            data_points.append(
-                                CrossSectionPoint(
-                                    energy=float(energy_MeV) * 1e6,  # Convert MeV to eV
-                                    cross_section=float(xs),
-                                )
-                            )
-                        except ValueError:
-                            logger.warning(f"Skipping malformed line in {filename}: {line.strip()}")
-                            continue
-
-            if not isotope_found:
-                raise ValueError(f"No data found for isotope {isotope_str} in {filename}")
-
-            return data_points
-        except Exception as e:
-            logger.error(f"Error reading cross-section data from {filename}: {str(e)}")
-            raise
 
     def get_mat_number(self, isotope: IsotopeIdentifier) -> Optional[int]:
         """
