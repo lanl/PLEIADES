@@ -1,5 +1,31 @@
 from enum import Enum
-from pydantic import BaseModel, Field, root_validator
+"""
+This module defines various enumerations and a data model for configuring fit options in the SAMMY code.
+SAMMY is a software tool used for the analysis of neutron-induced reactions, particularly in the context of 
+resonance parameter evaluation. The enumerations represent different configuration options available in SAMMY, 
+while the `FitOptions` class serves as a container for these options, providing a structured way to manage 
+and validate the configuration settings.
+
+Enumerations:
+- `RMatrixOptions`: Options for the R-matrix formalism used in the calculations.
+- `SpinGroupOptions`: Options for parameter input related to spin groups.
+- `QuantumNumbersOptions`: Options for handling quantum numbers in parameter files.
+- `DataFormatOptions`: Options for the format of the input data.
+- `BroadeningTypeOptions`: Options for the type of broadening model to be used.
+- `PrintInputOptions`: Options for printing input data and parameters.
+
+Classes:
+- `FitOptions`: A Pydantic data model that encapsulates all the fit options for SAMMY, ensuring that the 
+    configuration is well-defined and validated.
+
+Usage:
+This module is intended to be used as part of the SAMMY codebase, where it provides a clear and structured 
+way to manage the various configuration options required for running SAMMY simulations.
+"""
+from pydantic import BaseModel, Field
+
+""" Fit options for SAMMY """
+
 
 class RMatrixOptions(str, Enum):
     REICH_MOORE_FORMALISM = "REICH-MOORE FORMALISM"
@@ -54,3 +80,31 @@ class FitOptions(BaseModel):
     SolveBayesEquation: bool = Field(description="option to solve Bayes equation", default=False)
     PrintInputDataInLPT: bool = Field(description="option to print input data in LPT", default=False)
     PrintInputParamsInLPT: PrintInputOptions = Field(description="option to print input parameters in LPT", default=PrintInputOptions.DO_NOT_PRINT_ANY_INPUT)
+
+
+
+# Example usage of FitOptions
+def main():
+    # Create an instance of FitOptions with default values
+    default_fit_options = FitOptions()
+    print("Default FitOptions:")
+    print(default_fit_options.json(indent=4))
+
+    # Create an instance of FitOptions with custom values
+    custom_fit_options = FitOptions(
+        RMatrix=RMatrixOptions.MULTILEVEL_BREITWIGNER,
+        SpinGroupFormat=SpinGroupOptions.PARTICLE_PAIR_DEFINITION,
+        QuantumNumbers=QuantumNumbersOptions.PUT_Q_NUMBERS_IN_PARAM_FILE,
+        input_is_endf_b_file_2=True,
+        DataFormat=DataFormatOptions.DATA_IN_ENDF_FORMAT,
+        ImplementBroadeningOption=True,
+        BroadeningType=BroadeningTypeOptions.LEAL_HWANG_DOPPLER_MODEL,
+        SolveBayesEquation=True,
+        PrintInputDataInLPT=True,
+        PrintInputParamsInLPT=PrintInputOptions.PRINT_ALL_INPUT
+    )
+    print("\nCustom FitOptions:")
+    print(custom_fit_options.json(indent=4))
+
+if __name__ == "__main__":
+    main()
