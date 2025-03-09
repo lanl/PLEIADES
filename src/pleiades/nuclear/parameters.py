@@ -1,5 +1,8 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field, model_validator, field_validator
+
+from pleiades.nuclear.manager import get_isotope_info, get_mass_data
+
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
 
@@ -243,6 +246,25 @@ class IsotopeParameters(BaseModel):
     resonances: List[ResonanceEntry] = Field(default_factory=list, description="List of resonance entries")
     radius_parameters: List[RadiusParameters] = Field(default_factory=list, description="List of radius parameters")
 
+    @classmethod
+    def from_name(cls, isotope_name: str) -> "IsotopeParameters":
+        """Create an IsotopeParameters object from isotope name.
+
+        Args:
+            isotope_name: Isotope name (e.g., "U-238")
+
+        Returns:
+            IsotopeParameters: IsotopeParameters object with isotope name
+        """
+        isotope_name = isotope_name.upper()
+        # Get mass data from the manager
+        mass = get_mass_data(isotope_name)
+
+        
+        
+        
+        return cls(isotope_name=isotope_name)
+
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
         """Validate spin group constraints.
@@ -351,3 +373,50 @@ class nuclearParameters(BaseModel):
 
 
         return self
+    
+    
+# example usage
+if __name__ == "__main__":
+    # Example usage of RadiusParameters
+    radius_params = RadiusParameters(
+        effective_radius=1.0,
+        true_radius=1.0,
+        channel_mode=0,
+        vary_effective=VaryFlag.YES,
+        vary_true=VaryFlag.YES,
+        spin_groups=[1, 2, 3],
+    )
+
+    # Example usage of ResonanceEntry
+    resonance_entry = ResonanceEntry(
+        resonance_energy=1.0,
+        capture_width=1.0,
+        channel1_width=1.0,
+        channel2_width=1.0,
+        channel3_width=1.0,
+        vary_energy=VaryFlag.YES,
+        vary_capture_width=VaryFlag.YES,
+        vary_channel1=VaryFlag.YES,
+        vary_channel2=VaryFlag.YES,
+        vary_channel3=VaryFlag.YES,
+        igroup=1,
+    )
+
+    # Example usage of IsotopeParameters
+    isotope_params = IsotopeParameters(
+        isotope_name="U-238",
+        mass=238.0,
+        abundance=0.992745,
+        uncertainty=0.001,
+        flag=VaryFlag.YES,
+        spin_groups=[1, 2, 3],
+        resonances=[resonance_entry],
+        radius_parameters=[radius_params],
+    )
+
+    # Example usage of nuclearParameters
+    nuclear_params = nuclearParameters(
+        isotopes=[isotope_params],
+    )
+
+    print(nuclear_params)
