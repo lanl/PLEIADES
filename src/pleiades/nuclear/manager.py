@@ -120,28 +120,38 @@ class NuclearDataManager:
         except Exception:
             return False
 
-    def get_isotope_info(self, isotope: IsotopeIdentifier) -> Optional[IsotopeInfo]:
+    def get_isotope_info(self, isotope_str: str) -> Optional[IsotopeInfo]:
         """
         Extract isotope information from the isotopes.info file.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            isotope_str: String representation of the isotope (e.g., "U-238")
 
         Returns:
-            IsotopeInfo containing spin and abundance if found, None otherwise
+            IsotopeInfo containing isotope details if found, None otherwise
         """
-        try:
-            with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
-                for line in f:
-                    line = line.strip()
-                    if line and line[0].isdigit():
-                        data = line.split()
-                        if data[3] == isotope.element and int(data[1]) == isotope.mass_number:
-                            return IsotopeInfo(spin=float(data[5]), abundance=float(data[7]))
-            return None
-        except Exception as e:
-            logger.error(f"Error reading isotope info for {isotope}: {str(e)}")
-            raise
+        
+        # Create a IsotopeInfo instance from the isotope string
+        isotope = IsotopeInfo.from_string(isotope_str)
+        
+        # get the mass of the isotope from the mass.mas20 file
+        mass_data = self.get_mass_data(isotope)
+        
+        
+        # Check if isotope is a stable isotope with a known abundance and spin
+        with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
+            for line in f:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    data = line.split()
+                    
+                    # if the isotope is found in the isotopes.info file then set the abundance and spin
+                    if data[3] == isotope.element and int(data[1]) == isotope.mass_number:
+                        isotope.abundance = float(data[7])
+                        isotope.spin = float(data[5])
+                        break
+        return isotope
+        
 
     def get_mass_data(self, isotope: IsotopeIdentifier) -> Optional[IsotopeMassData]:
         """
