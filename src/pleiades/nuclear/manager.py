@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from pleiades.core.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class NuclearDataManager:
         for category in DataCategory:
             try:
                 category_path = self._get_category_path(category)
-                data_path = resources.files("pleiades.data").joinpath(category_path)
+                data_path = resources.files("pleiades.nuclear").joinpath(category_path)
                 self._cached_files[category] = {
                     item.name for item in data_path.iterdir() if item.suffix in self._VALID_EXTENSIONS[category]
                 }
@@ -76,10 +76,10 @@ class NuclearDataManager:
             raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}")
 
         try:
-            with resources.path(f"pleiades.data.{self._get_category_path(category)}", filename) as path:
-                if not path.exists():
-                    raise FileNotFoundError(f"File {filename} not found in {category}")
-                return path
+            data_path = resources.files(f"pleiades.nuclear.{self._get_category_path(category)}").joinpath(filename)
+            if not data_path.exists():
+                raise FileNotFoundError(f"File {filename} not found in {category}")
+            return data_path
         except Exception as e:
             raise FileNotFoundError(f"Error accessing {filename} in {category}: {str(e)}")
 
