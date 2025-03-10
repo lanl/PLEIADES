@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from pleiades.nuclear.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import DataCategory, IsotopeInfo, IsotopeMassData
 
 logger = logging.getLogger(__name__)
 
