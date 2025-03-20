@@ -6,7 +6,7 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 
 # Constants for header identifiers
 CARD_9_HEADER = "ORRES"

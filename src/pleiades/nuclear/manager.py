@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from pleiades.core.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import DataCategory, IsotopeInfo, IsotopeMassData
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class NuclearDataManager:
         for category in DataCategory:
             try:
                 category_path = self._get_category_path(category)
-                data_path = resources.files("pleiades.data").joinpath(category_path)
+                data_path = resources.files("pleiades.nuclear").joinpath(category_path)
                 self._cached_files[category] = {
                     item.name for item in data_path.iterdir() if item.suffix in self._VALID_EXTENSIONS[category]
                 }
@@ -76,10 +76,10 @@ class NuclearDataManager:
             raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}")
 
         try:
-            with resources.path(f"pleiades.data.{self._get_category_path(category)}", filename) as path:
-                if not path.exists():
-                    raise FileNotFoundError(f"File {filename} not found in {category}")
-                return path
+            data_path = resources.files(f"pleiades.nuclear.{self._get_category_path(category)}").joinpath(filename)
+            if not data_path.exists():
+                raise FileNotFoundError(f"File {filename} not found in {category}")
+            return data_path
         except Exception as e:
             raise FileNotFoundError(f"Error accessing {filename} in {category}: {str(e)}")
 
@@ -120,35 +120,36 @@ class NuclearDataManager:
         except Exception:
             return False
 
-    def get_isotope_info(self, isotope: IsotopeIdentifier) -> Optional[IsotopeInfo]:
+    def get_isotope_info(self, isotope_str: str) -> Optional[IsotopeInfo]:
         """
         Extract isotope information from the isotopes.info file.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            isotope_str: String representation of the isotope (e.g., "U-238")
 
         Returns:
-            IsotopeInfo containing spin and abundance if found, None otherwise
+            IsotopeInfo containing isotope details if found, None otherwise
         """
-        try:
-            with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
-                for line in f:
-                    line = line.strip()
-                    if line and line[0].isdigit():
-                        data = line.split()
-                        if data[3] == isotope.element and int(data[1]) == isotope.mass_number:
-                            return IsotopeInfo(spin=float(data[5]), abundance=float(data[7]))
-            return None
-        except Exception as e:
-            logger.error(f"Error reading isotope info for {isotope}: {str(e)}")
-            raise
+        
+        # Create a IsotopeInfo instance from the isotope string
+        isotope = IsotopeInfo.from_string(isotope_str)
+        
+        # get the mass of the isotope from the mass.mas20 file
+        isotope.mass_data = self.get_mass_data(isotope.element, isotope.mass_number)
+        
+        # check if the isotope is a stable isotope with known abundance and spin
+        self.check_and_set_abundance_and_spins(isotope)
+        
+        return isotope
+        
 
-    def get_mass_data(self, isotope: IsotopeIdentifier) -> Optional[IsotopeMassData]:
+    def get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
         """
         Extract mass data for an isotope from the mass.mas20 file.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            element (str): Element symbol
+            mass_number (int): Mass number
 
         Returns:
             IsotopeMassData containing atomic mass, mass uncertainty
@@ -163,7 +164,7 @@ class NuclearDataManager:
                     next(f)
 
                 for line in f:
-                    if (isotope.element in line[:25]) and (str(isotope.mass_number) in line[:25]):
+                    if (element in line[:25]) and (str(mass_number) in line[:25]):
                         # Parse the line according to mass.mas20 format
                         atomic_mass_coarse = line[106:109].replace("*", "nan").replace("#", ".0")
                         atomic_mass_fine = line[110:124].replace("*", "nan").replace("#", ".0")
@@ -181,66 +182,39 @@ class NuclearDataManager:
                         )
                 return None
         except Exception as e:
-            logger.error(f"Error reading mass data for {isotope}: {str(e)}")
+            logger.error(f"Error reading mass data for {element}-{mass_number}: {str(e)}")
             raise
 
-    def read_cross_section_data(self, filename: str, isotope: IsotopeIdentifier) -> List[CrossSectionPoint]:
+    def check_and_set_abundance_and_spins(self, isotope_info: IsotopeInfo) -> None:
         """
-        Read cross-section data from a .tot file for a specific isotope.
+        Set the abundance and spin of an isotope from the isotopes.info file.
 
         Args:
-            filename: Name of the cross-section file
-            isotope: IsotopeIdentifier instance
-
-        Returns:
-            List of CrossSectionPoint containing energy and cross-section values
-
-        Raises:
-            ValueError: If isotope data not found or file format is invalid
+            isotope_info: IsotopeInfo object to modify
         """
-        try:
-            data_points = []
-            isotope_found = False
-            capture_data = False
+        element = isotope_info.element
+        mass_number = isotope_info.mass_number
 
-            # Convert to string format expected in file (e.g., "U-238")
-            isotope_str = str(isotope)
+        # Check if isotope is a stable isotope with a known abundance and spin
+        with self.get_file_path(DataCategory.ISOTOPES, "isotopes.info").open() as f:
+            for line in f:
+                line = line.strip()
+                if line and line[0].isdigit():
+                    data = line.split()
+                    
+                    # if the isotope (Element-MassNum) is found in the isotopes.info file then set abundance and spin
+                    if data[3] == element and int(data[1]) == mass_number:
+                        isotope_info.atomic_number = int(data[0])
+                        isotope_info.abundance = float(data[7])
+                        isotope_info.spin = float(data[5])
+                        return
 
-            with self.get_file_path(DataCategory.CROSS_SECTIONS, filename).open() as f:
-                for line in f:
-                    if isotope_str.upper() in line:
-                        isotope_found = True
-                    elif isotope_found and "#data..." in line:
-                        capture_data = True
-                    elif isotope_found and "//" in line:
-                        break
-                    elif capture_data and not line.startswith("#"):
-                        try:
-                            energy_MeV, xs = line.split()  # noqa: N806
-                            data_points.append(
-                                CrossSectionPoint(
-                                    energy=float(energy_MeV) * 1e6,  # Convert MeV to eV
-                                    cross_section=float(xs),
-                                )
-                            )
-                        except ValueError:
-                            logger.warning(f"Skipping malformed line in {filename}: {line.strip()}")
-                            continue
-
-            if not isotope_found:
-                raise ValueError(f"No data found for isotope {isotope_str} in {filename}")
-
-            return data_points
-        except Exception as e:
-            logger.error(f"Error reading cross-section data from {filename}: {str(e)}")
-            raise
-
-    def get_mat_number(self, isotope: IsotopeIdentifier) -> Optional[int]:
+    def get_mat_number(self, isotope: IsotopeInfo) -> Optional[int]:
         """
         Get ENDF MAT number for an isotope.
 
         Args:
-            isotope: IsotopeIdentifier instance
+            isotope: IsotopeInfo instance
 
         Returns:
             ENDF MAT number if found, None otherwise

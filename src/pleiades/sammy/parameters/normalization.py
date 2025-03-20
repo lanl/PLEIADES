@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 
 # Format definitions for fixed-width fields
 # Each numeric field follows a 9+1 pattern for readability

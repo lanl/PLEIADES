@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from pleiades.core.models import CrossSectionPoint, Isotope, IsotopeIdentifier, Mass
+from pleiades.nuclear.models import CrossSectionPoint, Isotope, IsotopeIdentifier, Mass
 from pleiades.core.transmission import TransmissionError, calculate_transmission
 
 

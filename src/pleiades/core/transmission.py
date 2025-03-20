@@ -16,7 +16,7 @@ from typing import List, Tuple
 import numpy as np
 from scipy.interpolate import interp1d
 
-from pleiades.core.models import Isotope
+from pleiades.nuclear.models import Isotope
 
 logger = logging.getLogger(__name__)
 

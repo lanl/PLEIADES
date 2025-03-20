@@ -1,0 +1,31 @@
+working_dir/
+├── endf_dir/
+│	├── isotope_1_dir/
+│	│	├── results_dir/
+│	│	│	└── endf.par
+│	│	├── dummy.inpfile
+│	│	└── dummp.parfile
+│   └── isotope_2_dir/
+│		├── results_dir/
+│		│	└── endf.par
+│		├── dummy.inpfile
+│		└── dummp.parfile
+│	
+├── fitting_dir/
+│	├── isotope_1_dir/
+│	│	├── results_dir/
+│	│	│	└── sammy.lpt
+│	│	├── input_file.inp
+│	│	└── parameter_file.par
+│	├── isotope_1_dir/
+│	│	├── results_dir/
+│	│	│	└── sammy.lpt
+│	│	├── input_file.inp
+│	│	└── parameter_file.par
+│	└── ...
+├── results_dir/
+├── data_dir/
+│	├── transmission_x1_y1.dat
+│	├── transmission_x2_y2.dat
+│	└── ...
+└── image_dir (soft_link)/

@@ -6,13 +6,15 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 
 # Format definitions for fixed-width fields
 # Each numeric field follows a 9+1 pattern:
 #   - 9 characters for the actual data (e.g. "1.2340E+00")
 #   - 1 character for space separator
 # This maintains human readability while ensuring fixed-width alignment
+
+
 
 FORMAT_MAIN = {
     "crfn": slice(0, 10),  # Matching radius (F)
