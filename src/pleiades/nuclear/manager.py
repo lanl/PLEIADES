@@ -135,15 +135,14 @@ class NuclearDataManager:
         isotope = IsotopeInfo.from_string(isotope_str)
         
         # get the mass of the isotope from the mass.mas20 file
-        isotope.mass_data = self.get_mass_data(isotope.element, isotope.mass_number)
+        isotope.mass_data = self.check_and_get_mass_data(isotope.element, isotope.mass_number)
         
         # check if the isotope is a stable isotope with known abundance and spin
         self.check_and_set_abundance_and_spins(isotope)
         
         return isotope
         
-
-    def get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
+    def check_and_get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
         """
         Extract mass data for an isotope from the mass.mas20 file.
 
@@ -180,7 +179,7 @@ class NuclearDataManager:
                             binding_energy=float(line[54:66].replace("*", "nan").replace("#", ".0")),
                             beta_decay_energy=float(line[81:93].replace("*", "nan").replace("#", ".0")),
                         )
-                return None
+            raise ValueError(f"Mass data for {element}-{mass_number} not found")
         except Exception as e:
             logger.error(f"Error reading mass data for {element}-{mass_number}: {str(e)}")
             raise

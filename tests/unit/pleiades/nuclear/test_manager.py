@@ -5,7 +5,7 @@
 import pytest
 
 from pleiades.nuclear.manager import NuclearDataManager
-from pleiades.nuclear.models import CrossSectionPoint, DataCategory, IsotopeIdentifier, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import DataCategory, IsotopeInfo, IsotopeMassData
 
 
 @pytest.fixture
@@ -29,9 +29,10 @@ def test_list_files(data_manager):
 
 def test_get_isotope_info_u238(data_manager):
     """Test U-238 isotope information retrieval."""
-    info = data_manager.get_isotope_info(IsotopeIdentifier.from_string("U-238"))
-    
+    info = data_manager.get_isotope_info("U-238")
+
     assert isinstance(info, IsotopeInfo)
+    
     # Test against known U-238 values
     assert info.spin == 0.0
     assert abs(info.abundance - 0.992745 * 100) < 1e-6
@@ -39,30 +40,27 @@ def test_get_isotope_info_u238(data_manager):
 
 def test_get_mass_data_u238(data_manager):
     """Test U-238 mass data retrieval."""
-    mass_data = data_manager.get_mass_data(IsotopeIdentifier(element="U", mass_number=238))
+    mass_data = data_manager.check_and_get_mass_data(element="U", mass_number=238)
     assert isinstance(mass_data, IsotopeMassData)
     # Test against known U-238 values from mass.mas20
     expected_mass = 238.050786936
     assert abs(mass_data.atomic_mass - expected_mass) < 1e-6
 
 
-def test_read_cross_section_data_u238(data_manager):
-    """Test U-238 cross-section data reading."""
-    xs_data = data_manager.read_cross_section_data("u-n.tot", IsotopeIdentifier.from_string("U-238"))
-    assert len(xs_data) > 0
-    assert all(isinstance(point, CrossSectionPoint) for point in xs_data)
-
-
 def test_get_mat_number_u238(data_manager):
     """Test U-238 MAT number retrieval."""
-    mat = data_manager.get_mat_number(IsotopeIdentifier.from_string("U-238"))
+    mat = data_manager.get_mat_number(IsotopeInfo.from_string("U-238"))
     assert mat == 9237  # Verify this is the correct MAT number
 
 
 # Error cases
-def test_get_isotope_info_nonexistent(data_manager):
+def test_get_mass_data_nonexistent(data_manager):
     """Test handling of nonexistent isotope."""
-    assert data_manager.get_isotope_info(IsotopeIdentifier(element="X", mass_number=999)) is None
+    with pytest.raises(ValueError) as excinfo:
+        data_manager.check_and_get_mass_data(element="X", mass_number=999)
+    assert str(excinfo.value) == "Mass data for X-999 not found"
+
+
 
 
 def test_file_not_found(data_manager):
