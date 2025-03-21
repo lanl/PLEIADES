@@ -241,40 +241,11 @@ class IsotopeParameters(BaseModel):
     isotope: IsotopeInfo = Field(description="Isotope information")
     abundance: float = Field(description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(None, description="Uncertainty on abundance")
-    flag: Optional[VaryFlag] = Field(default=None, description="Treatment flag for abundance")
+    vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
     spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
     resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
     
-    @classmethod
-    def from_name(cls, isotope_name: str) -> "IsotopeParameters":
-        """Create an IsotopeParameters object from isotope name.
-
-        Args:
-            isotope_name: Isotope name (e.g., "U-238")
-
-        Returns:
-            IsotopeParameters: IsotopeParameters object with isotope name
-        """
-        # Convert to uppercase
-        isotope_name = isotope_name.upper()
-        
-        # Create an instance of NuclearDataManager
-        manager = NuclearDataManager()
-        
-        isotope_info = manager.get_isotope_info(isotope_name)
-        
-
-        return cls(
-            isotope_name=isotope_name,
-            mass=mass,
-            abundance=abundance,
-            uncertainty=None,  # Default value
-            flag=None,  # Default value
-            spin_groups=[],  # Default value
-            resonances=[],  # Default value
-            radius_parameters=[]  # Default value
-        )
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":

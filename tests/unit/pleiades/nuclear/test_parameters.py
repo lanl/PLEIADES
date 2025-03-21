@@ -1,5 +1,7 @@
 import unittest
+from pleiades.nuclear.manager import NuclearDataManager
 from pleiades.nuclear.parameters import RadiusParameters, ResonanceEntry, IsotopeParameters, nuclearParameters
+
 from pleiades.utils.helper import VaryFlag
 
 class TestRadiusParameters(unittest.TestCase):
@@ -59,6 +61,7 @@ class TestResonanceEntry(unittest.TestCase):
 
 class TestIsotopeParameters(unittest.TestCase):
     def test_isotope_parameters_initialization(self):
+        
         radius_params = RadiusParameters(
             effective_radius=1.0,
             true_radius=1.0,
@@ -80,48 +83,28 @@ class TestIsotopeParameters(unittest.TestCase):
             vary_channel3=VaryFlag.YES,
             igroup=1,
         )
+        
+        data_manager = NuclearDataManager()
+        isotope_info = data_manager.get_isotope_info("U-238")
+
         params = IsotopeParameters(
-            isotope_name="U-238",
-            mass=238.0,
+            isotope=isotope_info,
             abundance=0.992745,
             uncertainty=0.001,
-            flag=VaryFlag.YES,
+            vary_abundance=VaryFlag.YES,
             spin_groups=[1, 2, 3],
             resonances=[resonance_entry],
             radius_parameters=[radius_params],
         )
-        self.assertEqual(params.isotope_name, "U-238")
-        self.assertEqual(params.mass, 238.0)
+        self.assertEqual(params.isotope.name, "U-238")
+        self.assertEqual(params.isotope.mass_number, 238)
         self.assertEqual(params.abundance, 0.992745)
         self.assertEqual(params.uncertainty, 0.001)
-        self.assertEqual(params.flag, VaryFlag.YES)
+        self.assertEqual(params.vary_abundance, VaryFlag.YES)
         self.assertEqual(params.spin_groups, [1, 2, 3])
         self.assertEqual(params.resonances, [resonance_entry])
         self.assertEqual(params.radius_parameters, [radius_params])
 
-    def test_from_good_names(self):
-        params = IsotopeParameters.from_name("Ta-181")
-        self.assertEqual(params.isotope_name, "TA-181")
-        self.assertAlmostEqual(params.mass, 180.947998528, places=6)
-        self.assertAlmostEqual(params.abundance, 99.988, places=2)
-
-        params = IsotopeParameters.from_name("U-235")
-        self.assertEqual(params.isotope_name, "U-235")
-        self.assertAlmostEqual(params.mass, 235.043928117, places=6)
-        self.assertAlmostEqual(params.abundance, 0.7200, places=3)
-
-        params = IsotopeParameters.from_name("Pb-208")
-        self.assertEqual(params.isotope_name, "Pb-208")
-        self.assertAlmostEqual(params.mass, 207.976652005, places=6)
-        self.assertAlmostEqual(params.abundance, 52.4, places=3)
-
-        params = IsotopeParameters.from_name("Pb-208")
-
-    def test_from_bad_names(self):
-        params = IsotopeParameters.from_name("C-123")
-        self.assertEqual(params.isotope_name, "C-123")
-        self.assertIsNone(params.mass)
-        self.assertIsNone(params.abundance)
 
 class TestNuclearParameters(unittest.TestCase):
     def test_nuclear_parameters_initialization(self):
