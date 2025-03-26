@@ -129,19 +129,22 @@ class TestNuclearParameters(unittest.TestCase):
             vary_channel3=VaryFlag.YES,
             igroup=1,
         )
+
+        data_manager = NuclearDataManager()
+        isotope_info = data_manager.get_isotope_info("U-238")
+
         isotope_params = IsotopeParameters(
-            isotope_name="U-238",
-            mass=238.0,
+            isotope=isotope_info,
             abundance=0.992745,
             uncertainty=0.001,
-            flag=VaryFlag.YES,
+            vary_abundance=VaryFlag.YES,
             spin_groups=[1, 2, 3],
             resonances=[resonance_entry],
             radius_parameters=[radius_params],
         )
-        params = nuclearParameters(
-            isotopes=[isotope_params],
-        )
+
+        params = nuclearParameters(isotopes=[isotope_params])
+        
         self.assertEqual(params.isotopes, [isotope_params])
 
 if __name__ == "__main__":
