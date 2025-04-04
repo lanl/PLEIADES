@@ -4,6 +4,9 @@
 import functools
 import logging
 import re
+import requests
+import zipfile
+import io
 from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
