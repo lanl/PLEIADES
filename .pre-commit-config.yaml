@@ -24,5 +24,5 @@ repos:
   rev: v2.3.0
   hooks:
     - id: codespell
-      exclude: "(tests/data/.*|.*\\.ipynb|poetry.lock|src/pleiades/data/.*)"
+      exclude: "(tests/data/.*|.*\\.ipynb|pixi.lock|src/pleiades/data/.*)"
       args: ["--ignore-words-list=DELTE"]
