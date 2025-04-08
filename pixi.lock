@@ -6599,8 +6599,8 @@ packages:
   timestamp: 1742485085457
 - pypi: .
   name: pleiades
-  version: 0.2.0.dev323+d202504081655
-  sha256: d38c5017cce423ab2216bd030370febd4207d38b546a687c436a7ad1f552a71b
+  version: 0.2.0.dev324+d202504081819
+  sha256: 06ae023c60775d71ca4bfcf7786f7ed2c8785536db4b98ce4e5e77dc9a95c658
   requires_dist:
   - numpy
   - scipy
