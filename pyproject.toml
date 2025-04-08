@@ -95,12 +95,14 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-select = ["A", "ARG","ASYNC","BLE","C90", "E", "F", "I", "N", "UP032", "W"]
 exclude = ["notebooks/**", "**/*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-ignore = []
+ignore = [
+    "E501",  # Line too Long
+    "F841",  # Local variable is assigned to but never used
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["pleiades"]
