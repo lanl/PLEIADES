@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 """Core physical quantity models with validation."""
 
-import math
 import re
 from enum import Enum, auto
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Annotated
-
-from pleiades.core.constants import CONSTANTS
 
 NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -28,6 +24,7 @@ class DataCategory(Enum):
         """Convert category enum to path string."""
         return category.name.lower()
 
+
 class IsotopeMassData(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -35,6 +32,7 @@ class IsotopeMassData(BaseModel):
     mass_uncertainty: NonNegativeFloat
     binding_energy: Optional[float] = Field(description="Binding energy in MeV")
     beta_decay_energy: Optional[float] = Field(description="Beta decay energy in MeV")
+
 
 class IsotopeInfo(BaseModel):
     """
@@ -71,7 +69,7 @@ class IsotopeInfo(BaseModel):
     abundance: Optional[float] = Field(ge=0, default=None)
     spin: Optional[float] = Field(default=None)
     material_number: Optional[int] = Field(default=None)
-    
+
     @classmethod
     def from_string(cls, isotope_str: str) -> "IsotopeInfo":
         match = re.match(r"([A-Za-z]+)-?(\d+)|(\d+)-?([A-Za-z]+)", isotope_str)
@@ -85,7 +83,7 @@ class IsotopeInfo(BaseModel):
             mass_number = int(match.group(3))
         name = f"{element}-{mass_number}"
         return cls(name=name, element=element, mass_number=mass_number)
-    
+
     def __str__(self) -> str:
         """Convert to string format 'element-mass_number'."""
-        return f"{self.element}-{self.mass_number}" 
+        return f"{self.element}-{self.mass_number}"

@@ -3,7 +3,6 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.misc import (
     DeltaParameters,
     DelteParameters,
@@ -17,6 +16,7 @@ from pleiades.sammy.parameters.misc import (
     SiabnParameters,
     TzeroParameters,
 )
+from pleiades.utils.helper import VaryFlag
 
 
 class TestDeltaParameters:
@@ -480,7 +480,9 @@ class TestSiabnParameters:
     def valid_siabn_params(self):
         """Sample valid SIABN parameters."""
         return SiabnParameters(
-            abundances=[1.234, 3.456, 5.678], uncertainties=[2.345e-3, 4.567e-3, 6.789e-3], flags=[VaryFlag.YES, VaryFlag.YES, VaryFlag.YES]
+            abundances=[1.234, 3.456, 5.678],
+            uncertainties=[2.345e-3, 4.567e-3, 6.789e-3],
+            flags=[VaryFlag.YES, VaryFlag.YES, VaryFlag.YES],
         )
 
     def test_parse_valid_line(self, valid_siabn_line):

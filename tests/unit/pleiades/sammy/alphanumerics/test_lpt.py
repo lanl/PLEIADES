@@ -1,5 +1,7 @@
 import pytest
+
 from pleiades.sammy.alphanumerics.lpt import LPTOutputOptions
+
 
 def test_default_option():
     """Test the default option."""
@@ -44,8 +46,9 @@ def test_default_option():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
+
 
 def test_valid_option_with_single_boolean():
     """Test a valid option with a single boolean flag."""
@@ -64,18 +67,21 @@ def test_valid_option_with_single_boolean():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
+
 
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         LPTOutputOptions(do_not_print_any_input_parameters=True, print_all_input_parameters=True)
 
+
 def test_mutually_exclusive_options_2():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         LPTOutputOptions(do_not_print_input_data=True, print_input_data=True)
+
 
 def test_valid_combination_of_options_1():
     """Test a valid combination of options."""
@@ -95,8 +101,9 @@ def test_valid_combination_of_options_1():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
+
 
 def test_valid_combination_of_options_2():
     """Test a valid combination of options."""
@@ -116,17 +123,17 @@ def test_valid_combination_of_options_2():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
+
 
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
         LPTOutputOptions(
-            do_not_print_any_input_parameters=True,
-            print_all_input_parameters=True,
-            print_varied_input_parameters=True
+            do_not_print_any_input_parameters=True, print_all_input_parameters=True, print_varied_input_parameters=True
         )
+
 
 def test_switching_options():
     """Test switching options."""
@@ -144,7 +151,7 @@ def test_switching_options():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
 
     options = LPTOutputOptions(print_all_input_parameters=True)
@@ -161,7 +168,7 @@ def test_switching_options():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
 
     options = LPTOutputOptions(print_input_data=True)
@@ -178,8 +185,9 @@ def test_switching_options():
         "CHI SQUARED IS WANTED",
         "DO NOT PRINT WEIGHTED RESIDUALS",
         "DO NOT PRINT BAYES WEIGHTED RESIDUALS",
-        "DO NOT PRINT PHASE SHIFTS"
+        "DO NOT PRINT PHASE SHIFTS",
     ]
+
 
 if __name__ == "__main__":
     pytest.main()

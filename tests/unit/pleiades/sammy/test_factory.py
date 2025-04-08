@@ -73,7 +73,9 @@ def mock_subprocess_run(monkeypatch):
 @pytest.fixture
 def mock_subprocess_run_docker_fail(monkeypatch):
     """Mock subprocess.run to simulate docker info failure."""
-    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args=args, returncode=1, **kwargs))
+    monkeypatch.setattr(
+        subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(args=args, returncode=1, **kwargs)
+    )
 
 
 # Mock SammyRunner creation for runner tests
@@ -98,7 +100,9 @@ class TestSammyFactory:
             BackendType.NOVA: True,
         }
 
-    def test_list_available_backends_none_available(self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail):
+    def test_list_available_backends_none_available(
+        self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail
+    ):
         """No backends should be available."""
         _ = mock_which_unavailable, mock_subprocess_run_docker_fail  # implicitly used by the fixture
         # remove NOVA env vars to simulate unavailability
@@ -214,7 +218,9 @@ class TestSammyFactory:
         assert isinstance(runner, LocalSammyRunner)
         assert "Attempting to use local backend" in caplog.text
 
-    def test_auto_select_docker(self, monkeypatch, mock_which_unavailable, mock_subprocess_run, mock_sammy_runner, tmp_path, caplog):
+    def test_auto_select_docker(
+        self, monkeypatch, mock_which_unavailable, mock_subprocess_run, mock_sammy_runner, tmp_path, caplog
+    ):
         """Should auto-select docker backend if local unavailable."""
         _ = mock_which_unavailable, mock_subprocess_run, mock_sammy_runner  # implicitly used by the fixture
         # remove NOVA env vars to simulate unavailability
@@ -234,7 +240,9 @@ class TestSammyFactory:
         assert isinstance(runner, DockerSammyRunner)
         assert "Using preferred backend: docker" in caplog.text
 
-    def test_auto_select_none_available(self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail, tmp_path, caplog):
+    def test_auto_select_none_available(
+        self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail, tmp_path, caplog
+    ):
         """Should raise error if no backends available."""
         _ = mock_which_unavailable, mock_subprocess_run_docker_fail  # implicitly used by the fixture
         # remove NOVA env vars to simulate unavailability

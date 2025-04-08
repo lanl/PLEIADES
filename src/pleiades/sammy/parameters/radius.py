@@ -12,7 +12,13 @@ from typing import List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, parse_keyword_pairs_to_dict, safe_parse
+from pleiades.sammy.parameters.helper import (
+    VaryFlag,
+    format_float,
+    format_vary,
+    parse_keyword_pairs_to_dict,
+    safe_parse,
+)
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
@@ -125,7 +131,9 @@ class RadiusParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(
         description="List of spin group numbers",
     )
-    channels: Optional[List[int]] = Field(default=None, description="List of channel numbers (required when channel_mode=1)")
+    channels: Optional[List[int]] = Field(
+        default=None, description="List of channel numbers (required when channel_mode=1)"
+    )
 
     @field_validator("spin_groups")
     def validate_spin_groups(cls, v: List[int]) -> List[int]:
@@ -222,7 +230,9 @@ class RadiusParameters(BaseModel):
 
         if self.true_radius < 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                raise ValueError("When true_radius is negative (AWRI specification), " "vary_true cannot be USE_FROM_PARFILE (-1)")
+                raise ValueError(
+                    "When true_radius is negative (AWRI specification), " "vary_true cannot be USE_FROM_PARFILE (-1)"
+                )
 
         return self
 
@@ -783,7 +793,12 @@ class RadiusCardKeyword(BaseModel):
         }
 
         # Parse keyword format extras
-        extras = {"particle_pair": None, "orbital_momentum": None, "relative_uncertainty": None, "absolute_uncertainty": None}
+        extras = {
+            "particle_pair": None,
+            "orbital_momentum": None,
+            "relative_uncertainty": None,
+            "absolute_uncertainty": None,
+        }
 
         # Combine all non-empty lines into single string for parsing
         text = "\n".join(line for line in lines[1:] if line.strip())

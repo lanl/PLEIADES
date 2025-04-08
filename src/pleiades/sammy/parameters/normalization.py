@@ -146,9 +146,12 @@ class NormalizationParameters(BaseModel):
         lines.append(" ".join(main_parts))
 
         # Add uncertainties line if any uncertainties are present
-        if any(getattr(self, f"d_{param}") is not None for param in ["anorm", "backa", "backb", "backc", "backd", "backf"]):
+        if any(
+            getattr(self, f"d_{param}") is not None for param in ["anorm", "backa", "backb", "backc", "backd", "backf"]
+        ):
             unc_parts = [
-                format_float(getattr(self, f"d_{param}", 0.0), width=10) for param in ["anorm", "backa", "backb", "backc", "backd", "backf"]
+                format_float(getattr(self, f"d_{param}", 0.0), width=10)
+                for param in ["anorm", "backa", "backb", "backc", "backd", "backf"]
             ]
             lines.append("".join(unc_parts))
 
@@ -301,7 +304,11 @@ if __name__ == "__main__":
 
     # Test invalid header
     try:
-        bad_lines = ["WRONG header line", "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0", ""]
+        bad_lines = [
+            "WRONG header line",
+            "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
+            "",
+        ]
         logging.debug("Testing invalid header:")
         NormalizationBackgroundCard.from_lines(bad_lines)
     except ValueError as e:

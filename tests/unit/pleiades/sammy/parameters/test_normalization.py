@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.normalization import NormalizationBackgroundCard, NormalizationParameters
+from pleiades.utils.helper import VaryFlag
 
 # Test data with proper 10-char width formatting
 MAIN_ONLY_LINE = "1.000E+00 2.000E-02 3.000E-03 4.000E-04 5.000E-05 6.000E-06  1 0 1 0 1 0"

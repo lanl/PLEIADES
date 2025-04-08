@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.isotope import IsotopeCard, IsotopeParameters
+from pleiades.utils.helper import VaryFlag
 
 
 # Test fixtures for common test data
@@ -15,7 +15,12 @@ def single_isotope_lines():
 
 @pytest.fixture
 def multi_isotope_lines():
-    return ["ISOTOpic abundances and masses", "16.000    0.99835   0.00002    0  1  2  3", "17.000    0.00165   0.00001    0  4  5  6", ""]
+    return [
+        "ISOTOpic abundances and masses",
+        "16.000    0.99835   0.00002    0  1  2  3",
+        "17.000    0.00165   0.00001    0  4  5  6",
+        "",
+    ]
 
 
 @pytest.fixture
@@ -44,7 +49,9 @@ class TestIsotopeParameters:
     def test_basic_validation(self):
         """Test basic parameter validation."""
         # Test valid parameters
-        params = IsotopeParameters(mass=16.0, abundance=0.99835, uncertainty=0.00002, flag=VaryFlag.NO, spin_groups=[1, 2, 3])
+        params = IsotopeParameters(
+            mass=16.0, abundance=0.99835, uncertainty=0.00002, flag=VaryFlag.NO, spin_groups=[1, 2, 3]
+        )
         assert params.mass == 16.0
         assert params.abundance == 0.99835
         assert params.uncertainty == 0.00002
@@ -76,14 +83,19 @@ class TestIsotopeParameters:
 
     def test_from_lines_with_continuation(self):
         """Test parsing lines with continuation."""
-        lines = ["16.000    0.99835   0.00002   0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223-1", "24   25   26   27"]
+        lines = [
+            "16.000    0.99835   0.00002   0 1 2 3 4 5 6 7 8 9 1011121314151617181920212223-1",
+            "24   25   26   27",
+        ]
         params = IsotopeParameters.from_lines(lines)
         print(params)
         assert params.spin_groups == list(range(1, 28))  # Numbers 1-27
 
     def test_to_lines_formatting(self):
         """Test output formatting."""
-        params = IsotopeParameters(mass=16.0, abundance=0.99835, uncertainty=0.00002, flag=VaryFlag.NO, spin_groups=[1, 2, 3])
+        params = IsotopeParameters(
+            mass=16.0, abundance=0.99835, uncertainty=0.00002, flag=VaryFlag.NO, spin_groups=[1, 2, 3]
+        )
         lines = params.to_lines()
         assert len(lines) == 1
         assert lines[0].startswith("1.6000E+019.9835E-012.0000E-05 0 1 2 3")

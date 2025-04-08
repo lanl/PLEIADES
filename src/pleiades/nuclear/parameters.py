@@ -1,9 +1,9 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, model_validator, field_validator
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from pleiades.nuclear.manager import NuclearDataManager
 from pleiades.nuclear.models import IsotopeInfo
-
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
 
@@ -75,7 +75,9 @@ class RadiusParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(
         description="List of spin group numbers",
     )
-    channels: Optional[List[int]] = Field(default=None, description="List of channel numbers (required when channel_mode=1)")
+    channels: Optional[List[int]] = Field(
+        default=None, description="List of channel numbers (required when channel_mode=1)"
+    )
 
     @field_validator("spin_groups")
     def validate_spin_groups(cls, v: List[int]) -> List[int]:
@@ -174,8 +176,12 @@ class RadiusParameters(BaseModel):
 
         if self.true_radius < 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
-                raise ValueError("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
+                logger.error(
+                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                )
+                raise ValueError(
+                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                )
 
         return self
 
@@ -223,7 +229,7 @@ class ResonanceEntry(BaseModel):
 
 class IsotopeParameters(BaseModel):
     """Container for a single isotope's parameters which include.
-        mass, 
+        mass,
         abundance, uncertainty, treatment flag, and associated
     spin groups.
 
@@ -245,7 +251,7 @@ class IsotopeParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
     resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
-    
+
     @classmethod
     def from_name(cls, isotope_name: str) -> "IsotopeParameters":
         """Create an IsotopeParameters object from isotope name.
@@ -258,12 +264,11 @@ class IsotopeParameters(BaseModel):
         """
         # Convert to uppercase
         isotope_name = isotope_name.upper()
-        
+
         # Create an instance of NuclearDataManager
         manager = NuclearDataManager()
-        
+
         isotope_info = manager.get_isotope_info(isotope_name)
-        
 
         return cls(
             isotope_name=isotope_name,
@@ -273,7 +278,7 @@ class IsotopeParameters(BaseModel):
             flag=None,  # Default value
             spin_groups=[],  # Default value
             resonances=[],  # Default value
-            radius_parameters=[]  # Default value
+            radius_parameters=[],  # Default value
         )
 
     @model_validator(mode="after")
@@ -304,7 +309,7 @@ class IsotopeParameters(BaseModel):
                 logger.info(f"{where_am_i}:Group number {group} requires extended format")
 
         return self
-    
+
     @model_validator(mode="after")
     def validate_resonances(self) -> "IsotopeParameters":
         """Validate that resonance igroups match spin groups.
@@ -345,11 +350,16 @@ class IsotopeParameters(BaseModel):
         for radius in self.radius_parameters:
             for group in radius.spin_groups:
                 if group not in self.spin_groups:
-                    logger.info(f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
-                    raise ValueError(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
+                    logger.info(
+                        f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
+                    )
+                    raise ValueError(
+                        f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
+                    )
 
         return self
-    
+
+
 class nuclearParameters(BaseModel):
     """Container for nuclear parameters used in SAMMY calculations.
 
@@ -366,7 +376,7 @@ class nuclearParameters(BaseModel):
 
         Validates:
         - Each isotope has a unique mass
-        - Each isotope has a unique abundance   
+        - Each isotope has a unique abundance
         """
         where_am_i = "nuclear_params.validate_isotopes()"
 
@@ -382,10 +392,9 @@ class nuclearParameters(BaseModel):
             logger.info(f"{where_am_i}:Duplicate masses found")
             raise ValueError("Duplicate masses found")
 
-
         return self
-    
-    
+
+
 # example usage
 if __name__ == "__main__":
     # Example usage of RadiusParameters

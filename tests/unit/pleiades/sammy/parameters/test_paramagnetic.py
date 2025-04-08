@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.paramagnetic import NuclideType, ParamagneticParameters
+from pleiades.utils.helper import VaryFlag
 
 
 class TestParamagneticParameters:
@@ -125,7 +125,11 @@ class TestParamagneticParameters:
                 "",
             ],
             # Missing header
-            ["TM   1 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03", "     1 1 1.234E+00 2.345E-03", ""],
+            [
+                "TM   1 1 1 1.234E+00 2.345E-03 3.456E+00 4.567E-03 5.678E+00 6.789E-03",
+                "     1 1 1.234E+00 2.345E-03",
+                "",
+            ],
             # Missing terminator
             [
                 "PARAMagnetic cross section parameters follow",

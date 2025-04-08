@@ -1,5 +1,7 @@
 import pytest
+
 from pleiades.sammy.alphanumerics.rm import RMatrixOptions
+
 
 def test_default_option():
     """Test the default option."""
@@ -11,6 +13,7 @@ def test_default_option():
     assert r_matrix_options.reduced_width_amplitudes is False
     assert r_matrix_options.get_alphanumeric_commands() == ["REICH-MOORE FORMALISM IS WANTED"]
 
+
 def test_valid_option_with_single_boolean():
     """Test a valid option with a single boolean flag."""
     r_matrix_options = RMatrixOptions(original_reich_moore=True)
@@ -21,15 +24,18 @@ def test_valid_option_with_single_boolean():
     assert r_matrix_options.reduced_width_amplitudes is False
     assert r_matrix_options.get_alphanumeric_commands() == ["ORIGINAL REICH-MOORE FORMALISM"]
 
+
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         RMatrixOptions(reich_moore=True, original_reich_moore=True)
 
+
 def test_mutually_exclusive_options_2():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         RMatrixOptions(multilevel_breit_wigner=True, single_level_breit_wigner=True)
+
 
 def test_valid_set_of_options_1():
     """Test a valid combination of options."""
@@ -41,6 +47,7 @@ def test_valid_set_of_options_1():
     assert r_matrix_options.reduced_width_amplitudes is True
     assert r_matrix_options.get_alphanumeric_commands() == ["REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT"]
 
+
 def test_valid_set_of_options_2():
     """Test a valid combination of options."""
     r_matrix_options = RMatrixOptions(multilevel_breit_wigner=True)
@@ -51,14 +58,12 @@ def test_valid_set_of_options_2():
     assert r_matrix_options.reduced_width_amplitudes is False
     assert r_matrix_options.get_alphanumeric_commands() == ["MULTILEVEL BREIT-WIGNER FORMALISM IS WANTED"]
 
+
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        RMatrixOptions(
-            reich_moore=True,
-            original_reich_moore=True,
-            multilevel_breit_wigner=True
-        )
+        RMatrixOptions(reich_moore=True, original_reich_moore=True, multilevel_breit_wigner=True)
+
 
 def test_switching_options():
     """Test switching options."""
@@ -81,6 +86,7 @@ def test_switching_options():
     r_matrix_options = RMatrixOptions(reduced_width_amplitudes=True)
     assert r_matrix_options.reduced_width_amplitudes is True
     assert r_matrix_options.get_alphanumeric_commands() == ["REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT"]
+
 
 if __name__ == "__main__":
     pytest.main()

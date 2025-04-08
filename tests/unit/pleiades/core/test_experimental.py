@@ -1,13 +1,15 @@
 import pytest
 from pydantic import ValidationError
+
 from pleiades.core.experimental import (
+    BroadeningParameters,
     EnergyParameters,
     NormalizationParameters,
-    BroadeningParameters,
+    PhysicsParameters,
     UserResolutionParameters,
-    PhysicsParameters
 )
 from pleiades.utils.helper import VaryFlag
+
 
 def test_energy_parameters():
     params = EnergyParameters(
@@ -15,13 +17,14 @@ def test_energy_parameters():
         max_energy=10.0,
         number_of_energy_points=100,
         number_of_extra_points=5,
-        number_of_small_res_points=2
+        number_of_small_res_points=2,
     )
     assert params.min_energy == 0.1
     assert params.max_energy == 10.0
     assert params.number_of_energy_points == 100
     assert params.number_of_extra_points == 5
     assert params.number_of_small_res_points == 2
+
 
 def test_normalization_parameters():
     params = NormalizationParameters(
@@ -42,7 +45,7 @@ def test_normalization_parameters():
         flag_backb=VaryFlag.NO,
         flag_backc=VaryFlag.NO,
         flag_backd=VaryFlag.NO,
-        flag_backf=VaryFlag.NO
+        flag_backf=VaryFlag.NO,
     )
     assert params.anorm == 1.0
     assert params.backa == 0.1
@@ -62,6 +65,7 @@ def test_normalization_parameters():
     assert params.flag_backc == VaryFlag.NO
     assert params.flag_backd == VaryFlag.NO
     assert params.flag_backf == VaryFlag.NO
+
 
 def test_broadening_parameters():
     params = BroadeningParameters(
@@ -88,7 +92,7 @@ def test_broadening_parameters():
         flag_deltag=VaryFlag.NO,
         flag_deltae=VaryFlag.NO,
         flag_deltc1=VaryFlag.YES,
-        flag_deltc2=VaryFlag.YES
+        flag_deltc2=VaryFlag.YES,
     )
     assert params.crfn == 1.0
     assert params.temp == 300.0
@@ -116,15 +120,8 @@ def test_broadening_parameters():
     assert params.flag_deltc2 == VaryFlag.YES
 
     with pytest.raises(ValidationError):
-        BroadeningParameters(
-            crfn=1.0,
-            temp=300.0,
-            thick=0.1,
-            deltal=0.01,
-            deltag=0.001,
-            deltae=0.0001,
-            deltc1=0.1
-        )
+        BroadeningParameters(crfn=1.0, temp=300.0, thick=0.1, deltal=0.01, deltag=0.001, deltae=0.0001, deltc1=0.1)
+
 
 def test_user_resolution_parameters():
     params = UserResolutionParameters(
@@ -135,7 +132,7 @@ def test_user_resolution_parameters():
         channel_widths=[0.1, 0.2, 0.3],
         channel_uncertainties=[0.01, 0.02, 0.03],
         channel_flags=[VaryFlag.YES, VaryFlag.NO, VaryFlag.YES],
-        filenames=["file1.dat", "file2.dat"]
+        filenames=["file1.dat", "file2.dat"],
     )
     assert params.burst_width == 10.0
     assert params.burst_uncertainty == 1.0
@@ -146,13 +143,14 @@ def test_user_resolution_parameters():
     assert params.channel_flags == [VaryFlag.YES, VaryFlag.NO, VaryFlag.YES]
     assert params.filenames == ["file1.dat", "file2.dat"]
 
+
 def test_physics_parameters():
     energy_params = EnergyParameters(
         min_energy=0.1,
         max_energy=10.0,
         number_of_energy_points=100,
         number_of_extra_points=5,
-        number_of_small_res_points=2
+        number_of_small_res_points=2,
     )
     normalization_params = NormalizationParameters(
         anorm=1.0,
@@ -172,7 +170,7 @@ def test_physics_parameters():
         flag_backb=VaryFlag.NO,
         flag_backc=VaryFlag.NO,
         flag_backd=VaryFlag.NO,
-        flag_backf=VaryFlag.NO
+        flag_backf=VaryFlag.NO,
     )
     broadening_params = BroadeningParameters(
         crfn=1.0,
@@ -198,7 +196,7 @@ def test_physics_parameters():
         flag_deltag=VaryFlag.NO,
         flag_deltae=VaryFlag.NO,
         flag_deltc1=VaryFlag.YES,
-        flag_deltc2=VaryFlag.YES
+        flag_deltc2=VaryFlag.YES,
     )
     user_resolution_params = UserResolutionParameters(
         burst_width=10.0,
@@ -208,13 +206,13 @@ def test_physics_parameters():
         channel_widths=[0.1, 0.2, 0.3],
         channel_uncertainties=[0.01, 0.02, 0.03],
         channel_flags=[VaryFlag.YES, VaryFlag.NO, VaryFlag.YES],
-        filenames=["file1.dat", "file2.dat"]
+        filenames=["file1.dat", "file2.dat"],
     )
     params = PhysicsParameters(
         energy_parameters=energy_params,
         normalization_parameters=normalization_params,
         broadening_parameters=broadening_params,
-        user_resolution_parameters=user_resolution_params
+        user_resolution_parameters=user_resolution_params,
     )
     assert params.energy_parameters == energy_params
     assert params.normalization_parameters == normalization_params

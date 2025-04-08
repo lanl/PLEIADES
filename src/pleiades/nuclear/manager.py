@@ -73,7 +73,9 @@ class NuclearDataManager:
 
         file_path = Path(filename)
         if file_path.suffix not in self._VALID_EXTENSIONS[category]:
-            raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}")
+            raise ValueError(
+                f"Invalid file extension for {category}. " f"Allowed extensions: {self._VALID_EXTENSIONS[category]}"
+            )
 
         try:
             data_path = resources.files(f"pleiades.nuclear.{self._get_category_path(category)}").joinpath(filename)
@@ -130,18 +132,17 @@ class NuclearDataManager:
         Returns:
             IsotopeInfo containing isotope details if found, None otherwise
         """
-        
+
         # Create a IsotopeInfo instance from the isotope string
         isotope = IsotopeInfo.from_string(isotope_str)
-        
+
         # get the mass of the isotope from the mass.mas20 file
         isotope.mass_data = self.get_mass_data(isotope.element, isotope.mass_number)
-        
+
         # check if the isotope is a stable isotope with known abundance and spin
         self.check_and_set_abundance_and_spins(isotope)
-        
+
         return isotope
-        
 
     def get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
         """
@@ -201,7 +202,7 @@ class NuclearDataManager:
                 line = line.strip()
                 if line and line[0].isdigit():
                     data = line.split()
-                    
+
                     # if the isotope (Element-MassNum) is found in the isotopes.info file then set abundance and spin
                     if data[3] == element and int(data[1]) == mass_number:
                         isotope_info.atomic_number = int(data[0])

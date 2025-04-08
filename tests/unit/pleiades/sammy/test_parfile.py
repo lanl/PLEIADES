@@ -8,8 +8,8 @@ from typing import Generator
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parfile import SammyParameterFile
+from pleiades.utils.helper import VaryFlag
 
 
 @pytest.fixture
@@ -274,8 +274,12 @@ class TestFileIO:
         assert len(loaded_parfile.radius.parameters) == 1
         assert len(orig_parfile.radius.parameters) == 1
 
-        assert loaded_parfile.radius.parameters[0].effective_radius == pytest.approx(orig_parfile.radius.parameters[0].effective_radius)
-        assert loaded_parfile.radius.parameters[0].true_radius == pytest.approx(orig_parfile.radius.parameters[0].true_radius)
+        assert loaded_parfile.radius.parameters[0].effective_radius == pytest.approx(
+            orig_parfile.radius.parameters[0].effective_radius
+        )
+        assert loaded_parfile.radius.parameters[0].true_radius == pytest.approx(
+            orig_parfile.radius.parameters[0].true_radius
+        )
         assert loaded_parfile.radius.parameters[0].spin_groups == orig_parfile.radius.parameters[0].spin_groups
         assert loaded_parfile.radius.parameters[0].vary_effective == orig_parfile.radius.parameters[0].vary_effective
 
@@ -284,7 +288,9 @@ class TestFileIO:
         assert orig_parfile.data_reduction is not None
         assert len(loaded_parfile.data_reduction.parameters) == len(orig_parfile.data_reduction.parameters)
 
-        for loaded_param, orig_param in zip(loaded_parfile.data_reduction.parameters, orig_parfile.data_reduction.parameters):
+        for loaded_param, orig_param in zip(
+            loaded_parfile.data_reduction.parameters, orig_parfile.data_reduction.parameters
+        ):
             assert loaded_param.name == orig_param.name
             assert loaded_param.value == pytest.approx(orig_param.value)
             assert loaded_param.flag == orig_param.flag

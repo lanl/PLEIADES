@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import List, Optional
+
 from pydantic import BaseModel, Field, model_validator
 
 # Import VaryFlag from helper module
@@ -7,8 +8,9 @@ from pleiades.utils.helper import VaryFlag
 
 # NOTE: Some physics parameters are not supported in the current version of the code
 
+
 class EnergyParameters(BaseModel):
-    """ Paramters for energy bounds and sampling 
+    """Paramters for energy bounds and sampling
 
     Args:
         BaseModel (_type_): _description_
@@ -20,11 +22,20 @@ class EnergyParameters(BaseModel):
     Returns:
         _type_: _description_
     """
+
     min_energy: float = Field(description="Minimum energy for this data set(eV)")
     max_energy: float = Field(description="Maximum energy (eV)")
-    number_of_energy_points: int = Field(description="Number of points to be used in generating artificial energy grid",default=10001)
-    number_of_extra_points: int = Field(description="Number of extra points to be added between each pair of data points for auxiliary energy grid",default=0)
-    number_of_small_res_points: int = Field(description="Number of points to be added to auxiliary energy grid across small resonances",default=0)
+    number_of_energy_points: int = Field(
+        description="Number of points to be used in generating artificial energy grid", default=10001
+    )
+    number_of_extra_points: int = Field(
+        description="Number of extra points to be added between each pair of data points for auxiliary energy grid",
+        default=0,
+    )
+    number_of_small_res_points: int = Field(
+        description="Number of points to be added to auxiliary energy grid across small resonances", default=0
+    )
+
 
 class NormalizationParameters(BaseModel):
     """Parameters for normalization and background for one angle.
@@ -63,7 +74,7 @@ class NormalizationParameters(BaseModel):
     flag_backc: VaryFlag = Field(default=VaryFlag.NO)
     flag_backd: VaryFlag = Field(default=VaryFlag.NO)
     flag_backf: VaryFlag = Field(default=VaryFlag.NO)
-    
+
 
 class BroadeningParameters(BaseModel):
     """Container for a single set of broadening parameters.
@@ -125,6 +136,7 @@ class BroadeningParameters(BaseModel):
                 raise ValueError("Flags must be specified for DELTC1 and DELTC2 if present")
         return self
 
+
 class UserResolutionParameters(BaseModel):
     """Container for User-Defined Resolution Function parameters.
 
@@ -139,7 +151,7 @@ class UserResolutionParameters(BaseModel):
         channel_flags: List of flags for varying channel widths
         filenames: List of data file names
     """
-    
+
     class UserDefinedResolutionType(str, Enum):
         """Enumeration of user defined resolution types."""
 
@@ -172,12 +184,14 @@ class PhysicsParameters(BaseModel):
     energy_parameters: EnergyParameters = Field(description="Energy parameters")
     normalization_parameters: NormalizationParameters = Field(description="Normalization parameters")
     broadening_parameters: BroadeningParameters = Field(description="Broadening parameters")
-    user_resolution_parameters: UserResolutionParameters = Field(description="User-defined resolution function parameters")
-    
+    user_resolution_parameters: UserResolutionParameters = Field(
+        description="User-defined resolution function parameters"
+    )
+
     def __init__(self, **data):
         super().__init__(**data)
         self.validate_gaussian_parameters()
-    
+
     def validate_gaussian_parameters(self) -> None:
         """Validate that if any Gaussian parameter is present, both are present."""
         self.broadening_parameters.validate_gaussian_parameters()

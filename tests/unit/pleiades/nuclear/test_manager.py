@@ -18,10 +18,10 @@ def test_list_files(data_manager):
     """Test listing available files."""
     files = data_manager.list_files()
     assert DataCategory.ISOTOPES in files
-    
+
     # Test for known files that should exist
     isotope_files = files[DataCategory.ISOTOPES]
-    
+
     assert "isotopes.info" in isotope_files
     assert "mass.mas20" in isotope_files
     assert "neutrons.list" in isotope_files
@@ -30,7 +30,7 @@ def test_list_files(data_manager):
 def test_get_isotope_info_u238(data_manager):
     """Test U-238 isotope information retrieval."""
     info = data_manager.get_isotope_info(IsotopeIdentifier.from_string("U-238"))
-    
+
     assert isinstance(info, IsotopeInfo)
     # Test against known U-238 values
     assert info.spin == 0.0
@@ -69,6 +69,7 @@ def test_file_not_found(data_manager):
     """Test handling of nonexistent file."""
     with pytest.raises(FileNotFoundError):
         data_manager.get_file_path(DataCategory.ISOTOPES, "nonexistent.info")
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

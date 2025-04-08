@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 """
-    These notes are taken from the SAMMY manual. 
+    These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
-    
+
         Parameters input control for prior covariance matrix:
         Define the prior parameter covariance matrix
         input_covariance_matrix_options = [
@@ -30,7 +31,7 @@ from typing import List
             ["READ COMPACT COVARIAnces for parameter priors",
             "READ COMPACT CORRELAtions for parameter priors",
             "COMPACT CORRELATIONS are to be read and used",
-            "COMPACT COVARIANCES are to be read and used"], 
+            "COMPACT COVARIANCES are to be read and used"],
             ["PARAMETER COVARIANCE matrix is in endf format",
             "ENDF COVARIANCE MATRix is to be read and Used"],
         ----------------------------
@@ -40,35 +41,69 @@ from typing import List
 
 """
 
+
 class CovarianceMatrixOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
     ignore_input_binary_covariance_file: bool = Field(default=False, description="IGNORE INPUT BINARY covariance file")
-    energy_uncertainties_at_end_of_line_in_par_file: bool = Field(default=False, description="ENERGY UNCERTAINTIES are at end of line in par file")
-    retroactive_old_parameter_file_new_covariance: bool = Field(default=False, description="RETROACTIVE OLD PARAmeter file new covariance")
-    p_covariance_matrix_is_correct_u_is_not: bool = Field(default=False, description="P COVARIANCE MATRIX is correct, u is not")
-    modify_p_covariance_matrix_before_using: bool = Field(default=False, description="MODIFY P COVARIANCE matrix before using")
+    energy_uncertainties_at_end_of_line_in_par_file: bool = Field(
+        default=False, description="ENERGY UNCERTAINTIES are at end of line in par file"
+    )
+    retroactive_old_parameter_file_new_covariance: bool = Field(
+        default=False, description="RETROACTIVE OLD PARAmeter file new covariance"
+    )
+    p_covariance_matrix_is_correct_u_is_not: bool = Field(
+        default=False, description="P COVARIANCE MATRIX is correct, u is not"
+    )
+    modify_p_covariance_matrix_before_using: bool = Field(
+        default=False, description="MODIFY P COVARIANCE matrix before using"
+    )
     initial_diagonal_u_covariance: bool = Field(default=False, description="INITIAL DIAGONAL U Covariance")
     initial_diagonal_p_covariance: bool = Field(default=False, description="INITIAL DIAGONAL P Covariance")
-    permit_non_positive_definite_parameter_covariance_matrices: bool = Field(default=False, description="PERMIT NON POSITIVE definite parameter covariance matrices")
-    permit_zero_uncertainties_on_parameters: bool = Field(default=False, description="PERMIT ZERO UNCERTAInties on parameters")
-    read_compact_covariances_for_parameter_priors: bool = Field(default=False, description="READ COMPACT COVARIAnces for parameter priors")
-    read_compact_correlations_for_parameter_priors: bool = Field(default=False, description="READ COMPACT CORRELAtions for parameter priors")
-    compact_correlations_are_to_be_read_and_used: bool = Field(default=False, description="COMPACT CORRELATIONS are to be read and used")
-    compact_covariances_are_to_be_read_and_used: bool = Field(default=False, description="COMPACT COVARIANCES are to be read and used")
-    parameter_covariance_matrix_is_in_endf_format: bool = Field(default=False, description="PARAMETER COVARIANCE matrix is in endf format")
-    endf_covariance_matrix_is_to_be_read_and_used: bool = Field(default=False, description="ENDF COVARIANCE MATRix is to be read and Used")
-    use_least_squares_to_define_prior_parameter_covariance_matrix: bool = Field(default=False, description="USE LEAST SQUARES TO define prior parameter covariance matrix")
+    permit_non_positive_definite_parameter_covariance_matrices: bool = Field(
+        default=False, description="PERMIT NON POSITIVE definite parameter covariance matrices"
+    )
+    permit_zero_uncertainties_on_parameters: bool = Field(
+        default=False, description="PERMIT ZERO UNCERTAInties on parameters"
+    )
+    read_compact_covariances_for_parameter_priors: bool = Field(
+        default=False, description="READ COMPACT COVARIAnces for parameter priors"
+    )
+    read_compact_correlations_for_parameter_priors: bool = Field(
+        default=False, description="READ COMPACT CORRELAtions for parameter priors"
+    )
+    compact_correlations_are_to_be_read_and_used: bool = Field(
+        default=False, description="COMPACT CORRELATIONS are to be read and used"
+    )
+    compact_covariances_are_to_be_read_and_used: bool = Field(
+        default=False, description="COMPACT COVARIANCES are to be read and used"
+    )
+    parameter_covariance_matrix_is_in_endf_format: bool = Field(
+        default=False, description="PARAMETER COVARIANCE matrix is in endf format"
+    )
+    endf_covariance_matrix_is_to_be_read_and_used: bool = Field(
+        default=False, description="ENDF COVARIANCE MATRix is to be read and Used"
+    )
+    use_least_squares_to_define_prior_parameter_covariance_matrix: bool = Field(
+        default=False, description="USE LEAST SQUARES TO define prior parameter covariance matrix"
+    )
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
-        ["ignore_input_binary_covariance_file","energy_uncertainties_at_end_of_line_in_par_file"],
+        ["ignore_input_binary_covariance_file", "energy_uncertainties_at_end_of_line_in_par_file"],
         ["retroactive_old_parameter_file_new_covariance", "p_covariance_matrix_is_correct_u_is_not"],
         ["modify_p_covariance_matrix_before_using"],
         ["initial_diagonal_u_covariance", "initial_diagonal_p_covariance"],
         ["permit_non_positive_definite_parameter_covariance_matrices", "permit_zero_uncertainties_on_parameters"],
-        ["read_compact_covariances_for_parameter_priors", "read_compact_correlations_for_parameter_priors", "compact_correlations_are_to_be_read_and_used", "compact_covariances_are_to_be_read_and_used", "parameter_covariance_matrix_is_in_endf_format", "endf_covariance_matrix_is_to_be_read_and_used"],
-        ["use_least_squares_to_define_prior_parameter_covariance_matrix"]
+        [
+            "read_compact_covariances_for_parameter_priors",
+            "read_compact_correlations_for_parameter_priors",
+            "compact_correlations_are_to_be_read_and_used",
+            "compact_covariances_are_to_be_read_and_used",
+            "parameter_covariance_matrix_is_in_endf_format",
+            "endf_covariance_matrix_is_to_be_read_and_used",
+        ],
+        ["use_least_squares_to_define_prior_parameter_covariance_matrix"],
     ]
 
     @model_validator(mode="after")
@@ -84,8 +119,7 @@ class CovarianceMatrixOptions(BaseModel):
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
                 raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. "
-                    f"Only one allowed."
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
                 )
 
             # If exactly 1 user-specified => turn off all defaults in that group
@@ -97,8 +131,7 @@ class CovarianceMatrixOptions(BaseModel):
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
                 raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. "
-                    f"Only one allowed."
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
                 )
         return self
 
@@ -139,12 +172,13 @@ class CovarianceMatrixOptions(BaseModel):
             commands.append("USE LEAST SQUARES TO define prior parameter covariance matrix")
         return commands
 
+
 # Example usage
 if __name__ == "__main__":
     try:
         options = CovarianceMatrixOptions(
             ignore_input_binary_covariance_file=True,
-            energy_uncertainties_at_end_of_line_in_par_file=True  # This should raise a ValueError
+            energy_uncertainties_at_end_of_line_in_par_file=True,  # This should raise a ValueError
         )
     except ValueError as e:
         print(e)

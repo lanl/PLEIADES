@@ -1,6 +1,8 @@
 import unittest
-from pleiades.nuclear.parameters import RadiusParameters, ResonanceEntry, IsotopeParameters, nuclearParameters
+
+from pleiades.nuclear.parameters import IsotopeParameters, RadiusParameters, ResonanceEntry, nuclearParameters
 from pleiades.utils.helper import VaryFlag
+
 
 class TestRadiusParameters(unittest.TestCase):
     def test_radius_parameters_initialization(self):
@@ -30,6 +32,7 @@ class TestRadiusParameters(unittest.TestCase):
                 spin_groups=[-1, 2, 3],
             )
 
+
 class TestResonanceEntry(unittest.TestCase):
     def test_resonance_entry_initialization(self):
         entry = ResonanceEntry(
@@ -56,6 +59,7 @@ class TestResonanceEntry(unittest.TestCase):
         self.assertEqual(entry.vary_channel2, VaryFlag.YES)
         self.assertEqual(entry.vary_channel3, VaryFlag.YES)
         self.assertEqual(entry.igroup, 1)
+
 
 class TestIsotopeParameters(unittest.TestCase):
     def test_isotope_parameters_initialization(self):
@@ -123,6 +127,7 @@ class TestIsotopeParameters(unittest.TestCase):
         self.assertIsNone(params.mass)
         self.assertIsNone(params.abundance)
 
+
 class TestNuclearParameters(unittest.TestCase):
     def test_nuclear_parameters_initialization(self):
         radius_params = RadiusParameters(
@@ -160,6 +165,7 @@ class TestNuclearParameters(unittest.TestCase):
             isotopes=[isotope_params],
         )
         self.assertEqual(params.isotopes, [isotope_params])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 """
-    These notes are taken from the SAMMY manual. 
+    These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   Options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
@@ -26,24 +27,33 @@ from typing import List
         ----------------------------
         *   "DATA COVARIANCE IS Diagonal"
             "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
-            "DATA COVARIANCE FILE is named YYYYYY.YYY", 
+            "DATA COVARIANCE FILE is named YYYYYY.YYY",
             "FREE FORMAT DATA COVariance YYYYYY.YYY",
         ]
 """
+
 
 class CovarianceMatrixOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
     implicit_data_covariance: bool = Field(default=False, description="IMPLICIT DATA COVARIANCE is wanted")
-    user_supplied_implicit_data_covariance: bool = Field(default=False, description="USER SUPPLIED IMPLICIT data covariance matrix")
+    user_supplied_implicit_data_covariance: bool = Field(
+        default=False, description="USER SUPPLIED IMPLICIT data covariance matrix"
+    )
     pup_covariance_ascii: bool = Field(default=False, description="PUP COVARIANCE IS IN an ascii file")
     create_pup_file: bool = Field(default=False, description="CREATE PUP FILE FROM varied parameters used in this run")
     add_constant_term: bool = Field(default=False, description="ADD CONSTANT TERM TO data covariance")
     do_not_add_constant_term: bool = Field(default=True, description="DO NOT ADD CONSTANT term to data covariance")
-    use_default_constant_term: bool = Field(default=False, description="USE DEFAULT FOR CONSTANT term to add to data covariance")
-    use_ten_percent_uncertainty: bool = Field(default=False, description="USE TEN PERCENT DATA uncertainty or ADD TEN PERCENT DATA uncertainty")
+    use_default_constant_term: bool = Field(
+        default=False, description="USE DEFAULT FOR CONSTANT term to add to data covariance"
+    )
+    use_ten_percent_uncertainty: bool = Field(
+        default=False, description="USE TEN PERCENT DATA uncertainty or ADD TEN PERCENT DATA uncertainty"
+    )
     data_covariance_diagonal: bool = Field(default=True, description="DATA COVARIANCE IS Diagonal")
-    data_off_diagonal: bool = Field(default=False, description="DATA HAS OFF-DIAGONAL contribution to covariance matrix of the form (a+bEi) (a+bEj)")
+    data_off_diagonal: bool = Field(
+        default=False, description="DATA HAS OFF-DIAGONAL contribution to covariance matrix of the form (a+bEi) (a+bEj)"
+    )
     data_covariance_file: bool = Field(default=False, description="DATA COVARIANCE FILE is named YYYYYY.YYY")
     free_format_data_covariance: bool = Field(default=False, description="FREE FORMAT DATA COVARIANCE YYYYYY.YYY")
 
@@ -54,7 +64,7 @@ class CovarianceMatrixOptions(BaseModel):
         ["create_pup_file"],
         ["add_constant_term", "do_not_add_constant_term", "use_default_constant_term"],
         ["use_ten_percent_uncertainty"],
-        ["data_covariance_diagonal", "data_off_diagonal", "data_covariance_file", "free_format_data_covariance"]
+        ["data_covariance_diagonal", "data_off_diagonal", "data_covariance_file", "free_format_data_covariance"],
     ]
 
     @model_validator(mode="after")
@@ -70,8 +80,7 @@ class CovarianceMatrixOptions(BaseModel):
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
                 raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. "
-                    f"Only one allowed."
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
                 )
 
             # If exactly 1 user-specified => turn off all defaults in that group
@@ -83,8 +92,7 @@ class CovarianceMatrixOptions(BaseModel):
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
                 raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. "
-                    f"Only one allowed."
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
                 )
         return self
 
@@ -117,14 +125,13 @@ class CovarianceMatrixOptions(BaseModel):
             commands.append("FREE FORMAT DATA COVARIANCE YYYYYY.YYY")
         return commands
 
+
 # Example usage
 if __name__ == "__main__":
     try:
         options = CovarianceMatrixOptions(
             implicit_data_covariance=True,
-            user_supplied_implicit_data_covariance=True  # This should raise a ValueError
+            user_supplied_implicit_data_covariance=True,  # This should raise a ValueError
         )
     except ValueError as e:
         print(e)
-
-
