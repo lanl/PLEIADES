@@ -1,24 +1,19 @@
 #!/usr/bin/env python
 """Manages access to nuclear data files packaged with PLEIADES."""
 
-import functools
 import io
 import logging
-import re
 import zipfile
-from importlib import resources
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 import requests
 
-from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.isotopes.models import IsotopeInfo
 
 logger = logging.getLogger(__name__)
 
 
 class NuclearDataManager:
-    
     def clear_cache(self) -> None:
         """Clear the file cache and force reinitialization."""
         self._cached_files.clear()
