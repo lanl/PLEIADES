@@ -7,7 +7,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing_extensions import Annotated
 
 from pleiades.core.constants import CONSTANTS
@@ -15,6 +15,7 @@ from pleiades.core.constants import CONSTANTS
 NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 
+from pleiades.nuclear.isotopes.models import IsotopeInfo
 
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
@@ -414,4 +415,4 @@ if __name__ == "__main__":
         isotopes=[isotope_params],
     )
 
-    print(nuclear_params)y
+    print(nuclear_params)

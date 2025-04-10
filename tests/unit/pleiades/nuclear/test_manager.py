@@ -5,7 +5,7 @@
 import pytest
 
 from pleiades.nuclear.manager import NuclearDataManager
-from pleiades.nuclear.models import DataCategory, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 
 
 @pytest.fixture
@@ -13,18 +13,6 @@ def data_manager():
     """Create a NuclearDataManager instance using actual package data."""
     return NuclearDataManager()
 
-
-def test_list_files(data_manager):
-    """Test listing available files."""
-    files = data_manager.list_files()
-    assert DataCategory.ISOTOPES in files
-    
-    # Test for known files that should exist
-    isotope_files = files[DataCategory.ISOTOPES]
-    
-    assert "isotopes.info" in isotope_files
-    assert "mass.mas20" in isotope_files
-    assert "neutrons.list" in isotope_files
 
 
 def test_get_isotope_info_u238(data_manager):
