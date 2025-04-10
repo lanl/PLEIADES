@@ -1,41 +1,151 @@
-#!/usr/bin/env python
-"""Unit tests for core data models."""
+import unittest
+from pleiades.nuclear.manager import NuclearDataManager
+from pleiades.nuclear.models import RadiusParameters, ResonanceEntry, IsotopeParameters, nuclearParameters
 
-import pytest
-from pydantic import ValidationError
+from pleiades.utils.helper import VaryFlag
 
-from pleiades.nuclear.models import IsotopeInfo,IsotopeMassData
+class TestRadiusParameters(unittest.TestCase):
+    def test_radius_parameters_initialization(self):
+        params = RadiusParameters(
+            effective_radius=1.0,
+            true_radius=1.0,
+            channel_mode=0,
+            vary_effective=VaryFlag.YES,
+            vary_true=VaryFlag.YES,
+            spin_groups=[1, 2, 3],
+        )
+        self.assertEqual(params.effective_radius, 1.0)
+        self.assertEqual(params.true_radius, 1.0)
+        self.assertEqual(params.channel_mode, 0)
+        self.assertEqual(params.vary_effective, VaryFlag.YES)
+        self.assertEqual(params.vary_true, VaryFlag.YES)
+        self.assertEqual(params.spin_groups, [1, 2, 3])
+
+    def test_invalid_spin_groups(self):
+        with self.assertRaises(ValueError):
+            RadiusParameters(
+                effective_radius=1.0,
+                true_radius=1.0,
+                channel_mode=0,
+                vary_effective=VaryFlag.YES,
+                vary_true=VaryFlag.YES,
+                spin_groups=[-1, 2, 3],
+            )
+
+class TestResonanceEntry(unittest.TestCase):
+    def test_resonance_entry_initialization(self):
+        entry = ResonanceEntry(
+            resonance_energy=1.0,
+            capture_width=1.0,
+            channel1_width=1.0,
+            channel2_width=1.0,
+            channel3_width=1.0,
+            vary_energy=VaryFlag.YES,
+            vary_capture_width=VaryFlag.YES,
+            vary_channel1=VaryFlag.YES,
+            vary_channel2=VaryFlag.YES,
+            vary_channel3=VaryFlag.YES,
+            igroup=1,
+        )
+        self.assertEqual(entry.resonance_energy, 1.0)
+        self.assertEqual(entry.capture_width, 1.0)
+        self.assertEqual(entry.channel1_width, 1.0)
+        self.assertEqual(entry.channel2_width, 1.0)
+        self.assertEqual(entry.channel3_width, 1.0)
+        self.assertEqual(entry.vary_energy, VaryFlag.YES)
+        self.assertEqual(entry.vary_capture_width, VaryFlag.YES)
+        self.assertEqual(entry.vary_channel1, VaryFlag.YES)
+        self.assertEqual(entry.vary_channel2, VaryFlag.YES)
+        self.assertEqual(entry.vary_channel3, VaryFlag.YES)
+        self.assertEqual(entry.igroup, 1)
+
+class TestIsotopeParameters(unittest.TestCase):
+    def test_isotope_parameters_initialization(self):
+        
+        radius_params = RadiusParameters(
+            effective_radius=1.0,
+            true_radius=1.0,
+            channel_mode=0,
+            vary_effective=VaryFlag.YES,
+            vary_true=VaryFlag.YES,
+            spin_groups=[1, 2, 3],
+        )
+        resonance_entry = ResonanceEntry(
+            resonance_energy=1.0,
+            capture_width=1.0,
+            channel1_width=1.0,
+            channel2_width=1.0,
+            channel3_width=1.0,
+            vary_energy=VaryFlag.YES,
+            vary_capture_width=VaryFlag.YES,
+            vary_channel1=VaryFlag.YES,
+            vary_channel2=VaryFlag.YES,
+            vary_channel3=VaryFlag.YES,
+            igroup=1,
+        )
+        
+        data_manager = NuclearDataManager()
+        isotope_info = data_manager.get_isotope_info("U-238")
+
+        params = IsotopeParameters(
+            isotope=isotope_info,
+            abundance=0.992745,
+            uncertainty=0.001,
+            vary_abundance=VaryFlag.YES,
+            spin_groups=[1, 2, 3],
+            resonances=[resonance_entry],
+            radius_parameters=[radius_params],
+        )
+        self.assertEqual(params.isotope.name, "U-238")
+        self.assertEqual(params.isotope.mass_number, 238)
+        self.assertEqual(params.abundance, 0.992745)
+        self.assertEqual(params.uncertainty, 0.001)
+        self.assertEqual(params.vary_abundance, VaryFlag.YES)
+        self.assertEqual(params.spin_groups, [1, 2, 3])
+        self.assertEqual(params.resonances, [resonance_entry])
+        self.assertEqual(params.radius_parameters, [radius_params])
 
 
-def test_isotope_mass_data():
-    """Test IsotopeMassData model."""
-    data = IsotopeMassData(atomic_mass=238.0289, mass_uncertainty=0.0001, binding_energy=7.6, beta_decay_energy=None)
-    assert data.atomic_mass == pytest.approx(238.0289)
-    assert data.binding_energy == pytest.approx(7.6)
-    assert data.beta_decay_energy is None
+class TestNuclearParameters(unittest.TestCase):
+    def test_nuclear_parameters_initialization(self):
+        radius_params = RadiusParameters(
+            effective_radius=1.0,
+            true_radius=1.0,
+            channel_mode=0,
+            vary_effective=VaryFlag.YES,
+            vary_true=VaryFlag.YES,
+            spin_groups=[1, 2, 3],
+        )
+        resonance_entry = ResonanceEntry(
+            resonance_energy=1.0,
+            capture_width=1.0,
+            channel1_width=1.0,
+            channel2_width=1.0,
+            channel3_width=1.0,
+            vary_energy=VaryFlag.YES,
+            vary_capture_width=VaryFlag.YES,
+            vary_channel1=VaryFlag.YES,
+            vary_channel2=VaryFlag.YES,
+            vary_channel3=VaryFlag.YES,
+            igroup=1,
+        )
 
+        data_manager = NuclearDataManager()
+        isotope_info = data_manager.get_isotope_info("U-238")
 
-def test_isotope_info_from_string():
-    """Test IsotopeInfo.from_string method."""
-    isotope = IsotopeInfo.from_string("U-235")
-    assert isotope.name == "U-235"
-    assert isotope.element == "U"
-    assert isotope.mass_number == 235
+        isotope_params = IsotopeParameters(
+            isotope=isotope_info,
+            abundance=0.992745,
+            uncertainty=0.001,
+            vary_abundance=VaryFlag.YES,
+            spin_groups=[1, 2, 3],
+            resonances=[resonance_entry],
+            radius_parameters=[radius_params],
+        )
 
-    isotope = IsotopeInfo.from_string("235-U")
-    assert isotope.name == "U-235"
-    assert isotope.element == "U"
-    assert isotope.mass_number == 235
-
-    with pytest.raises(ValueError, match="Invalid isotope format"):
-        IsotopeInfo.from_string("InvalidFormat")
-
-
-def test_isotope_info_str():
-    """Test IsotopeInfo.__str__ method."""
-    isotope = IsotopeInfo(name="U-235", element="U", mass_number=235)
-    assert str(isotope) == "U-235"
-
+        params = nuclearParameters(isotopes=[isotope_params])
+        
+        self.assertEqual(params.isotopes, [isotope_params])
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    unittest.main()
