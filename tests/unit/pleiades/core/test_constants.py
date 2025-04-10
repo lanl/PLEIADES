@@ -10,7 +10,6 @@ Reasoning:
 """
 
 import pytest
-from pydantic import ValidationError
 
 from pleiades.core.constants import CONSTANTS
 

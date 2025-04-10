@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 """
-    These notes are taken from the SAMMY manual. 
+    These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
@@ -14,11 +15,12 @@ from typing import List
         *   ["REICH-MOORE FORMALISm is wanted","MORE ACCURATE REICHmoore","XCT"],
             ["ORIGINAL REICH-MOORE formalism","CRO"],
             ["MULTILEVEL BREITWIGner is wanted","MLBW FORMALISM IS WAnted","MLBW"],
-            ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"], 
+            ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"],
             "REDUCED WIDTH AMPLITudes are used for input"
         ----------------------------
         ]
 """
+
 
 class RMatrixOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
@@ -31,12 +33,7 @@ class RMatrixOptions(BaseModel):
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
-        [   "reich_moore", 
-            "original_reich_moore", 
-            "multilevel_breit_wigner", 
-            "single_level_breit_wigner", 
-            "reduced_width_amplitudes"
-        ]
+        ["reich_moore", "original_reich_moore", "multilevel_breit_wigner", "single_level_breit_wigner", "reduced_width_amplitudes"]
     ]
 
     @model_validator(mode="after")
@@ -51,10 +48,7 @@ class RMatrixOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -64,10 +58,7 @@ class RMatrixOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:
@@ -85,12 +76,13 @@ class RMatrixOptions(BaseModel):
             commands.append("REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
         return commands
 
+
 # Example usage
 if __name__ == "__main__":
     try:
         options = RMatrixOptions(
             reich_moore=True,
-            original_reich_moore=True  # This should raise a ValueError
+            original_reich_moore=True,  # This should raise a ValueError
         )
     except ValueError as e:
         print(e)

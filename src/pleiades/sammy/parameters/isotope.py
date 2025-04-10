@@ -47,11 +47,10 @@ Notes:
 """
 
 import os
-from typing import List, Optional
+from typing import List
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
@@ -174,6 +173,7 @@ class IsotopeCard(BaseModel):
             # Otherwise the are no more lines for spin groups, so process the current lines.
             else:
                 from pleiades.nuclear.parameters import IsotopeParameters  # Delayed import to avoid circular import
+
                 isotopes.append(IsotopeParameters.from_lines(current_lines, extended=extended))
                 current_lines = []
 

@@ -1,5 +1,7 @@
 import pytest
+
 from pleiades.sammy.alphanumerics.pcm_in import CovarianceMatrixOptions
+
 
 def test_default_option():
     """Test the default option."""
@@ -22,6 +24,7 @@ def test_default_option():
     assert options.use_least_squares_to_define_prior_parameter_covariance_matrix is False
     assert options.get_alphanumeric_commands() == []
 
+
 def test_valid_option_with_single_boolean():
     """Test a valid option with a single boolean flag."""
     options = CovarianceMatrixOptions(ignore_input_binary_covariance_file=True)
@@ -43,22 +46,25 @@ def test_valid_option_with_single_boolean():
     assert options.use_least_squares_to_define_prior_parameter_covariance_matrix is False
     assert options.get_alphanumeric_commands() == ["IGNORE INPUT BINARY covariance file"]
 
+
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         CovarianceMatrixOptions(retroactive_old_parameter_file_new_covariance=True, p_covariance_matrix_is_correct_u_is_not=True)
+
 
 def test_mutually_exclusive_options_2():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
         CovarianceMatrixOptions(read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True)
 
+
 def test_valid_combination_of_options_1():
     """Test a valid combination of options."""
     options = CovarianceMatrixOptions(
         energy_uncertainties_at_end_of_line_in_par_file=True,
         initial_diagonal_u_covariance=True,
-        permit_non_positive_definite_parameter_covariance_matrices=True
+        permit_non_positive_definite_parameter_covariance_matrices=True,
     )
     assert options.ignore_input_binary_covariance_file is False
     assert options.energy_uncertainties_at_end_of_line_in_par_file is True
@@ -79,15 +85,16 @@ def test_valid_combination_of_options_1():
     assert options.get_alphanumeric_commands() == [
         "ENERGY UNCERTAINTIES are at end of line in par file",
         "INITIAL DIAGONAL U Covariance",
-        "PERMIT NON POSITIVE definite parameter covariance matrices"
+        "PERMIT NON POSITIVE definite parameter covariance matrices",
     ]
+
 
 def test_valid_combination_of_options_2():
     """Test a valid combination of options."""
     options = CovarianceMatrixOptions(
         modify_p_covariance_matrix_before_using=True,
         read_compact_covariances_for_parameter_priors=True,
-        use_least_squares_to_define_prior_parameter_covariance_matrix=True
+        use_least_squares_to_define_prior_parameter_covariance_matrix=True,
     )
     assert options.modify_p_covariance_matrix_before_using is True
     assert options.read_compact_covariances_for_parameter_priors is True
@@ -95,16 +102,15 @@ def test_valid_combination_of_options_2():
     assert options.get_alphanumeric_commands() == [
         "MODIFY P COVARIANCE matrix before using",
         "READ COMPACT COVARIAnces for parameter priors",
-        "USE LEAST SQUARES TO define prior parameter covariance matrix"
+        "USE LEAST SQUARES TO define prior parameter covariance matrix",
     ]
+
 
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOptions(
-            read_compact_covariances_for_parameter_priors=True,
-            read_compact_correlations_for_parameter_priors=True
-        )
+        CovarianceMatrixOptions(read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True)
+
 
 def test_switching_options():
     """Test switching options."""
@@ -174,6 +180,7 @@ def test_switching_options():
     options = CovarianceMatrixOptions(use_least_squares_to_define_prior_parameter_covariance_matrix=True)
     assert options.use_least_squares_to_define_prior_parameter_covariance_matrix is True
     assert options.get_alphanumeric_commands() == ["USE LEAST SQUARES TO define prior parameter covariance matrix"]
+
 
 if __name__ == "__main__":
     pytest.main()

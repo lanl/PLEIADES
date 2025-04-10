@@ -14,7 +14,7 @@ This file lists neutron evaluation data. It includes:
 - Evaluation date
 - Authors
 - Material identifier (MAT)
-PLEIADES usage: ENDF Material identifier number. 
+PLEIADES usage: ENDF Material identifier number.
 
 ## isotopes.info
 This file is an EasySpin nuclear isotope database. It contains:

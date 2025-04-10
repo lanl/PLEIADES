@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.isotope import IsotopeCard, IsotopeParameters
+from pleiades.utils.helper import VaryFlag
 
 
 # Test fixtures for common test data

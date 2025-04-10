@@ -1,9 +1,18 @@
 import pytest
-from pleiades.sammy.fitting.config import FitConfig
-from pleiades.nuclear.parameters import nuclearParameters
+
 from pleiades.experimental.parameters import PhysicsParameters
+from pleiades.nuclear.parameters import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
-from pleiades.sammy.fitting.options import FitOptions, RMatrixOptions, SpinGroupOptions, QuantumNumbersOptions, DataFormatOptions, BroadeningTypeOptions
+from pleiades.sammy.fitting.config import FitConfig
+from pleiades.sammy.fitting.options import (
+    BroadeningTypeOptions,
+    DataFormatOptions,
+    FitOptions,
+    QuantumNumbersOptions,
+    RMatrixOptions,
+    SpinGroupOptions,
+)
+
 
 def test_fit_config_defaults():
     """Test the default values of FitConfig."""
@@ -13,10 +22,7 @@ def test_fit_config_defaults():
     options_and_routines = FitOptions()
 
     config = FitConfig(
-        nuclear_params=nuclear_params,
-        physics_params=physics_params,
-        data_params=data_params,
-        options_and_routines=options_and_routines
+        nuclear_params=nuclear_params, physics_params=physics_params, data_params=data_params, options_and_routines=options_and_routines
     )
 
     assert config.fit_title == "SAMMY Fit"
@@ -32,6 +38,7 @@ def test_fit_config_defaults():
     assert config.data_params == data_params
     assert config.options_and_routines == options_and_routines
 
+
 def test_fit_config_custom_values():
     """Test custom values of FitConfig."""
     nuclear_params = nuclearParameters()
@@ -42,7 +49,7 @@ def test_fit_config_custom_values():
         energy_units="keV",
         cross_section_units="millibarn",
         data_title="Custom Data",
-        data_comment="This is a custom data set."
+        data_comment="This is a custom data set.",
     )
     options_and_routines = FitOptions(
         RMatrix=RMatrixOptions.ORIGINAL_REICH_MOORE,
@@ -52,7 +59,7 @@ def test_fit_config_custom_values():
         DataFormat=DataFormatOptions.DATA_IN_ENDF_FORMAT,
         ImplementBroadeningOption=True,
         BroadeningType=BroadeningTypeOptions.FREE_GAS_MODEL,
-        SolveBayesEquation=True
+        SolveBayesEquation=True,
     )
 
     config = FitConfig(
@@ -67,7 +74,7 @@ def test_fit_config_custom_values():
         nuclear_params=nuclear_params,
         physics_params=physics_params,
         data_params=data_params,
-        options_and_routines=options_and_routines
+        options_and_routines=options_and_routines,
     )
 
     assert config.fit_title == "Custom Fit"
@@ -82,6 +89,7 @@ def test_fit_config_custom_values():
     assert config.physics_params == physics_params
     assert config.data_params == data_params
     assert config.options_and_routines == options_and_routines
+
 
 if __name__ == "__main__":
     pytest.main()
