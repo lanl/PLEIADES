@@ -1,22 +1,15 @@
 #!/usr/bin/env python
 """Core physical quantity models with validation."""
 
-import math
-import re
-from enum import Enum, auto
-from pathlib import Path
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing_extensions import Annotated
 
-from pleiades.core.constants import CONSTANTS
-
 NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo
-
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
 
@@ -259,7 +252,6 @@ class IsotopeParameters(BaseModel):
     resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
 
-
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
         """Validate spin group constraints.
@@ -334,6 +326,7 @@ class IsotopeParameters(BaseModel):
 
         return self
 
+
 class nuclearParameters(BaseModel):
     """Container for nuclear parameters used in SAMMY calculations.
 
@@ -366,7 +359,6 @@ class nuclearParameters(BaseModel):
         if len(masses) != len(set(masses)):
             logger.info(f"{where_am_i}:Duplicate masses found")
             raise ValueError("Duplicate masses found")
-
 
         return self
 
