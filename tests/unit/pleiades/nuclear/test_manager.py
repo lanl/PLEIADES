@@ -4,8 +4,8 @@
 # tests/unit/pleiades/core/test_data_manager.py
 import pytest
 
-from pleiades.nuclear.manager import NuclearDataManager
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.manager import NuclearDataManager
 
 
 @pytest.fixture

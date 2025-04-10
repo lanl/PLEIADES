@@ -1,5 +1,5 @@
 """Manages access to isotope data files packaged with PLEIADES."""
-import re
+
 import functools
 import logging
 from pathlib import Path
