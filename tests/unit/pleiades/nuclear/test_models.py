@@ -2,9 +2,8 @@
 """Unit tests for core data models."""
 
 import pytest
-from pydantic import ValidationError
 
-from pleiades.nuclear.models import IsotopeInfo,IsotopeMassData
+from pleiades.nuclear.models import IsotopeInfo, IsotopeMassData
 
 
 def test_isotope_mass_data():

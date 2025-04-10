@@ -2,14 +2,15 @@
 """Manages access to nuclear data files packaged with PLEIADES."""
 
 import functools
+import io
 import logging
 import re
-import requests
 import zipfile
-import io
 from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
+
+import requests
 
 from pleiades.nuclear.models import DataCategory, IsotopeInfo, IsotopeMassData
 
@@ -133,18 +134,18 @@ class NuclearDataManager:
         Returns:
             IsotopeInfo containing isotope details if found, None otherwise
         """
-        
+
         # Create a IsotopeInfo instance from the isotope string
         isotope = IsotopeInfo.from_string(isotope_str)
-        
+
         # get the mass of the isotope from the mass.mas20 file
         isotope.mass_data = self.check_and_get_mass_data(isotope.element, isotope.mass_number)
-        
+
         # check if the isotope is a stable isotope with known abundance and spin
         self.check_and_set_abundance_and_spins(isotope)
-        
+
         return isotope
-        
+
     def check_and_get_mass_data(self, element: str, mass_number: int) -> Optional[IsotopeMassData]:
         """
         Extract mass data for an isotope from the mass.mas20 file.
@@ -203,7 +204,7 @@ class NuclearDataManager:
                 line = line.strip()
                 if line and line[0].isdigit():
                     data = line.split()
-                    
+
                     # if the isotope (Element-MassNum) is found in the isotopes.info file then set abundance and spin
                     if data[3] == element and int(data[1]) == mass_number:
                         isotope_info.atomic_number = int(data[0])
@@ -292,10 +293,7 @@ class NuclearDataManager:
                         content = f.read().decode("utf-8")
 
                     # Extract only resonance-related lines
-                    resonance_lines = [
-                        line for line in content.splitlines()
-                        if line[70:72].strip() in {"2", "32", "34"}
-                    ]
+                    resonance_lines = [line for line in content.splitlines() if line[70:72].strip() in {"2", "32", "34"}]
 
                     output_path.write_text("\n".join(resonance_lines))
                     logger.info(f"Resonance parameters written to {output_path}")

@@ -1,5 +1,15 @@
 import pytest
-from pleiades.sammy.fitting.options import FitOptions, RMatrixOptions, SpinGroupOptions, QuantumNumbersOptions, DataFormatOptions, BroadeningTypeOptions, PrintInputOptions
+
+from pleiades.sammy.fitting.options import (
+    BroadeningTypeOptions,
+    DataFormatOptions,
+    FitOptions,
+    PrintInputOptions,
+    QuantumNumbersOptions,
+    RMatrixOptions,
+    SpinGroupOptions,
+)
+
 
 def test_fit_options_defaults():
     # Create an instance of FitOptions with default values
@@ -17,6 +27,7 @@ def test_fit_options_defaults():
     assert fit_options.PrintInputDataInLPT == False
     assert fit_options.PrintInputParamsInLPT == PrintInputOptions.DO_NOT_PRINT_ANY_INPUT
 
+
 def test_fit_options_custom_values():
     # Create an instance of FitOptions with custom values
     fit_options = FitOptions(
@@ -29,7 +40,7 @@ def test_fit_options_custom_values():
         BroadeningType=BroadeningTypeOptions.LEAL_HWANG_DOPPLER_MODEL,
         SolveBayesEquation=True,
         PrintInputDataInLPT=True,
-        PrintInputParamsInLPT=PrintInputOptions.PRINT_ALL_INPUT
+        PrintInputParamsInLPT=PrintInputOptions.PRINT_ALL_INPUT,
     )
 
     # Check custom values
@@ -43,6 +54,7 @@ def test_fit_options_custom_values():
     assert fit_options.SolveBayesEquation == True
     assert fit_options.PrintInputDataInLPT == True
     assert fit_options.PrintInputParamsInLPT == PrintInputOptions.PRINT_ALL_INPUT
+
 
 if __name__ == "__main__":
     pytest.main()

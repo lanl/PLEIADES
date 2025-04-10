@@ -1,8 +1,8 @@
-# This file represents an example of a working directory structure 
-# that is followed when using PLEIADES. This example is shown with 
+# This file represents an example of a working directory structure
+# that is followed when using PLEIADES. This example is shown with
 # two isotopes and two transmission data sets. All tope dirs are
 # created and verifiied before sammy is called. * represents symbolic
-# links. 
+# links.
 
 working_dir/
 ├── endf_dir/
@@ -16,7 +16,7 @@ working_dir/
 │		│	└── endf.par
 │		├── dummy.inpfile
 │		└── dummp.parfile
-│	
+│
 ├── fitting_dir/
 │	├── fit_x1_y1_dir/
 │	│	├── results_dir/

@@ -1,9 +1,10 @@
-from enum import Enum
-from pydantic import BaseModel, Field, constr
-from pleiades.nuclear.parameters import nuclearParameters
+from pydantic import BaseModel, Field
+
 from pleiades.experimental.parameters import PhysicsParameters
+from pleiades.nuclear.parameters import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.options import FitOptions
+
 
 class FitConfig(BaseModel):
     """Container for fit parameters including nuclear and physics parameters.
@@ -26,7 +27,7 @@ class FitConfig(BaseModel):
     physics_params: PhysicsParameters = Field(description="Physics parameters used in SAMMY calculations")
     data_params: dataParameters = Field(description="Data parameters used in SAMMY calculations")
     options_and_routines: FitOptions = Field(description="Fit options used in SAMMY calculations")
-    
+
 
 # example usage
 if __name__ == "__main__":
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         nuclear_params=nuclearParameters(),
         physics_params=PhysicsParameters(),
         data_params=dataParameters(),
-        options_and_routines=FitOptions()
+        options_and_routines=FitOptions(),
     )
 
     print(example_config)

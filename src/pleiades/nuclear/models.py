@@ -235,7 +235,7 @@ class ResonanceEntry(BaseModel):
 
 class IsotopeParameters(BaseModel):
     """Container for a single isotope's parameters which include.
-        mass, 
+        mass,
         abundance, uncertainty, treatment flag, and associated
     spin groups.
 
@@ -257,7 +257,7 @@ class IsotopeParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
     resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
-    
+
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
@@ -287,7 +287,7 @@ class IsotopeParameters(BaseModel):
                 logger.info(f"{where_am_i}:Group number {group} requires extended format")
 
         return self
-    
+
     @model_validator(mode="after")
     def validate_resonances(self) -> "IsotopeParameters":
         """Validate that resonance igroups match spin groups.
@@ -332,7 +332,7 @@ class IsotopeParameters(BaseModel):
                     raise ValueError(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
 
         return self
-    
+
 class nuclearParameters(BaseModel):
     """Container for nuclear parameters used in SAMMY calculations.
 
@@ -349,7 +349,7 @@ class nuclearParameters(BaseModel):
 
         Validates:
         - Each isotope has a unique mass
-        - Each isotope has a unique abundance   
+        - Each isotope has a unique abundance
         """
         where_am_i = "nuclear_params.validate_isotopes()"
 
@@ -368,8 +368,8 @@ class nuclearParameters(BaseModel):
 
 
         return self
-    
-    
+
+
 # example usage
 if __name__ == "__main__":
     # Example usage of RadiusParameters

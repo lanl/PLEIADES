@@ -1,7 +1,7 @@
-'''
-This module provides models and enumerations for representing isotopic data, 
-including isotope information, mass data, and associated nuclear data libraries. 
-It is part of the PLEIADES project and is designed to facilitate the handling 
+"""
+This module provides models and enumerations for representing isotopic data,
+including isotope information, mass data, and associated nuclear data libraries.
+It is part of the PLEIADES project and is designed to facilitate the handling
 and processing of nuclear isotopic information.
 Classes:
 1. FileCategory:
@@ -14,24 +14,21 @@ Classes:
     - Includes attributes for atomic mass, mass uncertainty, binding energy, and beta decay energy.
 4. IsotopeInfo:
     - A Pydantic model representing detailed information about an isotope.
-    - Includes attributes for name, atomic number, mass number, element symbol, atomic mass, abundance, 
+    - Includes attributes for name, atomic number, mass number, element symbol, atomic mass, abundance,
       spin, material number, and associated ENDF library.
     - Provides methods for creating an instance from a string and converting an instance to a string.
 Usage:
 ------
-This library is intended for use in nuclear isotope data processing for R-matrix applications where 
+This library is intended for use in nuclear isotope data processing for R-matrix applications where
 isotopes need to be represented, validated, and processed in a structured manner.
-'''
+"""
 
 import re
-from typing_extensions import Annotated
-from typing import Optional
 from enum import Enum, auto
-
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-
-from pleiades.core.constants import CONSTANTS
+from typing_extensions import Annotated
 
 NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -39,12 +36,14 @@ PositiveFloat = Annotated[float, Field(gt=0)]
 
 class FileCategory(Enum):
     """Enumeration of valid categories."""
+
     ISOTOPES = auto()
 
     @classmethod
     def to_path(cls, category: "FileCategory") -> str:
         """Convert category enum to path string."""
         return category.name.lower()
+
 
 class EndfLibrary(str, Enum):
     ENDF_B_VIII_1 = "ENDF-B-VIII.1"
@@ -54,6 +53,7 @@ class EndfLibrary(str, Enum):
     CENDL_3_2 = "CENDL-3.2"
     TENDL_2021 = "TENDL-2021"
 
+
 class IsotopeMassData(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -61,6 +61,7 @@ class IsotopeMassData(BaseModel):
     mass_uncertainty: NonNegativeFloat
     binding_energy: Optional[float] = Field(description="Binding energy in MeV")
     beta_decay_energy: Optional[float] = Field(description="Beta decay energy in MeV")
+
 
 class IsotopeInfo(BaseModel):
     """
@@ -98,7 +99,7 @@ class IsotopeInfo(BaseModel):
     spin: Optional[float] = Field(default=None)
     material_number: Optional[int] = Field(default=None)
     endf_library: Optional[EndfLibrary] = Field(description="ENDF library associated with the isotope", default=EndfLibrary.ENDF_B_VIII_0)
-    
+
     @classmethod
     def from_string(cls, isotope_str: str) -> "IsotopeInfo":
         match = re.match(r"([A-Za-z]+)-?(\d+)|(\d+)-?([A-Za-z]+)", isotope_str)
@@ -112,7 +113,7 @@ class IsotopeInfo(BaseModel):
             mass_number = int(match.group(3))
         name = f"{element}-{mass_number}"
         return cls(name=name, element=element, mass_number=mass_number)
-    
+
     def __str__(self) -> str:
         """Convert to string format 'element-mass_number'."""
         return f"IsotopeInfo class for: {self.element}-{self.mass_number}"

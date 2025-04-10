@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 """
-    These notes are taken from the SAMMY manual. 
+    These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with -------------- and ending with -------------
     -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
@@ -26,6 +27,7 @@ from typing import List
         ]
 """
 
+
 class ExperimentalDataInputOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
@@ -39,7 +41,9 @@ class ExperimentalDataInputOptions(BaseModel):
     use_endf_b_energies_and_data: bool = Field(default=False, description="USE ENDF/B ENERGIES and data, with MAT=9999")
     differential_data_are_in_ascii_file: bool = Field(default=False, description="DIFFERENTIAL DATA ARE in ascii file")
     do_not_divide_data_into_regions: bool = Field(default=True, description="DO NOT DIVIDE DATA Into regions")
-    divide_data_into_regions: bool = Field(default=False, description="DIVIDE DATA INTO REGions with a fixed number of data points per region")
+    divide_data_into_regions: bool = Field(
+        default=False, description="DIVIDE DATA INTO REGions with a fixed number of data points per region"
+    )
 
     # Mutually exclusive groups
     mutually_exclusive_groups: List[List[str]] = [
@@ -53,9 +57,7 @@ class ExperimentalDataInputOptions(BaseModel):
             "data_are_endf_b_file",
             "use_endf_b_energies_and_data",
         ],
-        [
-            "differential_data_are_in_ascii_file"
-        ],
+        ["differential_data_are_in_ascii_file"],
         [
             "do_not_divide_data_into_regions",
             "divide_data_into_regions",
@@ -74,10 +76,7 @@ class ExperimentalDataInputOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -87,10 +86,7 @@ class ExperimentalDataInputOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

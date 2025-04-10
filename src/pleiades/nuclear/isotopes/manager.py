@@ -2,13 +2,12 @@
 
 import functools
 import logging
-from importlib import resources
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
-from pleiades.nuclear.isotopes.models import FileCategory, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.isotopes.models import FileCategory
 
 
 class IsotopeManager:
@@ -21,9 +20,7 @@ class IsotopeManager:
     """
 
     # Mapping of file categories to their valid file extensions
-    _CATEGORY_FILE_EXTENSIONS = {
-        FileCategory.ISOTOPES: {".info", ".mas20", ".list"}
-    }
+    _CATEGORY_FILE_EXTENSIONS = {FileCategory.ISOTOPES: {".info", ".mas20", ".list"}}
 
     def __init__(self):
         """Initialize the IsotopeManager."""
@@ -36,8 +33,7 @@ class IsotopeManager:
         for category in FileCategory:
             try:
                 self._cached_files[category] = {
-                    item for item in base_path.iterdir()
-                    if item.suffix in self._CATEGORY_FILE_EXTENSIONS[category]
+                    item for item in base_path.iterdir() if item.suffix in self._CATEGORY_FILE_EXTENSIONS[category]
                 }
             except Exception as e:
                 logger.error(f"Failed to initialize cache for {category}: {str(e)}")
@@ -69,8 +65,7 @@ class IsotopeManager:
 
         file_path = Path(filename)
         if file_path.suffix not in self._CATEGORY_FILE_EXTENSIONS[category]:
-            raise ValueError(f"Invalid file extension for {category}. "
-                            f"Allowed extensions: {self._CATEGORY_FILE_EXTENSIONS[category]}")
+            raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._CATEGORY_FILE_EXTENSIONS[category]}")
 
         print(f"Searching for {filename} in cached files for {category}: {self._cached_files[category]}")
         for file in self._cached_files[category]:
@@ -114,7 +109,8 @@ class IsotopeManager:
         """
         try:
             path = Path(filename)
-            return path.suffix in self._CATEGORY_FILE_EXTENSIONS[category] and \
-                any(file.name == filename for file in self._cached_files[category])
+            return path.suffix in self._CATEGORY_FILE_EXTENSIONS[category] and any(
+                file.name == filename for file in self._cached_files[category]
+            )
         except Exception:
             return False

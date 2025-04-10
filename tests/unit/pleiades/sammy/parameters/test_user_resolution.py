@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.user_resolution import UserResolutionParameters
+from pleiades.utils.helper import VaryFlag
 
 
 class TestUserResolutionParameters:

@@ -8,8 +8,8 @@ from typing import Generator
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parfile import SammyParameterFile
+from pleiades.utils.helper import VaryFlag
 
 
 @pytest.fixture

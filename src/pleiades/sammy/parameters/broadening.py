@@ -15,7 +15,6 @@ from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_pars
 # This maintains human readability while ensuring fixed-width alignment
 
 
-
 FORMAT_MAIN = {
     "crfn": slice(0, 10),  # Matching radius (F)
     "temp": slice(10, 20),  # Effective temperature (K)
