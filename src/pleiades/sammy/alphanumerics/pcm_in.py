@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
     These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
-    -   options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+    -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
         Parameters input control for prior covariance matrix:
         Define the prior parameter covariance matrix
