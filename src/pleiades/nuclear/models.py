@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Core physical quantity models with validation."""
-
+from enum import Enum, auto
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -15,6 +15,13 @@ from pleiades.utils.logger import Logger
 
 logger = Logger(__name__)
 
+class EndfLibrary(str, Enum):
+    ENDF_B_VIII_1 = "ENDF-B-VIII.1"
+    ENDF_B_VIII_0 = "ENDF-B-VIII.0"
+    JEFF_3_3 = "JEFF-3.3"
+    JENDL_5 = "JENDL-5"
+    CENDL_3_2 = "CENDL-3.2"
+    TENDL_2021 = "TENDL-2021"
 
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
@@ -251,6 +258,7 @@ class IsotopeParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
     resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
+    endf_library: Optional[EndfLibrary] = Field(description="ENDF library associated with the isotope", default=EndfLibrary.ENDF_B_VIII_0)
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
