@@ -5,15 +5,50 @@ import io
 import logging
 import zipfile
 from pathlib import Path
-
 import requests
+from typing import Optional
 
+from pleiades.nuclear.isotopes.manager import IsotopeManager
 from pleiades.nuclear.isotopes.models import IsotopeInfo
+from pleiades.nuclear.models import IsotopeParameters
 
 logger = logging.getLogger(__name__)
 
 
 class NuclearDataManager:
+
+    # TODO: Setup nuclear/data/ directory to save and cache ENDF/JENDL/JEFF data files
+
+    def __init__(self, isotope_manager: Optional[IsotopeManager] = None):
+        """
+        Initialize the NuclearDataManager.
+
+        Args:
+            isotope_manager: Optional instance of IsotopeManager. If not provided, a new instance will be created.
+        """
+        self.isotope_manager = isotope_manager or IsotopeManager()
+
+    def create_isotope_parameters_from_string(self, isotope_str: str) -> IsotopeParameters:
+        """
+        Create an IsotopeParameters instance with the isotope set.
+
+        Args:
+            isotope_str: String representation of the isotope (e.g., "U-238").
+
+        Returns:
+            IsotopeParameters instance with the isotope set.
+
+        Raises:
+            ValueError: If the isotope string is invalid or not found.
+        """
+        # Retrieve IsotopeInfo using IsotopeManager
+        isotope_info = self.isotope_manager.get_isotope_info(isotope_str)
+        if not isotope_info:
+            raise ValueError(f"Isotope information for '{isotope_str}' not found.")
+
+        # Create and return an IsotopeParameters instance
+        return IsotopeParameters(isotope=isotope_info)
+
     def clear_cache(self) -> None:
         """Clear the file cache and force reinitialization."""
         self._cached_files.clear()
