@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from pleiades.sammy.parameters.helper import VaryFlag, safe_parse
+from pleiades.utils.helper import VaryFlag, safe_parse
 
 # setup logging
 logger = logging.getLogger(__name__)
