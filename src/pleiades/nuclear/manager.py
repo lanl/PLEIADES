@@ -47,7 +47,7 @@ class NuclearDataManager:
             raise ValueError(f"Isotope information for '{isotope_str}' not found.")
 
         # Create and return an IsotopeParameters instance
-        return IsotopeParameters(isotope=isotope_info)
+        return IsotopeParameters(isotope_infomation=isotope_info)
 
     def clear_cache(self) -> None:
         """Clear the file cache and force reinitialization."""
