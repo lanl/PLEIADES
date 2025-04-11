@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from pleiades.experimental.parameters import PhysicsParameters
+from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.parameters import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.options import FitOptions
