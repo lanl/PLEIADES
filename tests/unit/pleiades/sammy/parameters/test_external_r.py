@@ -22,7 +22,6 @@ FORMAT3A_LINES = [
 
 
 # Test ExternalREntry
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 class TestExternalREntry:
     def test_format3_parsing(self):
         """Test parsing of Format 3 entries"""
@@ -111,7 +110,6 @@ class TestExternalREntry:
 
 
 # Test ExternalRFunction
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 class TestExternalRFunction:
     def test_format3_parsing(self):
         """Test parsing of complete Format 3 card set"""
