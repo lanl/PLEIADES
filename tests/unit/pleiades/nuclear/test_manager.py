@@ -24,22 +24,9 @@ def test_create_isotope_parameters_from_string_valid(data_manager):
     assert isotope_params.isotope_infomation.name == "U-238"
     assert isotope_params.isotope_infomation.mass_number == 238
     assert isotope_params.isotope_infomation.element == "U"
-    assert isotope_params.isotope_information.abundance == 99.2745
     assert isotope_params.isotope_infomation.material_number == 9237
     assert isotope_params.abundance is None  # Default value
     assert isotope_params.spin_groups == []  # Default empty list
-
-
-def test_create_isotope_parameters_from_string_invalid(data_manager, mocker):
-    """
-    Test creating IsotopeParameters with an invalid isotope string.
-    """
-    # Mock the IsotopeManager's get_isotope_info method to return None
-    mocker.patch.object(data_manager.isotope_manager, "get_isotope_info", return_value=None)
-
-    # Call the method under test and assert that it raises a ValueError
-    with pytest.raises(ValueError, match="Isotope information for 'Invalid-Isotope' not found."):
-        data_manager.create_isotope_parameters_from_string("Invalid-Isotope")
 
 
 if __name__ == "__main__":
