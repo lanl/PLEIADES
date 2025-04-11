@@ -7,12 +7,12 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing_extensions import Annotated
 
-NonNegativeFloat = Annotated[float, Field(ge=0)]
-PositiveFloat = Annotated[float, Field(gt=0)]
-
 from pleiades.nuclear.isotopes.models import IsotopeInfo
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import Logger
+
+NonNegativeFloat = Annotated[float, Field(ge=0)]
+PositiveFloat = Annotated[float, Field(gt=0)]
 
 logger = Logger(__name__)
 
@@ -254,14 +254,14 @@ class IsotopeParameters(BaseModel):
 
     """
 
-    isotope: IsotopeInfo = Field(description="Isotope information")
-    abundance: float = Field(description="Fractional abundance", ge=0)
-    uncertainty: Optional[float] = Field(None, description="Uncertainty on abundance")
+    isotope_infomation: IsotopeInfo = Field(description="Isotope information")
+    abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
+    uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
-    spin_groups: Optional[List[int]] = Field(default=None, description="Spin group numbers")
-    resonances: Optional[List[ResonanceEntry]] = Field(default=None, description="List of resonance entries")
-    radius_parameters: Optional[List[RadiusParameters]] = Field(default=None, description="List of radius parameters")
-    endf_library: Optional[EndfLibrary] = Field(description="ENDF library associated with the isotope", default=EndfLibrary.ENDF_B_VIII_0)
+    endf_library: Optional[EndfLibrary] = Field(default=EndfLibrary.ENDF_B_VIII_0, description="ENDF library associated with the isotope")
+    spin_groups: Optional[List[int]] = Field(default_factory=list, description="Spin group numbers")
+    resonances: Optional[List[ResonanceEntry]] = Field(default_factory=list, description="List of resonance entries")
+    radius_parameters: Optional[List[RadiusParameters]] = Field(default_factory=list, description="List of radius parameters")
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
