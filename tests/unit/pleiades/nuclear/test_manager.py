@@ -4,7 +4,6 @@
 # tests/unit/pleiades/core/test_data_manager.py
 import pytest
 
-from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 from pleiades.nuclear.manager import NuclearDataManager
 
 
@@ -14,57 +13,33 @@ def data_manager():
     return NuclearDataManager()
 
 
-def test_list_files(data_manager):
-    """Test listing available files."""
-    files = data_manager.list_files()
-    assert DataCategory.ISOTOPES in files
+def test_create_isotope_parameters_from_string_valid(data_manager):
+    """
+    Test creating IsotopeParameters with a valid isotope string using actual data.
+    """
+    # Call the method under test with a valid isotope string
+    isotope_params = data_manager.create_isotope_parameters_from_string("U-238")
 
-    # Test for known files that should exist
-    isotope_files = files[DataCategory.ISOTOPES]
-
-    assert "isotopes.info" in isotope_files
-    assert "mass.mas20" in isotope_files
-    assert "neutrons.list" in isotope_files
-
-
-def test_get_isotope_info_u238(data_manager):
-    """Test U-238 isotope information retrieval."""
-    info = data_manager.get_isotope_info("U-238")
-
-    assert isinstance(info, IsotopeInfo)
-
-    # Test against known U-238 values
-    assert info.spin == 0.0
-    assert abs(info.abundance - 0.992745 * 100) < 1e-6
+    # Assert that the returned IsotopeParameters instance is correct
+    assert isotope_params.isotope_infomation.name == "U-238"
+    assert isotope_params.isotope_infomation.mass_number == 238
+    assert isotope_params.isotope_infomation.element == "U"
+    assert isotope_params.isotope_information.abundance == 99.2745
+    assert isotope_params.isotope_infomation.material_number == 9237
+    assert isotope_params.abundance is None  # Default value
+    assert isotope_params.spin_groups == []  # Default empty list
 
 
-def test_get_mass_data_u238(data_manager):
-    """Test U-238 mass data retrieval."""
-    mass_data = data_manager.check_and_get_mass_data(element="U", mass_number=238)
-    assert isinstance(mass_data, IsotopeMassData)
-    # Test against known U-238 values from mass.mas20
-    expected_mass = 238.050786936
-    assert abs(mass_data.atomic_mass - expected_mass) < 1e-6
+def test_create_isotope_parameters_from_string_invalid(data_manager, mocker):
+    """
+    Test creating IsotopeParameters with an invalid isotope string.
+    """
+    # Mock the IsotopeManager's get_isotope_info method to return None
+    mocker.patch.object(data_manager.isotope_manager, "get_isotope_info", return_value=None)
 
-
-def test_get_mat_number_u238(data_manager):
-    """Test U-238 MAT number retrieval."""
-    mat = data_manager.get_mat_number(IsotopeInfo.from_string("U-238"))
-    assert mat == 9237  # Verify this is the correct MAT number
-
-
-# Error cases
-def test_get_mass_data_nonexistent(data_manager):
-    """Test handling of nonexistent isotope."""
-    with pytest.raises(ValueError) as excinfo:
-        data_manager.check_and_get_mass_data(element="X", mass_number=999)
-    assert str(excinfo.value) == "Mass data for X-999 not found"
-
-
-def test_file_not_found(data_manager):
-    """Test handling of nonexistent file."""
-    with pytest.raises(FileNotFoundError):
-        data_manager.get_file_path(DataCategory.ISOTOPES, "nonexistent.info")
+    # Call the method under test and assert that it raises a ValueError
+    with pytest.raises(ValueError, match="Isotope information for 'Invalid-Isotope' not found."):
+        data_manager.create_isotope_parameters_from_string("Invalid-Isotope")
 
 
 if __name__ == "__main__":
