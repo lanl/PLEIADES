@@ -31,7 +31,6 @@ def burst_with_pup():
     return ["BURST 3   98.765    0.246"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_burst(basic_burst_input):
     params = BurstParameters.from_lines(basic_burst_input)
     assert params.burst == pytest.approx(12.345)
@@ -39,7 +38,6 @@ def test_parse_basic_burst(basic_burst_input):
     assert params.d_burst == pytest.approx(0.123)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_burst_no_uncertainty(burst_no_uncertainty):
     params = BurstParameters.from_lines(burst_no_uncertainty)
     assert params.burst == pytest.approx(45.678)
@@ -47,7 +45,6 @@ def test_parse_burst_no_uncertainty(burst_no_uncertainty):
     assert params.d_burst is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_burst_pup(burst_with_pup):
     params = BurstParameters.from_lines(burst_with_pup)
     assert params.burst == pytest.approx(98.765)
@@ -55,7 +52,6 @@ def test_parse_burst_pup(burst_with_pup):
     assert params.d_burst == pytest.approx(0.246)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_format_burst(basic_burst_input):
     params = BurstParameters.from_lines(basic_burst_input)
     print(params)
@@ -82,7 +78,6 @@ def water_with_pup():
     return ["WATER 33343.614     -0.089    0.037"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_water(basic_water_input):
     params = WaterParameters.from_lines(basic_water_input)
     assert params.watr0 == pytest.approx(3.614)
@@ -96,7 +91,6 @@ def test_parse_basic_water(basic_water_input):
     assert params.d_watr2 == pytest.approx(0.003)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_water_no_uncertainty(water_no_uncertainty):
     params = WaterParameters.from_lines(water_no_uncertainty)
     assert params.watr0 == pytest.approx(3.614)
@@ -104,7 +98,6 @@ def test_water_no_uncertainty(water_no_uncertainty):
     assert params.d_watr0 is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_water_round_trip(basic_water_input):
     params = WaterParameters.from_lines(basic_water_input)
     lines = params.to_lines()
@@ -131,7 +124,6 @@ def tanta_no_uncertainty():
     return ["TANTA 0   1.234", "      0000 2.345     3.456     4.567     5.678", "      00   7.890     8.901"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_tanta(basic_tanta_input):
     params = TantalumParameters.from_lines(basic_tanta_input)
 
@@ -148,7 +140,6 @@ def test_parse_basic_tanta(basic_tanta_input):
     assert params.d_beta == pytest.approx(0.789)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_tanta_no_uncertainty(tanta_no_uncertainty):
     params = TantalumParameters.from_lines(tanta_no_uncertainty)
 
@@ -157,7 +148,6 @@ def test_tanta_no_uncertainty(tanta_no_uncertainty):
     assert params.d_tanta is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_tanta_round_trip(basic_tanta_input):
     params = TantalumParameters.from_lines(basic_tanta_input)
     lines = params.to_lines()
@@ -165,7 +155,6 @@ def test_tanta_round_trip(basic_tanta_input):
     assert params_rt == params
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_tanta_invalid_input():
     with pytest.raises(ValueError):
         TantalumParameters.from_lines([])  # Empty input
@@ -182,7 +171,6 @@ def lithi_no_uncertainty():
     return ["LITHI 000 1.234     2.345     3.456"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_lithi(basic_lithi_input):
     params = LithiumParameters.from_lines(basic_lithi_input)
     assert params.d == pytest.approx(1.234)
@@ -192,7 +180,6 @@ def test_parse_basic_lithi(basic_lithi_input):
     assert params.d_d == pytest.approx(0.123)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_lithi_no_uncertainty(lithi_no_uncertainty):
     params = LithiumParameters.from_lines(lithi_no_uncertainty)
     assert params.d == pytest.approx(1.234)
@@ -200,7 +187,6 @@ def test_lithi_no_uncertainty(lithi_no_uncertainty):
     assert params.d_d is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_lithi_round_trip(basic_lithi_input):
     params = LithiumParameters.from_lines(basic_lithi_input)
     lines = params.to_lines()
@@ -223,7 +209,6 @@ def ne110_no_cross_sections():
     return ["NE110 0 0 1.234     0.123     0.0047"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_ne110(basic_ne110_input):
     params = NE110Parameters.from_lines(basic_ne110_input)
     assert params.delta == pytest.approx(1.234)
@@ -235,7 +220,6 @@ def test_parse_basic_ne110(basic_ne110_input):
     assert params.cross_sections[0].sigma == pytest.approx(10.0)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_ne110_no_cross_sections(ne110_no_cross_sections):
     params = NE110Parameters.from_lines(ne110_no_cross_sections)
     assert params.delta == pytest.approx(1.234)
@@ -243,7 +227,6 @@ def test_ne110_no_cross_sections(ne110_no_cross_sections):
     assert params.cross_sections is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_ne110_round_trip(basic_ne110_input):
     params = NE110Parameters.from_lines(basic_ne110_input)
     lines = params.to_lines()
@@ -257,7 +240,6 @@ def basic_channel_input():
     return ["CHANN 1   100.0     1.234     0.123", "CHANN 0   200.0     2.345     0.234"]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parse_basic_channel(basic_channel_input):
     channels = ChannelParameters.from_lines(basic_channel_input)
     assert len(channels) == 2
@@ -271,7 +253,6 @@ def test_parse_basic_channel(basic_channel_input):
     assert channels[1].flag_chann == VaryFlag.NO
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_channel_single_line():
     lines = ["CHANN 1   100.0     1.234"]
     channels = ChannelParameters.from_lines(lines)
@@ -279,7 +260,6 @@ def test_channel_single_line():
     assert channels[0].d_chann is None
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_channel_round_trip(basic_channel_input):
     channels = ChannelParameters.from_lines(basic_channel_input)
     lines = []
@@ -303,7 +283,6 @@ def full_orres_input():
     ]
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_full_card_parsing(full_orres_input):
     card = ORRESCard.from_lines(full_orres_input)
     assert isinstance(card.parameters.burst, BurstParameters)
@@ -313,7 +292,6 @@ def test_full_card_parsing(full_orres_input):
     assert len(card.parameters.channels) == 2
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_moderator_exclusivity():
     input_lines = [
         "ORRES",
@@ -326,14 +304,12 @@ def test_moderator_exclusivity():
         ORRESCard.from_lines(input_lines)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_detector_exclusivity():
     input_lines = ["ORRES", "LITHI 111 1.234     2.345     3.456", "NE110 1 2 1.234     0.123    0.0047"]
     with pytest.raises(ValueError, match="Cannot have both LITHI and NE110 detectors"):
         ORRESCard.from_lines(input_lines)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_channel_order():
     input_lines = [
         "ORRES",
@@ -344,13 +320,11 @@ def test_channel_order():
         ORRESCard.from_lines(input_lines)
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_missing_header():
     with pytest.raises(ValueError, match="Invalid header line"):
         ORRESCard.from_lines(["WATER 111 3.614"])
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_round_trip(full_orres_input):
     card = ORRESCard.from_lines(full_orres_input)
     lines = card.to_lines()

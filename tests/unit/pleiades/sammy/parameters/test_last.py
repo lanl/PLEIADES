@@ -6,7 +6,6 @@ import pytest
 from pleiades.sammy.parameters.last import LastParameters
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 class TestLastParameters:
     """Test suite for Last Card parameter parsing.
 
