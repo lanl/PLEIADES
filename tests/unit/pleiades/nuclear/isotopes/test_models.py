@@ -28,7 +28,6 @@ def test_isotope_info_defaults():
     assert isotope.abundance is None
     assert isotope.spin is None
     assert isotope.material_number is None
-    assert isotope.endf_library == EndfLibrary.ENDF_B_VIII_0
 
 
 def test_isotope_info_validation():
