@@ -1,8 +1,8 @@
 """Manages access to isotope data files packaged with PLEIADES."""
 
-import re
 import functools
 import logging
+import re
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
@@ -219,7 +219,7 @@ class IsotopeManager:
         """
 
         # Setting isotope string to search file.
-        isotope_string = str(isotope.element)+"-"+str(isotope.mass_number)
+        isotope_string = str(isotope.element) + "-" + str(isotope.mass_number)
         try:
             with self.get_file_path(FileCategory.ISOTOPES, "neutrons.list").open() as f:
                 # Line matching breakdown:
