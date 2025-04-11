@@ -1,7 +1,7 @@
 # These notes are taken from the SAMMY manual.
 # * denotes a default options
 # Mutually exclusive options are grouped together starting with ------ and ending with ------
-# options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+# options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
 # We have tried to implement the exclusivity logic in the following way while still adhering to defaults
 #   Defaults:
@@ -135,7 +135,7 @@ covariance_matrix_data_input_options = [
         "FREE FORMAT DATA COVariance YYYYYY.YYY",
     ]
 
-# Experimental data angular distribution otpions
+# Experimental data angular distribution options
 # Define frames of references and other details for angle-differential calculations
 # Not supported at the moment.
 
