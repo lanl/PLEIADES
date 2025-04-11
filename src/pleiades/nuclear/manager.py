@@ -5,8 +5,9 @@ import io
 import logging
 import zipfile
 from pathlib import Path
-import requests
 from typing import Optional
+
+import requests
 
 from pleiades.nuclear.isotopes.manager import IsotopeManager
 from pleiades.nuclear.isotopes.models import IsotopeInfo
@@ -16,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class NuclearDataManager:
-
     # TODO: Setup nuclear/data/ directory to save and cache ENDF/JENDL/JEFF data files
 
     def __init__(self, isotope_manager: Optional[IsotopeManager] = None):
