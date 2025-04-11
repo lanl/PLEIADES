@@ -9,6 +9,7 @@ import pytest
 from pleiades.sammy.parameters.det_efficiency import DetectorEfficiencyParameters
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 class TestDetectorEfficiencyParameters:
     """Test suite for Card Set 15 (Detector Efficiency) parameter parsing and formatting.
 

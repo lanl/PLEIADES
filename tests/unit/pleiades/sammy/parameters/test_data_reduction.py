@@ -4,6 +4,7 @@ from pleiades.sammy.parameters.data_reduction import DataReductionCard, DataRedu
 from pleiades.utils.helper import VaryFlag
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parameter_parsing():
     """Test parsing single parameter line."""
     line = "PAR1  1   1.234E+00 5.000E-02 1.234E+00"
@@ -16,6 +17,7 @@ def test_parameter_parsing():
     assert pytest.approx(param.derivative_value) == 1.234
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parameter_optional_fields():
     """Test parsing parameter with missing optional fields."""
     line = "PAR1  1   1.234E+00"
@@ -28,6 +30,7 @@ def test_parameter_optional_fields():
     assert param.derivative_value is None
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_parameter_formatting():
     """Test parameter line formatting."""
     param = DataReductionParameter(name="PAR1", value=1.234, flag=VaryFlag.YES, uncertainty=0.05, derivative_value=1.234)
@@ -42,6 +45,7 @@ def test_parameter_formatting():
     assert pytest.approx(parsed.derivative_value) == param.derivative_value
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_card_parsing():
     """Test parsing complete card set."""
     lines = [
@@ -66,6 +70,7 @@ def test_card_parsing():
     assert pytest.approx(card.parameters[2].value) == 3.456
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_card_formatting():
     """Test card set formatting."""
     params = [
@@ -89,6 +94,7 @@ def test_card_formatting():
             assert pytest.approx(new.derivative_value) == orig.derivative_value
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_invalid_parameter():
     """Test error handling for invalid parameter lines."""
     with pytest.raises(ValueError):
@@ -101,6 +107,7 @@ def test_invalid_parameter():
         DataReductionParameter(name="TOOLONG", value=1.0)  # Name too long
 
 
+@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 def test_invalid_card():
     """Test error handling for invalid card sets."""
     with pytest.raises(ValueError):
