@@ -1,9 +1,12 @@
-from enum import Enum
-from pydantic import BaseModel, Field, constr
-from pleiades.nuclear.parameters import nuclearParameters
-from pleiades.experimental.parameters import PhysicsParameters
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+from pleiades.experimental.models import PhysicsParameters
+from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.options import FitOptions
+
 
 class FitConfig(BaseModel):
     """Container for fit parameters including nuclear and physics parameters.
@@ -14,19 +17,23 @@ class FitConfig(BaseModel):
     """
 
     fit_title: str = Field(description="Title of fitting run", default="SAMMY Fit")
-    tolerance: float = Field(description="Tolerance for chi-squared convergence")
+    tolerance: Optional[float] = Field(default=None, description="Tolerance for chi-squared convergence")
     max_iterations: int = Field(description="Maximum number of iterations", default=1)
     i_correlation: int = Field(description="Correlation matrix interval", default=50)
-    max_cpu_time: float = Field(description="Maximum CPU time allowed")
-    max_wall_time: float = Field(description="Maximum wall time allowed")
-    max_memory: float = Field(description="Maximum memory allowed")
-    max_disk: float = Field(description="Maximum disk space allowed")
+    max_cpu_time: Optional[float] = Field(default=None, description="Maximum CPU time allowed")
+    max_wall_time: Optional[float] = Field(default=None, description="Maximum wall time allowed")
+    max_memory: Optional[float] = Field(default=None, description="Maximum memory allowed")
+    max_disk: Optional[float] = Field(default=None, description="Maximum disk space allowed")
 
-    nuclear_params: nuclearParameters = Field(description="Nuclear parameters used in SAMMY calculations")
-    physics_params: PhysicsParameters = Field(description="Physics parameters used in SAMMY calculations")
-    data_params: dataParameters = Field(description="Data parameters used in SAMMY calculations")
-    options_and_routines: FitOptions = Field(description="Fit options used in SAMMY calculations")
-    
+    nuclear_params: nuclearParameters = Field(
+        default_factory=nuclearParameters, description="Nuclear parameters used in SAMMY calculations"
+    )
+    physics_params: PhysicsParameters = Field(
+        default_factory=PhysicsParameters, description="Physics parameters used in SAMMY calculations"
+    )
+    data_params: dataParameters = Field(default_factory=dataParameters, description="Data parameters used in SAMMY calculations")
+    options_and_routines: FitOptions = Field(default_factory=FitOptions, description="Fit options used in SAMMY calculations")
+
 
 # example usage
 if __name__ == "__main__":
@@ -42,7 +49,7 @@ if __name__ == "__main__":
         nuclear_params=nuclearParameters(),
         physics_params=PhysicsParameters(),
         data_params=dataParameters(),
-        options_and_routines=FitOptions()
+        options_and_routines=FitOptions(),
     )
 
     print(example_config)

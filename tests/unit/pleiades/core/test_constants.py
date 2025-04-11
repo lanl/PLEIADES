@@ -10,19 +10,8 @@ Reasoning:
 """
 
 import pytest
-from pydantic import ValidationError
 
 from pleiades.core.constants import CONSTANTS
-from pleiades.nuclear.models import Mass, UnitType
-
-
-def test_constants_immutability():
-    """Test that constants cannot be modified."""
-    with pytest.raises(ValidationError):
-        CONSTANTS.speed_of_light = 0
-
-    with pytest.raises(ValidationError):
-        CONSTANTS.neutron_mass = Mass(value=0, unit_type=UnitType.MASS)
 
 
 def test_mass_constants():

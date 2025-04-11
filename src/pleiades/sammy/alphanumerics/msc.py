@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 """
-    These notes are taken from the SAMMY manual. 
+    These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
-    
+
         Multiple scattering corrections
         Define how the multiple-scattering corrections are to proceed
         multiple_scattering_corrections_options = [
@@ -42,6 +43,7 @@ from typing import List
 
 """
 
+
 class MultipleScatteringCorrectionsOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
@@ -67,7 +69,12 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
-        ["do_not_include_self_shielding", "use_self_shielding_only", "use_single_scattering_plus_self_shielding", "include_double_scattering_corrections"],
+        [
+            "do_not_include_self_shielding",
+            "use_self_shielding_only",
+            "use_single_scattering_plus_self_shielding",
+            "include_double_scattering_corrections",
+        ],
         ["infinite_slab", "finite_slab"],
         ["make_new_file_with_edge_effects", "file_with_edge_effects_already_exists"],
         ["make_plot_file_of_multiple_scattering_pieces"],
@@ -75,7 +82,7 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
         ["print_multiple_scattering_corrections", "prepare_input_for_monte_carlo_simulation", "y2_values_are_tabulated"],
         ["use_quadratic_interpolation_for_y1", "use_linear_interpolation_for_y1"],
         ["version_7_for_multiple_scattering"],
-        ["do_not_calculate_y0"]
+        ["do_not_calculate_y0"],
     ]
 
     @model_validator(mode="after")
@@ -90,10 +97,7 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -103,10 +107,7 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. "
-                    f"Only one allowed."
-                )
+                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:
@@ -152,12 +153,13 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
             commands.append("DO NOT CALCULATE Y0")
         return commands
 
+
 # Example usage
 if __name__ == "__main__":
     try:
         options = MultipleScatteringCorrectionsOptions(
             do_not_include_self_shielding=True,
-            use_self_shielding_only=True  # This should raise a ValueError
+            use_self_shielding_only=True,  # This should raise a ValueError
         )
     except ValueError as e:
         print(e)

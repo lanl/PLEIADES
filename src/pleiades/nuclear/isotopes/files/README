@@ -1,0 +1,28 @@
+# Isotope Information Files
+
+## mass.mas20
+This file contains atomic mass adjustment data. It includes information such as:
+- Atomic mass excess (keV)
+- Binding energy per nucleon (keV)
+- Beta-decay energy (keV)
+- Atomic mass (micro-u)
+PLEIADES usage: Atomic mass, Binding energy per nucleon, Beta-decay energy
+
+## neutrons.list
+This file lists neutron evaluation data. It includes:
+- Material and laboratory information
+- Evaluation date
+- Authors
+- Material identifier (MAT)
+PLEIADES usage: ENDF Material identifier number.
+
+## isotopes.info
+This file is an EasySpin nuclear isotope database. It contains:
+- Number of protons and nucleons
+- Radioactive or stable status
+- Element symbol and name
+- Spin quantum number
+- Nuclear g factor
+- Natural abundance (percent)
+- Electric quadrupole moment (barn)
+PLEIADES usage: spin quantum number and natural abundance

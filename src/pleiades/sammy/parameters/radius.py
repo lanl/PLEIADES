@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from pleiades.sammy.parameters.helper import VaryFlag, format_float, format_vary, parse_keyword_pairs_to_dict, safe_parse
+from pleiades.utils.helper import VaryFlag, format_float, format_vary, parse_keyword_pairs_to_dict, safe_parse
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
@@ -20,7 +20,7 @@ log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
 logger = Logger(__name__, log_file=log_file_path)
 
 ####################################################################################################
-# Header flages and format definitions
+# Header flags and format definitions
 ####################################################################################################
 CARD_7_HEADER = "RADIUs parameters follow"
 CARD_7A_HEADER = "RADII are in KEY-WORD format"
@@ -660,7 +660,6 @@ class RadiusCardAlternate(BaseModel):
         Returns:
             List[str]: Lines including header
         """
-        where_am_i = "RadiusCardAlternate.to_lines()"
 
         lines = []
 

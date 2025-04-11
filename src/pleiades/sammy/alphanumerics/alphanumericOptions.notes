@@ -1,7 +1,7 @@
-# These notes are taken from the SAMMY manual. 
+# These notes are taken from the SAMMY manual.
 # * denotes a default options
 # Mutually exclusive options are grouped together starting with ------ and ending with ------
-# options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+# options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
 # We have tried to implement the exclusivity logic in the following way while still adhering to defaults
 #   Defaults:
@@ -12,13 +12,13 @@
 #   -   Looks at each of the mutually_exclusive_groups.
 #   -   For each group:
 #   	-   Collects which fields ended up True.
-#   	-   Separates them into user-specified vs. default (using f in self.model_fields_set to detect 
+#   	-   Separates them into user-specified vs. default (using f in self.model_fields_set to detect
 #           if the user explicitly set that field).
 #   	-   Case A: If more than one user-specified field is True in the same group → raise ValueError.
-#   	-   Case B: If exactly one user-specified field is True in that group → turn off any default fields 
+#   	-   Case B: If exactly one user-specified field is True in that group → turn off any default fields
 #           that are True in that group. The user’s choice “wins.”
-#   	-   Case C: If no user-specified fields are True (all True fields in that group are defaults) 
-#           but there’s more than one → raise ValueError. Otherwise, it’s fine. 
+#   	-   Case C: If no user-specified fields are True (all True fields in that group are defaults)
+#           but there’s more than one → raise ValueError. Otherwise, it’s fine.
 
 # Commands for R-matrix approximation
 # Define which approximation to the R-matrix is to be used for this calculation
@@ -27,7 +27,7 @@ r_matrix_options = [
     *   ["REICH-MOORE FORMALISm is wanted","MORE ACCURATE REICHmoore","XCT"],
         ["ORIGINAL REICH-MOORE formalism","CRO"],
         ["MULTILEVEL BREITWIGner is wanted","MLBW FORMALISM IS WAnted","MLBW"],
-        ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"], 
+        ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"],
         "REDUCED WIDTH AMPLITudes are used for input"
     ----------------------------
     ]
@@ -36,7 +36,7 @@ r_matrix_options = [
 # Define which type of input is to be used for spin group information and other parameters
 input_quantum_numbers_options = [
     ----------------------------
-    *   "USE NEW SPIN GROUP Format", 
+    *   "USE NEW SPIN GROUP Format",
         "PARTICLE PAIR DEFINItions are used",
         "KEY-WORD PARTICLE-PAir definitions are given",
     ----------------------------
@@ -77,7 +77,7 @@ input_covariance_matrix_options = [
         ["READ COMPACT COVARIAnces for parameter priors",
         "READ COMPACT CORRELAtions for parameter priors",
         "COMPACT CORRELATIONS are to be read and used",
-        "COMPACT COVARIANCES are to be read and used"], 
+        "COMPACT COVARIANCES are to be read and used"],
         ["PARAMETER COVARIANCE matrix is in endf format",
         "ENDF COVARIANCE MATRix is to be read and Used"],
     ----------------------------
@@ -131,17 +131,17 @@ covariance_matrix_data_input_options = [
     ----------------------------
     *   "DATA COVARIANCE IS Diagonal"
         "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
-        "DATA COVARIANCE FILE is named YYYYYY.YYY", 
+        "DATA COVARIANCE FILE is named YYYYYY.YYY",
         "FREE FORMAT DATA COVariance YYYYYY.YYY",
     ]
 
-# Experimental data angular distribution otpions
+# Experimental data angular distribution options
 # Define frames of references and other details for angle-differential calculations
 # Not supported at the moment.
 
 # Broadening options
 # Is broadening wanted
-broadening_options = [ 
+broadening_options = [
     ----------------------------
     *"BROADENING IS WANTED",
     "BROADENING IS NOT WAnted"
@@ -197,8 +197,8 @@ multiple_scattering_corrections_options = [
 # Define details of the fitting procedure
 bayes_solution_options = [
     ----------------------------
-    *   "SOLVE BAYES EQUATIONs", 
-        "DO NOT SOLVE BAYES Equations", 
+    *   "SOLVE BAYES EQUATIONs",
+        "DO NOT SOLVE BAYES Equations",
     ----------------------------
     *   "LET SAMMY CHOOSE WHIch inversion scheme to use",
         "USE (N+V) INVERSION scheme" or "NPV",
@@ -265,4 +265,3 @@ lpt_file_options = [
         "PRINT PHASE SHIFTS For input parameters"
     ----------------------------
     ]
-

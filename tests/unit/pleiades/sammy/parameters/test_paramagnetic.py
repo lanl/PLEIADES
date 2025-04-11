@@ -3,8 +3,8 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.paramagnetic import NuclideType, ParamagneticParameters
+from pleiades.utils.helper import VaryFlag
 
 
 class TestParamagneticParameters:

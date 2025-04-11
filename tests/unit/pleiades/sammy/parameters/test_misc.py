@@ -3,7 +3,6 @@
 
 import pytest
 
-from pleiades.utils.helper import VaryFlag
 from pleiades.sammy.parameters.misc import (
     DeltaParameters,
     DelteParameters,
@@ -17,6 +16,7 @@ from pleiades.sammy.parameters.misc import (
     SiabnParameters,
     TzeroParameters,
 )
+from pleiades.utils.helper import VaryFlag
 
 
 class TestDeltaParameters:

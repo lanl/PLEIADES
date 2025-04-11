@@ -1,6 +1,8 @@
 import pytest
-from pleiades.sammy.data.options import dataParameters, DataTypeOptions
-from pleiades.utils.units import EnergyUnitOptions, CrossSectionUnitOptions
+
+from pleiades.sammy.data.options import DataTypeOptions, dataParameters
+from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
+
 
 def test_data_parameters_defaults():
     """Test the default values of dataParameters."""
@@ -13,6 +15,7 @@ def test_data_parameters_defaults():
     assert params.data_title is None
     assert params.data_comment is None
 
+
 def test_data_parameters_custom_values():
     """Test custom values of dataParameters."""
     params = dataParameters(
@@ -21,7 +24,7 @@ def test_data_parameters_custom_values():
         energy_units=EnergyUnitOptions.keV,
         cross_section_units=CrossSectionUnitOptions.millibarn,
         data_title="Custom Data",
-        data_comment="This is a custom data set."
+        data_comment="This is a custom data set.",
     )
 
     assert params.data_file == "custom.dat"
@@ -31,10 +34,12 @@ def test_data_parameters_custom_values():
     assert params.data_title == "Custom Data"
     assert params.data_comment == "This is a custom data set."
 
+
 def test_invalid_data_type():
     """Test invalid data type."""
     with pytest.raises(ValueError):
         dataParameters(data_file="invalid.dat", data_type="INVALID_TYPE")
+
 
 if __name__ == "__main__":
     pytest.main()
