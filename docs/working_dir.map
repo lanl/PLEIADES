@@ -10,12 +10,12 @@ working_dir/
 │	│	├── results_dir/
 │	│	│	└── endf.par
 │	│	├── dummy.inpfile
-│	│	└── dummp.parfile
+│	│	└── dummy.parfile
 │   └── isotope_2_dir/
 │		├── results_dir/
 │		│	└── endf.par
 │		├── dummy.inpfile
-│		└── dummp.parfile
+│		└── dummy.parfile
 │
 ├── fitting_dir/
 │	├── fit_x1_y1_dir/
