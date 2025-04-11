@@ -6,9 +6,9 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-logger = logging.getLogger(__name__)
-
 from pleiades.nuclear.isotopes.models import FileCategory, IsotopeInfo, IsotopeMassData
+
+logger = logging.getLogger(__name__)
 
 
 class IsotopeManager:
@@ -135,6 +135,9 @@ class IsotopeManager:
 
         # check if the isotope is a stable isotope with known abundance and spin
         self.check_and_set_abundance_and_spins(isotope)
+
+        # get the material number
+        isotope.material_number = self.get_mat_number(isotope)
 
         return isotope
 
