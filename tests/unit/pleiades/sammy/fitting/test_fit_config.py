@@ -1,7 +1,7 @@
 import pytest
 
 from pleiades.experimental.models import PhysicsParameters
-from pleiades.nuclear.parameters import nuclearParameters
+from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.sammy.fitting.options import (
