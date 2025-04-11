@@ -51,6 +51,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
+from pleiades.nuclear.models import IsotopeParameters
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
