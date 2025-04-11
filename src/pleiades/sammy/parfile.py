@@ -257,7 +257,7 @@ class SammyParameterFile(BaseModel):
         fudge_factor = None
 
         for line in resonance_or_fudge_factor_content:
-            # check if anycharacters exsist beyound 1-11
+            # check if anycharacters exists beyond 1-11
             if line[11:].strip():
                 # if so, then it is a resonance entry
                 resonances_entries.append(line)
@@ -446,7 +446,7 @@ class SammyParameterFile(BaseModel):
     def print_parameters(self) -> None:
         """Print the details of the parameter file."""
 
-        logger.info("SammyParameterFile.print_parameters(): Printing out Sammy Parameter Detials")
+        logger.info("SammyParameterFile.print_parameters(): Printing out Sammy Parameter Details")
 
         print("Sammy Parameter File Details:")
 
