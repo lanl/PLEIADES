@@ -10,7 +10,7 @@ from pleiades.utils.helper import VaryFlag
 
 
 class EnergyParameters(BaseModel):
-    """Paramters for energy bounds and sampling
+    """Parameters for energy bounds and sampling
 
     Args:
         BaseModel (_type_): _description_
