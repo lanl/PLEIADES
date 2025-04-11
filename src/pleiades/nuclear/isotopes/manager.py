@@ -1,5 +1,6 @@
 """Manages access to isotope data files packaged with PLEIADES."""
 
+import re
 import functools
 import logging
 from pathlib import Path
@@ -216,6 +217,9 @@ class IsotopeManager:
         Raises:
             ValueError: If isotope format is invalid
         """
+
+        # Setting isotope string to search file.
+        isotope_string = str(isotope.element)+"-"+str(isotope.mass_number)
         try:
             with self.get_file_path(FileCategory.ISOTOPES, "neutrons.list").open() as f:
                 # Line matching breakdown:
@@ -233,7 +237,7 @@ class IsotopeManager:
 
                 for line in f:
                     match = re.search(pattern, line)
-                    if match and match.expand(r"\2-\3") == str(isotope):
+                    if match and match.expand(r"\2-\3").lower() == str(isotope_string).lower():
                         return int(line[-5:])
             return None
         except Exception as e:
