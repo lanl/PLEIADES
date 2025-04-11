@@ -9,7 +9,6 @@ import pytest
 from pleiades.sammy.parameters.background import BackgroundParameters, BackgroundType
 
 
-@pytest.mark.skip(reason="Tests are disabled due to non-implementation.")
 class TestBackgroundParameters:
     """Test suite for Card Set 13 (Background) parameter parsing and formatting.
 
