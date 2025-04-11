@@ -23,8 +23,8 @@ class EnergyParameters(BaseModel):
         _type_: _description_
     """
 
-    min_energy: float = Field(description="Minimum energy for this data set(eV)")
-    max_energy: float = Field(description="Maximum energy (eV)")
+    min_energy: float = Field(default=0.0, description="Minimum energy for this data set(eV)")
+    max_energy: float = Field(default=0.0, description="Maximum energy (eV)")
     number_of_energy_points: int = Field(description="Number of points to be used in generating artificial energy grid", default=10001)
     number_of_extra_points: int = Field(
         description="Number of extra points to be added between each pair of data points for auxiliary energy grid", default=0
@@ -49,12 +49,12 @@ class NormalizationParameters(BaseModel):
     """
 
     # Main parameters
-    anorm: float = Field(description="Normalization (dimensionless)")
-    backa: float = Field(description="Constant background")
-    backb: float = Field(description="Background proportional to 1/E")
-    backc: float = Field(description="Background proportional to √E")
-    backd: float = Field(description="Exponential background coefficient")
-    backf: float = Field(description="Exponential decay constant")
+    anorm: float = Field(default=None, description="Normalization (dimensionless)")
+    backa: float = Field(default=None, description="Constant background")
+    backb: float = Field(default=None, description="Background proportional to 1/E")
+    backc: float = Field(default=None, description="Background proportional to √E")
+    backd: float = Field(default=None, description="Exponential background coefficient")
+    backf: float = Field(default=None, description="Exponential decay constant")
 
     # Optional uncertainties
     d_anorm: Optional[float] = Field(None, description="Uncertainty on ANORM")
@@ -90,12 +90,12 @@ class BroadeningParameters(BaseModel):
     """
 
     # Main parameters
-    crfn: float = Field(description="Matching radius (F)")
-    temp: float = Field(description="Effective temperature (K)")
-    thick: float = Field(description="Sample thickness (atoms/barn)")
-    deltal: float = Field(description="Spread in flight-path length (m)")
-    deltag: float = Field(description="Gaussian resolution width (μs)")
-    deltae: float = Field(description="e-folding width of exponential resolution (μs)")
+    crfn: float = Field(default=None, description="Matching radius (F)")
+    temp: float = Field(default=None, description="Effective temperature (K)")
+    thick: float = Field(default=None, description="Sample thickness (atoms/barn)")
+    deltal: float = Field(default=None, description="Spread in flight-path length (m)")
+    deltag: float = Field(default=None, description="Gaussian resolution width (μs)")
+    deltae: float = Field(default=None, description="e-folding width of exponential resolution (μs)")
 
     # Optional uncertainties for main parameters
     d_crfn: Optional[float] = Field(None, description="Uncertainty on CRFN")
@@ -158,8 +158,8 @@ class UserResolutionParameters(BaseModel):
         FILE = "FILE="
 
     type: UserDefinedResolutionType = UserDefinedResolutionType.USER
-    burst_width: Optional[float] = Field(None, description="Square burst width (ns)")
-    burst_uncertainty: Optional[float] = Field(None, description="Uncertainty on burst width")
+    burst_width: Optional[float] = Field(default=None, description="Square burst width (ns)")
+    burst_uncertainty: Optional[float] = Field(default=None, description="Uncertainty on burst width")
     burst_flag: VaryFlag = Field(default=VaryFlag.NO, description="Flag for burst width")
     channel_energies: List[float] = Field(default_factory=list, description="Energies for channels")
     channel_widths: List[float] = Field(default_factory=list, description="Channel width values")
@@ -178,10 +178,14 @@ class PhysicsParameters(BaseModel):
         user_resolution_parameters: User-defined resolution function parameters
     """
 
-    energy_parameters: EnergyParameters = Field(description="Energy parameters")
-    normalization_parameters: NormalizationParameters = Field(description="Normalization parameters")
-    broadening_parameters: BroadeningParameters = Field(description="Broadening parameters")
-    user_resolution_parameters: UserResolutionParameters = Field(description="User-defined resolution function parameters")
+    energy_parameters: EnergyParameters = Field(default_factory=EnergyParameters, description="Energy parameters")
+    normalization_parameters: NormalizationParameters = Field(
+        default_factory=NormalizationParameters, description="Normalization parameters"
+    )
+    broadening_parameters: BroadeningParameters = Field(default_factory=BroadeningParameters, description="Broadening parameters")
+    user_resolution_parameters: UserResolutionParameters = Field(
+        default_factory=UserResolutionParameters, description="User-defined resolution function parameters"
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
