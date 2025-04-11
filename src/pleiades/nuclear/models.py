@@ -359,14 +359,14 @@ class nuclearParameters(BaseModel):
         where_am_i = "nuclear_params.validate_isotopes()"
 
         # Check for duplicate isotope names in isotopeInfo
-        names = [iso.isotope.name for iso in self.isotopes]
+        names = [iso.isotope_infomation.name for iso in self.isotopes]
 
         if len(names) != len(set(names)):
             logger.info(f"{where_am_i}:Duplicate isotope names found")
             raise ValueError("Duplicate isotope names found")
 
         # Check for duplicate masses
-        masses = [iso.isotope.mass_data.atomic_mass for iso in self.isotopes]
+        masses = [iso.isotope_infomation.mass_data.atomic_mass for iso in self.isotopes]
         if len(masses) != len(set(masses)):
             logger.info(f"{where_am_i}:Duplicate masses found")
             raise ValueError("Duplicate masses found")
