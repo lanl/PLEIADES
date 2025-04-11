@@ -45,15 +45,6 @@ class FileCategory(Enum):
         return category.name.lower()
 
 
-class EndfLibrary(str, Enum):
-    ENDF_B_VIII_1 = "ENDF-B-VIII.1"
-    ENDF_B_VIII_0 = "ENDF-B-VIII.0"
-    JEFF_3_3 = "JEFF-3.3"
-    JENDL_5 = "JENDL-5"
-    CENDL_3_2 = "CENDL-3.2"
-    TENDL_2021 = "TENDL-2021"
-
-
 class IsotopeMassData(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -98,7 +89,6 @@ class IsotopeInfo(BaseModel):
     abundance: Optional[float] = Field(ge=0, default=None)
     spin: Optional[float] = Field(default=None)
     material_number: Optional[int] = Field(default=None)
-    endf_library: Optional[EndfLibrary] = Field(description="ENDF library associated with the isotope", default=EndfLibrary.ENDF_B_VIII_0)
 
     @classmethod
     def from_string(cls, isotope_str: str) -> "IsotopeInfo":
