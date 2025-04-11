@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
     These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
-    -   Options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+    -   Options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
         Options for printing into SAMMY.LPT
         Define what information will be printed in output file SAMMY.LPT
