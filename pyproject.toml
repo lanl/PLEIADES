@@ -18,7 +18,8 @@ dependencies = [
     "matplotlib",
     "jupyterlab",
     "pyyaml",
-    "pydantic", "nova-galaxy>=0.7.4,<0.8",
+    "pydantic",
+    "nova-galaxy>=0.7.4,<0.8",
 ]
 
 [project.urls]
@@ -147,6 +148,11 @@ build-docs = { cmd = "sphinx-build -b html docs docs/_build", description = "Bui
 clean-docs = { cmd = "rm -rf docs/_build", description = "Clean the documentation build artifacts" }
 # Testing tasks
 test = { cmd = "pytest", description = "Run the tests" }  # pytest config above takes care of the arguments
+# Development tasks
+lint = { cmd = "ruff check .", description = "Run linting checks" }
+format = { cmd = "ruff format .", description = "Format code with ruff" }
+pre-commit-install = { cmd = "pre-commit install", description = "Install pre-commit hooks" }
+pre-commit-run = { cmd = "pre-commit run --all-files", description = "Run pre-commit on all files" }
 # Clean all
 clean-all = { description = "Clean all build artifacts", depends-on = ["clean-pypi", "clean-conda", "clean-docs"] }
 
@@ -183,3 +189,12 @@ ipywidgets = "*"
 [tool.pixi.environments]
 default = {features = ["test", "package", "docs", "developer"], solve-group = "default"}
 jupyter = {features = ["developer", "jupyter"], solve-group = "jupyter"}
+
+[tool.pixi.solve-groups.default]
+platforms = ["linux-64", "osx-arm64"]
+timeout-seconds = 300  # Default solver timeout
+
+[tool.pixi.solve-groups.jupyter]
+platforms = ["linux-64", "osx-arm64"]
+channels = ["conda-forge"]
+timeout-seconds = 600  # Longer timeout for jupyter environment solving
