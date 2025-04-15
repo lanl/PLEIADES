@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
     These notes are taken from the SAMMY manual.
     -   * denotes a default options
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
-    -   Options can be written out multiple ways indicated with ["Defualt","Alternate 1","Alternate 2"]
+    -   Options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
         Experimental data input control for covariance matrix
         Define the format for input of data covariance matrix
@@ -80,7 +80,7 @@ class CovarianceMatrixOptions(BaseModel):
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
                 raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                    f"Multiple user-specified fields {user_true} are True in group {group}. Only one allowed."
                 )
 
             # If exactly 1 user-specified => turn off all defaults in that group
@@ -91,9 +91,7 @@ class CovarianceMatrixOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
-                )
+                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. Only one allowed.")
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:
