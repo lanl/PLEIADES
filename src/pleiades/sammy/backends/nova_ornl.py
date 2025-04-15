@@ -10,7 +10,12 @@ from tempfile import TemporaryDirectory
 from typing import Optional
 from uuid import uuid4
 
-from nova.galaxy import Dataset, Nova, NovaConnection, Parameters, Tool
+from nova.galaxy import (
+    Connection,
+    Dataset,
+    Parameters,
+    Tool,
+)
 
 from pleiades.sammy.config import NovaSammyConfig
 from pleiades.sammy.interface import (
@@ -36,8 +41,8 @@ class NovaSammyRunner(SammyRunner):
     def __init__(self, config: NovaSammyConfig):
         super().__init__(config)
         self.config: NovaSammyConfig = config
-        self._nova: Optional[Nova] = None
-        self._connection: Optional[NovaConnection] = None
+        self._nova: Optional[Connection] = None
+        self._connection: Optional[Connection] = None
         self._datastore_name: Optional[str] = None
         self._temp_dir: Optional[TemporaryDirectory] = None
 
@@ -55,15 +60,10 @@ class NovaSammyRunner(SammyRunner):
             # Validate input files
             files.validate()
 
-            # Initialize NOVA connection
-            self._nova = Nova(self.config.url, self.config.api_key)
+            self._connection = Connection(self.config.url, api_key=self.config.api_key)
 
             # Create temporary directory for downloads
             self._temp_dir = TemporaryDirectory()
-
-            logger.debug("Testing NOVA connection")
-            with self._nova.connect() as conn:
-                self._connection = conn
 
         except Exception as e:
             raise EnvironmentPreparationError(f"NOVA environment preparation failed: {str(e)}")
@@ -78,26 +78,28 @@ class NovaSammyRunner(SammyRunner):
         try:
             # Create unique datastore
             self._datastore_name = f"sammy_{execution_id}"
-            datastore = self._connection.create_data_store(self._datastore_name)
+            datastore = self._connection.datastore(self._datastore_name)
 
             # Prepare tool and datasets
-            tool = Tool(id=self.config.tool_id)
-            params = Parameters()
+            tool = Tool(self._connection, tool_id=self.config.tool_id)
 
             # Add input files as datasets
+            params = Parameters()
             params.add_input("inp", Dataset(str(files.input_file)))
             params.add_input("par", Dataset(str(files.parameter_file)))
             params.add_input("data", Dataset(str(files.data_file)))
 
             # Run SAMMY
-            results = tool.run(datastore, params)
+            results = tool.run(datastore=self._datastore_name, parameters=params)
 
             # Get console output
-            console_output = results.get_dataset("sammy_console_output").get_content()
+            if self._temp_dir is None:
+                raise SammyExecutionError("Temporary directory is not initialized.")
+            output_zip = Path(self._temp_dir.name) / "sammy_outputs.zip"
 
             # Download and extract output files
-            output_zip = Path(self._temp_dir.name) / "sammy_outputs.zip"
-            results.get_collection("sammy_output_files").download(str(output_zip))
+            console_output = results.outputs["sammy_console_output"].get_content()
+            results.outputs["sammy_output_files"].download(str(output_zip))
 
             # Extract files to output directory, handling nested structure
             with zipfile.ZipFile(output_zip) as zf:
@@ -135,7 +137,7 @@ class NovaSammyRunner(SammyRunner):
             logger.exception(f"NOVA execution failed for {execution_id}")
             raise SammyExecutionError(f"NOVA execution failed: {str(e)}")
 
-    def cleanup(self) -> None:
+    def cleanup(self, files: Optional[SammyFiles] = None) -> None:
         """Clean up NOVA resources."""
         logger.debug("Performing NOVA cleanup")
 
@@ -145,9 +147,9 @@ class NovaSammyRunner(SammyRunner):
                 self._temp_dir.cleanup()
                 self._temp_dir = None
 
-            # No need to explicitly close connection as it's handled by context manager
-            self._connection = None
-            self._nova = None
+            if self._connection is not None:
+                self._connection.close()
+                self._connection = None
 
         except Exception as e:
             logger.error(f"Error during cleanup: {str(e)}")
