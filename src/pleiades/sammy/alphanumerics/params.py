@@ -41,12 +41,18 @@ class QuantumNumbersOptions(BaseModel):
 
     new_spin_group_format: bool = Field(default=True, description="USE NEW SPIN GROUP Format")
     particle_pair_definitions: bool = Field(default=False, description="PARTICLE PAIR DEFINItions are used")
-    keyword_particle_pair_definitions: bool = Field(default=False, description="KEY-WORD PARTICLE-PAir definitions are given")
+    keyword_particle_pair_definitions: bool = Field(
+        default=False, description="KEY-WORD PARTICLE-PAir definitions are given"
+    )
     quantum_numbers_in_parameter_file: bool = Field(default=False, description="QUANTUM NUMBERS ARE in parameter file")
-    put_quantum_numbers_into_parameter_file: bool = Field(default=False, description="PUT QUANTUM NUMBERS into parameter file")
+    put_quantum_numbers_into_parameter_file: bool = Field(
+        default=False, description="PUT QUANTUM NUMBERS into parameter file"
+    )
     spin_of_incident_particle_is_plus: bool = Field(default=False, description="SPIN OF INCIDENT PARticle is +")
     spin_of_incident_particle_is_minus: bool = Field(default=False, description="SPIN OF INCIDENT PARticle is -")
-    i4_format_to_read_spin_group_number: bool = Field(default=False, description="USE I4 FORMAT TO REAd spin group number")
+    i4_format_to_read_spin_group_number: bool = Field(
+        default=False, description="USE I4 FORMAT TO REAd spin group number"
+    )
     input_is_endf_b_file: bool = Field(default=False, description="INPUT IS ENDF/B FILE")
     use_energy_range_from_endf_b_file_2: bool = Field(default=False, description="USE ENERGY RANGE FROm endf/b file 2")
     flag_all_resonance_parameters: bool = Field(default=False, description="FLAG ALL RESONANCE Parameters")
@@ -74,7 +80,9 @@ class QuantumNumbersOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -84,7 +92,9 @@ class QuantumNumbersOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

@@ -25,9 +25,12 @@ class EnergyParameters(BaseModel):
 
     min_energy: float = Field(default=0.0, description="Minimum energy for this data set(eV)")
     max_energy: float = Field(default=0.0, description="Maximum energy (eV)")
-    number_of_energy_points: int = Field(description="Number of points to be used in generating artificial energy grid", default=10001)
+    number_of_energy_points: int = Field(
+        description="Number of points to be used in generating artificial energy grid", default=10001
+    )
     number_of_extra_points: int = Field(
-        description="Number of extra points to be added between each pair of data points for auxiliary energy grid", default=0
+        description="Number of extra points to be added between each pair of data points for auxiliary energy grid",
+        default=0,
     )
     number_of_small_res_points: int = Field(
         description="Number of points to be added to auxiliary energy grid across small resonances", default=0
@@ -182,7 +185,9 @@ class PhysicsParameters(BaseModel):
     normalization_parameters: NormalizationParameters = Field(
         default_factory=NormalizationParameters, description="Normalization parameters"
     )
-    broadening_parameters: BroadeningParameters = Field(default_factory=BroadeningParameters, description="Broadening parameters")
+    broadening_parameters: BroadeningParameters = Field(
+        default_factory=BroadeningParameters, description="Broadening parameters"
+    )
     user_resolution_parameters: UserResolutionParameters = Field(
         default_factory=UserResolutionParameters, description="User-defined resolution function parameters"
     )

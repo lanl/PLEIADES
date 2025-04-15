@@ -49,23 +49,41 @@ class CovarianceMatrixOptions(BaseModel):
     energy_uncertainties_at_end_of_line_in_par_file: bool = Field(
         default=False, description="ENERGY UNCERTAINTIES are at end of line in par file"
     )
-    retroactive_old_parameter_file_new_covariance: bool = Field(default=False, description="RETROACTIVE OLD PARAmeter file new covariance")
-    p_covariance_matrix_is_correct_u_is_not: bool = Field(default=False, description="P COVARIANCE MATRIX is correct, u is not")
-    modify_p_covariance_matrix_before_using: bool = Field(default=False, description="MODIFY P COVARIANCE matrix before using")
+    retroactive_old_parameter_file_new_covariance: bool = Field(
+        default=False, description="RETROACTIVE OLD PARAmeter file new covariance"
+    )
+    p_covariance_matrix_is_correct_u_is_not: bool = Field(
+        default=False, description="P COVARIANCE MATRIX is correct, u is not"
+    )
+    modify_p_covariance_matrix_before_using: bool = Field(
+        default=False, description="MODIFY P COVARIANCE matrix before using"
+    )
     initial_diagonal_u_covariance: bool = Field(default=False, description="INITIAL DIAGONAL U Covariance")
     initial_diagonal_p_covariance: bool = Field(default=False, description="INITIAL DIAGONAL P Covariance")
     permit_non_positive_definite_parameter_covariance_matrices: bool = Field(
         default=False, description="PERMIT NON POSITIVE definite parameter covariance matrices"
     )
-    permit_zero_uncertainties_on_parameters: bool = Field(default=False, description="PERMIT ZERO UNCERTAInties on parameters")
-    read_compact_covariances_for_parameter_priors: bool = Field(default=False, description="READ COMPACT COVARIAnces for parameter priors")
+    permit_zero_uncertainties_on_parameters: bool = Field(
+        default=False, description="PERMIT ZERO UNCERTAInties on parameters"
+    )
+    read_compact_covariances_for_parameter_priors: bool = Field(
+        default=False, description="READ COMPACT COVARIAnces for parameter priors"
+    )
     read_compact_correlations_for_parameter_priors: bool = Field(
         default=False, description="READ COMPACT CORRELAtions for parameter priors"
     )
-    compact_correlations_are_to_be_read_and_used: bool = Field(default=False, description="COMPACT CORRELATIONS are to be read and used")
-    compact_covariances_are_to_be_read_and_used: bool = Field(default=False, description="COMPACT COVARIANCES are to be read and used")
-    parameter_covariance_matrix_is_in_endf_format: bool = Field(default=False, description="PARAMETER COVARIANCE matrix is in endf format")
-    endf_covariance_matrix_is_to_be_read_and_used: bool = Field(default=False, description="ENDF COVARIANCE MATRix is to be read and Used")
+    compact_correlations_are_to_be_read_and_used: bool = Field(
+        default=False, description="COMPACT CORRELATIONS are to be read and used"
+    )
+    compact_covariances_are_to_be_read_and_used: bool = Field(
+        default=False, description="COMPACT COVARIANCES are to be read and used"
+    )
+    parameter_covariance_matrix_is_in_endf_format: bool = Field(
+        default=False, description="PARAMETER COVARIANCE matrix is in endf format"
+    )
+    endf_covariance_matrix_is_to_be_read_and_used: bool = Field(
+        default=False, description="ENDF COVARIANCE MATRix is to be read and Used"
+    )
     use_least_squares_to_define_prior_parameter_covariance_matrix: bool = Field(
         default=False, description="USE LEAST SQUARES TO define prior parameter covariance matrix"
     )
@@ -100,7 +118,9 @@ class CovarianceMatrixOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -110,7 +130,9 @@ class CovarianceMatrixOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

@@ -127,12 +127,16 @@ class SammyParameterFile(BaseModel):
     external_r: Optional[ExternalREntry] = Field(None, description="External R matrix parameters")
     broadening: Optional[BroadeningParameterCard] = Field(None, description="Broadening parameters")
     unused_correlated: Optional[UnusedCorrelatedCard] = Field(None, description="Unused but correlated variables")
-    normalization: Optional[NormalizationBackgroundCard] = Field(None, description="Normalization and background parameters")
+    normalization: Optional[NormalizationBackgroundCard] = Field(
+        None, description="Normalization and background parameters"
+    )
     radius: Optional[RadiusCard] = Field(None, description="Radius parameters")
     data_reduction: Optional[DataReductionCard] = Field(None, description="Data reduction parameters")
     orres: Optional[ORRESCard] = Field(None, description="ORRES card parameters")
     paramagnetic: Optional[ParamagneticParameters] = Field(None, description="Paramagnetic parameters")
-    user_resolution: Optional[UserResolutionParameters] = Field(None, description="User-defined resolution function parameters")
+    user_resolution: Optional[UserResolutionParameters] = Field(
+        None, description="User-defined resolution function parameters"
+    )
     isotope: Optional[IsotopeCard] = Field(None, description="Isotope parameters")
 
     def to_string(self) -> str:
@@ -154,7 +158,9 @@ class SammyParameterFile(BaseModel):
             field_name = CardOrder.get_field_name(card_type)
             value = getattr(self, field_name)
 
-            print(f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}")
+            print(
+                f"{where_am_i}: Processing card type: {card_type.name} with field name: {field_name} and value: {value}"
+            )
 
             # Skip None values (optional cards not present)
             if value is None:

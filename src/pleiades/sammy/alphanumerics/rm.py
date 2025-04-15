@@ -33,7 +33,13 @@ class RMatrixOptions(BaseModel):
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
-        ["reich_moore", "original_reich_moore", "multilevel_breit_wigner", "single_level_breit_wigner", "reduced_width_amplitudes"]
+        [
+            "reich_moore",
+            "original_reich_moore",
+            "multilevel_breit_wigner",
+            "single_level_breit_wigner",
+            "reduced_width_amplitudes",
+        ]
     ]
 
     @model_validator(mode="after")
@@ -48,7 +54,9 @@ class RMatrixOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -58,7 +66,9 @@ class RMatrixOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

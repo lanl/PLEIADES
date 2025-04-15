@@ -16,7 +16,10 @@ def test_default_option():
     assert options.take_baby_steps_with_least_squares_method is False
     assert options.remember_original_parameter_values is False
     assert options.use_remembered_original_parameter_values is False
-    assert options.get_alphanumeric_commands() == ["SOLVE BAYES EQUATIONS", "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE"]
+    assert options.get_alphanumeric_commands() == [
+        "SOLVE BAYES EQUATIONS",
+        "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
+    ]
 
 
 def test_valid_option_with_single_boolean():
@@ -24,7 +27,10 @@ def test_valid_option_with_single_boolean():
     options = BayesSolutionOptions(do_not_solve_bayes_equations=True)
     assert options.solve_bayes_equations is False
     assert options.do_not_solve_bayes_equations is True
-    assert options.get_alphanumeric_commands() == ["DO NOT SOLVE BAYES EQUATIONS", "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE"]
+    assert options.get_alphanumeric_commands() == [
+        "DO NOT SOLVE BAYES EQUATIONS",
+        "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
+    ]
 
 
 def test_mutually_exclusive_options_1():
@@ -41,7 +47,9 @@ def test_mutually_exclusive_options_2():
 
 def test_valid_combination_of_options_1():
     """Test a valid combination of options."""
-    options = BayesSolutionOptions(use_npv_inversion_scheme=True, use_least_squares_to_define_prior_parameter_covariance_matrix=True)
+    options = BayesSolutionOptions(
+        use_npv_inversion_scheme=True, use_least_squares_to_define_prior_parameter_covariance_matrix=True
+    )
     assert options.let_sammy_choose_which_inversion_scheme_to_use is False
     assert options.use_npv_inversion_scheme is True
     assert options.use_least_squares_to_define_prior_parameter_covariance_matrix is True
@@ -68,18 +76,26 @@ def test_valid_combination_of_options_2():
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        BayesSolutionOptions(solve_bayes_equations=True, do_not_solve_bayes_equations=True, use_npv_inversion_scheme=True)
+        BayesSolutionOptions(
+            solve_bayes_equations=True, do_not_solve_bayes_equations=True, use_npv_inversion_scheme=True
+        )
 
 
 def test_switching_options():
     """Test switching options."""
     options = BayesSolutionOptions()
     assert options.solve_bayes_equations is True
-    assert options.get_alphanumeric_commands() == ["SOLVE BAYES EQUATIONS", "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE"]
+    assert options.get_alphanumeric_commands() == [
+        "SOLVE BAYES EQUATIONS",
+        "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
+    ]
 
     options = BayesSolutionOptions(do_not_solve_bayes_equations=True)
     assert options.do_not_solve_bayes_equations is True
-    assert options.get_alphanumeric_commands() == ["DO NOT SOLVE BAYES EQUATIONS", "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE"]
+    assert options.get_alphanumeric_commands() == [
+        "DO NOT SOLVE BAYES EQUATIONS",
+        "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
+    ]
 
     options = BayesSolutionOptions(use_npv_inversion_scheme=True)
     assert options.use_npv_inversion_scheme is True

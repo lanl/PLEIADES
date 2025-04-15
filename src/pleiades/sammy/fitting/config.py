@@ -31,8 +31,12 @@ class FitConfig(BaseModel):
     physics_params: PhysicsParameters = Field(
         default_factory=PhysicsParameters, description="Physics parameters used in SAMMY calculations"
     )
-    data_params: dataParameters = Field(default_factory=dataParameters, description="Data parameters used in SAMMY calculations")
-    options_and_routines: FitOptions = Field(default_factory=FitOptions, description="Fit options used in SAMMY calculations")
+    data_params: dataParameters = Field(
+        default_factory=dataParameters, description="Data parameters used in SAMMY calculations"
+    )
+    options_and_routines: FitOptions = Field(
+        default_factory=FitOptions, description="Fit options used in SAMMY calculations"
+    )
 
 
 # example usage

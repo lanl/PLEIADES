@@ -105,7 +105,9 @@ class SammyFactory:
         return available
 
     @classmethod
-    def create_runner(cls, backend_type: str, working_dir: Path, output_dir: Optional[Path] = None, **kwargs) -> SammyRunner:
+    def create_runner(
+        cls, backend_type: str, working_dir: Path, output_dir: Optional[Path] = None, **kwargs
+    ) -> SammyRunner:
         """
         Create a SAMMY runner with the specified backend and configuration.
 
@@ -293,7 +295,9 @@ class SammyFactory:
             backend_config = config.get(backend_type, {})
 
             # Create runner using create_runner
-            return cls.create_runner(backend_type=backend_type, working_dir=working_dir, output_dir=output_dir, **backend_config)
+            return cls.create_runner(
+                backend_type=backend_type, working_dir=working_dir, output_dir=output_dir, **backend_config
+            )
 
         except Exception as e:
             if not isinstance(e, (ConfigurationError, BackendNotAvailableError)):
@@ -343,7 +347,9 @@ class SammyFactory:
                 preferred = BackendType(preferred_backend.lower())
                 if available[preferred]:
                     logger.info(f"Using preferred backend: {preferred.value}")
-                    return cls.create_runner(backend_type=preferred.value, working_dir=working_dir, output_dir=output_dir, **kwargs)
+                    return cls.create_runner(
+                        backend_type=preferred.value, working_dir=working_dir, output_dir=output_dir, **kwargs
+                    )
                 else:
                     logger.warning(f"Preferred backend {preferred.value} not available, " "trying alternatives")
             except ValueError:
@@ -361,7 +367,9 @@ class SammyFactory:
             if available[backend]:
                 try:
                     logger.info(f"Attempting to use {backend.value} backend")
-                    return cls.create_runner(backend_type=backend.value, working_dir=working_dir, output_dir=output_dir, **kwargs)
+                    return cls.create_runner(
+                        backend_type=backend.value, working_dir=working_dir, output_dir=output_dir, **kwargs
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to configure {backend.value} backend: {str(e)}")
                     errors.append(f"{backend.value}: {str(e)}")

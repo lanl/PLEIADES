@@ -37,12 +37,16 @@ class CovarianceMatrixOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
     implicit_data_covariance: bool = Field(default=False, description="IMPLICIT DATA COVARIANCE is wanted")
-    user_supplied_implicit_data_covariance: bool = Field(default=False, description="USER SUPPLIED IMPLICIT data covariance matrix")
+    user_supplied_implicit_data_covariance: bool = Field(
+        default=False, description="USER SUPPLIED IMPLICIT data covariance matrix"
+    )
     pup_covariance_ascii: bool = Field(default=False, description="PUP COVARIANCE IS IN an ascii file")
     create_pup_file: bool = Field(default=False, description="CREATE PUP FILE FROM varied parameters used in this run")
     add_constant_term: bool = Field(default=False, description="ADD CONSTANT TERM TO data covariance")
     do_not_add_constant_term: bool = Field(default=True, description="DO NOT ADD CONSTANT term to data covariance")
-    use_default_constant_term: bool = Field(default=False, description="USE DEFAULT FOR CONSTANT term to add to data covariance")
+    use_default_constant_term: bool = Field(
+        default=False, description="USE DEFAULT FOR CONSTANT term to add to data covariance"
+    )
     use_ten_percent_uncertainty: bool = Field(
         default=False, description="USE TEN PERCENT DATA uncertainty or ADD TEN PERCENT DATA uncertainty"
     )
@@ -75,7 +79,9 @@ class CovarianceMatrixOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -85,7 +91,9 @@ class CovarianceMatrixOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

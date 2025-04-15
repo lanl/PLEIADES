@@ -93,7 +93,9 @@ class NuclearDataManager:
                         content = f.read().decode("utf-8")
 
                     # Extract only resonance-related lines
-                    resonance_lines = [line for line in content.splitlines() if line[70:72].strip() in {"2", "32", "34"}]
+                    resonance_lines = [
+                        line for line in content.splitlines() if line[70:72].strip() in {"2", "32", "34"}
+                    ]
 
                     output_path.write_text("\n".join(resonance_lines))
                     logger.info(f"Resonance parameters written to {output_path}")

@@ -77,7 +77,9 @@ def test_valid_combination_of_options_1():
 
 def test_valid_combination_of_options_2():
     """Test a valid combination of options."""
-    options = MultipleScatteringCorrectionsOptions(include_double_scattering_corrections=True, file_with_edge_effects_already_exists=True)
+    options = MultipleScatteringCorrectionsOptions(
+        include_double_scattering_corrections=True, file_with_edge_effects_already_exists=True
+    )
     assert options.include_double_scattering_corrections is True
     assert options.file_with_edge_effects_already_exists is True
     assert options.get_alphanumeric_commands() == [
@@ -91,7 +93,9 @@ def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
         MultipleScatteringCorrectionsOptions(
-            do_not_include_self_shielding=True, use_self_shielding_only=True, use_single_scattering_plus_self_shielding=True
+            do_not_include_self_shielding=True,
+            use_self_shielding_only=True,
+            use_single_scattering_plus_self_shielding=True,
         )
 
 

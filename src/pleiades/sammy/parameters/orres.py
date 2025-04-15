@@ -262,7 +262,9 @@ class WaterParameters(BaseModel):
 
         # Add uncertainties line if any uncertainties present
         if any(getattr(self, f"d_{param}") is not None for param in ["watr0", "watr1", "watr2"]):
-            unc_parts = [format_float(getattr(self, f"d_{param}", 0.0), width=10) for param in ["watr0", "watr1", "watr2"]]
+            unc_parts = [
+                format_float(getattr(self, f"d_{param}", 0.0), width=10) for param in ["watr0", "watr1", "watr2"]
+            ]
             # pad the first 10 characters
             unc_parts = [" " * 10] + unc_parts
             lines.append("".join(unc_parts))
@@ -480,7 +482,11 @@ class LithiumParameters(BaseModel):
 
         # Add uncertainties line if any present
         if any(getattr(self, f"d_{param}") is not None for param in ["d", "f", "g"]):
-            unc_parts = [format_float(self.d_d, width=10), format_float(self.d_f, width=10), format_float(self.d_g, width=9)]
+            unc_parts = [
+                format_float(self.d_d, width=10),
+                format_float(self.d_f, width=10),
+                format_float(self.d_g, width=9),
+            ]
             # pad the first 10 characters
             unc_parts = [" " * 10] + unc_parts
             lines.append("".join(unc_parts))
@@ -559,7 +565,9 @@ class NE110Parameters(BaseModel):
         # Cross section points
         if self.cross_sections:
             for point in self.cross_sections:
-                lines.append("".join([" " * 10, format_float(point.energy, width=10), format_float(point.sigma, width=10)]))
+                lines.append(
+                    "".join([" " * 10, format_float(point.energy, width=10), format_float(point.sigma, width=10)])
+                )
 
         return lines
 

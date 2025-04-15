@@ -47,20 +47,34 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class MultipleScatteringCorrectionsOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
-    do_not_include_self_shielding: bool = Field(default=True, description="DO NOT INCLUDE SELF-shielding multiple-scattering corrections")
+    do_not_include_self_shielding: bool = Field(
+        default=True, description="DO NOT INCLUDE SELF-shielding multiple-scattering corrections"
+    )
     use_self_shielding_only: bool = Field(default=False, description="USE SELF SHIELDING Only no scattering")
-    use_single_scattering_plus_self_shielding: bool = Field(default=False, description="USE SINGLE SCATTERINg plus self shielding")
-    include_double_scattering_corrections: bool = Field(default=False, description="INCLUDE DOUBLE SCATTering corrections")
+    use_single_scattering_plus_self_shielding: bool = Field(
+        default=False, description="USE SINGLE SCATTERINg plus self shielding"
+    )
+    include_double_scattering_corrections: bool = Field(
+        default=False, description="INCLUDE DOUBLE SCATTering corrections"
+    )
     infinite_slab: bool = Field(default=False, description="INFINITE SLAB")
     finite_slab: bool = Field(default=True, description="FINITE SLAB")
     make_new_file_with_edge_effects: bool = Field(default=True, description="MAKE NEW FILE WITH Edge effects")
-    file_with_edge_effects_already_exists: bool = Field(default=False, description="FILE WITH EDGE EFFECts already exists")
-    make_plot_file_of_multiple_scattering_pieces: bool = Field(default=False, description="MAKE PLOT FILE OF MUltiple scattering pieces")
+    file_with_edge_effects_already_exists: bool = Field(
+        default=False, description="FILE WITH EDGE EFFECts already exists"
+    )
+    make_plot_file_of_multiple_scattering_pieces: bool = Field(
+        default=False, description="MAKE PLOT FILE OF MUltiple scattering pieces"
+    )
     normalize_as_cross_section: bool = Field(default=False, description="NORMALIZE AS CROSS Section rather than yield")
     normalize_as_yield: bool = Field(default=False, description="NORMALIZE AS YIELD Rather than cross section")
     normalize_as_1_minus_e_sigma: bool = Field(default=False, description="NORMALIZE AS (1-E)SIgma")
-    print_multiple_scattering_corrections: bool = Field(default=False, description="PRINT MULTIPLE SCATTering corrections")
-    prepare_input_for_monte_carlo_simulation: bool = Field(default=False, description="PREPARE INPUT FOR MOnte carlo simulation")
+    print_multiple_scattering_corrections: bool = Field(
+        default=False, description="PRINT MULTIPLE SCATTering corrections"
+    )
+    prepare_input_for_monte_carlo_simulation: bool = Field(
+        default=False, description="PREPARE INPUT FOR MOnte carlo simulation"
+    )
     y2_values_are_tabulated: bool = Field(default=False, description="Y2 VALUES ARE TABULAted")
     use_quadratic_interpolation_for_y1: bool = Field(default=False, description="USE QUADRATIC INTERPolation for y1")
     use_linear_interpolation_for_y1: bool = Field(default=False, description="USE LINEAR INTERPOLAtion for y1")
@@ -79,7 +93,11 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
         ["make_new_file_with_edge_effects", "file_with_edge_effects_already_exists"],
         ["make_plot_file_of_multiple_scattering_pieces"],
         ["normalize_as_cross_section", "normalize_as_yield", "normalize_as_1_minus_e_sigma"],
-        ["print_multiple_scattering_corrections", "prepare_input_for_monte_carlo_simulation", "y2_values_are_tabulated"],
+        [
+            "print_multiple_scattering_corrections",
+            "prepare_input_for_monte_carlo_simulation",
+            "y2_values_are_tabulated",
+        ],
         ["use_quadratic_interpolation_for_y1", "use_linear_interpolation_for_y1"],
         ["version_7_for_multiple_scattering"],
         ["do_not_calculate_y0"],
@@ -97,7 +115,9 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -107,7 +127,9 @@ class MultipleScatteringCorrectionsOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

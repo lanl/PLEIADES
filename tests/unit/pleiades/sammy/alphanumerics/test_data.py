@@ -17,7 +17,10 @@ def test_default_option():
     assert options.differential_data_are_in_ascii_file is False
     assert options.do_not_divide_data_into_regions is True
     assert options.divide_data_into_regions is False
-    assert options.get_alphanumeric_commands() == ["DATA ARE IN ORIGINAL MULTI-STYLE FORMAT", "DO NOT DIVIDE DATA INTO REGIONS"]
+    assert options.get_alphanumeric_commands() == [
+        "DATA ARE IN ORIGINAL MULTI-STYLE FORMAT",
+        "DO NOT DIVIDE DATA INTO REGIONS",
+    ]
 
 
 def test_valid_option_with_single_boolean():
@@ -34,7 +37,10 @@ def test_valid_option_with_single_boolean():
     assert options.differential_data_are_in_ascii_file is False
     assert options.do_not_divide_data_into_regions is True
     assert options.divide_data_into_regions is False
-    assert options.get_alphanumeric_commands() == ["DATA FORMAT IS ONE POINT PER LINE", "DO NOT DIVIDE DATA INTO REGIONS"]
+    assert options.get_alphanumeric_commands() == [
+        "DATA FORMAT IS ONE POINT PER LINE",
+        "DO NOT DIVIDE DATA INTO REGIONS",
+    ]
 
 
 def test_mutually_exclusive_options_1():
@@ -92,7 +98,9 @@ def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
         ExperimentalDataInputOptions(
-            data_in_original_multi_style_format=True, data_format_is_one_point_per_line=True, use_csisrs_format_for_data=True
+            data_in_original_multi_style_format=True,
+            data_format_is_one_point_per_line=True,
+            use_csisrs_format_for_data=True,
         )
 
 
@@ -100,11 +108,17 @@ def test_switching_options():
     """Test switching options."""
     options = ExperimentalDataInputOptions()
     assert options.data_in_original_multi_style_format is True
-    assert options.get_alphanumeric_commands() == ["DATA ARE IN ORIGINAL MULTI-STYLE FORMAT", "DO NOT DIVIDE DATA INTO REGIONS"]
+    assert options.get_alphanumeric_commands() == [
+        "DATA ARE IN ORIGINAL MULTI-STYLE FORMAT",
+        "DO NOT DIVIDE DATA INTO REGIONS",
+    ]
 
     options = ExperimentalDataInputOptions(data_format_is_one_point_per_line=True)
     assert options.data_format_is_one_point_per_line is True
-    assert options.get_alphanumeric_commands() == ["DATA FORMAT IS ONE POINT PER LINE", "DO NOT DIVIDE DATA INTO REGIONS"]
+    assert options.get_alphanumeric_commands() == [
+        "DATA FORMAT IS ONE POINT PER LINE",
+        "DO NOT DIVIDE DATA INTO REGIONS",
+    ]
 
     options = ExperimentalDataInputOptions(use_csisrs_format_for_data=True)
     assert options.use_csisrs_format_for_data is True
@@ -128,7 +142,10 @@ def test_switching_options():
 
     options = ExperimentalDataInputOptions(use_endf_b_energies_and_data=True)
     assert options.use_endf_b_energies_and_data is True
-    assert options.get_alphanumeric_commands() == ["USE ENDF/B ENERGIES AND DATA, WITH MAT=9999", "DO NOT DIVIDE DATA INTO REGIONS"]
+    assert options.get_alphanumeric_commands() == [
+        "USE ENDF/B ENERGIES AND DATA, WITH MAT=9999",
+        "DO NOT DIVIDE DATA INTO REGIONS",
+    ]
 
     options = ExperimentalDataInputOptions(differential_data_are_in_ascii_file=True)
     assert options.differential_data_are_in_ascii_file is True

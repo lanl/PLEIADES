@@ -50,13 +50,17 @@ def test_valid_option_with_single_boolean():
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOptions(retroactive_old_parameter_file_new_covariance=True, p_covariance_matrix_is_correct_u_is_not=True)
+        CovarianceMatrixOptions(
+            retroactive_old_parameter_file_new_covariance=True, p_covariance_matrix_is_correct_u_is_not=True
+        )
 
 
 def test_mutually_exclusive_options_2():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOptions(read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True)
+        CovarianceMatrixOptions(
+            read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True
+        )
 
 
 def test_valid_combination_of_options_1():
@@ -109,7 +113,9 @@ def test_valid_combination_of_options_2():
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOptions(read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True)
+        CovarianceMatrixOptions(
+            read_compact_covariances_for_parameter_priors=True, read_compact_correlations_for_parameter_priors=True
+        )
 
 
 def test_switching_options():

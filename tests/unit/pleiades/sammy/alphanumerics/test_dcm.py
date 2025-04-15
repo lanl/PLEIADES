@@ -18,7 +18,10 @@ def test_default_option():
     assert options.data_off_diagonal is False
     assert options.data_covariance_file is False
     assert options.free_format_data_covariance is False
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE IS DIAGONAL"]
+    assert options.get_alphanumeric_commands() == [
+        "DO NOT ADD CONSTANT TERM TO DATA COVARIANCE",
+        "DATA COVARIANCE IS DIAGONAL",
+    ]
 
 
 def test_valid_option_with_single_boolean():
@@ -73,14 +76,19 @@ def test_valid_combination_of_options_2():
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOptions(implicit_data_covariance=True, user_supplied_implicit_data_covariance=True, pup_covariance_ascii=True)
+        CovarianceMatrixOptions(
+            implicit_data_covariance=True, user_supplied_implicit_data_covariance=True, pup_covariance_ascii=True
+        )
 
 
 def test_switching_options():
     """Test switching options."""
     options = CovarianceMatrixOptions()
     assert options.data_covariance_diagonal is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "DATA COVARIANCE IS DIAGONAL"]
+    assert options.get_alphanumeric_commands() == [
+        "DO NOT ADD CONSTANT TERM TO DATA COVARIANCE",
+        "DATA COVARIANCE IS DIAGONAL",
+    ]
 
     options = CovarianceMatrixOptions(data_off_diagonal=True)
     assert options.data_off_diagonal is True
@@ -98,7 +106,10 @@ def test_switching_options():
 
     options = CovarianceMatrixOptions(free_format_data_covariance=True)
     assert options.free_format_data_covariance is True
-    assert options.get_alphanumeric_commands() == ["DO NOT ADD CONSTANT TERM TO DATA COVARIANCE", "FREE FORMAT DATA COVARIANCE YYYYYY.YYY"]
+    assert options.get_alphanumeric_commands() == [
+        "DO NOT ADD CONSTANT TERM TO DATA COVARIANCE",
+        "FREE FORMAT DATA COVARIANCE YYYYYY.YYY",
+    ]
 
 
 if __name__ == "__main__":

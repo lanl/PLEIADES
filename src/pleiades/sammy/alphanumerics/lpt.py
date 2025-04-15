@@ -77,8 +77,12 @@ class LPTOutputOptions(BaseModel):
     print_partial_derivatives: bool = Field(default=False, description="PRINT PARTIAL DERIVAtives")
 
     suppress_intermediate_printout: bool = Field(default=False, description="SUPPRESS INTERMEDIATe printout")
-    do_not_suppress_intermediate_printout: bool = Field(default=False, description="DO NOT SUPPRESS INTErmediate printout")
-    do_not_suppress_any_intermediate_printout: bool = Field(default=True, description="DO NOT SUPPRESS ANY intermediate printout")
+    do_not_suppress_intermediate_printout: bool = Field(
+        default=False, description="DO NOT SUPPRESS INTErmediate printout"
+    )
+    do_not_suppress_any_intermediate_printout: bool = Field(
+        default=True, description="DO NOT SUPPRESS ANY intermediate printout"
+    )
 
     do_not_use_short_format_for_output: bool = Field(default=True, description="DO NOT USE SHORT FORmat for output")
     use_short_format_for_output: bool = Field(default=False, description="USE SHORT FORMAT FOR output")
@@ -86,7 +90,9 @@ class LPTOutputOptions(BaseModel):
     do_not_print_reduced_widths: bool = Field(default=True, description="DO NOT PRINT REDUCED widths")
     print_reduced_widths: bool = Field(default=False, description="PRINT REDUCED WIDTHS")
 
-    do_not_print_small_correlation_coefficients: bool = Field(default=False, description="DO NOT PRINT SMALL Correlation coefficients")
+    do_not_print_small_correlation_coefficients: bool = Field(
+        default=False, description="DO NOT PRINT SMALL Correlation coefficients"
+    )
 
     do_not_print_debug_info: bool = Field(default=True, description="DO NOT PRINT DEBUG Info")
     print_debug_information: bool = Field(default=False, description="PRINT DEBUG INFORMATion")
@@ -100,10 +106,14 @@ class LPTOutputOptions(BaseModel):
     print_weighted_residuals: bool = Field(default=False, description="PRINT WEIGHTED RESIDuals")
 
     print_bayes_weighted_residuals: bool = Field(default=False, description="PRINT BAYES WEIGHTED residuals")
-    do_not_print_bayes_weighted_residuals: bool = Field(default=True, description="DO NOT PRINT BAYES Weighted residuals")
+    do_not_print_bayes_weighted_residuals: bool = Field(
+        default=True, description="DO NOT PRINT BAYES Weighted residuals"
+    )
 
     do_not_print_phase_shifts: bool = Field(default=True, description="DO NOT PRINT PHASE Shifts")
-    print_phase_shifts_for_input_parameters: bool = Field(default=False, description="PRINT PHASE SHIFTS For input parameters")
+    print_phase_shifts_for_input_parameters: bool = Field(
+        default=False, description="PRINT PHASE SHIFTS For input parameters"
+    )
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
@@ -111,7 +121,11 @@ class LPTOutputOptions(BaseModel):
         ["do_not_print_input_data", "print_input_data"],
         ["do_not_print_theoretical_values", "print_theoretical_values"],
         ["do_not_print_partial_derivatives", "print_partial_derivatives"],
-        ["suppress_intermediate_printout", "do_not_suppress_intermediate_printout", "do_not_suppress_any_intermediate_printout"],
+        [
+            "suppress_intermediate_printout",
+            "do_not_suppress_intermediate_printout",
+            "do_not_suppress_any_intermediate_printout",
+        ],
         ["do_not_use_short_format_for_output", "use_short_format_for_output"],
         ["do_not_print_reduced_widths", "print_reduced_widths"],
         ["do_not_print_debug_info", "print_debug_information"],
@@ -133,7 +147,9 @@ class LPTOutputOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -143,7 +159,9 @@ class LPTOutputOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

@@ -40,7 +40,9 @@ def test_isotope_info_validation():
 
 
 def test_isotope_mass_data_validation():
-    mass_data = IsotopeMassData(atomic_mass=235.0439299, mass_uncertainty=0.000002, binding_energy=7.6, beta_decay_energy=None)
+    mass_data = IsotopeMassData(
+        atomic_mass=235.0439299, mass_uncertainty=0.000002, binding_energy=7.6, beta_decay_energy=None
+    )
     assert mass_data.atomic_mass == 235.0439299
     assert mass_data.mass_uncertainty == 0.000002
     assert mass_data.binding_energy == 7.6
