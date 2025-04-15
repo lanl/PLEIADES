@@ -81,15 +81,23 @@ class PrintInputOptions(str, Enum):
 class FitOptions(BaseModel):
     """Container for fit options with SAMMY"""
 
-    RMatrix: RMatrixOptions = Field(description="R-matrix option for the calculation", default=RMatrixOptions.REICH_MOORE_FORMALISM)
-    SpinGroupFormat: SpinGroupOptions = Field(description="Parameter input options", default=SpinGroupOptions.USE_NEW_SPIN_GROUP)
+    RMatrix: RMatrixOptions = Field(
+        description="R-matrix option for the calculation", default=RMatrixOptions.REICH_MOORE_FORMALISM
+    )
+    SpinGroupFormat: SpinGroupOptions = Field(
+        description="Parameter input options", default=SpinGroupOptions.USE_NEW_SPIN_GROUP
+    )
     QuantumNumbers: QuantumNumbersOptions = Field(
         description="Quantum numbers options", default=QuantumNumbersOptions.Q_NUMBERS_IN_PARAM_FILE
     )
     input_is_endf_b_file_2: bool = Field(description="Indicates if the input is ENDF/B FILE 2", default=False)
-    DataFormat: DataFormatOptions = Field(description="Data format options", default=DataFormatOptions.DATA_IN_ORIGINAL_MULTI_FORMAT)
+    DataFormat: DataFormatOptions = Field(
+        description="Data format options", default=DataFormatOptions.DATA_IN_ORIGINAL_MULTI_FORMAT
+    )
     ImplementBroadeningOption: bool = Field(description="option to implement Broadening", default=False)
-    BroadeningType: BroadeningTypeOptions = Field(description="Broadening type options", default=BroadeningTypeOptions.FREE_GAS_MODEL)
+    BroadeningType: BroadeningTypeOptions = Field(
+        description="Broadening type options", default=BroadeningTypeOptions.FREE_GAS_MODEL
+    )
     SolveBayesEquation: bool = Field(description="option to solve Bayes equation", default=False)
     PrintInputDataInLPT: bool = Field(description="option to print input data in LPT", default=False)
     PrintInputParamsInLPT: PrintInputOptions = Field(

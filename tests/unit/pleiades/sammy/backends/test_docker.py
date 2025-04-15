@@ -124,7 +124,9 @@ class TestDockerSammyRunner:
         assert "Normal finish to SAMMY" in result.console_output
         assert result.error_message is None
 
-    def test_execute_sammy_failure(self, docker_config, mock_sammy_files, mock_subprocess_docker_fail, mock_docker_command):
+    def test_execute_sammy_failure(
+        self, docker_config, mock_sammy_files, mock_subprocess_docker_fail, mock_docker_command
+    ):
         """Should handle SAMMY execution failure in container."""
         _ = mock_docker_command  # implicitly used via fixture
         _ = mock_subprocess_docker_fail  # implicitly used via fixture
@@ -137,7 +139,9 @@ class TestDockerSammyRunner:
         assert not result.success
         assert "Docker execution failed" in result.error_message
 
-    def test_collect_outputs(self, docker_config, mock_sammy_files, mock_subprocess_docker, mock_docker_command, mock_sammy_results):
+    def test_collect_outputs(
+        self, docker_config, mock_sammy_files, mock_subprocess_docker, mock_docker_command, mock_sammy_results
+    ):
         """Should collect output files from container."""
         _ = mock_docker_command  # implicitly used via fixture
         _ = mock_subprocess_docker  # implicitly used via fixture

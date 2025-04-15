@@ -38,7 +38,13 @@ FORMAT_SPECS = {
         "l0_const": slice(30, 40),
         "l0_unc": slice(40, 50),
     },
-    "ETA": {"identifier": slice(0, 5), "flag": slice(6, 7), "nu_value": slice(10, 20), "nu_unc": slice(20, 30), "energy": slice(30, 40)},
+    "ETA": {
+        "identifier": slice(0, 5),
+        "flag": slice(6, 7),
+        "nu_value": slice(10, 20),
+        "nu_unc": slice(20, 30),
+        "energy": slice(30, 40),
+    },
     "FINIT": {
         "identifier": slice(0, 5),
         "flag_i": slice(6, 7),
@@ -48,7 +54,13 @@ FORMAT_SPECS = {
         "attno": slice(30, 40),
         "dttno": slice(40, 50),
     },
-    "GAMMA": {"identifier": slice(0, 5), "group": slice(5, 7), "flag": slice(7, 9), "width": slice(10, 20), "uncertainty": slice(20, 30)},
+    "GAMMA": {
+        "identifier": slice(0, 5),
+        "group": slice(5, 7),
+        "flag": slice(7, 9),
+        "width": slice(10, 20),
+        "uncertainty": slice(20, 30),
+    },
     "TZERO": {
         "identifier": slice(0, 5),
         "flag_t0": slice(6, 7),
@@ -289,7 +301,12 @@ class DeltaParameters(Card11Parameter):
         l0_unc = safe_parse(line[FORMAT_SPECS["DELTA"]["l0_unc"]])
 
         return cls(
-            l1_coefficient=l1_coeff, l1_uncertainty=l1_unc, l0_constant=l0_const, l0_uncertainty=l0_unc, l1_flag=l1_flag, l0_flag=l0_flag
+            l1_coefficient=l1_coeff,
+            l1_uncertainty=l1_unc,
+            l0_constant=l0_const,
+            l0_uncertainty=l0_unc,
+            l1_flag=l1_flag,
+            l0_flag=l0_flag,
         )
 
     def to_lines(self) -> List[str]:
@@ -761,7 +778,9 @@ class SiabnParameters(Card11Parameter):
 
         # Parse flags
         flags = []
-        for i, flag_slice in enumerate([FORMAT_SPECS["SIABN"]["flag1"], FORMAT_SPECS["SIABN"]["flag2"], FORMAT_SPECS["SIABN"]["flag3"]]):
+        for i, flag_slice in enumerate(
+            [FORMAT_SPECS["SIABN"]["flag1"], FORMAT_SPECS["SIABN"]["flag2"], FORMAT_SPECS["SIABN"]["flag3"]]
+        ):
             flag_str = line[flag_slice].strip()
             if flag_str:
                 try:

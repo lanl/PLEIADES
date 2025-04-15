@@ -216,9 +216,12 @@ class BroadeningParameters(BaseModel):
         lines.append(main_line)
 
         # Add uncertainties line if any uncertainties are present
-        if any(getattr(self, f"d_{param}") is not None for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]):
+        if any(
+            getattr(self, f"d_{param}") is not None for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]
+        ):
             unc_parts = [
-                format_float(getattr(self, f"d_{param}", 0.0), width=9) for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]
+                format_float(getattr(self, f"d_{param}", 0.0), width=9)
+                for param in ["crfn", "temp", "thick", "deltal", "deltag", "deltae"]
             ]
             lines.append(" ".join(unc_parts))
 
@@ -235,7 +238,10 @@ class BroadeningParameters(BaseModel):
 
             # Add Gaussian uncertainties if present
             if self.d_deltc1 is not None or self.d_deltc2 is not None:
-                gaussian_unc_parts = [format_float(self.d_deltc1 or 0.0, width=9), format_float(self.d_deltc2 or 0.0, width=9)]
+                gaussian_unc_parts = [
+                    format_float(self.d_deltc1 or 0.0, width=9),
+                    format_float(self.d_deltc2 or 0.0, width=9),
+                ]
                 lines.append(" ".join(gaussian_unc_parts))
 
         return lines
@@ -389,7 +395,11 @@ if __name__ == "__main__":
 
     # Test invalid header
     try:
-        bad_lines = ["WRONG header line", "1.2340E+00 2.9800E+02 1.5000E-01 2.5000E-02 1.0000E+00 5.0000E-01  1 0 1 0 1 0", ""]
+        bad_lines = [
+            "WRONG header line",
+            "1.2340E+00 2.9800E+02 1.5000E-01 2.5000E-02 1.0000E+00 5.0000E-01  1 0 1 0 1 0",
+            "",
+        ]
         logging.debug("Testing invalid header:")
         BroadeningParameterCard.from_lines(bad_lines)
     except ValueError as e:

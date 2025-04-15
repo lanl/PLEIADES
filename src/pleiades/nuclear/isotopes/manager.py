@@ -66,7 +66,10 @@ class IsotopeManager:
 
         file_path = Path(filename)
         if file_path.suffix not in self._CATEGORY_FILE_EXTENSIONS[category]:
-            raise ValueError(f"Invalid file extension for {category}. " f"Allowed extensions: {self._CATEGORY_FILE_EXTENSIONS[category]}")
+            raise ValueError(
+                f"Invalid file extension for {category}. "
+                f"Allowed extensions: {self._CATEGORY_FILE_EXTENSIONS[category]}"
+            )
 
         print(f"Searching for {filename} in cached files for {category}: {self._cached_files[category]}")
         for file in self._cached_files[category]:

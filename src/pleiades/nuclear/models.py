@@ -91,7 +91,9 @@ class RadiusParameters(BaseModel):
     spin_groups: Optional[List[int]] = Field(
         description="List of spin group numbers",
     )
-    channels: Optional[List[int]] = Field(default=None, description="List of channel numbers (required when channel_mode=1)")
+    channels: Optional[List[int]] = Field(
+        default=None, description="List of channel numbers (required when channel_mode=1)"
+    )
 
     @field_validator("spin_groups")
     def validate_spin_groups(cls, v: List[int]) -> List[int]:
@@ -190,8 +192,12 @@ class RadiusParameters(BaseModel):
 
         if self.true_radius < 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
-                raise ValueError("When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)")
+                logger.error(
+                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                )
+                raise ValueError(
+                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                )
 
         return self
 
@@ -258,10 +264,14 @@ class IsotopeParameters(BaseModel):
     abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
-    endf_library: Optional[EndfLibrary] = Field(default=EndfLibrary.ENDF_B_VIII_0, description="ENDF library associated with the isotope")
+    endf_library: Optional[EndfLibrary] = Field(
+        default=EndfLibrary.ENDF_B_VIII_0, description="ENDF library associated with the isotope"
+    )
     spin_groups: Optional[List[int]] = Field(default_factory=list, description="Spin group numbers")
     resonances: Optional[List[ResonanceEntry]] = Field(default_factory=list, description="List of resonance entries")
-    radius_parameters: Optional[List[RadiusParameters]] = Field(default_factory=list, description="List of radius parameters")
+    radius_parameters: Optional[List[RadiusParameters]] = Field(
+        default_factory=list, description="List of radius parameters"
+    )
 
     @model_validator(mode="after")
     def validate_groups(self) -> "IsotopeParameters":
@@ -332,8 +342,12 @@ class IsotopeParameters(BaseModel):
         for radius in self.radius_parameters:
             for group in radius.spin_groups:
                 if group not in self.spin_groups:
-                    logger.info(f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
-                    raise ValueError(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
+                    logger.info(
+                        f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
+                    )
+                    raise ValueError(
+                        f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
+                    )
 
         return self
 

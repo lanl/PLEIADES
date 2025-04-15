@@ -30,7 +30,9 @@ def test_parameter_optional_fields():
 
 def test_parameter_formatting():
     """Test parameter line formatting."""
-    param = DataReductionParameter(name="PAR1", value=1.234, flag=VaryFlag.YES, uncertainty=0.05, derivative_value=1.234)
+    param = DataReductionParameter(
+        name="PAR1", value=1.234, flag=VaryFlag.YES, uncertainty=0.05, derivative_value=1.234
+    )
     line = param.to_line()
 
     # Parse back to verify format

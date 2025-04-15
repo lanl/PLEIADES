@@ -6,7 +6,9 @@ import pytest
 from pleiades.sammy.parameters.radius import RadiusCard, RadiusFormat, VaryFlag
 
 
-def create_fixed_width_line(pareff: float, partru: float, ichan: int, ifleff: int, ifltru: int, spin_groups: list[int]) -> str:
+def create_fixed_width_line(
+    pareff: float, partru: float, ichan: int, ifleff: int, ifltru: int, spin_groups: list[int]
+) -> str:
     """Create properly formatted fixed-width line."""
     # Format floating point numbers with proper width
     pareff_str = f"{pareff:10.3f}"
@@ -23,7 +25,9 @@ def create_fixed_width_line(pareff: float, partru: float, ichan: int, ifleff: in
     return f"{pareff_str}{partru_str}{ichan_str}{ifleff_str}{ifltru_str}{spin_groups_str}"
 
 
-def create_alternate_fixed_width_line(pareff: float, partru: float, ichan: int, ifleff: int, ifltru: int, spin_groups: list[int]) -> str:
+def create_alternate_fixed_width_line(
+    pareff: float, partru: float, ichan: int, ifleff: int, ifltru: int, spin_groups: list[int]
+) -> str:
     """Create properly formatted fixed-width line for alternate format (>=99 spin groups).
 
     Args:
@@ -114,7 +118,9 @@ def test_alternate_fixed_width_format():
     # Create test input with large spin group numbers
     spin_groups = [101, 102, 103]  # Using 3-digit group numbers
 
-    input_str = "RADIUs parameters follow\n" + create_alternate_fixed_width_line(3.200, 3.200, 0, 1, -1, spin_groups) + "\n"
+    input_str = (
+        "RADIUs parameters follow\n" + create_alternate_fixed_width_line(3.200, 3.200, 0, 1, -1, spin_groups) + "\n"
+    )
 
     print("\nTest input:")
     print(input_str)

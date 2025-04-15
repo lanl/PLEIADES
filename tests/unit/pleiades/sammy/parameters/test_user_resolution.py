@@ -209,7 +209,12 @@ class TestUserResolutionParameters:
 
     def test_parse_multiple_file_lines(self, valid_header_line):
         """Test parsing of multiple FILE parameter lines."""
-        lines = [valid_header_line, "FILE=resolution_data1.txt", "FILE=resolution_data2.txt", "FILE=resolution_data3.txt"]
+        lines = [
+            valid_header_line,
+            "FILE=resolution_data1.txt",
+            "FILE=resolution_data2.txt",
+            "FILE=resolution_data3.txt",
+        ]
 
         params = UserResolutionParameters.from_lines(lines)
 

@@ -38,16 +38,22 @@ class BayesSolutionOptions(BaseModel):
 
     solve_bayes_equations: bool = Field(default=True, description="SOLVE BAYES EQUATIONs")
     do_not_solve_bayes_equations: bool = Field(default=False, description="DO NOT SOLVE BAYES Equations")
-    let_sammy_choose_which_inversion_scheme_to_use: bool = Field(default=True, description="LET SAMMY CHOOSE WHIch inversion scheme to use")
+    let_sammy_choose_which_inversion_scheme_to_use: bool = Field(
+        default=True, description="LET SAMMY CHOOSE WHIch inversion scheme to use"
+    )
     use_npv_inversion_scheme: bool = Field(default=False, description="USE (N+V) INVERSION scheme")
     use_ipq_inversion_scheme: bool = Field(default=False, description="USE (I+Q) INVERSION scheme")
     use_mpw_inversion_scheme: bool = Field(default=False, description="USE (M+W) INVERSION scheme")
     use_least_squares_to_define_prior_parameter_covariance_matrix: bool = Field(
         default=False, description="USE LEAST SQUARES TO define prior parameter covariance matrix"
     )
-    take_baby_steps_with_least_squares_method: bool = Field(default=False, description="TAKE BABY STEPS WITH least-squares method")
+    take_baby_steps_with_least_squares_method: bool = Field(
+        default=False, description="TAKE BABY STEPS WITH least-squares method"
+    )
     remember_original_parameter_values: bool = Field(default=False, description="REMEMBER ORIGINAL PArameter values")
-    use_remembered_original_parameter_values: bool = Field(default=False, description="USE REMEMBERED ORIGInal parameter values")
+    use_remembered_original_parameter_values: bool = Field(
+        default=False, description="USE REMEMBERED ORIGInal parameter values"
+    )
 
     # Mutually exclusive groups
     mutually_exclusive_groups: List[List[str]] = [
@@ -78,7 +84,9 @@ class BayesSolutionOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -88,7 +96,9 @@ class BayesSolutionOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

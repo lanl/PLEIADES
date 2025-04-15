@@ -37,6 +37,8 @@ class dataParameters(BaseModel):
     data_file: str = Field(description="File containing the data", default=None)
     data_type: DataTypeOptions = Field(description="Type of the data", default=DataTypeOptions.TRANSMISSION)
     energy_units: EnergyUnitOptions = Field(description="Units of energy", default=EnergyUnitOptions.eV)
-    cross_section_units: CrossSectionUnitOptions = Field(description="Units of cross-section", default=CrossSectionUnitOptions.barn)
+    cross_section_units: CrossSectionUnitOptions = Field(
+        description="Units of cross-section", default=CrossSectionUnitOptions.barn
+    )
     data_title: str = Field(description="Title of the data", default=None)
     data_comment: str = Field(description="Comment for the data", default=None)

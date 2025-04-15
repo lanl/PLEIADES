@@ -1,72 +1,191 @@
 [project]
 name = "pleiades"
-version = "0.1.1"
 description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
-license = "MIT"
+dynamic = ["version"]
+requires-python = ">=3.10,<4.0"
+license = { text = "MIT" }
+keywords = ["neutron", "resonance", "cross-section"]
 authors = [
     {name = "Alex M. Long", email = "alexlong@lanl.gov"},
     {name = "Tsviki Hirsh", email = "tsviki.hirsh@gmail.com"},
     {name = "Chen Zhang", email = "zhangc@ornl.gov"},
     {name = "Jean Bilheux", email = "bilheuxjm@ornl.gov"},
 ]
-requires-python = ">=3.10,<4.0"
 dependencies = [
-    "setuptools",
     "numpy",
     "scipy",
     "pandas",
     "matplotlib",
     "jupyterlab",
-    "nova-galaxy",
     "pyyaml",
     "pydantic",
+    "nova-galaxy>=0.7.4,<0.8",
 ]
+
+[project.urls]
+homepage = "https://github.com/lanl/PLEIADES"
+repository = "https://github.com/lanl/PLEIADES"
+documentation = "https://pleiades-sammy.readthedocs.io"
+issues = "https://github.com/lanl/PLEIADES/issues"
 
 [project.scripts]
 pleiades = "pleiades:main"  # Console script entry point
 post_install_check = "pleiades.post_install:check_sammy_installed"
 
-# ---------------------------------------------------------- #
-# This section is for users who want to install via `poetry` #
-# ---------------------------------------------------------- #
-[tool.poetry]
-packages = [
-    { include = "pleiades", from = "src" }
-]
-include = [
-    "src/pleiades/data/isotopes/*",
-    "src/pleiades/data/resonances/*",
-    "src/pleiades/data/cross_sections/*"
-]
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-pytest-cov = "^6.0.0"
-pre-commit = "^4.0.1"
-
 [build-system]
-requires = ["poetry>=1.1.0"]
-build-backend = "poetry.core.masonry.api"
+requires = [
+    "setuptools >= 40.6.0",
+    "wheel",
+    "toml",
+    "versioningit"
+]
+build-backend = "setuptools.build_meta"
 
-# --------------------------------------------- #
-# The rest all 3rd party plugins configurations #
-# --------------------------------------------- #
+# -------------------------------------- #
+# ----- Versioningit configuration ----- #
+# -------------------------------------- #
+[tool.versioningit.vcs]
+method = "git"
+default-tag = "1.0.0"
+
+[tool.versioningit.next-version]
+method = "minor"
+
+[tool.versioningit.format]
+distance = "{next_version}.dev{distance}"
+dirty = "{version}+d{build_date:%Y%m%d}"
+distance-dirty = "{next_version}.dev{distance}+d{build_date:%Y%m%d%H%M}"
+
+[tool.versioningit.write]
+file = "src/pleiades/_version.py"
+
+# ------------------------------------ #
+# ----- Setuptools configuration ----- #
+# ------------------------------------ #
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*", "docs*", "notebooks*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yml","*.yaml","*.ini","**/*.ui","**/*.json", "**/icons/*"]
+
+# -------------------------------- #
+# ----- Pytest configuration ----- #
+# -------------------------------- #
 [tool.pytest.ini_options]
-addopts = "-v --cov=pleiades --cov-report=term-missing"
 pythonpath = [
-  ".", "src", "scripts"
+    ".", "src",
 ]
 testpaths = ["tests"]
 python_files = ["test*.py"]
 norecursedirs = [".git", "tmp*", "_tmp*", "__pycache__", "*dataset*", "*data_set*"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "if __name__ == .__main__.:"
+markers = [
+    "unit: unit tests",
+    "integration: integration tests",
+    "slow: tests that are slow to run",
+    "gui: tests for the GUI components"
 ]
 
+# ------------------------------ #
+# ----- Ruff configuration ----- #
+# ------------------------------ #
 [tool.ruff]
-line-length = 140
+target-version = "py311"
+line-length = 120
+exclude = ["notebooks/**", "**/*.ipynb"]
 
 [tool.ruff.lint]
-select = ["A", "ARG","ASYNC", "E", "F", "I", "UP032", "W"]
+select = ["E", "F", "I"]
+ignore = [
+    "E501",  # Line too Long
+    "F841",  # Local variable is assigned to but never used
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pleiades"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ------------------------------ #
+# ----- Pixi configuration ----- #
+# ------------------------------ #
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+pleiades = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+numpy = ">=2.2.4,<3"
+scipy = ">=1.15.2,<2"
+pandas = ">=2.2.3,<3"
+matplotlib = ">=3.10.1,<4"
+jupyterlab = ">=4.4.0,<5"
+pyyaml = ">=6.0.2,<7"
+pydantic = ">=2.11.2,<3"
+
+[tool.pixi.tasks]
+# PyPi packaging tasks
+build-pypi = { cmd = "python -m build", description = "Build the package for PyPI" }
+publish-pypi = { cmd = "twine upload dist/*", description = "Publish the package to PyPI", depends-on = ["build-pypi"] }
+clean-pypi = { cmd = "rm -rf dist", description = "Clean the PyPI build artifacts" }
+# Conda packaging tasks
+# NOTE: for build-conda to work locally, you need to set pixi to use detached-environments, i.e. pixi config set detached-environments true
+#       this is because the conda build will complain about build environment in source and refuse to build.
+build-conda = { cmd = "cd conda.recipe && VERSION=$(versioningit ../) conda mambabuild --channel conda-forge --output-folder . .", description = "Build the package for conda" }
+verify-conda = { cmd = "conda verify conda.recipe/noarch/*.tar.bz2", description = "Verify the conda package", depends-on = ["build-conda"] }
+publish-conda = { cmd = "anaconda upload conda.recipe/noarch/*/*.tar.bz2", description = "Publish the package to conda", depends-on = ["verify-conda"] }
+clean-conda = { cmd = "sh -c \"find conda.recipe/* ! -name 'meta.yaml' -exec rm -rf {} +\"", description = "Clean the conda build artifacts" }
+# Documentation tasks
+build-docs = { cmd = "sphinx-build -b html docs docs/_build", description = "Build the documentation" }
+clean-docs = { cmd = "rm -rf docs/_build", description = "Clean the documentation build artifacts" }
+# Testing tasks
+test = { cmd = "pytest", description = "Run the tests" }  # pytest config above takes care of the arguments
+# Development tasks
+lint = { cmd = "ruff check .", description = "Run linting checks" }
+format = { cmd = "ruff format .", description = "Format code with ruff" }
+pre-commit-install = { cmd = "pre-commit install", description = "Install pre-commit hooks" }
+pre-commit-run = { cmd = "pre-commit run --all-files", description = "Run pre-commit on all files" }
+# Clean all
+clean-all = { description = "Clean all build artifacts", depends-on = ["clean-pypi", "clean-conda", "clean-docs"] }
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-xdist = "*"
+pytest-repeat = "*"
+
+[tool.pixi.feature.package.dependencies]
+boa = "*"
+anaconda-client = ">=1.13.0,<2"
+conda-build = "*"
+conda-verify = "*"
+python-build = "*"
+twine = ">=6.1.0,<7"
+
+[tool.pixi.feature.developer.dependencies]
+pip = "*"
+versioningit = "*"
+pre-commit = "*"
+conda-tree = "*"
+ruff = "*"
+
+[tool.pixi.feature.docs.dependencies]
+sphinx = ">=8.2.1,<9"
+sphinx_rtd_theme = ">=3.0.1,<4"
+
+[tool.pixi.feature.jupyter.dependencies]
+jupyterlab = "*"
+ipympl = "*"
+ipywidgets = "*"
+
+[tool.pixi.environments]
+default = {features = ["test", "package", "docs", "developer"]}
+jupyter = {features = ["developer", "jupyter"]}

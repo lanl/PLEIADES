@@ -130,7 +130,9 @@ def test_valid_combination_of_options_2():
 def test_invalid_option():
     """Test an invalid option with multiple mutually exclusive flags."""
     with pytest.raises(ValueError):
-        LPTOutputOptions(do_not_print_any_input_parameters=True, print_all_input_parameters=True, print_varied_input_parameters=True)
+        LPTOutputOptions(
+            do_not_print_any_input_parameters=True, print_all_input_parameters=True, print_varied_input_parameters=True
+        )
 
 
 def test_switching_options():

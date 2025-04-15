@@ -1,0 +1,54 @@
+name: conda packaging and deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [qa, main]
+    tags: ['v*']
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.5
+        with:
+          pixi-version: v0.41.4
+          manifest-path: pyproject.toml
+      - name: build conda package
+        run: |
+          echo "build and verify conda package"
+          pixi run verify-conda
+      - name: upload conda package to anaconda
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+          IS_RC: ${{ contains(github.ref, 'rc') }}
+        run: |
+          # label is main or rc depending on the tag-name
+          CONDA_LABEL="main"
+          if [ "${IS_RC}" = "true" ]; then CONDA_LABEL="rc"; fi
+          echo pushing ${{ github.ref }} with label $CONDA_LABEL
+          pixi run anaconda upload --label $CONDA_LABEL --user neutrons conda.recipe/noarch/mypackagename*.tar.bz2
+
+  pypi-publish:
+    name: upload release to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.5
+        with:
+          pixi-version: v0.41.4
+          manifest-path: pyproject.toml
+      - name: build pypi package
+        run: |
+          # build the package
+          VERSION=$(pixi run -- versioningit .)
+          pixi run -- python -m build
+      # publish your distributions here (need to setup on PyPI first)
+      - name: Publish package distributions to PyPI
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: pypa/gh-action-pypi-publish@release/v1

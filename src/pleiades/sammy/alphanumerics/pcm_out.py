@@ -23,11 +23,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class CovarianceMatrixOutputOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
-    write_correlations_into_compact_format: bool = Field(default=False, description="WRITE CORRELATIONS Into compact format")
-    put_correlations_into_compact_format: bool = Field(default=False, description="PUT CORRELATIONS INTo compact format")
-    write_covariances_into_compact_format: bool = Field(default=False, description="WRITE COVARIANCES INto compact format")
+    write_correlations_into_compact_format: bool = Field(
+        default=False, description="WRITE CORRELATIONS Into compact format"
+    )
+    put_correlations_into_compact_format: bool = Field(
+        default=False, description="PUT CORRELATIONS INTo compact format"
+    )
+    write_covariances_into_compact_format: bool = Field(
+        default=False, description="WRITE COVARIANCES INto compact format"
+    )
     put_covariances_into_compact_format: bool = Field(default=False, description="PUT COVARIANCES INTO compact format")
-    put_covariance_matrix_into_endf_file_32: bool = Field(default=False, description="PUT COVARIANCE MATRIx into endf file 32")
+    put_covariance_matrix_into_endf_file_32: bool = Field(
+        default=False, description="PUT COVARIANCE MATRIx into endf file 32"
+    )
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
@@ -52,7 +60,9 @@ class CovarianceMatrixOutputOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -62,7 +72,9 @@ class CovarianceMatrixOutputOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

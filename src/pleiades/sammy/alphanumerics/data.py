@@ -31,7 +31,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class ExperimentalDataInputOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
-    data_in_original_multi_style_format: bool = Field(default=True, description="DATA ARE IN ORIGINAL multi-style format")
+    data_in_original_multi_style_format: bool = Field(
+        default=True, description="DATA ARE IN ORIGINAL multi-style format"
+    )
     data_format_is_one_point_per_line: bool = Field(default=False, description="DATA FORMAT IS ONE Point per line")
     use_csisrs_format_for_data: bool = Field(default=False, description="USE CSISRS FORMAT For data")
     use_twenty_significant_digits: bool = Field(default=False, description="USE TWENTY SIGNIFICANT digits")
@@ -76,7 +78,9 @@ class ExperimentalDataInputOptions(BaseModel):
 
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
-                raise ValueError(f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                )
 
             # If exactly 1 user-specified => turn off all defaults in that group
             if len(user_true) == 1:
@@ -86,7 +90,9 @@ class ExperimentalDataInputOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed.")
+                raise ValueError(
+                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
+                )
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

@@ -22,7 +22,10 @@ def test_fit_config_defaults():
     options_and_routines = FitOptions()
 
     config = FitConfig(
-        nuclear_params=nuclear_params, physics_params=physics_params, data_params=data_params, options_and_routines=options_and_routines
+        nuclear_params=nuclear_params,
+        physics_params=physics_params,
+        data_params=data_params,
+        options_and_routines=options_and_routines,
     )
 
     assert config.fit_title == "SAMMY Fit"

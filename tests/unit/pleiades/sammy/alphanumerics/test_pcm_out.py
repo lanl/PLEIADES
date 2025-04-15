@@ -28,13 +28,17 @@ def test_valid_option_with_single_boolean():
 def test_mutually_exclusive_options_1():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOutputOptions(write_correlations_into_compact_format=True, put_correlations_into_compact_format=True)
+        CovarianceMatrixOutputOptions(
+            write_correlations_into_compact_format=True, put_correlations_into_compact_format=True
+        )
 
 
 def test_mutually_exclusive_options_2():
     """Test mutually exclusive options."""
     with pytest.raises(ValueError):
-        CovarianceMatrixOutputOptions(write_covariances_into_compact_format=True, put_covariances_into_compact_format=True)
+        CovarianceMatrixOutputOptions(
+            write_covariances_into_compact_format=True, put_covariances_into_compact_format=True
+        )
 
 
 def test_valid_combination_of_options_1():

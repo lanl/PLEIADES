@@ -48,7 +48,9 @@ class DockerSammyRunner(SammyRunner):
                 raise EnvironmentPreparationError("Docker not found in PATH")
 
             # Verify docker image exists
-            result = subprocess.run(["docker", "image", "inspect", self.config.image_name], capture_output=True, text=True)
+            result = subprocess.run(
+                ["docker", "image", "inspect", self.config.image_name], capture_output=True, text=True
+            )
             if result.returncode != 0:
                 raise EnvironmentPreparationError(f"Docker image not found: {self.config.image_name}")
 
