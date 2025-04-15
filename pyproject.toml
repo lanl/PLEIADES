@@ -187,14 +187,5 @@ ipympl = "*"
 ipywidgets = "*"
 
 [tool.pixi.environments]
-default = {features = ["test", "package", "docs", "developer"], solve-group = "default"}
-jupyter = {features = ["developer", "jupyter"], solve-group = "jupyter"}
-
-[tool.pixi.solve-groups.default]
-platforms = ["linux-64", "osx-arm64"]
-timeout-seconds = 300  # Default solver timeout
-
-[tool.pixi.solve-groups.jupyter]
-platforms = ["linux-64", "osx-arm64"]
-channels = ["conda-forge"]
-timeout-seconds = 600  # Longer timeout for jupyter environment solving
+default = {features = ["test", "package", "docs", "developer"]}
+jupyter = {features = ["developer", "jupyter"]}
