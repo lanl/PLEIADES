@@ -17,6 +17,13 @@ PositiveFloat = Annotated[float, Field(gt=0)]
 logger = Logger(__name__)
 
 
+class DataSource(str, Enum):
+    """Enumeration of nuclear data sources."""
+
+    IAEA = "IAEA"
+    NNDC = "NNDC"  # To be implemented
+
+
 class EndfLibrary(str, Enum):
     ENDF_B_VIII_1 = "ENDF-B-VIII.1"
     ENDF_B_VIII_0 = "ENDF-B-VIII.0"
