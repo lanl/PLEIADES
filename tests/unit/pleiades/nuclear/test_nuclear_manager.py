@@ -106,6 +106,14 @@ def test_get_cache_file_path(data_manager, mock_isotope_info):
     cache_file_path = data_manager._get_cache_file_path(
         DataSource.IAEA, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
     )
+    # ENDF-B-VIII.0 uses MAT_FIRST pattern with non-zero-padded Z
+    expected_filename = "n_9237_92-U-238.dat"
+    assert cache_file_path.name == expected_filename
+
+    # Also test with a library that uses ELEMENT_FIRST pattern
+    cache_file_path = data_manager._get_cache_file_path(
+        DataSource.IAEA, EndfLibrary.ENDF_B_VIII_1, mock_isotope_info, 9237
+    )
     expected_filename = "n_092-U-238_9237.dat"
     assert cache_file_path.name == expected_filename
 

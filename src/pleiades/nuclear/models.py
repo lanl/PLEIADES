@@ -25,12 +25,32 @@ class DataSource(str, Enum):
 
 
 class EndfLibrary(str, Enum):
+    """Enumeration of ENDF library versions."""
+
     ENDF_B_VIII_1 = "ENDF-B-VIII.1"
     ENDF_B_VIII_0 = "ENDF-B-VIII.0"
     JEFF_3_3 = "JEFF-3.3"
     JENDL_5 = "JENDL-5"
     CENDL_3_2 = "CENDL-3.2"
     TENDL_2021 = "TENDL-2021"
+
+
+class EndfFilenamePattern(str, Enum):
+    """Filename patterns for different ENDF libraries."""
+
+    MAT_FIRST = "n_{mat}_{z_nozero}-{element}-{a}.zip"  # Format for VIII.0
+    ELEMENT_FIRST = "n_{z}-{element}-{a}_{mat}.zip"  # Format for VIII.1 and others
+
+
+# Mapping of library versions to their filename patterns
+LIBRARY_FILENAME_PATTERNS = {
+    EndfLibrary.ENDF_B_VIII_0: EndfFilenamePattern.MAT_FIRST,
+    EndfLibrary.ENDF_B_VIII_1: EndfFilenamePattern.ELEMENT_FIRST,
+    EndfLibrary.JEFF_3_3: EndfFilenamePattern.ELEMENT_FIRST,
+    EndfLibrary.JENDL_5: EndfFilenamePattern.ELEMENT_FIRST,
+    EndfLibrary.CENDL_3_2: EndfFilenamePattern.ELEMENT_FIRST,
+    EndfLibrary.TENDL_2021: EndfFilenamePattern.ELEMENT_FIRST,
+}
 
 
 class RadiusParameters(BaseModel):

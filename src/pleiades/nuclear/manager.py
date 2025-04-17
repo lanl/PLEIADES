@@ -11,7 +11,13 @@ import requests
 
 from pleiades.nuclear.isotopes.manager import IsotopeManager
 from pleiades.nuclear.isotopes.models import IsotopeInfo
-from pleiades.nuclear.models import DataSource, EndfLibrary, IsotopeParameters
+from pleiades.nuclear.models import (
+    LIBRARY_FILENAME_PATTERNS,
+    DataSource,
+    EndfFilenamePattern,
+    EndfLibrary,
+    IsotopeParameters,
+)
 from pleiades.utils.config import get_config
 
 logger = logging.getLogger(__name__)
@@ -69,10 +75,18 @@ class NuclearDataManager:
         Returns:
             Path to the cached file
         """
-        z = f"{isotope.atomic_number:03d}"
+        z = f"{isotope.atomic_number:03d}"  # Zero-padded to 3 digits
+        z_nozero = f"{isotope.atomic_number}"  # Non-zero-padded version
         element = isotope.element.capitalize()
         a = isotope.mass_number
-        filename = f"n_{z}-{element}-{a}_{mat}.dat"
+
+        # We use the same pattern for cache files, but with .dat extension
+        # This keeps the naming consistent with the source files
+        pattern = LIBRARY_FILENAME_PATTERNS.get(library, EndfFilenamePattern.ELEMENT_FIRST)
+        format_vars = {"z": z, "z_nozero": z_nozero, "element": element, "a": a, "mat": mat}
+
+        # Use the same pattern but replace .zip with .dat
+        filename = pattern.value.format(**format_vars).replace(".zip", ".dat")
         return self._get_cache_dir(source, library) / filename
 
     def create_isotope_parameters_from_string(self, isotope_str: str) -> IsotopeParameters:
@@ -146,7 +160,8 @@ class NuclearDataManager:
             ValueError: If the MAT number cannot be determined
             requests.RequestException: If download fails
         """
-        z = f"{isotope.atomic_number:03d}"
+        z = f"{isotope.atomic_number:03d}"  # Zero-padded to 3 digits
+        z_nozero = f"{isotope.atomic_number}"  # Non-zero-padded version
         element = isotope.element.capitalize()
         a = isotope.mass_number
         mat = isotope.material_number
@@ -156,11 +171,19 @@ class NuclearDataManager:
             if mat is None:
                 raise ValueError(f"Cannot determine MAT number for {isotope}")
 
-        # Construct filename and URL
-        filename = f"n_{z}-{element}-{a}_{mat}.zip"
+        # Get the pattern for this library or default to ELEMENT_FIRST
+        pattern = LIBRARY_FILENAME_PATTERNS.get(library, EndfFilenamePattern.ELEMENT_FIRST)
+
+        # Format the filename using the pattern and format specification
+        format_vars = {"z": z, "z_nozero": z_nozero, "element": element, "a": a, "mat": mat}
+        filename = pattern.value.format(**format_vars)
+
         config = get_config()
         base_url = config.nuclear_data_sources[DataSource.IAEA.value]
-        url = f"{base_url}/{library}/n/{filename}"
+
+        # Make sure to use the string value of the library enum, not the enum itself
+        library_str = library.value if isinstance(library, EndfLibrary) else str(library)
+        url = f"{base_url}/{library_str}/n/{filename}"
 
         logger.info(f"Downloading ENDF data from {url}")
         response = requests.get(url)
