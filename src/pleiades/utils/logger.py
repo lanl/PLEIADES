@@ -1,4 +1,33 @@
-import logging
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, Union
+
+from loguru import logger as loguru_logger
+
+# Remove default configuration
+loguru_logger.remove()
+
+# Set up default configuration for console logging
+loguru_logger.add(
+    sys.stderr,
+    level="DEBUG",
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+)
+
+# Set up default log file
+default_log_filename = f"pleiades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+default_log_path = Path(os.getcwd()) / default_log_filename
+
+# Add file logger with default settings
+loguru_logger.add(
+    default_log_path,
+    level="DEBUG",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+    rotation="10 MB",
+    retention="30 days",
+)
 
 
 def _log_and_raise_error(logger, message: str, exception_class: Exception):
@@ -6,7 +35,7 @@ def _log_and_raise_error(logger, message: str, exception_class: Exception):
     Log an error message and raise an exception.
 
     Args:
-        logger (logging.Logger): The logger instance to use for logging the error.
+        logger: The logger instance to use for logging the error.
         message (str): The error message to log and raise.
         exception_class (Exception): The class of the exception to raise.
 
@@ -17,28 +46,90 @@ def _log_and_raise_error(logger, message: str, exception_class: Exception):
     raise exception_class(message)
 
 
+def configure_logger(
+    console_level: str = "DEBUG",
+    file_level: str = "DEBUG",
+    log_file: Optional[Union[str, Path]] = None,
+    rotation: str = "10 MB",
+    retention: str = "30 days",
+    format_string: Optional[str] = None,
+):
+    """
+    Configure the loguru logger with custom settings.
+
+    Args:
+        console_level (str): Logging level for console output
+        file_level (str): Logging level for file output
+        log_file (Optional[Union[str, Path]]): Custom log file path
+        rotation (str): When to rotate the log file (size or time)
+        retention (str): How long to keep log files
+        format_string (Optional[str]): Custom format string for log messages
+    """
+    # Remove all existing handlers
+    loguru_logger.remove()
+
+    # Default format if none provided
+    if not format_string:
+        console_format = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+        file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}"
+    else:
+        console_format = file_format = format_string
+
+    # Add console logger
+    loguru_logger.add(sys.stderr, level=console_level, format=console_format)
+
+    # Add file logger
+    if log_file is None:
+        log_file = default_log_path
+    else:
+        log_file = Path(log_file)
+
+    loguru_logger.add(
+        log_file,
+        level=file_level,
+        format=file_format,
+        rotation=rotation,
+        retention=retention,
+    )
+
+    loguru_logger.info(f"Logging configured. Log file: {log_file}")
+
+
 class Logger:
-    def __init__(self, name: str, level: int = logging.DEBUG, log_file: str = None):
+    """
+    Backward-compatible Logger class that wraps loguru.
+
+    This class maintains the same interface as the original Logger class
+    but uses loguru under the hood for better logging capabilities.
+    """
+
+    def __init__(self, name: str, level: str = "DEBUG", log_file: Optional[str] = None):
         """
         Initialize a Logger instance.
 
         Args:
             name (str): The name of the logger.
-            level (int): The logging level (default is logging.DEBUG).
+            level (str): The logging level (default is "DEBUG").
             log_file (str, optional): The file to log messages to (default is None).
         """
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
+        self.name = name
+        self.level = level
 
-        # Create file handler if log_file is specified
-        if log_file:
-            file_handler = logging.FileHandler(log_file)
-            file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-            file_handler.setFormatter(file_formatter)
-            self.logger.addHandler(file_handler)
+        # If custom log file is specified, configure a new sink for it
+        if log_file and log_file != str(default_log_path):
+            self.log_file = Path(log_file)
 
-        # Log a break line
-        self.logger.info("logging initialized...")
+            # Add a file handler if specified
+            loguru_logger.add(
+                self.log_file,
+                level=level,
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+                rotation="10 MB",
+                retention="30 days",
+            )
+
+        # Log a break line to indicate initialization
+        loguru_logger.bind(name=name).info("logging initialized...")
 
     def debug(self, message: str):
         """
@@ -47,7 +138,7 @@ class Logger:
         Args:
             message (str): The debug message to log.
         """
-        self.logger.debug(message)
+        loguru_logger.bind(name=self.name).debug(message)
 
     def info(self, message: str):
         """
@@ -56,7 +147,7 @@ class Logger:
         Args:
             message (str): The info message to log.
         """
-        self.logger.info(message)
+        loguru_logger.bind(name=self.name).info(message)
 
     def warning(self, message: str):
         """
@@ -65,7 +156,7 @@ class Logger:
         Args:
             message (str): The warning message to log.
         """
-        self.logger.warning(message)
+        loguru_logger.bind(name=self.name).warning(message)
 
     def error(self, message: str):
         """
@@ -74,7 +165,7 @@ class Logger:
         Args:
             message (str): The error message to log.
         """
-        self.logger.error(message)
+        loguru_logger.bind(name=self.name).error(message)
 
     def critical(self, message: str):
         """
@@ -83,4 +174,8 @@ class Logger:
         Args:
             message (str): The critical message to log.
         """
-        self.logger.critical(message)
+        loguru_logger.bind(name=self.name).critical(message)
+
+
+# Make the loguru logger available directly
+get_logger = loguru_logger.bind
