@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo
-from pleiades.nuclear.manager import DataSource, EndfLibrary, NuclearDataManager
+from pleiades.nuclear.manager import EndfLibrary, NuclearDataManager
+from pleiades.nuclear.models import DataRetrievalMethod
 from pleiades.utils.config import PleiadesConfig
 
 
@@ -18,8 +19,8 @@ def mock_config():
     test_config = PleiadesConfig(
         nuclear_data_cache_dir=Path("/tmp/pleiades_test/nuclear_data"),
         nuclear_data_sources={
-            "IAEA": "https://test-iaea.org/download-endf",
-            "NNDC": "https://test-nndc.org/endf/data",
+            "DIRECT": "https://test-iaea.org/download-endf",
+            "API": "https://test-iaea.org/exfor/servlet",
         },
     )
 
@@ -87,24 +88,24 @@ def test_initialize_cache(mock_config):
     with patch("pleiades.nuclear.manager.Path.mkdir") as mock_mkdir:
         manager = NuclearDataManager()
 
-        # Should create a directory for each combination of source and library
-        expected_calls = len(DataSource) * len(EndfLibrary)
+        # Should create a directory for each combination of method and library
+        expected_calls = len(DataRetrievalMethod) * len(EndfLibrary)
         assert mock_mkdir.call_count >= expected_calls
 
 
 def test_get_cache_dir(data_manager, mock_config):
-    """Test getting the cache directory for a specific source and library."""
-    # Test for IAEA source and ENDF-B-VIII.0 library
-    cache_dir = data_manager._get_cache_dir(DataSource.IAEA, EndfLibrary.ENDF_B_VIII_0)
-    expected_path = mock_config.nuclear_data_cache_dir / DataSource.IAEA / EndfLibrary.ENDF_B_VIII_0
+    """Test getting the cache directory for a specific retrieval method and library."""
+    # Test for DIRECT method and ENDF-B-VIII.0 library
+    cache_dir = data_manager._get_cache_dir(DataRetrievalMethod.DIRECT, EndfLibrary.ENDF_B_VIII_0)
+    expected_path = mock_config.nuclear_data_cache_dir / DataRetrievalMethod.DIRECT / EndfLibrary.ENDF_B_VIII_0
     assert cache_dir == expected_path
 
 
 def test_get_cache_file_path(data_manager, mock_isotope_info):
     """Test getting the cache file path for a specific file."""
-    # Test for IAEA source, ENDF-B-VIII.0 library, and U-238 isotope
+    # Test for DIRECT method, ENDF-B-VIII.0 library, and U-238 isotope
     cache_file_path = data_manager._get_cache_file_path(
-        DataSource.IAEA, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
+        DataRetrievalMethod.DIRECT, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
     )
     # ENDF-B-VIII.0 uses MAT_FIRST pattern with non-zero-padded Z
     expected_filename = "n_9237_92-U-238.dat"
@@ -112,17 +113,24 @@ def test_get_cache_file_path(data_manager, mock_isotope_info):
 
     # Also test with a library that uses ELEMENT_FIRST pattern
     cache_file_path = data_manager._get_cache_file_path(
-        DataSource.IAEA, EndfLibrary.ENDF_B_VIII_1, mock_isotope_info, 9237
+        DataRetrievalMethod.DIRECT, EndfLibrary.ENDF_B_VIII_1, mock_isotope_info, 9237
     )
     expected_filename = "n_092-U-238_9237.dat"
     assert cache_file_path.name == expected_filename
 
+    # Test API method which uses a different filename format
+    cache_file_path = data_manager._get_cache_file_path(
+        DataRetrievalMethod.API, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
+    )
+    expected_filename = "n_092-U-238_9237_resonance.dat"
+    assert cache_file_path.name == expected_filename
 
-def test_download_endf_resonance_file_cache_hit(data_manager, mock_isotope_info, mock_config):
-    """Test downloading ENDF resonance file when it exists in cache."""
+
+def test_download_endf_resonance_file_cache_hit_direct(data_manager, mock_isotope_info, mock_config):
+    """Test downloading ENDF resonance file with DIRECT method when it exists in cache."""
     # Mock the cache file
     cache_file_path = data_manager._get_cache_file_path(
-        DataSource.IAEA, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
+        DataRetrievalMethod.DIRECT, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
     )
 
     # Create mock content with resonance data lines
@@ -138,9 +146,42 @@ def test_download_endf_resonance_file_cache_hit(data_manager, mock_isotope_info,
         # Configure mock to return our content when reading
         mock_open.return_value.__enter__.return_value.read.return_value = mock_content
 
-        # Call the method under test
+        # Call the method under test with DIRECT method
         output_path = data_manager.download_endf_resonance_file(
-            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp"
+            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp", method=DataRetrievalMethod.DIRECT
+        )
+
+        # Verify the output path is correct
+        assert output_path.name == "092-U-238.B-VIII.0.par"
+        assert output_path.parent == Path("/tmp")
+
+        # Verify we used the cached data
+        mock_open.assert_called()
+
+
+def test_download_endf_resonance_file_cache_hit_api(data_manager, mock_isotope_info, mock_config):
+    """Test downloading ENDF resonance file with API method when it exists in cache."""
+    # Mock the cache file
+    cache_file_path = data_manager._get_cache_file_path(
+        DataRetrievalMethod.API, EndfLibrary.ENDF_B_VIII_0, mock_isotope_info, 9237
+    )
+
+    # Create mock content with resonance data (the API returns this directly)
+    mock_content = "Line with resonance data  2\n".encode()
+
+    # Patch file exists check and open operations
+    with (
+        patch("pleiades.nuclear.manager.Path.exists", return_value=True),
+        patch("builtins.open", Mock()),
+        patch("pleiades.nuclear.manager.Path.write_bytes") as mock_write_bytes,
+        patch("builtins.open", mock_open := MagicMock()),
+    ):
+        # Configure mock to return our content when reading
+        mock_open.return_value.__enter__.return_value.read.return_value = mock_content
+
+        # Call the method under test with API method
+        output_path = data_manager.download_endf_resonance_file(
+            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp", method=DataRetrievalMethod.API
         )
 
         # Verify the output path is correct
@@ -152,25 +193,55 @@ def test_download_endf_resonance_file_cache_hit(data_manager, mock_isotope_info,
 
 
 @patch("pleiades.nuclear.manager.requests.get")
-def test_download_endf_resonance_file_cache_miss(mock_get, data_manager, mock_isotope_info, mock_config):
-    """Test downloading ENDF resonance file when it doesn't exist in cache."""
+def test_download_endf_resonance_file_cache_miss_direct(mock_get, data_manager, mock_isotope_info, mock_config):
+    """Test downloading ENDF resonance file with DIRECT method when it doesn't exist in cache."""
     # Set up mocks
     mock_response = Mock()
     mock_response.content = b"Mock ZIP content"
     mock_get.return_value = mock_response
     mock_response.raise_for_status = Mock()
 
-    # Set up the mock for _get_data_from_iaea method instead of trying to mock zipfile
+    # Set up the mock for _get_data_from_direct method instead of trying to mock zipfile
     with (
         patch.object(
-            data_manager, "_get_data_from_iaea", return_value=(b"Line with resonance data  2\n", "file.dat")
+            data_manager, "_get_data_from_direct", return_value=(b"Line with resonance data  2\n", "file.dat")
         ) as mock_get_data,
         patch("pleiades.nuclear.manager.Path.exists", return_value=False),
         patch("pleiades.nuclear.manager.Path.write_text") as mock_write,
     ):
         # Call the method under test
         output_path = data_manager.download_endf_resonance_file(
-            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp"
+            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp", method=DataRetrievalMethod.DIRECT
+        )
+
+        # Verify the output path is correct
+        assert output_path.name == "092-U-238.B-VIII.0.par"
+        assert output_path.parent == Path("/tmp")
+
+        # Verify our mock was called
+        mock_get_data.assert_called_once()
+
+
+@patch("pleiades.nuclear.manager.requests.get")
+def test_download_endf_resonance_file_cache_miss_api(mock_get, data_manager, mock_isotope_info, mock_config):
+    """Test downloading ENDF resonance file with API method when it doesn't exist in cache."""
+    # Set up mocks
+    mock_response = Mock()
+    mock_response.content = b"Mock API response with resonance data"
+    mock_get.return_value = mock_response
+    mock_response.raise_for_status = Mock()
+
+    # Set up the mock for _get_data_from_api method
+    with (
+        patch.object(
+            data_manager, "_get_data_from_api", return_value=(b"Line with resonance data  2\n", "U-238_resonance.dat")
+        ) as mock_get_data,
+        patch("pleiades.nuclear.manager.Path.exists", return_value=False),
+        patch("pleiades.nuclear.manager.Path.write_bytes") as mock_write_bytes,
+    ):
+        # Call the method under test
+        output_path = data_manager.download_endf_resonance_file(
+            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, output_dir="/tmp", method=DataRetrievalMethod.API
         )
 
         # Verify the output path is correct
@@ -202,7 +273,7 @@ def test_clear_cache(data_manager, mock_config):
         assert mock_file1.unlink.called
         assert mock_file2.unlink.called
 
-    # Test 2: Clearing specific source
+    # Test 2: Clearing specific method
     with (
         patch("pleiades.nuclear.manager.Path.exists", return_value=True),
         patch("pleiades.nuclear.manager.Path.glob") as mock_glob,
@@ -211,12 +282,12 @@ def test_clear_cache(data_manager, mock_config):
         mock_file2 = MagicMock()
         mock_glob.return_value = [mock_file1, mock_file2]
 
-        data_manager.clear_cache(source=DataSource.IAEA)
+        data_manager.clear_cache(method=DataRetrievalMethod.DIRECT)
         assert mock_glob.call_count > 0
         assert mock_file1.unlink.called
         assert mock_file2.unlink.called
 
-    # Test 3: Clearing specific source and library
+    # Test 3: Clearing specific method and library
     with (
         patch("pleiades.nuclear.manager.Path.exists", return_value=True),
         patch("pleiades.nuclear.manager.Path.glob") as mock_glob,
@@ -225,17 +296,24 @@ def test_clear_cache(data_manager, mock_config):
         mock_file2 = MagicMock()
         mock_glob.return_value = [mock_file1, mock_file2]
 
-        data_manager.clear_cache(source=DataSource.IAEA, library=EndfLibrary.ENDF_B_VIII_0)
+        data_manager.clear_cache(method=DataRetrievalMethod.DIRECT, library=EndfLibrary.ENDF_B_VIII_0)
         assert mock_glob.call_count > 0
         assert mock_file1.unlink.called
         assert mock_file2.unlink.called
 
 
-def test_nndc_not_implemented(data_manager, mock_isotope_info):
-    """Test that NNDC download raises NotImplementedError."""
-    with pytest.raises(NotImplementedError):
-        # Try to download from NNDC source
-        data_manager.download_endf_resonance_file(mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, source=DataSource.NNDC)
+def test_api_method_works(data_manager, mock_isotope_info):
+    """Test that API method works correctly."""
+    with patch.object(
+        data_manager, "_get_data_from_api", return_value=(b"Line with resonance data  2\n", "U-238_resonance.dat")
+    ) as mock_get_data:
+        # Try to download using API method
+        data_manager.download_endf_resonance_file(
+            mock_isotope_info, EndfLibrary.ENDF_B_VIII_0, method=DataRetrievalMethod.API, use_cache=False
+        )
+
+        # Verify the API method was called
+        mock_get_data.assert_called_once()
 
 
 # Helper for tests

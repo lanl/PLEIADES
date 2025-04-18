@@ -16,11 +16,11 @@ class PleiadesConfig:
     # Nuclear data configuration
     nuclear_data_cache_dir: Path = field(default_factory=lambda: Path(os.path.expanduser("~/.pleiades/nuclear_data")))
 
-    # Nuclear data sources
+    # Nuclear data retrieval methods and URLs
     nuclear_data_sources: Dict[str, str] = field(
         default_factory=lambda: {
-            "IAEA": "https://www-nds.iaea.org/public/download-endf",
-            "NNDC": "https://www.nndc.bnl.gov/endf/b8.0/data",
+            "DIRECT": "https://www-nds.iaea.org/public/download-endf",  # IAEA direct file download
+            "API": "https://www-nds.iaea.org/exfor/servlet",  # IAEA EXFOR API for section retrieval
         }
     )
 

@@ -23,10 +23,10 @@ class TestPleiadesConfig:
         assert config.nuclear_data_cache_dir == expected_path
 
         # Check default nuclear data sources
-        assert "IAEA" in config.nuclear_data_sources
-        assert "NNDC" in config.nuclear_data_sources
-        assert config.nuclear_data_sources["IAEA"] == "https://www-nds.iaea.org/public/download-endf"
-        assert config.nuclear_data_sources["NNDC"] == "https://www.nndc.bnl.gov/endf/b8.0/data"
+        assert "DIRECT" in config.nuclear_data_sources
+        assert "API" in config.nuclear_data_sources
+        assert config.nuclear_data_sources["DIRECT"] == "https://www-nds.iaea.org/public/download-endf"
+        assert config.nuclear_data_sources["API"] == "https://www-nds.iaea.org/exfor/servlet"
 
     def test_custom_initialization(self):
         """Test custom initialization of PleiadesConfig."""
@@ -117,8 +117,8 @@ class TestPleiadesConfig:
             # Verify default values
             expected_path = Path(os.path.expanduser("~/.pleiades/nuclear_data"))
             assert config.nuclear_data_cache_dir == expected_path
-            assert "IAEA" in config.nuclear_data_sources
-            assert "NNDC" in config.nuclear_data_sources
+            assert "DIRECT" in config.nuclear_data_sources
+            assert "API" in config.nuclear_data_sources
 
     def test_load_empty_file(self):
         """Test loading from empty file returns default config."""
@@ -135,8 +135,8 @@ class TestPleiadesConfig:
             # Verify default values
             expected_path = Path(os.path.expanduser("~/.pleiades/nuclear_data"))
             assert config.nuclear_data_cache_dir == expected_path
-            assert "IAEA" in config.nuclear_data_sources
-            assert "NNDC" in config.nuclear_data_sources
+            assert "DIRECT" in config.nuclear_data_sources
+            assert "API" in config.nuclear_data_sources
 
 
 class TestGlobalConfigFunctions:

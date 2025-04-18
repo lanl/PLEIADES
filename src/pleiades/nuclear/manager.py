@@ -13,7 +13,7 @@ from pleiades.nuclear.isotopes.manager import IsotopeManager
 from pleiades.nuclear.isotopes.models import IsotopeInfo
 from pleiades.nuclear.models import (
     LIBRARY_FILENAME_PATTERNS,
-    DataSource,
+    DataRetrievalMethod,
     EndfFilenamePattern,
     EndfLibrary,
     IsotopeParameters,
@@ -42,32 +42,34 @@ class NuclearDataManager:
     def _initialize_cache(self) -> None:
         """Initialize the cache directory structure."""
         config = get_config()
-        # Ensure cache directories exist for each data source and library
-        for source in DataSource:
+        # Ensure cache directories exist for each retrieval method and library
+        for method in DataRetrievalMethod:
             for library in EndfLibrary:
-                cache_dir = self._get_cache_dir(source, library)
+                cache_dir = self._get_cache_dir(method, library)
                 cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def _get_cache_dir(self, source: DataSource, library: EndfLibrary) -> Path:
+    def _get_cache_dir(self, method: DataRetrievalMethod, library: EndfLibrary) -> Path:
         """
-        Get the cache directory for a specific data source and library.
+        Get the cache directory for a specific retrieval method and library.
 
         Args:
-            source: The data source (IAEA, NNDC)
+            method: The data retrieval method (DIRECT, API)
             library: The ENDF library version
 
         Returns:
             Path to the cache directory
         """
         config = get_config()
-        return config.nuclear_data_cache_dir / source / library
+        return config.nuclear_data_cache_dir / method / library
 
-    def _get_cache_file_path(self, source: DataSource, library: EndfLibrary, isotope: IsotopeInfo, mat: int) -> Path:
+    def _get_cache_file_path(
+        self, method: DataRetrievalMethod, library: EndfLibrary, isotope: IsotopeInfo, mat: int
+    ) -> Path:
         """
         Get the path to the cached data file.
 
         Args:
-            source: The data source (IAEA, NNDC)
+            method: The data retrieval method (DIRECT, API)
             library: The ENDF library version
             isotope: IsotopeInfo instance
             mat: Material number
@@ -80,14 +82,17 @@ class NuclearDataManager:
         element = isotope.element.capitalize()
         a = isotope.mass_number
 
-        # We use the same pattern for cache files, but with .dat extension
-        # This keeps the naming consistent with the source files
-        pattern = LIBRARY_FILENAME_PATTERNS.get(library, EndfFilenamePattern.ELEMENT_FIRST)
-        format_vars = {"z": z, "z_nozero": z_nozero, "element": element, "a": a, "mat": mat}
+        if method == DataRetrievalMethod.DIRECT:
+            # For direct downloads, use the same pattern as the source files, but with .dat extension
+            pattern = LIBRARY_FILENAME_PATTERNS.get(library, EndfFilenamePattern.ELEMENT_FIRST)
+            format_vars = {"z": z, "z_nozero": z_nozero, "element": element, "a": a, "mat": mat}
+            filename = pattern.value.format(**format_vars).replace(".zip", ".dat")
+        else:  # API method
+            # For API downloads, use a more descriptive filename indicating it contains only resonance data
+            library_short = library.value.replace("ENDF-B-", "B").replace(".", "")
+            filename = f"n_{z}-{element}-{a}_{mat}_resonance.dat"
 
-        # Use the same pattern but replace .zip with .dat
-        filename = pattern.value.format(**format_vars).replace(".zip", ".dat")
-        return self._get_cache_dir(source, library) / filename
+        return self._get_cache_dir(method, library) / filename
 
     def create_isotope_parameters_from_string(self, isotope_str: str) -> IsotopeParameters:
         """
@@ -110,26 +115,26 @@ class NuclearDataManager:
         # Create and return an IsotopeParameters instance with default library
         return IsotopeParameters(isotope_infomation=isotope_info, endf_library=self.default_library)
 
-    def clear_cache(self, source: Optional[DataSource] = None, library: Optional[EndfLibrary] = None) -> None:
+    def clear_cache(self, method: Optional[DataRetrievalMethod] = None, library: Optional[EndfLibrary] = None) -> None:
         """
         Clear the specified cache directories.
 
         Args:
-            source: Optional data source to clear. If None, clears all sources.
+            method: Optional data retrieval method to clear. If None, clears all methods.
             library: Optional library to clear. If None, clears all libraries.
         """
         config = get_config()
 
         # Determine directories to clear
-        if source is None:
-            # Clear all sources
-            dirs_to_clear = [config.nuclear_data_cache_dir / s.value for s in DataSource]
+        if method is None:
+            # Clear all methods
+            dirs_to_clear = [config.nuclear_data_cache_dir / m.value for m in DataRetrievalMethod]
         elif library is None:
-            # Clear specific source, all libraries
-            dirs_to_clear = [config.nuclear_data_cache_dir / source.value]
+            # Clear specific method, all libraries
+            dirs_to_clear = [config.nuclear_data_cache_dir / method.value]
         else:
-            # Clear specific source and library
-            dirs_to_clear = [config.nuclear_data_cache_dir / source.value / library.value]
+            # Clear specific method and library
+            dirs_to_clear = [config.nuclear_data_cache_dir / method.value / library.value]
 
         # Delete files in each directory
         for directory in dirs_to_clear:
@@ -142,11 +147,14 @@ class NuclearDataManager:
                     except Exception as e:
                         logger.error(f"Failed to delete {file}: {str(e)}")
 
-    def _get_data_from_iaea(
+    def _get_data_from_direct(
         self, isotope: IsotopeInfo, library: EndfLibrary, cache_file_path: Path
     ) -> Tuple[bytes, str]:
         """
-        Download ENDF data from IAEA.
+        Download complete ENDF data file directly from IAEA.
+
+        This method downloads the complete ENDF file for an isotope directly from the IAEA FTP server.
+        The file contains all ENDF sections (not just resonance data).
 
         Args:
             isotope: IsotopeInfo instance
@@ -179,13 +187,14 @@ class NuclearDataManager:
         filename = pattern.value.format(**format_vars)
 
         config = get_config()
-        base_url = config.nuclear_data_sources[DataSource.IAEA.value]
+        base_url = config.nuclear_data_sources[DataRetrievalMethod.DIRECT.value]
 
         # Make sure to use the string value of the library enum, not the enum itself
         library_str = library.value if isinstance(library, EndfLibrary) else str(library)
         url = f"{base_url}/{library_str}/n/{filename}"
 
-        logger.info(f"Downloading ENDF data from {url}")
+        logger.info(f"Downloading complete ENDF data from {url}")
+        logger.info("This will download and cache the entire ENDF file (all sections)")
         response = requests.get(url)
         response.raise_for_status()
 
@@ -207,11 +216,15 @@ class NuclearDataManager:
 
         raise FileNotFoundError("No suitable ENDF file found inside the ZIP.")
 
-    def _get_data_from_nndc(
+    def _get_data_from_api(
         self, isotope: IsotopeInfo, library: EndfLibrary, cache_file_path: Path
     ) -> Tuple[bytes, str]:
         """
-        Download ENDF data from NNDC.
+        Download only the neutron resonance data section from IAEA via the EXFOR API.
+
+        This method uses the IAEA EXFOR API (also used by NNDC website) to selectively
+        download only the neutron resonance section of the ENDF file rather than the
+        complete file. This is more efficient but contains only partial data.
 
         Args:
             isotope: IsotopeInfo instance
@@ -222,29 +235,98 @@ class NuclearDataManager:
             Tuple of (file content bytes, original filename)
 
         Raises:
-            NotImplementedError: NNDC download not yet implemented
+            ValueError: If no suitable data is found
+            requests.RequestException: If the download fails
         """
-        raise NotImplementedError("NNDC data source is not yet implemented")
+        # Format target string for search
+        element = isotope.element.capitalize()
+        a = isotope.mass_number
+        target = f"{element}-{a}"
+
+        # Convert EndfLibrary enum to API library format
+        library_str = library.value
+        # API uses ENDF/B-VIII.0 format (with / instead of -)
+        library_str = library_str.replace("ENDF-B-", "ENDF/B-")
+
+        logger.info(f"Searching for neutron resonance data for {target} in {library_str} via IAEA EXFOR API")
+        logger.info("Note: This will download ONLY the resonance section, not the complete ENDF file")
+
+        # Get the API base URL from configuration
+        config = get_config()
+        base_url = config.nuclear_data_sources[DataRetrievalMethod.API.value]
+        headers = {"User-Agent": "pleiades-endf-client/0.1"}
+
+        try:
+            # Query parameters
+            params = {
+                "Target": target,
+                "Reaction": "n,*",  # All neutron reactions
+                "Quantity": "res",  # Resonance data
+                "Library": library_str,  # Specific library
+                "json": "",  # Return JSON format
+            }
+
+            # Make the search request
+            response = requests.get(f"{base_url}/E4sSearch2", params=params, headers=headers, timeout=30)
+            response.raise_for_status()
+            search_results = response.json().get("sections", [])
+
+            if not search_results:
+                raise ValueError(f"No resonance data found for {target} in {library_str}")
+
+            # Pick the first matching section (most relevant)
+            first_match = search_results[0]
+            sect_id = first_match["SectID"]
+            library_name = first_match.get("LibName", library_str)
+
+            logger.info(f"Found neutron resonance data (SectID: {sect_id}) for {target} in {library_name}")
+
+            # Download the specific section
+            download_params = {"SectID": sect_id, "download": ""}
+
+            # Get the section data
+            download_response = requests.get(
+                f"{base_url}/E4sGetSect", params=download_params, headers=headers, timeout=60
+            )
+            download_response.raise_for_status()
+
+            # Save to cache
+            cache_file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(cache_file_path, "wb") as f:
+                f.write(download_response.content)
+
+            logger.info(f"Downloaded neutron resonance data section for {target}")
+            logger.info(f"Cached as: {cache_file_path}")
+
+            return download_response.content, f"{target}_resonance.dat"
+
+        except requests.RequestException as e:
+            logger.error(f"Failed to download data from IAEA EXFOR API: {str(e)}")
+            raise
 
     def download_endf_resonance_file(
         self,
         isotope: IsotopeInfo,
         library: str,
         output_dir: str = ".",
-        source: DataSource = DataSource.IAEA,
+        method: DataRetrievalMethod = DataRetrievalMethod.DIRECT,
         use_cache: bool = True,
     ) -> Path:
         """
         Download and extract resonance parameter section from ENDF library.
 
         This function first checks if the file is available in cache. If not, it downloads
-        the complete file to cache and then extracts the resonance parameters.
+        the data using the specified method and then processes as needed:
+        - DIRECT: Downloads complete ENDF file and extracts resonance parameters
+        - API: Downloads only resonance data section (more efficient, no extraction needed)
 
         Args:
             isotope: IsotopeInfo instance with atomic_number, element, mass_number, material_number
             library: ENDF library version string (e.g., "ENDF-B-VIII.0")
             output_dir: Directory to write the .par output file
-            source: Data source to use (IAEA or NNDC)
+            method: Data retrieval method to use:
+                   - DIRECT: Downloads complete ENDF file (all sections)
+                   - API: Downloads only resonance data section (more efficient)
             use_cache: Whether to check cache before downloading
 
         Returns:
@@ -264,7 +346,14 @@ class NuclearDataManager:
                 raise ValueError(f"Cannot determine MAT number for {isotope}")
 
         # Determine cache file path
-        cache_file_path = self._get_cache_file_path(source, library, isotope, isotope.material_number)
+        cache_file_path = self._get_cache_file_path(method, library, isotope, isotope.material_number)
+
+        # Prepare output file path
+        z = f"{isotope.atomic_number:03d}"
+        element = isotope.element.capitalize()
+        a = isotope.mass_number
+        output_name = f"{z}-{element}-{a}.{library.value.replace('ENDF-', '')}.par"
+        output_path = Path(output_dir) / output_name
 
         # Check if file exists in cache
         content = None
@@ -273,26 +362,39 @@ class NuclearDataManager:
             with open(cache_file_path, "rb") as f:
                 content = f.read()
         else:
-            # Download from appropriate source
-            if source == DataSource.IAEA:
-                content, _ = self._get_data_from_iaea(isotope, library, cache_file_path)
-            elif source == DataSource.NNDC:
-                content, _ = self._get_data_from_nndc(isotope, library, cache_file_path)
+            # Download using appropriate method
+            if method == DataRetrievalMethod.DIRECT:
+                content, _ = self._get_data_from_direct(isotope, library, cache_file_path)
+            elif method == DataRetrievalMethod.API:
+                content, _ = self._get_data_from_api(isotope, library, cache_file_path)
             else:
-                raise ValueError(f"Invalid data source: {source}")
+                raise ValueError(f"Invalid data retrieval method: {method}")
 
-        # Extract resonance parameters and write to output file
-        z = f"{isotope.atomic_number:03d}"
-        element = isotope.element.capitalize()
-        a = isotope.mass_number
+        # Process the data based on retrieval method
+        if method == DataRetrievalMethod.DIRECT:
+            # For DIRECT method, extract only the resonance parameter lines
+            logger.info("Extracting resonance parameters from complete ENDF file")
+            content_text = content.decode("utf-8")
+            resonance_lines = [line for line in content_text.splitlines() if line[70:72].strip() in {"2", "32", "34"}]
 
-        output_name = f"{z}-{element}-{a}.{library.value.replace('ENDF-', '')}.par"
-        output_path = Path(output_dir) / output_name
+            if not resonance_lines:
+                logger.warning("No resonance parameters found in the downloaded ENDF file")
 
-        # Extract resonance parameters
-        content_text = content.decode("utf-8")
-        resonance_lines = [line for line in content_text.splitlines() if line[70:72].strip() in {"2", "32", "34"}]
+            # Write the extracted resonance parameters to output file
+            output_path.write_text("\n".join(resonance_lines))
+            logger.info(f"Resonance parameters extracted and written to {output_path}")
 
-        output_path.write_text("\n".join(resonance_lines))
-        logger.info(f"Resonance parameters written to {output_path}")
+        elif method == DataRetrievalMethod.API:
+            # For API method, the content already contains only resonance data
+            # Just write it directly to the output file
+            logger.info("API method returned resonance data directly, no extraction needed")
+            output_path.write_bytes(content)
+            logger.info(f"Resonance parameters written to {output_path}")
+
+        # Log information about the method used
+        if method == DataRetrievalMethod.API:
+            logger.info("Note: Only resonance data was downloaded (API method)")
+        else:
+            logger.info("Note: Complete ENDF file was downloaded and resonance data was extracted (DIRECT method)")
+
         return output_path

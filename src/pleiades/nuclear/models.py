@@ -17,11 +17,11 @@ PositiveFloat = Annotated[float, Field(gt=0)]
 logger = Logger(__name__)
 
 
-class DataSource(str, Enum):
-    """Enumeration of nuclear data sources."""
+class DataRetrievalMethod(str, Enum):
+    """Enumeration of methods to retrieve nuclear data."""
 
-    IAEA = "IAEA"
-    NNDC = "NNDC"  # To be implemented
+    DIRECT = "DIRECT"  # Direct download of complete ENDF files
+    API = "API"  # API-based retrieval of specific sections (resonance data only)
 
 
 class EndfLibrary(str, Enum):
