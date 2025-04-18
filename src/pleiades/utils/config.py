@@ -13,6 +13,9 @@ import yaml
 class PleiadesConfig:
     """Global configuration for PLEIADES."""
 
+    # Working directory to be the current working directory
+    working_dir: Path = field(default_factory=lambda: Path(os.getcwd()))
+
     # Nuclear data configuration
     nuclear_data_cache_dir: Path = field(default_factory=lambda: Path(os.path.expanduser("~/.pleiades/nuclear_data")))
 
