@@ -1,0 +1,42 @@
+Whenever you call the PleiadesConfig class it will determine the current working directory [CWD]
+and start to populate the rest of the subdirectories needed for running SAMMY with pleiades.
+Below is the suggested working directory structure when using pleiades for two isotopes and two fits.
+
+[CWD]
+├── .logs                   Hidden log dir
+|
+├── endf/                   Directory to hold SAMMY:ENDF-MODE runs
+|   ├── isotope_1/          Directory for running SAMMY:ENDF-MODE for isotope #1
+|   |   ├── results/        Directory that has the results from the SAMMY:ENDF-MODE run
+|   |   |   └── SAMNDF.par  Parameter file made by SAMMY:ENDF-MODE for isotope #1
+|   |   ├── input.inp       Input file to run SAMMY:ENDF-MODE for isotope #1
+|   |   ├── isotope1.endf   Parameter file to run SAMMY:ENDF-MODE for isotope #1 (This a MF=2/MT=151 file)
+|   |   └── dummy.data      dummy data file needed to run SAMMY:ENDF-MODE.
+|   └── isotope_2/          Directory for running SAMMY:ENDF-MODE for isotope #2
+|       ├── results/        Directory that has the results from the SAMMY:ENDF-MODE run
+|       |   └── SAMNDF.par  Parameter file made by SAMMY:ENDF-MODE for isotope #2
+|       ├── input.inp       Input file to run SAMMY:ENDF-MODE for isotope #2
+|       ├── isotope2.endf   Parameter file to run SAMMY:ENDF-MODE for isotope #2 (This a MF=2/MT=151 file)
+|       └── dummy.data      dummy data file needed to run SAMMY:ENDF-MODE.
+|
+├── fits/                   Fitting directory
+|   ├── fit_x1_y1/          Fit directory for pixel [x1,y1]
+|   |   ├── results/        Directory that has the results from the SAMMY:FIT-MODE run fit_x1_y1
+|   |   |   └── SAMMY.LPT   Fit results of running SAMMY:FIT-MODE for fit_x1_y1
+|   |   |   └── SAMMY.LST   Plot results of running SAMMY:FIT-MODE for fit_x1_y1
+|   |   ├── input.inp       Input file to run SAMMY:FIT-MODE for fit_x1_y1
+|   |   ├── params.par      Parameter file to run SAMMY:FIT-MODE for fit_x1_y1
+|   |   └── data_x1_y1      Symbolic link to data_x1_y1 in data_dir
+|   └── fit_x2_y2/          Fit directory for pixel [x2,y2]
+|       ├── results/        Directory that has the results from the SAMMY:FIT-MODE run fit_x2_y2
+|       |   └── SAMMY.LPT   Fit results of running SAMMY:FIT-MODE for fit_x2_y2
+|       |   └── SAMMY.LST   Plot results of running SAMMY:FIT-MODE for fit_x2_y2
+|       ├── input.inp       Input file to run SAMMY:FIT-MODE for fit_x2_y2
+|       ├── params.par      Parameter file to run SAMMY:FIT-MODE for fit_x2_y2
+|       └── data_x2_y2      Symbolic link to data_x2_y2 in data_dir
+|
+├── data/               data directory
+|   ├── data_x1_y1      transmission data for pixel x1 and y1
+|   └── data_x2_y2      transmission data for pixel x2 and y2
+|
+└── results/            directory for fitting results.
