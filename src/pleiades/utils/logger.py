@@ -16,9 +16,13 @@ loguru_logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
 )
 
+# Set up default log directory and ensure it exists
+default_log_dir = Path(os.getcwd()) / ".logs"
+default_log_dir.mkdir(parents=True, exist_ok=True)
+
 # Set up default log file
 default_log_filename = f"pleiades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-default_log_path = Path(os.getcwd()) / default_log_filename
+default_log_path = default_log_dir / default_log_filename
 
 # Add file logger with default settings
 loguru_logger.add(
