@@ -19,6 +19,7 @@ dependencies = [
     "jupyterlab",
     "pyyaml",
     "pydantic",
+    "loguru",
     "nova-galaxy>=0.7.4,<0.8",
 ]
 
@@ -130,6 +131,7 @@ matplotlib = ">=3.10.1,<4"
 jupyterlab = ">=4.4.0,<5"
 pyyaml = ">=6.0.2,<7"
 pydantic = ">=2.11.2,<3"
+loguru = ">=0.7.2,<0.8"
 
 [tool.pixi.tasks]
 # PyPi packaging tasks
@@ -147,14 +149,15 @@ clean-conda = { cmd = "sh -c \"find conda.recipe/* ! -name 'meta.yaml' -exec rm 
 build-docs = { cmd = "sphinx-build -b html docs docs/_build", description = "Build the documentation" }
 clean-docs = { cmd = "rm -rf docs/_build", description = "Clean the documentation build artifacts" }
 # Testing tasks
-test = { cmd = "pytest", description = "Run the tests" }  # pytest config above takes care of the arguments
+test = { cmd = "pytest tests --cov-branch --cov=src/pleiades --cov-report=term --cov-report=xml", description = "Run the tests" }  # pytest config above takes care of the arguments
+clean-test = { cmd = "rm -rf .pytest_cache .coverage coverage.xml", description = "Clean the test cache" }
 # Development tasks
 lint = { cmd = "ruff check .", description = "Run linting checks" }
 format = { cmd = "ruff format .", description = "Format code with ruff" }
 pre-commit-install = { cmd = "pre-commit install", description = "Install pre-commit hooks" }
 pre-commit-run = { cmd = "pre-commit run --all-files", description = "Run pre-commit on all files" }
 # Clean all
-clean-all = { description = "Clean all build artifacts", depends-on = ["clean-pypi", "clean-conda", "clean-docs"] }
+clean-all = { description = "Clean all build artifacts", depends-on = ["clean-pypi", "clean-conda", "clean-docs", "clean-test"] }
 
 [tool.pixi.feature.test.dependencies]
 pytest = "*"
