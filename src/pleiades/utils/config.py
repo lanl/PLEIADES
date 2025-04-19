@@ -13,8 +13,17 @@ import yaml
 class PleiadesConfig:
     """Global configuration for PLEIADES."""
 
-    # Working directory to be the current working directory
+    # Working directory (default: current working directory)
     working_dir: Path = field(default_factory=lambda: Path(os.getcwd()))
+
+    # Fit directory (default: working_dir / "fits")
+    fit_dir: Path = field(default=None)
+
+    # ENDF directory (default: working_dir / "endf")
+    endf_dir: Path = field(default=None)
+
+    # Results directory (default: working_dir / "results")
+    results_dir: Path = field(default=None)
 
     # Nuclear data configuration
     nuclear_data_cache_dir: Path = field(default_factory=lambda: Path(os.path.expanduser("~/.pleiades/nuclear_data")))
@@ -30,19 +39,25 @@ class PleiadesConfig:
     # Other configuration sections can be added here as needed
 
     def __post_init__(self):
-        """Ensure Path objects for all directory configurations."""
+        """Initialize directories based on the working directory."""
+        self.fit_dir = self.fit_dir or self.working_dir / "fits"
+        self.endf_dir = self.endf_dir or self.working_dir / "endf"
+        self.results_dir = self.results_dir or self.working_dir / "results"
         self.nuclear_data_cache_dir = Path(self.nuclear_data_cache_dir)
 
     def ensure_directories(self):
         """Ensure all configured directories exist."""
         self.nuclear_data_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.fit_dir.mkdir(parents=True, exist_ok=True)
+        self.endf_dir.mkdir(parents=True, exist_ok=True)
+        self.results_dir.mkdir(parents=True, exist_ok=True)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to a dictionary."""
         result = {}
         for key, value in self.__dict__.items():
             if isinstance(value, Path):
-                result[key] = str(value)
+                result[key] = str(value.resolve())  # Convert to absolute path
             else:
                 result[key] = value
         return result
@@ -93,6 +108,8 @@ class PleiadesConfig:
             return cls()
 
         # Convert string paths back to Path objects
+        if "working_dir" in config_dict:
+            config_dict["working_dir"] = Path(config_dict["working_dir"])
         if "nuclear_data_cache_dir" in config_dict:
             config_dict["nuclear_data_cache_dir"] = Path(config_dict["nuclear_data_cache_dir"])
 
