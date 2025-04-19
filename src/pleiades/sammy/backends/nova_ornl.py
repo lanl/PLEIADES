@@ -24,7 +24,7 @@ from pleiades.sammy.config.interface import (
     SammyFiles,
     SammyRunner,
 )
-from pleiades.sammy.config.options import NovaSammyConfig
+from pleiades.sammy.config.sammy_options import NovaSammyConfig
 
 logger = logging.getLogger(__name__)
 
