@@ -8,7 +8,7 @@ import pytest
 
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.config.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles
-from pleiades.sammy.config.options import LocalSammyConfig
+from pleiades.sammy.config.sammy_options import LocalSammyConfig
 
 
 @pytest.fixture

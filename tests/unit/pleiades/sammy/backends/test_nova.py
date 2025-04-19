@@ -9,7 +9,7 @@ import pytest
 
 from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
 from pleiades.sammy.config.interface import SammyFiles
-from pleiades.sammy.config.options import NovaSammyConfig
+from pleiades.sammy.config.sammy_options import NovaSammyConfig
 
 # Mock environment variables
 os.environ["NOVA_URL"] = "https://mock_nova_url"

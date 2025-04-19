@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from pleiades.sammy.config.options import ConfigurationError, DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
+from pleiades.sammy.config.sammy_options import ConfigurationError, DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
 
 
 class TestLocalSammyConfig:

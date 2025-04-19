@@ -11,7 +11,7 @@ from pleiades.sammy.config.interface import (
     EnvironmentPreparationError,
     SammyFiles,
 )
-from pleiades.sammy.config.options import DockerSammyConfig
+from pleiades.sammy.config.sammy_options import DockerSammyConfig
 
 
 @pytest.fixture
