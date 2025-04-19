@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
-from pleiades.sammy.interface import BaseSammyConfig, ConfigurationError
+from pleiades.sammy.config.interface import BaseSammyConfig, ConfigurationError
 
 
 @dataclass
