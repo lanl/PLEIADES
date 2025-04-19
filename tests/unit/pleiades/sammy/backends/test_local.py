@@ -7,8 +7,9 @@ from pathlib import Path
 import pytest
 
 from pleiades.sammy.backends.local import LocalSammyRunner
-from pleiades.sammy.config.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles
-from pleiades.sammy.config.sammy_options import LocalSammyConfig
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError, SammyExecutionError
+from pleiades.sammy.config.sammy_options import LocalConfig
+from pleiades.sammy.interface import SammyFiles
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ def mock_sammy_executable(monkeypatch):
 def local_config(temp_working_dir, mock_sammy_executable):
     """Create local SAMMY configuration."""
     _ = mock_sammy_executable  # make pre-commit happy
-    local_sammy_config = LocalSammyConfig(
+    local_sammy_config = LocalConfig(
         working_dir=temp_working_dir,
         output_dir=temp_working_dir / "output",
         sammy_executable=Path("sammy"),
