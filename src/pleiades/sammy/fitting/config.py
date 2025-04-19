@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
-from pleiades.sammy.fitting.options import FitOptions
+from pleiades.sammy.fitting.fit_options import FitOptions
 
 
 class FitConfig(BaseModel):
