@@ -9,14 +9,13 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
-from pleiades.sammy.config.interface import (
-    EnvironmentPreparationError,
-    SammyExecutionError,
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError, SammyExecutionError
+from pleiades.sammy.config.sammy_options import LocalConfig
+from pleiades.sammy.interface import (
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
 )
-from pleiades.sammy.config.sammy_options import LocalSammyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +31,9 @@ SAMMY_OUTPUT_FILES = {
 class LocalSammyRunner(SammyRunner):
     """Implementation of SAMMY runner for local installation."""
 
-    def __init__(self, config: LocalSammyConfig):
+    def __init__(self, config: LocalConfig):
         super().__init__(config)
-        self.config: LocalSammyConfig = config
+        self.config: LocalConfig = config
         self._moved_files: List[Path] = []
 
     def prepare_environment(self, files: SammyFiles) -> None:
@@ -122,7 +121,7 @@ if __name__ == "__main__":
     output_dir = working_dir / "output"
 
     # Create config
-    config = LocalSammyConfig(sammy_executable=sammy_executable, working_dir=working_dir, output_dir=output_dir)
+    config = LocalConfig(sammy_executable=sammy_executable, working_dir=working_dir, output_dir=output_dir)
     config.validate()
 
     # Create files container
