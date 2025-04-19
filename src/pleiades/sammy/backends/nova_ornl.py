@@ -17,14 +17,14 @@ from nova.galaxy import (
     Tool,
 )
 
-from pleiades.sammy.config import NovaSammyConfig
-from pleiades.sammy.interface import (
+from pleiades.sammy.config.interface import (
     EnvironmentPreparationError,
     SammyExecutionError,
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
 )
+from pleiades.sammy.config.options import NovaSammyConfig
 
 logger = logging.getLogger(__name__)
 
