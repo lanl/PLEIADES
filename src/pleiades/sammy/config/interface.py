@@ -7,13 +7,15 @@ all SAMMY backend implementations.
 """
 
 import logging
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
+
+from pleiades.sammy.config.config_errors import OutputCollectionError
+from pleiades.sammy.config.config_options import BaseSammyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -70,54 +72,6 @@ class SammyExecutionResult:
     def runtime_seconds(self) -> float:
         """Calculate execution time in seconds."""
         return (self.end_time - self.start_time).total_seconds()
-
-
-@dataclass
-class BaseSammyConfig(ABC):
-    """Base configuration for all SAMMY backends."""
-
-    working_dir: Path  # Directory for SAMMY execution
-    output_dir: Path  # Directory for SAMMY outputs
-
-    def prepare_directories(self) -> None:
-        """
-        Create and prepare required directories.
-
-        Raises:
-            ConfigurationError: If directory creation fails
-        """
-        try:
-            # Create working directory if it doesn't exist
-            self.working_dir.mkdir(parents=True, exist_ok=True)
-
-            # Create output directory if it doesn't exist
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-
-        except Exception as e:
-            raise ConfigurationError(f"Failed to create directories: {str(e)}")
-
-    def validate(self) -> bool:
-        """
-        Validate the configuration.
-
-        Returns:
-            bool: True if configuration is valid
-
-        Raises:
-            ConfigurationError: If configuration is invalid
-        """
-        # Create directories first
-        self.prepare_directories()
-
-        # Validate working directory is writable
-        if not os.access(self.working_dir, os.W_OK):
-            raise ConfigurationError(f"Working directory not writable: {self.working_dir}")
-
-        # Validate output directory is writable
-        if not os.access(self.output_dir, os.W_OK):
-            raise ConfigurationError(f"Output directory not writable: {self.output_dir}")
-
-        return True
 
 
 class SammyRunner(ABC):
@@ -258,40 +212,3 @@ class SammyRunner(ABC):
                 moved_file.rename(original)
             except Exception as e:
                 logger.error(f"Failed to rollback move for {moved_file}: {str(e)}")
-
-
-# Custom exceptions
-class SammyError(Exception):
-    """Base exception for SAMMY-related errors."""
-
-    pass
-
-
-class EnvironmentPreparationError(SammyError):
-    """Raised when environment preparation fails."""
-
-    pass
-
-
-class SammyExecutionError(SammyError):
-    """Raised when SAMMY execution fails."""
-
-    pass
-
-
-class OutputCollectionError(SammyError):
-    """Raised when output collection fails."""
-
-    pass
-
-
-class ConfigurationError(SammyError):
-    """Raised when configuration is invalid."""
-
-    pass
-
-
-class CleanupError(SammyError):
-    """Raised when cleanup fails."""
-
-    pass
