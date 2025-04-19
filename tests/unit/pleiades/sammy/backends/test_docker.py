@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 
 from pleiades.sammy.backends.docker import DockerSammyRunner
-from pleiades.sammy.config import DockerSammyConfig
-from pleiades.sammy.interface import (
+from pleiades.sammy.config.interface import (
     EnvironmentPreparationError,
     SammyFiles,
 )
+from pleiades.sammy.config.options import DockerSammyConfig
 
 
 @pytest.fixture

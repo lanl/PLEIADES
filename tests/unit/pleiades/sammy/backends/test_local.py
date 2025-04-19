@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from pleiades.sammy.backends.local import LocalSammyRunner
-from pleiades.sammy.config import LocalSammyConfig
-from pleiades.sammy.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles
+from pleiades.sammy.config.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles
+from pleiades.sammy.config.options import LocalSammyConfig
 
 
 @pytest.fixture

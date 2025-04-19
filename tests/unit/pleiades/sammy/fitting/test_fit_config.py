@@ -4,7 +4,7 @@ from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import dataParameters
 from pleiades.sammy.fitting.config import FitConfig
-from pleiades.sammy.fitting.options import (
+from pleiades.sammy.fitting.fit_options import (
     BroadeningTypeOptions,
     DataFormatOptions,
     FitOptions,

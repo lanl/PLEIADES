@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.fitting.options import (
+from pleiades.sammy.fitting.fit_options import (
     BroadeningTypeOptions,
     DataFormatOptions,
     FitOptions,
