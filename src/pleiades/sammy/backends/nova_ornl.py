@@ -17,14 +17,13 @@ from nova.galaxy import (
     Tool,
 )
 
-from pleiades.sammy.config.interface import (
-    EnvironmentPreparationError,
-    SammyExecutionError,
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError, SammyExecutionError
+from pleiades.sammy.config.sammy_options import NovaConfig
+from pleiades.sammy.interface import (
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
 )
-from pleiades.sammy.config.sammy_options import NovaSammyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +37,9 @@ class NovaConnectionError(Exception):
 class NovaSammyRunner(SammyRunner):
     """Implementation of SAMMY runner for NOVA web service."""
 
-    def __init__(self, config: NovaSammyConfig):
+    def __init__(self, config: NovaConfig):
         super().__init__(config)
-        self.config: NovaSammyConfig = config
+        self.config: NovaConfig = config
         self._nova: Optional[Connection] = None
         self._connection: Optional[Connection] = None
         self._datastore_name: Optional[str] = None
@@ -174,7 +173,7 @@ if __name__ == "__main__":
             raise ValueError("NOVA_URL and NOVA_API_KEY environment variables must be set")
 
         # Create and validate config
-        config = NovaSammyConfig(url=nova_url, api_key=nova_api_key, working_dir=working_dir, output_dir=output_dir)
+        config = NovaConfig(url=nova_url, api_key=nova_api_key, working_dir=working_dir, output_dir=output_dir)
         config.validate()
 
         # Create files container
