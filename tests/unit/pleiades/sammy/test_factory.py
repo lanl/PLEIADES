@@ -8,13 +8,13 @@ import pytest
 from pleiades.sammy.backends.docker import DockerSammyRunner
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
+from pleiades.sammy.config.interface import SammyRunner
 from pleiades.sammy.factory import (
     BackendNotAvailableError,
     BackendType,
     ConfigurationError,
     SammyFactory,
 )
-from pleiades.sammy.interface import SammyRunner
 
 
 # Mock environment variables for NOVA backend checks
