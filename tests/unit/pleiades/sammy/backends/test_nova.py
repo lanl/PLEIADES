@@ -8,8 +8,8 @@ from unittest import mock
 import pytest
 
 from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
-from pleiades.sammy.config.interface import SammyFiles
-from pleiades.sammy.config.sammy_options import NovaSammyConfig
+from pleiades.sammy.config.sammy_options import NovaConfig
+from pleiades.sammy.interface import SammyFiles
 
 # Mock environment variables
 os.environ["NOVA_URL"] = "https://mock_nova_url"
@@ -27,7 +27,7 @@ def create_dummy_zip(destination):
 @pytest.fixture
 def nova_config(temp_working_dir):
     """Create NOVA SAMMY configuration."""
-    config = NovaSammyConfig(
+    config = NovaConfig(
         url=os.environ["NOVA_URL"],
         api_key=os.environ["NOVA_API_KEY"],
         working_dir=temp_working_dir,
