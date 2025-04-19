@@ -9,14 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from pleiades.sammy.config import DockerSammyConfig
-from pleiades.sammy.interface import (
+from pleiades.sammy.config.interface import (
     EnvironmentPreparationError,
     SammyExecutionError,
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
 )
+from pleiades.sammy.config.sammy_options import DockerSammyConfig
 
 logger = logging.getLogger(__name__)
 
