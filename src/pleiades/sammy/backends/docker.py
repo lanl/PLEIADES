@@ -9,14 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from pleiades.sammy.config.interface import (
-    EnvironmentPreparationError,
-    SammyExecutionError,
-    SammyExecutionResult,
-    SammyFiles,
-    SammyRunner,
-)
-from pleiades.sammy.config.sammy_options import DockerSammyConfig
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError, SammyExecutionError
+from pleiades.sammy.config.sammy_options import DockerConfig
+from pleiades.sammy.interface import SammyExecutionResult, SammyFiles, SammyRunner
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +19,7 @@ logger = logging.getLogger(__name__)
 class DockerSammyRunner(SammyRunner):
     """Implementation of SAMMY runner for Docker container."""
 
-    def __init__(self, config: DockerSammyConfig):
+    def __init__(self, config: DockerConfig):
         super().__init__(config)
         self.config = config
         self._moved_files = []
@@ -169,7 +164,7 @@ if __name__ == "__main__":
 
     try:
         # Create and validate config
-        config = DockerSammyConfig(image_name="kedokudo/sammy-docker", working_dir=working_dir, output_dir=output_dir)
+        config = DockerConfig(image_name="kedokudo/sammy-docker", working_dir=working_dir, output_dir=output_dir)
         config.validate()
 
         # Create files container
