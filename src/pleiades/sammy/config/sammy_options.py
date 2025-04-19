@@ -11,23 +11,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
+from pleiades.sammy.config.base_config import BaseSammyConfig
 from pleiades.sammy.config.config_errors import ConfigurationError
-from pleiades.sammy.config.config_options import BaseSammyConfig
 
 
 @dataclass
-class LocalSammyConfig(BaseSammyConfig):
+class LocalConfig(BaseSammyConfig):
     """Configuration for local SAMMY installation."""
 
     sammy_executable: str = field(default="sammy")
     shell_path: Path = field(default=Path("/bin/bash"))
     env_vars: Dict[str, str] = field(default_factory=dict)
 
-    def validate(self) -> bool:
-        """Validate local SAMMY configuration."""
-        # Validate base configuration first
-        super().validate()
-
+    def validate_executable(self) -> bool:
         # Validate SAMMY executable exists and is executable
         sammy_path = shutil.which(str(self.sammy_executable))
         if not sammy_path:
@@ -42,7 +38,7 @@ class LocalSammyConfig(BaseSammyConfig):
 
 
 @dataclass
-class DockerSammyConfig(BaseSammyConfig):
+class DockerConfig(BaseSammyConfig):
     """Configuration for Docker-based SAMMY execution."""
 
     image_name: str = field(default="sammy:latest")
@@ -80,7 +76,7 @@ class DockerSammyConfig(BaseSammyConfig):
 
 
 @dataclass
-class NovaSammyConfig(BaseSammyConfig):
+class NovaConfig(BaseSammyConfig):
     """Configuration for NOVA web service SAMMY execution."""
 
     url: str = field(default="")
