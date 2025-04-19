@@ -5,9 +5,9 @@ from datetime import datetime
 
 import pytest
 
-from pleiades.sammy.config.interface import (
-    BaseSammyConfig,
-    EnvironmentPreparationError,
+from pleiades.sammy.config.base_config import BaseSammyConfig
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError
+from pleiades.sammy.interface import (
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
