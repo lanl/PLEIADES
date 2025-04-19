@@ -15,8 +15,8 @@ import yaml
 from pleiades.sammy.backends.docker import DockerSammyRunner
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
-from pleiades.sammy.config import DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
-from pleiades.sammy.interface import SammyFiles, SammyRunner
+from pleiades.sammy.config.interface import SammyFiles, SammyRunner
+from pleiades.sammy.config.options import DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
 
 logger = logging.getLogger(__name__)
 
