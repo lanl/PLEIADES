@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
-from pleiades.sammy.config import LocalSammyConfig
-from pleiades.sammy.interface import (
+from pleiades.sammy.config.interface import (
     EnvironmentPreparationError,
     SammyExecutionError,
     SammyExecutionResult,
     SammyFiles,
     SammyRunner,
 )
+from pleiades.sammy.config.sammy_options import LocalSammyConfig
 
 logger = logging.getLogger(__name__)
 
