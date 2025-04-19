@@ -7,11 +7,9 @@ from pathlib import Path
 import pytest
 
 from pleiades.sammy.backends.docker import DockerSammyRunner
-from pleiades.sammy.config.interface import (
-    EnvironmentPreparationError,
-    SammyFiles,
-)
-from pleiades.sammy.config.sammy_options import DockerSammyConfig
+from pleiades.sammy.config.config_errors import EnvironmentPreparationError
+from pleiades.sammy.config.sammy_options import DockerConfig
+from pleiades.sammy.interface import SammyFiles
 
 
 @pytest.fixture
@@ -64,7 +62,7 @@ def mock_subprocess_docker_fail(monkeypatch, mock_sammy_error_output):
 @pytest.fixture
 def docker_config(temp_working_dir):
     """Create Docker SAMMY configuration."""
-    config = DockerSammyConfig(
+    config = DockerConfig(
         working_dir=temp_working_dir,
         output_dir=temp_working_dir / "output",
         image_name="kedokudo/sammy-docker",
