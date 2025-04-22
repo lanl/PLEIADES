@@ -18,11 +18,11 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 SAMMY_OUTPUT_FILES = {
-    "SAMMY.LPT",    # Log file
-    "SAMMY.LST",    # 
-    "SAMNDF.PAR",   # Updated parameter file based on SAMMY run
-    "SAMNDF.INP",   # Updated input file based on SAMMY run
-    "SAMMY.IO",     # terminal output file from SAMMY run
+    "SAMMY.LPT",  # Log file
+    "SAMMY.LST",  #
+    "SAMNDF.PAR",  # Updated parameter file based on SAMMY run
+    "SAMNDF.INP",  # Updated input file based on SAMMY run
+    "SAMMY.IO",  # terminal output file from SAMMY run
 }
 
 
