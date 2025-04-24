@@ -2,6 +2,7 @@
 """Shared pytest fixtures for SAMMY tests."""
 
 import os
+import shutil
 from pathlib import Path
 from typing import Dict, Generator
 from unittest.mock import Mock
@@ -32,13 +33,30 @@ def temp_output_dir(temp_working_dir) -> Path:
 
 
 @pytest.fixture
-def mock_sammy_files(test_data_dir) -> Dict[str, Path]:
-    """Provide paths to test input files."""
-    return {
-        "input_file": test_data_dir / "ex012a.inp",
-        "parameter_file": test_data_dir / "ex012a.par",
-        "data_file": test_data_dir / "ex012a.dat",
+def mock_sammy_files(test_data_dir, temp_working_dir) -> Dict[str, Path]:
+    """Provide paths to test input files.
+
+    Copies the real test files to the temporary directory to ensure path safety.
+    """
+    # Create a subdirectory for the test files
+    test_files_dir = temp_working_dir / "test_files"
+    test_files_dir.mkdir(exist_ok=True)
+
+    # Copy the test files to the temporary directory
+    src_files = {
+        "input_file": "ex012a.inp",
+        "parameter_file": "ex012a.par",
+        "data_file": "ex012a.dat",
     }
+
+    result = {}
+    for key, filename in src_files.items():
+        src_path = test_data_dir / filename
+        dest_path = test_files_dir / filename
+        shutil.copy2(src_path, dest_path)
+        result[key] = dest_path
+
+    return result
 
 
 @pytest.fixture
