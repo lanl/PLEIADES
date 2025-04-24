@@ -1,0 +1,58 @@
+##########################################################################
+### PURPOSE of Exercise EX027: Learn to run SAMMY from ENDF files
+
+
+### DESCRIPTION
+
+    Often an analyst may wish to use files from ENDF to obtain starting
+	parameters for a SAMMY run.  SAMMY can read directly from File 2
+	of an ENDF file, and perform the run as specified in the INPut
+	file.  In addition to the regular output, SAMMY will also provide
+	SAMMY-style INPut and PARameter files which can then be used as
+	input for subsequent SAMMY runs.  (Because ENDF files do not
+	contain all the information needed by SAMMY, only simple no-Bayes
+	runs can be performed directly from the ENDF files.)
+
+### Instructions
+
+(1) Command file ex027a sets up a no-Bayes run starting from the ENDF
+    file.  Notice that the INPut file ex027a.inp contains no spin group
+    information; that information will be pulled from the ENDF file.  The
+    experimental data file is taken from a paper which did not provide
+    uncertainties or correlations; file ex027a.dat arbitrarily assumes
+    ten percent uncertainty.  Make this run to generate the SAMMY-style
+    INPut and PARameter files.
+
+    (This is a long run, since there are many data points.  You may wish
+    to reduce the energy range to save time.)
+
+(2) Now play with fitting these data.  You will need to modify the
+    output INPut and PARameter files from step (1) to use for input to
+    this step.  One change you will need to make in the INPut file is to
+    provide the correct thickness, which is 0.002800 atoms/barn; also
+    tell SAMMY to include single-scattering corrections and specify
+    "normalize as cross sections".
+
+    Another change needed if you wish to SOLVE BAYES EQUATIONS is to flag
+    at least one parameter in the PARameter file.
+
+    For fitting the data, the arbitrary ten percent uncertainty is a poor
+    choice, since that gives unrealistically high weight to background
+    points (between resonances).  It may be necessary to set an absolute
+    lower limit on the uncertainty for any point; this is done in SAMMY by
+    setting the VMIN parameter in Card Set 7 of the INPut file.
+
+    There are many points in this data set, and the fit is poor.  You may
+    wish to work with small energy ranges at first, rather than trying for
+    a global fit.  You will also note that there are gaps in the data,
+    which look odd in plots but provide no difficulty for the analysis.
+
+    In the energy range from 6 to 100 eV, a normalization of almost ten
+    is needed to obtain agreement with the data.  For a "real" analysis
+    (as opposed to an exercise such as this one), you would have to
+    understand why!
+
+    Command file ex027b is a first attempt to fit this data, using most of
+    the suggestions discussed above.
+
+##########################################################################

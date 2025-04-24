@@ -59,9 +59,9 @@ class LocalSammyRunner(SammyRunner):
 
         sammy_command = textwrap.dedent(f"""\
             {self.config.sammy_executable} <<EOF
-            {files.input_file}
-            {files.parameter_file}
-            {files.data_file}
+            {files.input_file.relative_to(self.config.working_dir)}
+            {files.parameter_file.relative_to(self.config.working_dir)}
+            {files.data_file.relative_to(self.config.working_dir)}
             EOF""")
 
         try:

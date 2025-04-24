@@ -19,9 +19,10 @@ logger = logging.getLogger(__name__)
 
 SAMMY_OUTPUT_FILES = {
     "SAMMY.LPT",  # Log file
-    "SAMMIE.ODF",  # Output data file
-    "SAMNDF.PAR",  # Updated parameter file
-    "SAMRESOLVED.PAR",  # Additional parameter file
+    "SAMMY.LST",  #
+    "SAMNDF.PAR",  # Updated parameter file based on SAMMY run
+    "SAMNDF.INP",  # Updated input file based on SAMMY run
+    "SAMMY.IO",  # terminal output file from SAMMY run
 }
 
 

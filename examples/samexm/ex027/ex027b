@@ -1,0 +1,9 @@
+#!/bin/csh
+
+sammy <<EOF
+ex027b.inp
+ex027b.par
+ex027a.dat
+
+EOF
+mv -f SAM* results/
