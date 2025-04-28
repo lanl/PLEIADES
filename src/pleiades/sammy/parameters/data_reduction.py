@@ -166,12 +166,13 @@ class DataReductionCard(BaseModel):
 
 
 if __name__ == "__main__":
-    import logging
+    from pleiades.utils.logger import configure_logger, loguru_logger
 
-    logging.basicConfig(level=logging.DEBUG)
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
 
     # Test single parameter parsing
-    logging.debug("**Testing single parameter parsing**")
+    logger.debug("**Testing single parameter parsing**")
     param_line = "PARAM 1   1.234E+00 5.000E-02 1.234E+00"
 
     for k, v in FORMAT_PARAMETER.items():
@@ -180,13 +181,13 @@ if __name__ == "__main__":
 
     try:
         param = DataReductionParameter.from_line(param_line)
-        logging.debug(f"Successfully parsed parameter: {param.name} = {param.value}")
-        logging.debug(f"Output line: '{param.to_line()}'")
+        logger.debug(f"Successfully parsed parameter: {param.name} = {param.value}")
+        logger.debug(f"Output line: '{param.to_line()}'")
     except ValueError as e:
-        logging.error(f"Failed to parse parameter: {e}")
+        logger.error(f"Failed to parse parameter: {e}")
 
     # Test complete card set
-    logging.debug("\n**Testing complete card set**")
+    logger.debug("\n**Testing complete card set**")
     card_lines = [
         "DATA reduction parameters are next",
         "PAR1   1   1.234E+00 5.000E-02 1.234E+00",
@@ -197,26 +198,26 @@ if __name__ == "__main__":
 
     try:
         card = DataReductionCard.from_lines(card_lines)
-        logging.debug("Successfully parsed card set")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed card set")
+        logger.debug("Output lines:")
         for line in card.to_lines():
-            logging.debug(f"'{line}'")
+            logger.debug(f"'{line}'")
     except ValueError as e:
-        logging.error(f"Failed to parse card set: {e}")
+        logger.error(f"Failed to parse card set: {e}")
 
     # Test error handling
-    logging.debug("\n**Testing error handling**")
+    logger.debug("\n**Testing error handling**")
 
     # Test invalid header
     try:
         bad_lines = ["WRONG header", "PAR1  1 1.234E+00", ""]
         DataReductionCard.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid header: {e}")
+        logger.debug(f"Caught expected error for invalid header: {e}")
 
     # Test invalid parameter line
     try:
         bad_param = "PAR1  X invalid_value"
         DataReductionParameter.from_line(bad_param)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid parameter line: {e}")
+        logger.debug(f"Caught expected error for invalid parameter line: {e}")

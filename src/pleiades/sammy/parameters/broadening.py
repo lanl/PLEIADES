@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Data class for card 04::broadening parameters."""
 
-import logging
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import loguru_logger
 
 # Format definitions for fixed-width fields
 # Each numeric field follows a 9+1 pattern:
@@ -312,26 +312,29 @@ class BroadeningParameterCard(BaseModel):
 
 if __name__ == "__main__":
     # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
 
     # Test example with main parameters only
-    logging.debug("**Testing main parameters only**")
+    logger.debug("**Testing main parameters only**")
     main_only_lines = ["1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0"]
 
     try:
         params = BroadeningParameters.from_lines(main_only_lines)
-        logging.debug("Successfully parsed main parameters:")
-        logging.debug(f"CRFN: {params.crfn}")
-        logging.debug(f"TEMP: {params.temp}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed main parameters:")
+        logger.debug(f"CRFN: {params.crfn}")
+        logger.debug(f"TEMP: {params.temp}")
+        logger.debug("Output lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse main parameters: {e}")
+        logger.error(f"Failed to parse main parameters: {e}")
 
     # Test example with uncertainties
-    logging.debug("**Testing with uncertainties**")
+    logger.debug("**Testing with uncertainties**")
     with_unc_lines = [
         "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
         "1.000E-02 1.000E+00 1.000E-03 1.000E-03 1.000E-02 1.000E-02",
@@ -339,18 +342,18 @@ if __name__ == "__main__":
 
     try:
         params = BroadeningParameters.from_lines(with_unc_lines)
-        logging.debug("Successfully parsed parameters with uncertainties:")
-        logging.debug(f"CRFN: {params.crfn} ± {params.d_crfn}")
-        logging.debug(f"TEMP: {params.temp} ± {params.d_temp}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed parameters with uncertainties:")
+        logger.debug(f"CRFN: {params.crfn} ± {params.d_crfn}")
+        logger.debug(f"TEMP: {params.temp} ± {params.d_temp}")
+        logger.debug("Output lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse parameters with uncertainties: {e}")
+        logger.error(f"Failed to parse parameters with uncertainties: {e}")
 
     # Test example with Gaussian parameters
-    logging.debug("**Testing with Gaussian parameters**")
+    logger.debug("**Testing with Gaussian parameters**")
     full_lines = [
         "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
         "1.000E-02 1.000E+00 1.000E-03 1.000E-03 1.000E-02 1.000E-02",
@@ -360,18 +363,18 @@ if __name__ == "__main__":
 
     try:
         params = BroadeningParameters.from_lines(full_lines)
-        logging.debug("Successfully parsed full parameter set:")
-        logging.debug(f"DELTC1: {params.deltc1} ± {params.d_deltc1}")
-        logging.debug(f"DELTC2: {params.deltc2} ± {params.d_deltc2}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed full parameter set:")
+        logger.debug(f"DELTC1: {params.deltc1} ± {params.d_deltc1}")
+        logger.debug(f"DELTC2: {params.deltc2} ± {params.d_deltc2}")
+        logger.debug("Output lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse full parameter set: {e}")
+        logger.error(f"Failed to parse full parameter set: {e}")
 
     # Test complete card set
-    logging.debug("**Testing complete card set**")
+    logger.debug("**Testing complete card set**")
     card_lines = [
         "BROADening parameters may be varied",
         "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
@@ -383,15 +386,15 @@ if __name__ == "__main__":
 
     try:
         card = BroadeningParameterCard.from_lines(card_lines)
-        logging.debug("Successfully parsed complete card set")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed complete card set")
+        logger.debug("Output lines:")
         for line in card.to_lines():
-            logging.debug(f"'{line}'")
+            logger.debug(f"'{line}'")
     except ValueError as e:
-        logging.error(f"Failed to parse complete card set: {e}")
+        logger.error(f"Failed to parse complete card set: {e}")
 
     # Test error handling
-    logging.debug("**Testing Error Handling**")
+    logger.debug("**Testing Error Handling**")
 
     # Test invalid header
     try:
@@ -400,10 +403,10 @@ if __name__ == "__main__":
             "1.2340E+00 2.9800E+02 1.5000E-01 2.5000E-02 1.0000E+00 5.0000E-01  1 0 1 0 1 0",
             "",
         ]
-        logging.debug("Testing invalid header:")
+        logger.debug("Testing invalid header:")
         BroadeningParameterCard.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid header: {e}")
+        logger.debug(f"Caught expected error for invalid header: {e}")
 
     # Test invalid Gaussian parameters (missing one)
     try:
@@ -414,4 +417,4 @@ if __name__ == "__main__":
         ]
         BroadeningParameters.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid Gaussian parameters: {e}")
+        logger.debug(f"Caught expected error for invalid Gaussian parameters: {e}")
