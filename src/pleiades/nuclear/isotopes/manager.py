@@ -1,14 +1,14 @@
 """Manages access to isotope data files packaged with PLEIADES."""
 
 import functools
-import logging
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from pleiades.nuclear.isotopes.models import FileCategory, IsotopeInfo, IsotopeMassData
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 class IsotopeManager:
