@@ -1,7 +1,6 @@
 #!/usr/env/bin python
 """Local backend implementation for SAMMY execution."""
 
-import logging
 import subprocess
 import textwrap
 from datetime import datetime
@@ -17,8 +16,9 @@ from pleiades.sammy.interface import (
     SammyFiles,
     SammyRunner,
 )
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 # Known SAMMY output file patterns
 SAMMY_OUTPUT_FILES = {
