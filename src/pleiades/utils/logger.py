@@ -16,9 +16,13 @@ loguru_logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
 )
 
-# Set up default log file
-default_log_filename = f"pleiades_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-default_log_path = Path(os.getcwd()) / default_log_filename
+# Create logs directory if it doesn't exist
+logs_dir = Path(os.getcwd()) / "pleiades_logs"
+logs_dir.mkdir(exist_ok=True)
+
+# Set up default log file with hourly timestamp
+default_log_filename = f"pleiades_{datetime.now().strftime('%Y%m%d_%H')}.log"
+default_log_path = logs_dir / default_log_filename
 
 # Add file logger with default settings
 loguru_logger.add(
@@ -82,7 +86,11 @@ def configure_logger(
     if log_file is None:
         log_file = default_log_path
     else:
+        # If custom log file is provided but isn't an absolute path,
+        # put it in the logs directory
         log_file = Path(log_file)
+        if not log_file.is_absolute():
+            log_file = logs_dir / log_file
 
     loguru_logger.add(
         log_file,
@@ -117,7 +125,12 @@ class Logger:
 
         # If custom log file is specified, configure a new sink for it
         if log_file and log_file != str(default_log_path):
-            self.log_file = Path(log_file)
+            log_path = Path(log_file)
+            # If not an absolute path, place in logs directory
+            if not log_path.is_absolute():
+                log_path = logs_dir / log_path
+
+            self.log_file = log_path
 
             # Add a file handler if specified
             loguru_logger.add(
