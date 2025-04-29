@@ -64,7 +64,16 @@ def data_manager(mock_isotope_manager, mock_config):
         manager = NuclearDataManager(isotope_manager=mock_isotope_manager)
         # Ensure cache directories are created
         assert mock_mkdir.called
-        return manager
+
+        # Return the manager for use in tests
+        yield manager
+
+        # Cleanup: remove any residual files after tests
+        try:
+            for par_file in Path(".").glob("*.par"):
+                par_file.unlink()
+        except Exception:
+            pass
 
 
 def test_create_isotope_parameters_from_string_valid(data_manager):

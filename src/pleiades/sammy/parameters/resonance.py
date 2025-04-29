@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """Data class for card 01::resonance."""
 
-import logging
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 from pleiades.utils.helper import VaryFlag, safe_parse
+from pleiades.utils.logger import loguru_logger
 
 # setup logging
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 # Define format constants
@@ -214,38 +214,40 @@ class ResonanceCard(BaseModel):
 
 if __name__ == "__main__":
     # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
     # Test with regular cases
     good_examples = [
         "-3.6616E+06 1.5877E+05 3.6985E+09                       0 0 1     1",
         "-8.7373E+05 1.0253E+03 1.0151E+02                       0 0 1     1",
     ]
 
-    logging.debug("**Testing valid formats**")
+    logger.debug("**Testing valid formats**")
     for i, line in enumerate(good_examples):
         entry = ResonanceEntry.from_str(line)
-        logging.debug(f"Example {i+1}:")
-        logging.debug(f"Original: {line}")
-        logging.debug(f"Parsed: {entry}")
-        logging.debug(f"Reformatted: {entry.to_str()}")
+        logger.debug(f"Example {i+1}:")
+        logger.debug(f"Original: {line}")
+        logger.debug(f"Parsed: {entry}")
+        logger.debug(f"Reformatted: {entry.to_str()}")
 
     # Test with special case (should raise error)
-    logging.debug("**Testing unsupported format**")
+    logger.debug("**Testing unsupported format**")
     try:
         # Make sure the negative value is properly aligned in columns 68-80
         bad_line = "-3.6616E+06 1.5877E+05 3.6985E+09                       0 0 1     1    -1.234"
-        logging.debug(f"Testing line: '{bad_line}'")
-        logging.debug(f"Length before padding: {len(bad_line)}")
+        logger.debug(f"Testing line: '{bad_line}'")
+        logger.debug(f"Length before padding: {len(bad_line)}")
         ResonanceEntry.from_str(bad_line)
     except UnsupportedFormatError as e:
-        logging.debug("Caught expected error for unsupported format:")
-        logging.debug(str(e))
+        logger.debug("Caught expected error for unsupported format:")
+        logger.debug(str(e))
 
     # Let's also try with a malformed line to make sure our padding doesn't hide issues
-    logging.debug("**Testing malformed format**")
+    logger.debug("**Testing malformed format**")
     try:
         malformed_line = "-3.6616E+06 1.5877E+05 3.6985E+09 -1.234"  # Clearly wrong format
         ResonanceEntry.from_str(malformed_line)
-        logging.debug("No error raised for malformed format!")
+        logger.debug("No error raised for malformed format!")
     except ValueError as e:
-        logging.debug("Caught expected error for malformed line:", str(e))
+        logger.debug("Caught expected error for malformed line:", str(e))

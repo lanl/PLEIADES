@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Top level parameter file handler for SAMMY."""
 
-import os
 import pathlib
 from enum import Enum, auto
 from typing import List, Optional, Union
@@ -24,9 +23,8 @@ from pleiades.sammy.parameters import (
 )
 from pleiades.utils.logger import Logger
 
-# Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
-logger = Logger(__name__, log_file=log_file_path)
+# Initialize logger without a separate log file
+logger = Logger(__name__)
 
 # Header lines for card sets in the PARameter file
 # NOTE: If a card is not implemented, the value is None

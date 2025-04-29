@@ -1,6 +1,6 @@
-import logging
 import shutil
 import subprocess
+import sys
 from unittest import mock
 
 import pytest
@@ -15,6 +15,48 @@ from pleiades.sammy.factory import (
     SammyFactory,
 )
 from pleiades.sammy.interface import SammyRunner
+from pleiades.utils.logger import loguru_logger
+
+
+# Create a fixture to capture loguru logs for test assertions
+@pytest.fixture
+def loguru_caplog():
+    """Capture loguru logs for testing."""
+
+    # Prepare a place to store logs
+    class LogCapture:
+        def __init__(self):
+            self.logs = []
+            self.min_level = "INFO"
+
+        @property
+        def text(self):
+            return "\n".join(self.logs)
+
+        def set_level(self, level):
+            self.min_level = level
+
+    log_capture = LogCapture()
+
+    # Remove default handlers
+    loguru_logger.remove()
+
+    # Add a specialized handler to capture logs
+    def sink(message):
+        log_capture.logs.append(message)
+
+    # Add handler with captured sink
+    handler_id = loguru_logger.add(sink, level=log_capture.min_level, format="{message}")
+
+    # Also add stderr handler for visibility
+    stderr_id = loguru_logger.add(sys.stderr, level="DEBUG")
+
+    yield log_capture
+
+    # Clean up after the test
+    loguru_logger.remove(handler_id)
+    loguru_logger.remove(stderr_id)
+    loguru_logger.add(sys.stderr)
 
 
 # Mock environment variables for NOVA backend checks
@@ -210,16 +252,16 @@ class TestSammyFactory:
             SammyFactory.from_config(config_file)
         assert "Environment variable not found" in str(exc.value)
 
-    def test_auto_select_local(self, mock_which, mock_subprocess_run, mock_sammy_runner, tmp_path, caplog):
+    def test_auto_select_local(self, mock_which, mock_subprocess_run, mock_sammy_runner, tmp_path, loguru_caplog):
         """Should auto-select local backend."""
         _ = mock_which, mock_subprocess_run, mock_sammy_runner  # implicitly used by the fixture
-        caplog.set_level(logging.INFO)
+        loguru_caplog.set_level("INFO")
         runner = SammyFactory.auto_select(tmp_path)
         assert isinstance(runner, LocalSammyRunner)
-        assert "Attempting to use local backend" in caplog.text
+        assert "Attempting to use local backend" in loguru_caplog.text
 
     def test_auto_select_docker(
-        self, monkeypatch, mock_which_unavailable, mock_subprocess_run, mock_sammy_runner, tmp_path, caplog
+        self, monkeypatch, mock_which_unavailable, mock_subprocess_run, mock_sammy_runner, tmp_path, loguru_caplog
     ):
         """Should auto-select docker backend if local unavailable."""
         _ = mock_which_unavailable, mock_subprocess_run, mock_sammy_runner  # implicitly used by the fixture
@@ -227,21 +269,21 @@ class TestSammyFactory:
         monkeypatch.delenv("NOVA_URL", raising=False)
         monkeypatch.delenv("NOVA_API", raising=False)
         # check availability
-        caplog.set_level(logging.INFO)
+        loguru_caplog.set_level("INFO")
         runner = SammyFactory.auto_select(tmp_path)
         assert isinstance(runner, DockerSammyRunner)
-        assert "Attempting to use docker backend" in caplog.text
+        assert "Attempting to use docker backend" in loguru_caplog.text
 
-    def test_auto_select_preferred(self, mock_which, mock_subprocess_run, mock_sammy_runner, tmp_path, caplog):
+    def test_auto_select_preferred(self, mock_which, mock_subprocess_run, mock_sammy_runner, tmp_path, loguru_caplog):
         """Should respect preferred backend."""
         _ = mock_which, mock_subprocess_run, mock_sammy_runner  # implicitly used by the fixture
-        caplog.set_level(logging.INFO)
+        loguru_caplog.set_level("INFO")
         runner = SammyFactory.auto_select(tmp_path, preferred_backend="docker")
         assert isinstance(runner, DockerSammyRunner)
-        assert "Using preferred backend: docker" in caplog.text
+        assert "Using preferred backend: docker" in loguru_caplog.text
 
     def test_auto_select_none_available(
-        self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail, tmp_path, caplog
+        self, monkeypatch, mock_which_unavailable, mock_subprocess_run_docker_fail, tmp_path, loguru_caplog
     ):
         """Should raise error if no backends available."""
         _ = mock_which_unavailable, mock_subprocess_run_docker_fail  # implicitly used by the fixture
@@ -249,7 +291,7 @@ class TestSammyFactory:
         monkeypatch.delenv("NOVA_URL", raising=False)
         monkeypatch.delenv("NOVA_API", raising=False)
         # check availability
-        caplog.set_level(logging.INFO)
+        loguru_caplog.set_level("INFO")
         with pytest.raises(BackendNotAvailableError) as exc:
             SammyFactory.auto_select(tmp_path)
         assert "No suitable backend available." in str(exc.value)

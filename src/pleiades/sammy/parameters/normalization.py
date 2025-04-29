@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Data class for card 06::normalization and background parameters."""
 
-import logging
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import loguru_logger
 
 # Format definitions for fixed-width fields
 # Each numeric field follows a 9+1 pattern for readability
@@ -242,26 +242,29 @@ class NormalizationBackgroundCard(BaseModel):
 
 if __name__ == "__main__":
     # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
 
     # Test example with main parameters only
-    logging.debug("**Testing main parameters only**")
+    logger.debug("**Testing main parameters only**")
     main_only_lines = ["1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0"]
 
     try:
         params = NormalizationParameters.from_lines(main_only_lines)
-        logging.debug("Successfully parsed main parameters:")
-        logging.debug(f"ANORM: {params.anorm}")
-        logging.debug(f"BACKA: {params.backa}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed main parameters:")
+        logger.debug(f"ANORM: {params.anorm}")
+        logger.debug(f"BACKA: {params.backa}")
+        logger.debug("Output lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse main parameters: {e}")
+        logger.error(f"Failed to parse main parameters: {e}")
 
     # Test example with uncertainties
-    logging.debug("**Testing with uncertainties**")
+    logger.debug("**Testing with uncertainties**")
     with_unc_lines = [
         "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
         "1.000E-02 1.000E+00 1.000E-03 1.000E-03 1.000E-02 1.000E-02",
@@ -269,18 +272,18 @@ if __name__ == "__main__":
 
     try:
         params = NormalizationParameters.from_lines(with_unc_lines)
-        logging.debug("Successfully parsed parameters with uncertainties:")
-        logging.debug(f"ANORM: {params.anorm} ± {params.d_anorm}")
-        logging.debug(f"BACKA: {params.backa} ± {params.d_backa}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed parameters with uncertainties:")
+        logger.debug(f"ANORM: {params.anorm} ± {params.d_anorm}")
+        logger.debug(f"BACKA: {params.backa} ± {params.d_backa}")
+        logger.debug("Output lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse parameters with uncertainties: {e}")
+        logger.error(f"Failed to parse parameters with uncertainties: {e}")
 
     # Test complete card set with multiple angles
-    logging.debug("**Testing complete card set with multiple angles**")
+    logger.debug("**Testing complete card set with multiple angles**")
     card_lines = [
         "NORMAlization and background are next",
         "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
@@ -291,16 +294,16 @@ if __name__ == "__main__":
 
     try:
         card = NormalizationBackgroundCard.from_lines(card_lines)
-        logging.debug("Successfully parsed complete card set")
-        logging.debug(f"Number of angle sets: {len(card.angle_sets)}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed complete card set")
+        logger.debug(f"Number of angle sets: {len(card.angle_sets)}")
+        logger.debug("Output lines:")
         for line in card.to_lines():
-            logging.debug(f"'{line}'")
+            logger.debug(f"'{line}'")
     except ValueError as e:
-        logging.error(f"Failed to parse complete card set: {e}")
+        logger.error(f"Failed to parse complete card set: {e}")
 
     # Test error handling
-    logging.debug("\n**Testing Error Handling**")
+    logger.debug("\n**Testing Error Handling**")
 
     # Test invalid header
     try:
@@ -309,15 +312,15 @@ if __name__ == "__main__":
             "1.234E+00 2.980E+02 1.500E-01 2.500E-02 1.000E+00 5.000E-01  1 0 1 0 1 0",
             "",
         ]
-        logging.debug("Testing invalid header:")
+        logger.debug("Testing invalid header:")
         NormalizationBackgroundCard.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid header: {e}")
+        logger.debug(f"Caught expected error for invalid header: {e}")
 
     # Test empty parameter set
     try:
         bad_lines = ["NORMAlization and background are next", ""]
-        logging.debug("Testing empty parameter set:")
+        logger.debug("Testing empty parameter set:")
         NormalizationBackgroundCard.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for empty parameter set: {e}")
+        logger.debug(f"Caught expected error for empty parameter set: {e}")
