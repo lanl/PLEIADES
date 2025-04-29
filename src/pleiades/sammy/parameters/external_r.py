@@ -385,7 +385,7 @@ if __name__ == "__main__":
     try:
         r_function = ExternalRFunction.from_lines(format3_lines)
         logger.debug("Successfully parsed Format 3 card set:")
-        logger.debug("Number of entries: {len(r_function.entries)}")
+        logger.debug(f"Number of entries: {len(r_function.entries)}")
         logger.debug("Output lines:")
         for line in r_function.to_lines():
             logger.debug(f"'{line}'")
