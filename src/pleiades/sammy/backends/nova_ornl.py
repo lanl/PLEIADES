@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """NOVA web service backend implementation for SAMMY execution."""
 
-import logging
 import os
 import zipfile
 from datetime import datetime
@@ -25,8 +24,9 @@ from pleiades.sammy.interface import (
     SammyFiles,
     SammyRunner,
 )
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 class NovaConnectionError(Exception):

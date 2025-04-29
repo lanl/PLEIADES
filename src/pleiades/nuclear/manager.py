@@ -2,7 +2,6 @@
 """Manages access to nuclear data files packaged with PLEIADES."""
 
 import io
-import logging
 import zipfile
 from pathlib import Path
 from typing import Optional, Tuple
@@ -19,8 +18,9 @@ from pleiades.nuclear.models import (
     IsotopeParameters,
 )
 from pleiades.utils.config import get_config
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 class NuclearDataManager:

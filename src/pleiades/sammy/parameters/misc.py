@@ -19,13 +19,13 @@ Each parameter type has a specific identifier in columns 1-5 and its own fixed-w
 Parameters can be omitted when not needed.
 """
 
-import logging
 from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import loguru_logger
 
 # Format definitions - column positions for each parameter type
 FORMAT_SPECS = {
@@ -213,7 +213,7 @@ class Card11Parameter(BaseModel):
 
         parser_class = parameter_classes.get(param_type)
         if parser_class is None:
-            logging.warning(f"Parser not yet implemented for parameter type: {param_type}")
+            loguru_logger.warning(f"Parser not yet implemented for parameter type: {param_type}")
             return None
 
         return parser_class.from_lines(lines)
@@ -1370,4 +1370,8 @@ class NonunParameters(Card11Parameter):
 
 
 if __name__ == "__main__":
-    print("Refer to unit tests for usage examples.")
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
+    logger.info("Refer to unit tests for usage examples.")

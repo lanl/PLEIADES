@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Auto setup sammy runner with factory"""
 
-import logging
 import os
 import re
 import shutil
@@ -17,8 +16,9 @@ from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
 from pleiades.sammy.config import DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
 from pleiades.sammy.interface import SammyFiles, SammyRunner
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 class BackendType(Enum):
@@ -351,7 +351,7 @@ class SammyFactory:
                         backend_type=preferred.value, working_dir=working_dir, output_dir=output_dir, **kwargs
                     )
                 else:
-                    logger.warning(f"Preferred backend {preferred.value} not available, " "trying alternatives")
+                    logger.warning(f"Preferred backend {preferred.value} not available, trying alternatives")
             except ValueError:
                 raise ConfigurationError(f"Invalid preferred backend: {preferred_backend}")
 
@@ -382,9 +382,6 @@ class SammyFactory:
 
 if __name__ == "__main__":
     import sys
-
-    # Setup logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
     # Example paths
     test_data_dir = Path(__file__).parents[3] / "tests/data/ex012"
@@ -478,7 +475,7 @@ nova:
 
     except Exception as e:
         print(f"\nError: {str(e)}", file=sys.stderr)
-        logging.exception("Example execution failed")
+        logger.exception("Example execution failed")
         sys.exit(1)
 
     finally:

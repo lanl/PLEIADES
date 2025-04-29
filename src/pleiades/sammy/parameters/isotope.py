@@ -46,7 +46,6 @@ Notes:
 - Spin groups must be valid for the model
 """
 
-import os
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -55,8 +54,7 @@ from pleiades.nuclear.models import IsotopeParameters
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
-logger = Logger(__name__, log_file=log_file_path)
+logger = Logger(__name__)
 
 # Format definitions for standard format (<99 spin groups)
 # Each numeric field has specific width requirements

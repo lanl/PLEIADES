@@ -5,7 +5,6 @@ This module handles both fixed-width (Card Set 7) and keyword-based (Card Set 7a
 for radius parameters in SAMMY parameter files.
 """
 
-import os
 import re
 from enum import Enum
 from typing import List, Optional, Tuple, Union
@@ -16,8 +15,7 @@ from pleiades.utils.helper import VaryFlag, format_float, format_vary, parse_key
 from pleiades.utils.logger import Logger, _log_and_raise_error
 
 # Initialize logger with file logging
-log_file_path = os.path.join(os.getcwd(), "pleiades-par.log")
-logger = Logger(__name__, log_file=log_file_path)
+logger = Logger(__name__)
 
 ####################################################################################################
 # Header flags and format definitions
@@ -215,17 +213,17 @@ class RadiusParameters(BaseModel):
         """
         if self.vary_true == VaryFlag.USE_FROM_PARFILE:
             if self.true_radius != self.effective_radius:
-                raise ValueError("When vary_true is USE_FROM_PARFILE (-1), " "true_radius must match effective_radius")
+                raise ValueError("When vary_true is USE_FROM_PARFILE (-1), true_radius must match effective_radius")
 
         # Special cases for true_radius
         if self.true_radius == 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                raise ValueError("When true_radius=0 (use CRFN value), " "vary_true cannot be USE_FROM_PARFILE (-1)")
+                raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
 
         if self.true_radius < 0:
             if self.vary_true == VaryFlag.USE_FROM_PARFILE:
                 raise ValueError(
-                    "When true_radius is negative (AWRI specification), " "vary_true cannot be USE_FROM_PARFILE (-1)"
+                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
                 )
 
         return self

@@ -114,8 +114,18 @@ from pleiades.utils.logger import configure_logger
 configure_logger(console_level="WARNING", file_level="DEBUG")
 ```
 
-## Default Log File Location
+## Log File Location
 
-By default, Loguru will create a log file named `pleiades_YYYYMMDD_HHMMSS.log` in the current working directory.
+By default, Loguru will create a log file named `pleiades_YYYYMMDD_HH.log` in a `pleiades_logs` directory within the current working directory. This organizes logs by hour, reducing clutter in your project directories.
 
-You can change this by calling `configure_logger()` with a custom path.
+You can change this by calling `configure_logger()` with a custom path:
+
+```python
+from pleiades.utils.logger import configure_logger
+
+# Use a custom log file path
+configure_logger(log_file="path/to/my/custom_log.log")
+
+# Or a custom filename in the default logs directory
+configure_logger(log_file="my_special_run.log")  # Will be stored in pleiades_logs/
+```

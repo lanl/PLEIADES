@@ -6,7 +6,6 @@ This module defines the core interfaces and data structures used across
 all SAMMY backend implementations.
 """
 
-import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -15,7 +14,9 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from pleiades.utils.logger import loguru_logger
+
+logger = loguru_logger.bind(name=__name__)
 
 SAMMY_OUTPUT_FILES = {
     "SAMMY.LPT",  # Log file
@@ -126,7 +127,7 @@ class SammyRunner(ABC):
 
     def __init__(self, config: BaseSammyConfig):
         self.config = config
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.logger = loguru_logger.bind(name=f"{__name__}.{self.__class__.__name__}")
 
     @abstractmethod
     def prepare_environment(self, files: SammyFiles) -> None:
