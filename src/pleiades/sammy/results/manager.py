@@ -28,6 +28,8 @@ class ResultsManager:
         self.inp_manager = None
         self.run_results = RunResults()
 
+        # Initialize the managers based on the provided file paths
+        # If a file path is provided, process the file and extract results.
         if lpt_file_path is not None:
             self.lpt_manager = LptManager(lpt_file_path)
         if lst_file_path is not None:
