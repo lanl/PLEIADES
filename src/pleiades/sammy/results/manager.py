@@ -6,60 +6,26 @@ from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name=__name__)
 
 
-
-def extract_results_from_string(lpt_block_string: str) -> FitResults:
+class ResultsManager:
     """
-    Extracts results from a given LPT string and returns a FitResults object.
+    A class to manage and extract results from SAMMY calculations.
     
-    Args:
-        lpt_block_string (str): The LPT string containing the results from a given iteration.
-        
-    Returns:
-        FitResults: An object containing the extracted results.
+    Attributes:
+        run_results (RunResults): A container for multiple fit results.
     """
-    fit_results = FitResults()
-    temp_nuclear_data = nuclearParameters()
-    temp_physics_data = PhysicsParameters()
     
-    lines = lpt_block_string.splitlines()
+    def __init__(self):
+        self.run_results = RunResults()
     
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-        # EFFECTIVE RADIUS block
-        if line.startswith('EFFECTIVE RADIUS'):
-            # Example: parse next N lines for radii
-            i += 1
-            while i < len(lines) and lines[i].strip():
-                # Parse radii here, e.g.:
-                # tokens = lines[i].split()
-                # nuclear_data.radius_parameters.append(...)
-                i += 1
-        # Isotopic abundance block
-        elif line.startswith('Isotopic abundance and mass for each nuclide'):
-            i += 2  # skip header lines
-            while i < len(lines) and lines[i].strip():
-                print(lines[i])
-                i += 1
-        # TEMPERATURE/THICKNESS block
-        elif line.startswith('TEMPERATURE') and 'THICKNESS' in line:
-            i += 1
-            if i < len(lines):
-                tokens = lines[i].split()
-                if len(tokens) >= 2:
-                    pass
-                    
-            i += 1
-        # DELTA-L ... block
-        elif line.startswith('DELTA-L') and 'DELTA-T-GAUS' in line:
-            i += 1
-            if i < len(lines):
-                tokens = lines[i].split()
-                # physics_data.broadening_parameters.delta_l = float(tokens[0])
-                # physics_data.broadening_parameters.delta_t_gaus = float(tokens[1])
-                # physics_data.broadening_parameters.delta_t_exp = float(tokens[2])
-            i += 1
+    def add_fit_result(self, fit_result: FitResults):
+        """Add a FitResults object to the RunResults."""
+        self.run_results.add_fit_result(fit_result)
+    
+    def get_single_fit_results(self, index: int) -> FitResults:
+        """Retrieve a single fit result from the list."""
+        if self.fit_results:
+            return self.fit_results[index]
         else:
-            i += 1
+            raise ValueError("No fit results available.")
     
-    return fit_results
+    
