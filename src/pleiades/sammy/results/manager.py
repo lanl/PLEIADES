@@ -1,6 +1,6 @@
 from pleiades.sammy.results.models import RunResults, FitResults
-from pleiades.nuclear.models import nuclearParameters
-from pleiades.experimental.models import PhysicsParameters
+from pleiades.sammy.io.lpt_manager import LptManager
+
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -13,9 +13,32 @@ class ResultsManager:
     Attributes:
         run_results (RunResults): A container for multiple fit results.
     """
-    
-    def __init__(self):
+        
+    # Initialize a LptManager object to manage the LPT file
+    def __init__(
+        self,
+        lpt_file_path: str = None,
+        lst_file_path: str = None,
+        par_file_path: str = None,
+        inp_file_path: str = None,
+    ):
+        self.lpt_manager = None
+        self.lst_manager = None
+        self.par_manager = None
+        self.inp_manager = None
         self.run_results = RunResults()
+
+        if lpt_file_path is not None:
+            self.lpt_manager = LptManager(lpt_file_path)
+        if lst_file_path is not None:
+            # self.lst_manager = LstManager(lst_file_path)  # Implement if needed
+            pass
+        if par_file_path is not None:
+            # self.par_manager = ParManager(par_file_path)  # Implement if needed
+            pass
+        if inp_file_path is not None:
+            # self.inp_manager = InpManager(inp_file_path)  # Implement if needed
+            pass
     
     def add_fit_result(self, fit_result: FitResults):
         """Add a FitResults object to the RunResults."""
@@ -23,8 +46,8 @@ class ResultsManager:
     
     def get_single_fit_results(self, index: int) -> FitResults:
         """Retrieve a single fit result from the list."""
-        if self.fit_results:
-            return self.fit_results[index]
+        if self.run_results.fit_results:
+            return self.run_results.fit_results[index]
         else:
             raise ValueError("No fit results available.")
     
