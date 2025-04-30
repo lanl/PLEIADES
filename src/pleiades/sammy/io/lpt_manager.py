@@ -2,9 +2,9 @@
 # to create a new class called LptData. The LptData class is filled by reading
 # a .LPT file.
 
-from pleiades.sammy.results.models import FitResults, RunResults
 from pleiades.nuclear.models import nuclearParameters, IsotopeParameters
 from pleiades.experimental.models import PhysicsParameters
+from pleiades.sammy.results.models import RunResults, FitResults
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -23,6 +23,11 @@ class LptManager:
         "***** INTERMEDIATE VALUES FOR RESONANCE PARAMETERS",
         "***** NEW VALUES FOR RESONANCE PARAMETERS"
     ]
+
+    # If initialize with a filepath then start processing the file
+    def __init__(self, file_path: str = None):
+        if file_path:
+            self.process_lpt_file(file_path)
 
     def extract_isotope_info(lines, nuclear_data):
         """Extract isotope info and update nuclear_data.isotopes."""
@@ -47,62 +52,17 @@ class LptManager:
                     i += 1
                 break
 
-
-    def extract_results_from_string(lpt_block_string: str) -> FitResults:
-        """
-        Extracts results from a given LPT string and returns a FitResults object.
-        
-        Args:
-            lpt_block_string (str): The LPT string containing the results from a given iteration.
-            
-        Returns:
-            FitResults: An object containing the extracted results.
-        """
+    def extract_results_from_string(self,lpt_block_string: str) -> FitResults:
         fit_results = FitResults()
         temp_nuclear_data = nuclearParameters()
         temp_physics_data = PhysicsParameters()
-        
         lines = lpt_block_string.splitlines()
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i].strip()
-            # EFFECTIVE RADIUS block
-            if line.startswith('EFFECTIVE RADIUS'):
-                # Example: parse next N lines for radii
-                i += 1
-                while i < len(lines) and lines[i].strip():
-                    # Parse radii here, e.g.:
-                    # tokens = lines[i].split()
-                    # nuclear_data.radius_parameters.append(...)
-                    i += 1
-            # Isotopic abundance block
-            elif line.startswith('Isotopic abundance and mass for each nuclide'):
-                i += 2  # skip header lines
-                while i < len(lines) and lines[i].strip():
-                    print(lines[i])
-                    i += 1
-            # TEMPERATURE/THICKNESS block
-            elif line.startswith('TEMPERATURE') and 'THICKNESS' in line:
-                i += 1
-                if i < len(lines):
-                    tokens = lines[i].split()
-                    if len(tokens) >= 2:
-                        pass
-                        
-                i += 1
-            # DELTA-L ... block
-            elif line.startswith('DELTA-L') and 'DELTA-T-GAUS' in line:
-                i += 1
-                if i < len(lines):
-                    tokens = lines[i].split()
-                    # physics_data.broadening_parameters.delta_l = float(tokens[0])
-                    # physics_data.broadening_parameters.delta_t_gaus = float(tokens[1])
-                    # physics_data.broadening_parameters.delta_t_exp = float(tokens[2])
-                i += 1
-            else:
-                i += 1
-        
+
+        # Call each extraction function in the order you want
+        self.extract_isotope_info(lines, temp_nuclear_data)
+        #extract_radius_info(lines, temp_nuclear_data)
+        # Add more extraction calls as needed
+            
         return fit_results
 
     def split_lpt_blocks(self, lpt_content: str):
@@ -170,11 +130,12 @@ class LptManager:
         
         for block_type, block_text in blocks:
             
+            print(f"Processing block type: {block_type}")
             # Extract results from the block
-            fit_results = self.extract_results_from_string(block_text)
+            #fit_results = self.extract_results_from_string(block_text)
             
             # Append the fit results to the RunResults object
-            run_results.add_fit_result(fit_results)
+            #run_results.add_fit_result(fit_results)
         
         return run_results
 
