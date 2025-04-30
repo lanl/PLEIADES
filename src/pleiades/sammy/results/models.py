@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import Optional
 from pleiades.nuclear.models import nuclearParameters
 from pleiades.experimental.models import PhysicsParameters
 
@@ -44,9 +43,3 @@ class RunResults(BaseModel):
         """Add a FitResults object to the list of fit results."""
         self.fit_results.append(fit_result)
         
-    def get_single_fit_results(self, index: int) -> FitResults:
-        """Retrieve a single fit result from the list."""
-        if self.fit_results:
-            return self.fit_results[index]
-        else:
-            raise ValueError("No fit results available.")
