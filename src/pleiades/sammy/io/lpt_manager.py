@@ -130,9 +130,8 @@ class LptManager:
         
         for block_type, block_text in blocks:
             
-            print(f"Processing block type: {block_type}")
             # Extract results from the block
-            #fit_results = self.extract_results_from_string(block_text)
+            fit_results = self.extract_results_from_string(block_text)
             
             # Append the fit results to the RunResults object
             #run_results.add_fit_result(fit_results)
