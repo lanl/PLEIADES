@@ -1,3 +1,9 @@
+import os
+import numpy as np
+
+from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
+from pleiades.utils.load import load
+
 # input: 
 #  - list_of_sample folders (tiff, fits)
 #  - list_of_obs folders (tiff, fits)
@@ -99,4 +105,13 @@ def normalization(list_sample_folders: list,
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
 
-    
+    for sample_folder in list_sample_folders:
+        if not os.path.exists(sample_folder):
+            raise ValueError(f"Sample folder {sample_folder} does not exist.")
+
+        # retrieve list of files in the sample folder
+        list_sample_files = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
+
+        # load the sample data
+        list_sample_data = load(list_sample_files)
+        
