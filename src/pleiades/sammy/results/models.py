@@ -1,29 +1,36 @@
 from pydantic import BaseModel, Field
-from pleiades.nuclear.models import nuclearParameters
+
 from pleiades.experimental.models import PhysicsParameters
+from pleiades.nuclear.models import nuclearParameters
+
 
 class FitResults(BaseModel):
     """
     A container for combined results from nuclear and experimental data
     in SAMMY calculations.
     """
+
     nuclear_data: nuclearParameters = Field(default_factory=nuclearParameters, description="Nuclear parameters data")
-    physics_data: PhysicsParameters = Field(default_factory=PhysicsParameters, description="Experimental physics parameters")
-    
+    physics_data: PhysicsParameters = Field(
+        default_factory=PhysicsParameters, description="Experimental physics parameters"
+    )
+
     def update_nuclear_data(self, new_data: nuclearParameters):
         """Update the nuclear data with new parameters."""
         self.nuclear_data = new_data
+
     def update_physics_data(self, new_data: PhysicsParameters):
         """Update the physics data with new parameters."""
-        self.physics_data = new_data    
-        
+        self.physics_data = new_data
+
     def get_physics_data(self) -> PhysicsParameters:
         """Retrieve the current physics data."""
         return self.physics_data
+
     def get_nuclear_data(self) -> nuclearParameters:
         """Retrieve the current nuclear data."""
         return self.nuclear_data
-    
+
     def __init__(self, **data):
         super().__init__(**data)
         # Initialize nuclear and physics data with default values
@@ -37,9 +44,9 @@ class RunResults(BaseModel):
     Attributes:
         fit_results (list[FitResults]): List of FitResults from multiple fits.
     """
+
     fit_results: list[FitResults] = Field(default_factory=list, description="List of FitResults from multiple fits.")
-    
+
     def add_fit_result(self, fit_result: FitResults):
         """Add a FitResults object to the list of fit results."""
         self.fit_results.append(fit_result)
-        

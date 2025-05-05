@@ -413,7 +413,7 @@ class nuclearParameters(BaseModel):
             raise ValueError("Duplicate masses found")
 
         return self
-    
+
     def append_isotope(self, isotope: IsotopeParameters):
         """Append an isotope to the list of isotopes.
 

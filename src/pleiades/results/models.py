@@ -1,5 +1,7 @@
 from typing import List
+
 from pydantic import BaseModel, Field
+
 
 class AbundanceInfo(BaseModel):
     """Container for isotope abundance information, such as isotope name, abundance, and uncertainty.
@@ -8,17 +10,21 @@ class AbundanceInfo(BaseModel):
         abundance (float): Abundance of the isotope.
         uncertainty (float): Uncertainty in the abundance.
     """
+
     isotope_name: str = Field(..., description="Name of the isotope")
     abundance: float = Field(..., description="Abundance of the isotope")
     uncertainty: float = Field(..., description="Uncertainty in the abundance")
 
+
 class BackgroundInfo(BaseModel):
-    #TODO: Add attributes and methods for background information
+    # TODO: Add attributes and methods for background information
     pass
 
+
 class NormalizationInfo(BaseModel):
-    #TODO: Add attributes and methods for normalization information
+    # TODO: Add attributes and methods for normalization information
     pass
+
 
 class PixelInfo(BaseModel):
     position: List[float] = Field(..., description="x,y,z coordinates")
@@ -27,12 +33,12 @@ class PixelInfo(BaseModel):
     normalization: List[NormalizationInfo] = Field(default_factory=list)
     temperature: List[float] = Field(default_factory=list)
 
+
 class ResultsMap(BaseModel):
     """Container for results map data.
 
     Attributes:
         results_map (List[PixelInfo]): List of pixel information containing isotope and background data.
     """
+
     results_map: List[PixelInfo] = Field(default_factory=list)
-
-
