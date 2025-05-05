@@ -18,6 +18,7 @@ class LptManager:
     """
     A class to manage and extract results from SAMMY LPT files.
 
+
     Attributes:
         run_results (RunResults): A container for multiple fit results.
     """
@@ -26,6 +27,7 @@ class LptManager:
     lpt_delimiters = [
         "***** INITIAL VALUES FOR PARAMETERS",
         "***** INTERMEDIATE VALUES FOR RESONANCE PARAMETERS",
+        "***** NEW VALUES FOR RESONANCE PARAMETERS",
         "***** NEW VALUES FOR RESONANCE PARAMETERS",
     ]
 
@@ -106,9 +108,6 @@ class LptManager:
         intermediate = "***** INTERMEDIATE VALUES FOR RESONANCE PARAMETERS"
         new = "***** NEW VALUES FOR RESONANCE PARAMETERS"
 
-        # Find all delimiter positions
-        import re
-
         pattern = f"({re.escape(initial)}|{re.escape(intermediate)}|{re.escape(new)})"
         matches = list(re.finditer(pattern, lpt_content))
 
@@ -133,7 +132,6 @@ class LptManager:
         RunResults object which is returned.
 
         The RunResults object can be used to access the results of all iterations.
-
 
         Args:
             file_path (str): Path to the .LPT file.
@@ -163,6 +161,8 @@ class LptManager:
             fit_results = self.extract_results_from_string(block_text)
 
             # Append the fit results to the RunResults object
+            # run_results.add_fit_result(fit_results)
+
             # run_results.add_fit_result(fit_results)
 
         return run_results

@@ -1,6 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 
 def process_and_plot_lst_file(filename, residual=False, quantity="cross-section"):
@@ -93,12 +93,8 @@ def plot_cross_section(data, residual=False):
         ax[0].set_ylabel("Cross Section (barns)")
         ax[0].legend()
 
-        plt.plot(
-            energy, diff_initial, label="Difference Initial", marker="o", linestyle="-"
-        )
-        plt.plot(
-            energy, diff_final, label="Difference Final", marker="o", linestyle="-"
-        )
+        plt.plot(energy, diff_initial, label="Difference Initial", marker="o", linestyle="-")
+        plt.plot(energy, diff_final, label="Difference Final", marker="o", linestyle="-")
         plt.ylabel("Difference (barns)")
 
     else:
@@ -188,13 +184,8 @@ def plot_transmission(data, residual=False):
         ax[1].set_xticks([])
         ax[1].set_yticks([], [])
 
-        data["residual_initial"] = (
-            data["Zeroth-order theoretical transmission"]
-            - data["Experimental transmission"]
-        )
-        data["residual_final"] = (
-            data["Final theoretical transmission"] - data["Experimental transmission"]
-        )
+        data["residual_initial"] = data["Zeroth-order theoretical transmission"] - data["Experimental transmission"]
+        data["residual_final"] = data["Final theoretical transmission"] - data["Experimental transmission"]
 
         # data.plot.scatter(x="Energy",y="residual_initial",yerr="Absolute uncertainty in experimental transmission",lw=0,ylim=(-10,10),color=initial_color,ax=ax[2],alpha=0.5,legend=False)
         data.plot.scatter(
@@ -246,16 +237,12 @@ def plot_transmission(data, residual=False):
 
 def read_data(filename):
     # Load the data
-    data = np.loadtxt(
-        filename, delimiter=" ", skiprows=1
-    )  # Assuming space delimited and one header row
+    data = np.loadtxt(filename, delimiter=" ", skiprows=1)  # Assuming space delimited and one header row
 
     # Check number of columns
     num_cols = data.shape[1]
     if num_cols != 13:
-        raise ValueError(
-            "Incorrect number of columns. Expected 13 but got {}".format(num_cols)
-        )
+        raise ValueError("Incorrect number of columns. Expected 13 but got {}".format(num_cols))
 
     return data
 
