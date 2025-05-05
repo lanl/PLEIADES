@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Local backend implementation for SAMMY execution."""
 
+import shlex
 import subprocess
 import textwrap
 from datetime import datetime
