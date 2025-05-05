@@ -63,9 +63,9 @@ class LocalSammyRunner(SammyRunner):
 
         sammy_command = textwrap.dedent(f"""\
             {self.config.sammy_executable} <<EOF
-            {files.input_file.name}
-            {files.parameter_file.name}
-            {files.data_file.name}
+            {shlex.quote(files.input_file.name)}
+            {shlex.quote(files.parameter_file.name)}
+            {shlex.quote(files.data_file.name)}
             EOF""")
 
         try:
