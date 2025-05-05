@@ -72,6 +72,7 @@ class SammyFiles:
         - data_file: symlink to working directory
 
         Updates the object's file path attributes to point to the files in the working directory.
+        Can be safely called multiple times - will clean up previous working files first.
 
         Args:
             working_dir: Path to the working directory
@@ -82,7 +83,11 @@ class SammyFiles:
         """
         logger.debug(f"Moving files to working directory: {working_dir}")
 
-        # Save original paths for cleanup
+        # If we already moved files to a working directory, clean them up first
+        if self._original_input_file is not None:
+            self.cleanup_working_files()
+
+        # Save original paths for cleanup (only if not already saved)
         self._original_input_file = self.input_file
         self._original_parameter_file = self.parameter_file
         self._original_data_file = self.data_file
@@ -92,8 +97,8 @@ class SammyFiles:
         if working_input.exists():
             logger.debug(f"Removing existing file: {working_input}")
             working_input.unlink()
-        logger.debug(f"Copying input file: {self.input_file} -> {working_input}")
-        shutil.copy2(self.input_file, working_input)
+        logger.debug(f"Copying input file: {self._original_input_file} -> {working_input}")
+        shutil.copy2(self._original_input_file, working_input)
         self.input_file = working_input
 
         # Copy parameter file
@@ -101,7 +106,7 @@ class SammyFiles:
         if working_param.exists():
             logger.debug(f"Removing existing file: {working_param}")
             working_param.unlink()
-        logger.debug(f"Copying parameter file: {self.parameter_file} -> {working_param}")
+        logger.debug(f"Copying parameter file: {self._original_parameter_file} -> {working_param}")
         shutil.copy2(self._original_parameter_file, working_param)
         self.parameter_file = working_param
 
@@ -110,7 +115,7 @@ class SammyFiles:
         if working_data.exists():
             logger.debug(f"Removing existing file: {working_data}")
             working_data.unlink()
-        logger.debug(f"Creating symlink for data file: {self.data_file} -> {working_data}")
+        logger.debug(f"Creating symlink for data file: {self._original_data_file} -> {working_data}")
         working_data.symlink_to(self._original_data_file)
         self.data_file = working_data
 
