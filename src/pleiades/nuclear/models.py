@@ -287,7 +287,7 @@ class IsotopeParameters(BaseModel):
 
     """
 
-    isotope_infomation: IsotopeInfo = Field(description="Isotope information")
+    isotope_infomation: IsotopeInfo = Field(default=None, description="Isotope information")
     abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
@@ -413,7 +413,7 @@ class nuclearParameters(BaseModel):
             raise ValueError("Duplicate masses found")
 
         return self
-    
+
     def append_isotope(self, isotope: IsotopeParameters):
         """Append an isotope to the list of isotopes.
 
