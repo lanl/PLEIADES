@@ -106,16 +106,18 @@ class RadiusParameters(BaseModel):
         of input format.
     """
 
-    effective_radius: float = Field(description="Radius for potential scattering (Fermi)", ge=0)
-    true_radius: float = Field(description="Radius for penetrabilities and shifts (Fermi)")
-    channel_mode: int = Field(
+    effective_radius: Optional[float] = Field(default=None, description="Radius for potential scattering (Fermi)", ge=0)
+    true_radius: Optional[float] = Field(default=None, description="Radius for penetrabilities and shifts (Fermi)")
+    channel_mode: Optional[int] = Field(
+        default=None,
         description="Channel specification mode (0: all channels, 1: specific channels)",
-        ge=0,  # Greater than or equal to 0
-        le=1,  # Less than or equal to 1
+        ge=0,
+        le=1,
     )
-    vary_effective: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying effective radius")
-    vary_true: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying true radius")
+    vary_effective: Optional[VaryFlag] = Field(default=None, description="Flag for varying effective radius")
+    vary_true: Optional[VaryFlag] = Field(default=None, description="Flag for varying true radius")
     spin_groups: Optional[List[int]] = Field(
+        default=None,
         description="List of spin group numbers",
     )
     channels: Optional[List[int]] = Field(
@@ -212,19 +214,20 @@ class RadiusParameters(BaseModel):
                 raise ValueError("When vary_true is USE_FROM_PARFILE (-1), true_radius must match effective_radius")
 
         # Special cases for true_radius
-        if self.true_radius == 0:
-            if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
-                raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
+        if self.true_radius is not None:
+            if self.true_radius == 0:
+                if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                    logger.error("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
+                    raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
 
-        if self.true_radius < 0:
-            if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error(
-                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
-                )
-                raise ValueError(
-                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
-                )
+            if self.true_radius < 0:
+                if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                    logger.error(
+                        "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                    )
+                    raise ValueError(
+                        "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                    )
 
         return self
 
