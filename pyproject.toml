@@ -20,6 +20,7 @@ dependencies = [
     "tifffile",
     "jupyterlab",
     "pyyaml",
+    "scikit-image",
     "pydantic",
     "loguru",
     "nova-galaxy>=0.7.4,<0.8",
