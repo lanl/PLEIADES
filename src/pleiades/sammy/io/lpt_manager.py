@@ -14,6 +14,19 @@ from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name=__name__)
 
 
+def parse_value_and_varied(s):
+    """
+    Parse a value that may have a parenthesis indicating it was varied.
+    Returns (float_value, varied_flag)
+    """
+    match = re.match(r"([-\d.Ee+]+)(\s*\([^)]+\))?", s)
+    if match:
+        value = float(match.group(1))
+        varied = match.group(2) is not None
+        return value, varied
+    raise ValueError(f"Could not parse value: {s}")
+
+
 class LptManager:
     """
     A class to manage and extract results from SAMMY LPT files.
@@ -168,7 +181,7 @@ class LptManager:
     def extract_broadening_info(self, lines, physics_data):
         """
         Extracts the broadening parameters from an LPT file and stores them in
-        physics_data.broadening_parameters as a list of BroadeningParameters.
+        physics_data.broadening_parameters. Also sets .*_varied attributes if present.
         """
         logger.debug("Extracting broadening information...")
         paramters_found = False
@@ -179,8 +192,15 @@ class LptManager:
                 temp_parts = temp_line.split()
                 if len(temp_parts) >= 2:
                     paramters_found = True
-                    physics_data.broadening_parameters.temp = float(temp_parts[0])
-                    physics_data.broadening_parameters.thick = float(temp_parts[1])
+                    temp, temp_varied = parse_value_and_varied(temp_parts[0])
+                    thick, thick_varied = parse_value_and_varied(temp_parts[1])
+                    physics_data.broadening_parameters.temp = temp
+                    physics_data.broadening_parameters.thick = thick
+                    # Optionally store varied flags if your model supports it:
+                    if hasattr(physics_data.broadening_parameters, "temp_varied"):
+                        physics_data.broadening_parameters.temp_varied = temp_varied
+                    if hasattr(physics_data.broadening_parameters, "thick_varied"):
+                        physics_data.broadening_parameters.thick_varied = thick_varied
                 else:
                     continue
 
@@ -190,9 +210,19 @@ class LptManager:
                         delta_line = lines[j + 1].strip()
                         delta_parts = delta_line.split()
                         if len(delta_parts) >= 3:
-                            physics_data.broadening_parameters.deltal = float(delta_parts[0])
-                            physics_data.broadening_parameters.deltag = float(delta_parts[1])
-                            physics_data.broadening_parameters.deltae = float(delta_parts[2])
+                            deltal, deltal_varied = parse_value_and_varied(delta_parts[0])
+                            deltag, deltag_varied = parse_value_and_varied(delta_parts[1])
+                            deltae, deltae_varied = parse_value_and_varied(delta_parts[2])
+                            physics_data.broadening_parameters.deltal = deltal
+                            physics_data.broadening_parameters.deltag = deltag
+                            physics_data.broadening_parameters.deltae = deltae
+                            # Optionally store varied flags
+                            if hasattr(physics_data.broadening_parameters, "deltal_varied"):
+                                physics_data.broadening_parameters.deltal_varied = deltal_varied
+                            if hasattr(physics_data.broadening_parameters, "deltag_varied"):
+                                physics_data.broadening_parameters.deltag_varied = deltag_varied
+                            if hasattr(physics_data.broadening_parameters, "deltae_varied"):
+                                physics_data.broadening_parameters.deltae_varied = deltae_varied
                         break
                 break  # Only read the first block
 
