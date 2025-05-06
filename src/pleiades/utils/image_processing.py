@@ -1,7 +1,10 @@
 import numpy as np
+import logging
 
 from pleiades.processing import Roi
 from skimage.measure import block_reduce
+
+logger = logging.getLogger(__name__)
 
 
 def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
@@ -11,15 +14,18 @@ def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
         - (x1, y1) is the top-left corner
         - (x2, y2) is the bottom-right corner
     """
+    logger.info(f"Cropping data with shape {data.shape} using ROI: {roi}")
 
     x1, y1, x2, y2 = roi.get_roi()
     tof_dim, y_dim, x_dim = data.shape
 
     if y2 > y_dim or y1 >= y_dim or x2 > x_dim or x1 > x_dim:
+        logger.error(f"ROI exceeds array bounds: {roi}")
         raise IndexError("ROI exceeds array bounds. Please check the ROI coordinates.")
     
     cropped_data = data[:, y1:y2, x1:x2]
-    
+
+    logger.info(f"Cropped data shape: {cropped_data.shape}")
     return cropped_data
 
 
@@ -27,6 +33,7 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
     """
     Rebin a 2D array by averaging over blocks of size binning_factor x binning_factor.
     """
+    logger.info(f"Rebinning data with shape {data.shape} using binning factor: {binning_factor}")
 
     block_size = (1, binning_factor, binning_factor)
 
@@ -35,6 +42,7 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
                                  func=np.mean,
                                  func_kwargs={'dtype': np.float16})
 
+    logger.info(f"Rebinned data shape: {rebinned_data.shape}")
     return rebinned_data
 
 
@@ -42,8 +50,11 @@ def combine(data: np.ndarray) -> np.ndarray:
     """
     Combine multiple 2D arrays using np.median
     """
+    logger.info(f"Combining data with shape {data.shape}")
     if data is None or len(data) == 0:
         raise ValueError("No data provided for combination.")
   
     combined_data = np.median(data, axis=0)
+
+    logger.info(f"Combined data shape: {combined_data.shape}")  
     return combined_data

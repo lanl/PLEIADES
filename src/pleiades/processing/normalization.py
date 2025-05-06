@@ -1,10 +1,13 @@
 import os
 import numpy as np
+import logging
 
 from pleiades.processing import Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
+
+logger = logging.getLogger(__name__)
 
 # input: 
 #  - list_of_sample folders (tiff, fits)
@@ -35,8 +38,8 @@ from pleiades.utils.image_processing import rebin, crop, combine
 
 def normalization(list_sample_folders: list, 
                   list_obs_folders: list, 
-                  nexus_sample_file: str = None,
-                  nexus_obs_file: str = None,
+                  list_nexus_sample_file: str = None,
+                  list_nexus_obs_file: str = None,
                   background_roi: Roi = None, 
                   crop_roi: Roi = None,
                   timepix: bool = True, 
@@ -66,6 +69,8 @@ def normalization(list_sample_folders: list,
     Parameters:
     - list_sample_folders: List of sample folders containing tiff or fits files.
     - list_obs_folders: List of open beam folders containing tiff or fits files.
+    - list_nexus_sample_file: Nexus sample file (optional) used to retrieve the proton charge value.
+    - list_nexus_obs_file: Nexus observation file (optional) used to retrieve the proton charge value.
     - background_roi: Region of interest (optional) used to define the background region in sample data.
     - crop_roi: Region of interest (optional) used to define the crop region
     - timepix: Boolean indicating if timepix data is used.
@@ -79,6 +84,22 @@ def normalization(list_sample_folders: list,
     - Normalized data.
     """
     
+    logger.info("Starting normalization process...")
+    logger.info(f"##############################")
+    logger.info(f"\tSample folders: {list_sample_folders}")
+    logger.info(f"\tOpen beam folders: {list_obs_folders}")
+    logger.info(f"\tNexus sample files: {list_nexus_sample_file}")
+    logger.info(f"\tNexus obs files: {list_nexus_obs_file}")
+    logger.info(f"\tBackground ROI: {background_roi}")
+    logger.info(f"\tCrop ROI: {crop_roi}")
+    logger.info(f"\tTimepix: {timepix}")
+    logger.info(f"\tPixel binning: {pixel_binning}")
+    logger.info(f"\tRemove outliers: {remove_outliers}")
+    logger.info(f"\tRolling average: {rolling_average}")
+    logger.info(f"\tOutput folder: {output_folder}")
+    logger.info(f"\tOutput numpy: {output_numpy}")
+    logger.info(f"##############################")
+
     #checking all the inputs
     
     # Check if the input folders are valid
@@ -137,4 +158,23 @@ def normalization(list_sample_folders: list,
         # rebin the data if requested
         if pixel_binning > 1:
             list_sample_data = rebin(list_sample_data, pixel_binning)
+
+
+
+if __name__ == "__main__":
+    # Example usage
+    normalization(
+        list_sample_folders=["/Users/j35/SNS/IPTS-35945/autoreduce/Run_7820"],
+        list_obs_folders=["/Users/j35/SNS/IPTS-35945/autoreduce/Run_7816"],
+        list_nexus_sample_file=["/Users/j35/SNS/IPTS-35945/nexus/VENUS_7820.nxs.h5"],
+        list_nexus_obs_file=["/Users/j35/SNS/IPTS-35945/nexus/VENUS_7816.nxs.h5"],
+        background_roi=Roi(0, 0, 10, 10),
+        crop_roi=Roi(10, 10, 20, 20),
+        timepix=True,
+        pixel_binning=2,
+        remove_outliers=True,
+        rolling_average=True,
+        output_folder="/Users/j35/SNS/IPTS-35945/processed",
+        output_numpy=True
+    )
 

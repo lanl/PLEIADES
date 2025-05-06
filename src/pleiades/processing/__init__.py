@@ -19,3 +19,9 @@ class Roi:
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
+
+    def __repr__(self):
+        return f"Roi(x1={self.x1}, y1={self.y1}, x2={self.x2}, y2={self.y2})"
+
+    def __str__(self):
+        return f"Roi: (x1={self.x1}, y1={self.y1}) to (x2={self.x2}, y2={self.y2})"
