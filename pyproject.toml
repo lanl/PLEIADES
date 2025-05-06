@@ -19,6 +19,7 @@ dependencies = [
     "matplotlib",
     "tifffile",
     "jupyterlab",
+    "dxchange",
     "pyyaml",
     "scikit-image",
     "pydantic",
@@ -135,6 +136,7 @@ jupyterlab = ">=4.4.0,<5"
 pyyaml = ">=6.0.2,<7"
 pydantic = ">=2.11.2,<3"
 loguru = ">=0.7.2,<0.8"
+dxchange = ">=0.1.8,<0.2"
 
 [tool.pixi.tasks]
 # PyPi packaging tasks
