@@ -199,6 +199,17 @@ class LptManager:
         # if broadening parameters were found then return true
         return bool(paramters_found)
 
+    def extract_normalization_info(self, lines, physics_data):
+        """
+        Extracts normalization parameters from an LPT file and stores them in
+        physics_data.normalization_parameters as a list of NormalizationParameters.
+        """
+        logger.debug("Extracting normalization information...")
+
+        parameters_found = False
+
+        return parameters_found
+
     def extract_results_from_string(self, lpt_block_string: str) -> FitResults:
         fit_results = FitResults()
         lines = lpt_block_string.splitlines()
@@ -213,6 +224,10 @@ class LptManager:
         broadening_results_found = self.extract_broadening_info(lines, fit_results.physics_data)
         if not broadening_results_found:
             logger.info("Broadening results not found.")
+
+        normalization_results_found = self.extract_normalization_info(lines, fit_results.physics_data)
+        if not normalization_results_found:
+            logger.info("Normalization results not found.")
 
         return fit_results
 
