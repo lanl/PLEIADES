@@ -1,10 +1,27 @@
 import numpy as np
+
+from pleiades.processing import Roi
 from skimage.measure import block_reduce
+
+
+def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
+    """
+    Crop a 2D array using the provided region of interest (ROI).
+    The ROI is defined as a Roi object:
+        - (x1, y1) is the top-left corner
+        - (x2, y2) is the bottom-right corner
+    """
+
+    x1, y1, x2, y2 = roi.get_roi()
+    cropped_data = data[:, y1:y2, x1:x2]
+
+    return cropped_data
 
 
 def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
     """
-    Rebin a 2D array by averaging over blocks of size binning_factor x binning_factor."""
+    Rebin a 2D array by averaging over blocks of size binning_factor x binning_factor.
+    """
 
     block_size = (1, binning_factor, binning_factor)
 
@@ -14,3 +31,4 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
                                  func_kwargs={'dtype': np.float16})
 
     return rebinned_data
+
