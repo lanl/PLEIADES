@@ -1,9 +1,10 @@
 import os
 import numpy as np
 
+from pleiades.processing import Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
-from pleiades.utils.image_processing import rebin
+from pleiades.utils.image_processing import rebin, crop
 
 # input: 
 #  - list_of_sample folders (tiff, fits)
@@ -30,22 +31,6 @@ from pleiades.utils.image_processing import rebin
 # output:
 #  - numpy (otional)
 #  - output folder (optional)
-
-class Roi:
-    def __init__(self, x1, y1, x2, y2):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-
-    def get_roi(self):
-        return (self.x1, self.y1, self.x2, self.y2)
-
-    def set_roi(self, x1, y1, x2, y2):
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
 
 
 def normalization(list_sample_folders: list, 
@@ -118,11 +103,10 @@ def normalization(list_sample_folders: list,
         
         # crop the data if requested
         if crop_roi is not None:
-            x1, y1, x2, y2 = crop_roi.get_roi()
-            list_sample_data = list_sample_data[:, y1:y2, x1:x2]
+            list_sample_data = crop(list_sample_data, crop_roi)
 
         # rebin the data if requested
         if pixel_binning > 1:
             list_sample_data = rebin(list_sample_data, pixel_binning)
-        
+
      

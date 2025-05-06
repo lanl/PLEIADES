@@ -13,8 +13,13 @@ def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
     """
 
     x1, y1, x2, y2 = roi.get_roi()
-    cropped_data = data[:, y1:y2, x1:x2]
+    tof_dim, y_dim, x_dim = data.shape
 
+    if y2 > y_dim or y1 >= y_dim or x2 > x_dim or x1 > x_dim:
+        raise IndexError("ROI exceeds array bounds. Please check the ROI coordinates.")
+    
+    cropped_data = data[:, y1:y2, x1:x2]
+    
     return cropped_data
 
 
