@@ -26,12 +26,14 @@ def parse_value_and_varied(s):
         return value, varied
     raise ValueError(f"Could not parse value: {s}")
 
+
 def split_lpt_values(line):
     """
     Splits a line into values, where each value may be followed by a parenthesis group.
     Example: '2.9660E+02(  4)  1.1592E-01(  5)' -> ['2.9660E+02(  4)', '1.1592E-01(  5)']
     """
-    return re.findall(r'[-+]?\d*\.\d+E[+-]?\d+(?:\s*\([^)]+\))?', line)
+    return re.findall(r"[-+]?\d*\.\d+E[+-]?\d+(?:\s*\([^)]+\))?", line)
+
 
 class LptManager:
     """
@@ -57,7 +59,7 @@ class LptManager:
             self.run_results = run_results
         else:
             self.run_results = RunResults()
-            
+
         if file_path:
             self.process_lpt_file(file_path, self.run_results)
 
@@ -200,9 +202,8 @@ class LptManager:
         paramters_found = False
         for idx, line in enumerate(lines):
             # Look for header line
-            if (
-                ("TEMPERATURE" in line and "THICKNESS" in line)
-                or ("RADIUS" in line and "TEMPERATURE" in line and "THICKNESS" in line)
+            if ("TEMPERATURE" in line and "THICKNESS" in line) or (
+                "RADIUS" in line and "TEMPERATURE" in line and "THICKNESS" in line
             ):
                 header = line.strip().split()
                 next_line = lines[idx + 1].strip()
@@ -309,7 +310,7 @@ class LptManager:
                 break  # Only read the first normalization block
 
         return parameters_found
-    
+
     def extract_results_from_string(self, lpt_block_string: str) -> FitResults:
         fit_results = FitResults()
         lines = lpt_block_string.splitlines()
@@ -396,4 +397,3 @@ class LptManager:
 
             # Append the fit results to the RunResults object
             run_results.add_fit_result(fit_results)
-

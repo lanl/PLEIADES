@@ -50,9 +50,7 @@ class ResultsManager:
         """Print a specific fit result in a readable format."""
         fit_result = self.get_single_fit_results(index)
         if fit_result:
-            logger.info(
-                f"Fit Result {index}:\n{json.dumps(fit_result.model_dump(), indent=2, default=str)}"
-            )
+            logger.info(f"Fit Result {index}:\n{json.dumps(fit_result.model_dump(), indent=2, default=str)}")
         else:
             logger.warning(f"No fit result found at index {index}.")
 

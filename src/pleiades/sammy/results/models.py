@@ -1,14 +1,17 @@
-from pydantic import BaseModel, Field
 from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import LstData
 
+
 class Chi2Results(BaseModel):
     """
     Container for chi-squared values and related statistics.
     """
+
     chi2_values: List[float] = Field(default_factory=list, description="List of chi-squared values")
     dof: Optional[int] = Field(default=None, description="Degrees of freedom")
     reduced_chi2: Optional[float] = Field(default=None, description="Reduced chi-squared value")
@@ -19,6 +22,7 @@ class Chi2Results(BaseModel):
     def calculate_reduced_chi2(self):
         if self.dof and self.dof > 0 and self.chi2_values:
             self.reduced_chi2 = sum(self.chi2_values) / self.dof
+
 
 class FitResults(BaseModel):
     """
@@ -31,7 +35,6 @@ class FitResults(BaseModel):
         default_factory=PhysicsParameters, description="Experimental physics parameters"
     )
     chi2_results: Chi2Results = Field(default_factory=Chi2Results, description="Chi-squared results")
-
 
     def update_nuclear_data(self, new_data: nuclearParameters):
         """Update the nuclear data with new parameters."""
@@ -48,7 +51,7 @@ class FitResults(BaseModel):
     def get_nuclear_data(self) -> nuclearParameters:
         """Retrieve the current nuclear data."""
         return self.nuclear_data
-    
+
     def get_chi2_results(self) -> Chi2Results:
         """Retrieve the current chi-squared results."""
         return self.chi2_results
@@ -68,13 +71,9 @@ class RunResults(BaseModel):
         fit_results (list[FitResults]): List of FitResults from multiple fits.
     """
 
-    fit_results: list[FitResults] = Field(
-        default_factory=list, description="List of FitResults from multiple fits."
-    )
-    data: LstData = Field(
-        default_factory=LstData, description="Container for LST data loaded from a SAMMY .LST file."
-    )
-    
+    fit_results: list[FitResults] = Field(default_factory=list, description="List of FitResults from multiple fits.")
+    data: LstData = Field(default_factory=LstData, description="Container for LST data loaded from a SAMMY .LST file.")
+
     def __init__(self, **data):
         super().__init__(**data)
         # Initialize the list of fit results
