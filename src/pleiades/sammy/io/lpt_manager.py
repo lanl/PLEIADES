@@ -26,10 +26,17 @@ def parse_value_and_varied(s):
         return value, varied
     raise ValueError(f"Could not parse value: {s}")
 
+def split_lpt_values(line):
+    """
+    Splits a line into values, where each value may be followed by a parenthesis group.
+    Example: '2.9660E+02(  4)  1.1592E-01(  5)' -> ['2.9660E+02(  4)', '1.1592E-01(  5)']
+    """
+    return re.findall(r'[-+]?\d*\.\d+E[+-]?\d+(?:\s*\([^)]+\))?', line)
 
 class LptManager:
     """
     A class to manage and extract results from SAMMY LPT files.
+
 
 
     Attributes:
@@ -45,9 +52,14 @@ class LptManager:
     ]
 
     # If initialize with a filepath then start processing the file
-    def __init__(self, file_path: str = None):
+    def __init__(self, file_path: str = None, run_results: RunResults = None):
+        if run_results is not None:
+            self.run_results = run_results
+        else:
+            self.run_results = RunResults()
+            
         if file_path:
-            self.run_results = self.process_lpt_file(file_path)
+            self.process_lpt_file(file_path, self.run_results)
 
     def extract_isotope_info(self, lines, nuclear_data):
         """Extract isotope info and update nuclear_data.isotopes."""
@@ -182,21 +194,42 @@ class LptManager:
         """
         Extracts the broadening parameters from an LPT file and stores them in
         physics_data.broadening_parameters. Also sets .*_varied attributes if present.
+        Handles both cases: with or without RADIUS field.
         """
         logger.debug("Extracting broadening information...")
         paramters_found = False
         for idx, line in enumerate(lines):
-            if line.strip().startswith("TEMPERATURE") and "THICKNESS" in line:
-                # Next line contains the values
-                temp_line = lines[idx + 1].strip()
-                temp_parts = temp_line.split()
-                if len(temp_parts) >= 2:
+            # Look for header line
+            if (
+                ("TEMPERATURE" in line and "THICKNESS" in line)
+                or ("RADIUS" in line and "TEMPERATURE" in line and "THICKNESS" in line)
+            ):
+                header = line.strip().split()
+                next_line = lines[idx + 1].strip()
+                parts = split_lpt_values(next_line)
+                print(parts)
+                # Case with RADIUS
+                if "RADIUS" in header and len(parts) >= 3:
                     paramters_found = True
-                    temp, temp_varied = parse_value_and_varied(temp_parts[0])
-                    thick, thick_varied = parse_value_and_varied(temp_parts[1])
+                    radius, radius_varied = parse_value_and_varied(parts[0])
+                    temp, temp_varied = parse_value_and_varied(parts[1])
+                    thick, thick_varied = parse_value_and_varied(parts[2])
+                    physics_data.broadening_parameters.radius = radius
                     physics_data.broadening_parameters.temp = temp
                     physics_data.broadening_parameters.thick = thick
-                    # Optionally store varied flags if your model supports it:
+                    if hasattr(physics_data.broadening_parameters, "radius_varied"):
+                        physics_data.broadening_parameters.radius_varied = radius_varied
+                    if hasattr(physics_data.broadening_parameters, "temp_varied"):
+                        physics_data.broadening_parameters.temp_varied = temp_varied
+                    if hasattr(physics_data.broadening_parameters, "thick_varied"):
+                        physics_data.broadening_parameters.thick_varied = thick_varied
+                # Case without RADIUS
+                elif "TEMPERATURE" in header and "THICKNESS" in header and len(parts) >= 2:
+                    paramters_found = True
+                    temp, temp_varied = parse_value_and_varied(parts[0])
+                    thick, thick_varied = parse_value_and_varied(parts[1])
+                    physics_data.broadening_parameters.temp = temp
+                    physics_data.broadening_parameters.thick = thick
                     if hasattr(physics_data.broadening_parameters, "temp_varied"):
                         physics_data.broadening_parameters.temp_varied = temp_varied
                     if hasattr(physics_data.broadening_parameters, "thick_varied"):
@@ -208,7 +241,8 @@ class LptManager:
                 for j in range(idx + 2, min(idx + 6, len(lines))):
                     if "DELTA-L" in lines[j]:
                         delta_line = lines[j + 1].strip()
-                        delta_parts = delta_line.split()
+                        delta_parts = split_lpt_values(delta_line)
+                        print(delta_parts)
                         if len(delta_parts) >= 3:
                             deltal, deltal_varied = parse_value_and_varied(delta_parts[0])
                             deltag, deltag_varied = parse_value_and_varied(delta_parts[1])
@@ -216,7 +250,6 @@ class LptManager:
                             physics_data.broadening_parameters.deltal = deltal
                             physics_data.broadening_parameters.deltag = deltag
                             physics_data.broadening_parameters.deltae = deltae
-                            # Optionally store varied flags
                             if hasattr(physics_data.broadening_parameters, "deltal_varied"):
                                 physics_data.broadening_parameters.deltal_varied = deltal_varied
                             if hasattr(physics_data.broadening_parameters, "deltag_varied"):
@@ -226,20 +259,57 @@ class LptManager:
                         break
                 break  # Only read the first block
 
-        # if broadening parameters were found then return true
         return bool(paramters_found)
 
     def extract_normalization_info(self, lines, physics_data):
         """
         Extracts normalization parameters from an LPT file and stores them in
-        physics_data.normalization_parameters as a list of NormalizationParameters.
+        physics_data.normalization_parameters (NormalizationParameters).
         """
         logger.debug("Extracting normalization information...")
 
         parameters_found = False
 
-        return parameters_found
+        for idx, line in enumerate(lines):
+            # Look for the normalization header
+            if "NORMALIZATION" in line and "BCKG" in line:
+                next_line = lines[idx + 1].strip()
+                parts = next_line.split()
+                # There should be 4 values on this line
+                if len(parts) >= 4:
+                    parameters_found = True
+                    anorm, flag_anorm = parse_value_and_varied(parts[0])
+                    backa, flag_backa = parse_value_and_varied(parts[1])
+                    backb, flag_backb = parse_value_and_varied(parts[2])
+                    backc, flag_backc = parse_value_and_varied(parts[3])
+                    # Assign to the model
+                    norm_params = physics_data.normalization_parameters
+                    norm_params.anorm = anorm
+                    norm_params.flag_anorm = VaryFlag.YES if flag_anorm else VaryFlag.NO
+                    norm_params.backa = backa
+                    norm_params.flag_backa = VaryFlag.YES if flag_backa else VaryFlag.NO
+                    norm_params.backb = backb
+                    norm_params.flag_backb = VaryFlag.YES if flag_backb else VaryFlag.NO
+                    norm_params.backc = backc
+                    norm_params.flag_backc = VaryFlag.YES if flag_backc else VaryFlag.NO
 
+                # Look for the next background line (for backd, backf)
+                for j in range(idx + 2, min(idx + 6, len(lines))):
+                    if "BCKG*EXP" in lines[j]:
+                        bkg_line = lines[j + 1].strip()
+                        bkg_parts = bkg_line.split()
+                        if len(bkg_parts) >= 2:
+                            backd, flag_backd = parse_value_and_varied(bkg_parts[0])
+                            backf, flag_backf = parse_value_and_varied(bkg_parts[1])
+                            norm_params.backd = backd
+                            norm_params.flag_backd = VaryFlag.YES if flag_backd else VaryFlag.NO
+                            norm_params.backf = backf
+                            norm_params.flag_backf = VaryFlag.YES if flag_backf else VaryFlag.NO
+                        break
+                break  # Only read the first normalization block
+
+        return parameters_found
+    
     def extract_results_from_string(self, lpt_block_string: str) -> FitResults:
         fit_results = FitResults()
         lines = lpt_block_string.splitlines()
@@ -287,7 +357,7 @@ class LptManager:
             blocks.append((block_type, block_text))
         return blocks
 
-    def process_lpt_file(self, file_path: str) -> RunResults:
+    def process_lpt_file(self, file_path: str, run_results: RunResults = None) -> bool:
         """
         Process a SAMMY LPT file into blocks of iteration results and store them in a
         RunResults object. This function reads the .LPT file, extracts the results of each
@@ -300,8 +370,8 @@ class LptManager:
             file_path (str): Path to the .LPT file.
         """
 
-        # Initialize the RunResults object
-        run_results = RunResults()
+        if run_results is None:
+            raise ValueError("A RunResults object must be provided to process_lpt_file.")
 
         try:
             with open(file_path, "r") as file:
@@ -311,11 +381,12 @@ class LptManager:
 
         except FileNotFoundError:
             logger.error(f"File not found: {file_path}")
+            return False
         except Exception as e:
             logger.error(f"An error occurred: {e}")
+            return False
 
         # Split the content into blocks based on the delimiter
-
         blocks = self.split_lpt_blocks(lpt_content)
         logger.debug(f"Split LPT content into {len(blocks)} blocks.")
 
@@ -326,6 +397,3 @@ class LptManager:
             # Append the fit results to the RunResults object
             run_results.add_fit_result(fit_results)
 
-            # run_results.add_fit_result(fit_results)
-
-        return run_results
