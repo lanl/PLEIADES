@@ -208,7 +208,6 @@ class LptManager:
                 header = line.strip().split()
                 next_line = lines[idx + 1].strip()
                 parts = split_lpt_values(next_line)
-                print(parts)
                 # Case with RADIUS
                 if "RADIUS" in header and len(parts) >= 3:
                     paramters_found = True
@@ -243,7 +242,6 @@ class LptManager:
                     if "DELTA-L" in lines[j]:
                         delta_line = lines[j + 1].strip()
                         delta_parts = split_lpt_values(delta_line)
-                        print(delta_parts)
                         if len(delta_parts) >= 3:
                             deltal, deltal_varied = parse_value_and_varied(delta_parts[0])
                             deltag, deltag_varied = parse_value_and_varied(delta_parts[1])
@@ -275,7 +273,7 @@ class LptManager:
             # Look for the normalization header
             if "NORMALIZATION" in line and "BCKG" in line:
                 next_line = lines[idx + 1].strip()
-                parts = next_line.split()
+                parts = split_lpt_values(next_line)
                 # There should be 4 values on this line
                 if len(parts) >= 4:
                     parameters_found = True
@@ -298,7 +296,8 @@ class LptManager:
                 for j in range(idx + 2, min(idx + 6, len(lines))):
                     if "BCKG*EXP" in lines[j]:
                         bkg_line = lines[j + 1].strip()
-                        bkg_parts = bkg_line.split()
+                        bkg_parts = split_lpt_values(bkg_line)
+                        # There should be 2 values on this line
                         if len(bkg_parts) >= 2:
                             backd, flag_backd = parse_value_and_varied(bkg_parts[0])
                             backf, flag_backf = parse_value_and_varied(bkg_parts[1])
