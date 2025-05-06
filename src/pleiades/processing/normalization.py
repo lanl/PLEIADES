@@ -1,11 +1,12 @@
 import os
 import numpy as np
 
-from pleiades.processing import Roi
+from pleiades.processing import Roi, MasterDictKeys, Facility
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
-from pleiades.utils.nexus import is_normalization_by_proton_charge
+from pleiades.utils.nexus import get_proton_charge_dict
+from pleiades.utils.timepix_at_VENUS import update_with_nexus_files
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -36,11 +37,27 @@ logger = loguru_logger.bind(name="normalization")
 #  - numpy (otional)
 #  - output folder (optional)
 
+def init_master_dict(list_folders: list) -> dict:
+    """
+    Initialize a master dictionary to store the data from each sample and open beam folders.
+    """
+    master_dict = {}
+    for folder in list_folders:
+        master_dict[folder] = {MasterDictKeys.nexus_path: None, 
+                               MasterDictKeys.frame_number: None, 
+                               MasterDictKeys.data_path: None, 
+                               MasterDictKeys.proton_charge: None,
+                               MasterDictKeys.matching_ob: [] ,
+                               MasterDictKeys.list_tif: [], 
+                               MasterDictKeys.shutter_counts: None,
+                               MasterDictKeys.list_spectra: [],
+                               MasterDictKeys.data: None}
+    return master_dict
+
 
 def normalization(list_sample_folders: list, 
                   list_obs_folders: list, 
-                  list_nexus_sample_file: str = None,
-                  list_nexus_obs_file: str = None,
+                  nexus_path: str = None,
                   background_roi: Roi = None, 
                   crop_roi: Roi = None,
                   timepix: bool = True, 
@@ -48,14 +65,15 @@ def normalization(list_sample_folders: list,
                   remove_outliers: bool = False, 
                   rolling_average: bool = False, 
                   output_folder: str = None, 
-                  output_numpy: bool = True):
+                  output_numpy: bool = True,
+                  facility=Facility.ornl):
     """
     Normalize the data from the sample and observation folders.
 
     if more than 1 ob folder is provided, the data will be combined using the mean
     if more than 1 sample folder is provided, each folder will be processed separately
 
-    if the nexus files (sample and obs) are provided, the data will be normalized using the proton charge value
+    if the nexus_path is provided, the proton charge will be retrieved from the nexus file
     if the timepix flag is True, the data will be normalized using the shutter values
     if the background_roi is provided, the data will be normalized using the background region
     if the crop_roi is provided, the data will be cropped to the region of interest
@@ -70,8 +88,7 @@ def normalization(list_sample_folders: list,
     Parameters:
     - list_sample_folders: List of sample folders containing tiff or fits files.
     - list_obs_folders: List of open beam folders containing tiff or fits files.
-    - list_nexus_sample_file: Nexus sample file (optional) used to retrieve the proton charge value.
-    - list_nexus_obs_file: Nexus observation file (optional) used to retrieve the proton charge value.
+    - nexus_path: Path to the nexus file (optional).
     - background_roi: Region of interest (optional) used to define the background region in sample data.
     - crop_roi: Region of interest (optional) used to define the crop region
     - timepix: Boolean indicating if timepix data is used.
@@ -89,8 +106,7 @@ def normalization(list_sample_folders: list,
     logger.info(f"##############################")
     logger.info(f"\tSample folders: {list_sample_folders}")
     logger.info(f"\tOpen beam folders: {list_obs_folders}")
-    logger.info(f"\tNexus sample files: {list_nexus_sample_file}")
-    logger.info(f"\tNexus obs files: {list_nexus_obs_file}")
+    logger.info(f"\tnexus path: {nexus_path}")
     logger.info(f"\tBackground ROI: {background_roi}")
     logger.info(f"\tCrop ROI: {crop_roi}")
     logger.info(f"\tTimepix: {timepix}")
@@ -113,10 +129,21 @@ def normalization(list_sample_folders: list,
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
 
-    proton_charge_dict = get_proton_charge_dict(list_sample_nexus = list_nexus_sample_file,
-                                                list_nexus_obs = list_nexus_obs_file,
-                                                nbr_sample_folders = len(list_sample_folders),
-                                                nbr_obs_folders = len(list_obs_folders))
+    sample_master_dict = init_master_dict(list_sample_folders)
+    ob_master_dict = init_master_dict(list_obs_folders)
+
+    # update with the nexus files
+    update_with_nexus_files(sample_master_dict, nexus_path, facility=facility)
+    update_with_nexus_files(ob_master_dict, nexus_path, facility=facility)
+
+    # update with proton charge
+
+    # update with the shutter values
+
+    
+
+
+    
 
     # process open beams
     for obs_folder in list_obs_folders:

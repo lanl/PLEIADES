@@ -25,3 +25,21 @@ class Roi:
 
     def __str__(self):
         return f"Roi: (x1={self.x1}, y1={self.y1}) to (x2={self.x2}, y2={self.y2})"
+
+
+class MasterDictKeys:
+    frame_number = "frame_number"
+    proton_charge = "proton_charge"
+    matching_ob = "matching_ob"
+    list_tif = "list_tif"
+    data = "data"
+    nexus_path = "nexus_path"
+    data_path = "data_path"
+    shutter_counts = "shutter_counts"
+    list_spectra = "list_spectra"
+    
+
+class Facility:
+    ornl = "ornl"
+    lanl = "lanl"
+    
