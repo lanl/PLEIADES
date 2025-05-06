@@ -4,7 +4,7 @@ import numpy as np
 from pleiades.processing import Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
-from pleiades.utils.image_processing import rebin, crop
+from pleiades.utils.image_processing import rebin, crop, combine
 
 # input: 
 #  - list_of_sample folders (tiff, fits)
@@ -91,6 +91,35 @@ def normalization(list_sample_folders: list,
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
 
+    # process open beams
+    for obs_folder in list_obs_folders:
+        if not os.path.exists(obs_folder):
+            raise ValueError(f"Observation folder {obs_folder} does not exist.")
+
+        # retrieve list of files in the observation folder
+        list_obs_files = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
+
+        # load the observation data
+        list_obs_data = load(list_obs_files)
+
+        # crop the data if requested
+        if crop_roi is not None:
+            list_obs_data = crop(list_obs_data, crop_roi)
+
+        # rebin the data if requested
+        if pixel_binning > 1:
+            list_obs_data = rebin(list_obs_data, pixel_binning)
+
+        # combine the normalized data
+        if len(list_obs_data) > 1:
+            ob_data = combine(list_obs_data)
+        else:
+            ob_data = list_obs_data[0]
+
+
+
+
+
     for sample_folder in list_sample_folders:
         if not os.path.exists(sample_folder):
             raise ValueError(f"Sample folder {sample_folder} does not exist.")
@@ -109,4 +138,3 @@ def normalization(list_sample_folders: list,
         if pixel_binning > 1:
             list_sample_data = rebin(list_sample_data, pixel_binning)
 
-     

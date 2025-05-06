@@ -3,6 +3,7 @@ import pytest
 from pleiades.utils.image_processing import rebin
 from pleiades.utils.image_processing import crop
 from pleiades.processing import Roi
+from pleiades.utils.image_processing import combine
 
 # rebin
 def test_rebin_with_valid_input():
@@ -113,3 +114,41 @@ def test_crop_with_invalid_roi():
     with pytest.raises(ValueError):
         roi = Roi(-1, -1, 2, 2)  # Negative coordinates
         crop(data, roi)
+
+
+# combine
+def test_combine_with_valid_input():
+    # Test with valid input arrays
+    data = np.array([[[1, 2, 3],
+                        [4, 5, 6],
+                        [7, 8, 9]],
+                        [[9, 8, 7],
+                        [6, 5, 4],
+                        [3, 2, 1]],
+                        [[5, 5, 5],
+                        [5, 5, 5],
+                        [5, 5, 5]]])
+    expected_output = np.array([[5, 5, 5],
+                                    [5, 5, 5],
+                                    [5, 5, 5]])
+    result = combine(data)
+    np.testing.assert_array_equal(result, expected_output)
+
+
+def test_combine_with_single_array():
+    # Test with a single 2D array
+    data = np.array([[[1, 2, 3],
+                        [4, 5, 6],
+                        [7, 8, 9]]])
+    expected_output = np.array([[1, 2, 3],
+                                    [4, 5, 6],
+                                    [7, 8, 9]])
+    result = combine(data)
+    np.testing.assert_array_equal(result, expected_output)
+
+
+def test_combine_with_empty_array():
+    # Test with an empty array
+    data = np.array([])
+    with pytest.raises(ValueError):
+        combine(data)

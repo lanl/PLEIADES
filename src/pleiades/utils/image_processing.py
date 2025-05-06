@@ -37,3 +37,13 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
 
     return rebinned_data
 
+
+def combine(data: np.ndarray) -> np.ndarray:
+    """
+    Combine multiple 2D arrays using np.median
+    """
+    if data is None or len(data) == 0:
+        raise ValueError("No data provided for combination.")
+  
+    combined_data = np.median(data, axis=0)
+    return combined_data
