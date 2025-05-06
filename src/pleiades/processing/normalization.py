@@ -5,6 +5,7 @@ from pleiades.processing import Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
+from pleiades.utils.nexus import is_normalization_by_proton_charge
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -112,6 +113,11 @@ def normalization(list_sample_folders: list,
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
 
+    proton_charge_dict = get_proton_charge_dict(list_sample_nexus = list_nexus_sample_file,
+                                                list_nexus_obs = list_nexus_obs_file,
+                                                nbr_sample_folders = len(list_sample_folders),
+                                                nbr_obs_folders = len(list_obs_folders))
+
     # process open beams
     for obs_folder in list_obs_folders:
         if not os.path.exists(obs_folder):
@@ -137,10 +143,6 @@ def normalization(list_sample_folders: list,
         else:
             ob_data = list_obs_data[0]
 
-
-
-
-
     for sample_folder in list_sample_folders:
         if not os.path.exists(sample_folder):
             raise ValueError(f"Sample folder {sample_folder} does not exist.")
@@ -159,6 +161,7 @@ def normalization(list_sample_folders: list,
         if pixel_binning > 1:
             list_sample_data = rebin(list_sample_data, pixel_binning)
 
+        # 
 
 
 if __name__ == "__main__":
@@ -169,7 +172,7 @@ if __name__ == "__main__":
         list_nexus_sample_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7820.nxs.h5"],
         list_nexus_obs_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7816.nxs.h5"],
         # background_roi=Roi(0, 0, 10, 10),
-        # crop_roi=Roi(10, 10, 20, 20),
+        crop_roi=Roi(10, 10, 200, 200),
         timepix=True,
         pixel_binning=2,
         remove_outliers=True,
