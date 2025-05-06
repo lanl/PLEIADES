@@ -297,7 +297,6 @@ class LptManager:
                     if "BCKG*EXP" in lines[j]:
                         bkg_line = lines[j + 1].strip()
                         bkg_parts = split_lpt_values(bkg_line)
-                        # There should be 2 values on this line
                         if len(bkg_parts) >= 2:
                             backd, flag_backd = parse_value_and_varied(bkg_parts[0])
                             backf, flag_backf = parse_value_and_varied(bkg_parts[1])
