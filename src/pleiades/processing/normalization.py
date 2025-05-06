@@ -1,13 +1,13 @@
 import os
 import numpy as np
-import logging
 
 from pleiades.processing import Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
 
-logger = logging.getLogger(__name__)
+from pleiades.utils.logger import loguru_logger
+logger = loguru_logger.bind(name="normalization")
 
 # input: 
 #  - list_of_sample folders (tiff, fits)
@@ -118,10 +118,10 @@ def normalization(list_sample_folders: list,
             raise ValueError(f"Observation folder {obs_folder} does not exist.")
 
         # retrieve list of files in the observation folder
-        list_obs_files = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
+        list_obs_files, ext = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
 
         # load the observation data
-        list_obs_data = load(list_obs_files)
+        list_obs_data = load(list_obs_files, ext)
 
         # crop the data if requested
         if crop_roi is not None:
@@ -146,10 +146,10 @@ def normalization(list_sample_folders: list,
             raise ValueError(f"Sample folder {sample_folder} does not exist.")
 
         # retrieve list of files in the sample folder
-        list_sample_files = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
+        list_sample_files, ext = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
 
         # load the sample data
-        list_sample_data = load(list_sample_files)
+        list_sample_data = load(list_sample_files, ext)
         
         # crop the data if requested
         if crop_roi is not None:
@@ -164,12 +164,12 @@ def normalization(list_sample_folders: list,
 if __name__ == "__main__":
     # Example usage
     normalization(
-        list_sample_folders=["/Users/j35/SNS/IPTS-35945/autoreduce/Run_7820"],
-        list_obs_folders=["/Users/j35/SNS/IPTS-35945/autoreduce/Run_7816"],
-        list_nexus_sample_file=["/Users/j35/SNS/IPTS-35945/nexus/VENUS_7820.nxs.h5"],
-        list_nexus_obs_file=["/Users/j35/SNS/IPTS-35945/nexus/VENUS_7816.nxs.h5"],
-        background_roi=Roi(0, 0, 10, 10),
-        crop_roi=Roi(10, 10, 20, 20),
+        list_sample_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7820"],
+        list_obs_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7816"],
+        list_nexus_sample_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7820.nxs.h5"],
+        list_nexus_obs_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7816.nxs.h5"],
+        # background_roi=Roi(0, 0, 10, 10),
+        # crop_roi=Roi(10, 10, 20, 20),
         timepix=True,
         pixel_binning=2,
         remove_outliers=True,

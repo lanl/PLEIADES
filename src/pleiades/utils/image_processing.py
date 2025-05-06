@@ -4,7 +4,8 @@ import logging
 from pleiades.processing import Roi
 from skimage.measure import block_reduce
 
-logger = logging.getLogger(__name__)
+from pleiades.utils.logger import loguru_logger
+logger = loguru_logger.bind(name="image_processing")
 
 
 def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
