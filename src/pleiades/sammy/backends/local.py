@@ -1,7 +1,6 @@
-#!/usr/env/bin python
+#!/usr/bin/env python
 """Local backend implementation for SAMMY execution."""
 
-import logging
 import subprocess
 import textwrap
 from datetime import datetime
@@ -17,8 +16,9 @@ from pleiades.sammy.interface import (
     SammyFiles,
     SammyRunner,
 )
+from pleiades.utils.logger import loguru_logger
 
-logger = logging.getLogger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 # Known SAMMY output file patterns
 SAMMY_OUTPUT_FILES = {
@@ -82,8 +82,7 @@ class LocalSammyRunner(SammyRunner):
             if not success:
                 logger.error(f"SAMMY execution failed for {execution_id}")
                 error_message = (
-                    f"SAMMY execution failed with return code {process.returncode}. "
-                    "Check console output for details."
+                    f"SAMMY execution failed with return code {process.returncode}. Check console output for details."
                 )
             else:
                 logger.info(f"SAMMY execution completed successfully for {execution_id}")

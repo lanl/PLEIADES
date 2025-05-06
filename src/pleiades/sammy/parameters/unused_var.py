@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Data class for card 05::unused but correlated variables."""
 
-import logging
 from typing import List
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.utils.helper import safe_parse
+from pleiades.utils.logger import loguru_logger
 
 # Format definitions for fixed-width fields
 # Name line has 8 possible 5-character fields separated by 5 spaces
@@ -177,10 +177,13 @@ class UnusedCorrelatedCard(BaseModel):
 
 if __name__ == "__main__":
     # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
 
     # Test example with two groups of variables
-    logging.debug("**Testing variable parsing**")
+    logger.debug("**Testing variable parsing**")
     test_lines = [
         (" " * 5).join([f"NVAR{i}" for i in range(1, 4)]),
         "1.2304E+002.9800E+021.5000E-01",
@@ -190,18 +193,18 @@ if __name__ == "__main__":
 
     try:
         params = UnusedCorrelatedParameters.from_lines(test_lines)
-        logging.debug("Successfully parsed parameters:")
+        logger.debug("Successfully parsed parameters:")
         for var in params.variables:
-            logging.debug(f"{var.name}: {var.value}")
-        logging.debug("\nOutput lines:")
+            logger.debug(f"{var.name}: {var.value}")
+        logger.debug("\nOutput lines:")
         for line in params.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse parameters: {e}")
+        logger.error(f"Failed to parse parameters: {e}")
 
     # Test complete card set
-    logging.debug("**Testing complete card set**")
+    logger.debug("**Testing complete card set**")
     card_lines = [
         "UNUSEd but correlated variables come next",
         (" " * 5).join([f"NVAR{i}" for i in range(1, 4)]),
@@ -213,27 +216,27 @@ if __name__ == "__main__":
 
     try:
         card = UnusedCorrelatedCard.from_lines(card_lines)
-        logging.debug("Successfully parsed complete card set")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed complete card set")
+        logger.debug("Output lines:")
         for line in card.to_lines():
-            logging.debug(f"'{line}'")
+            logger.debug(f"'{line}'")
     except ValueError as e:
-        logging.error(f"Failed to parse complete card set: {e}")
+        logger.error(f"Failed to parse complete card set: {e}")
 
     # Test error handling
-    logging.debug("\n**Testing Error Handling**")
+    logger.debug("\n**Testing Error Handling**")
 
     # Test invalid header
     try:
         bad_lines = ["WRONG header line", "NVAR1", "1.2340E+00", ""]
-        logging.debug("Testing invalid header:")
+        logger.debug("Testing invalid header:")
         UnusedCorrelatedCard.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid header: {e}")
+        logger.debug(f"Caught expected error for invalid header: {e}")
 
     # Test mismatched name/value lines
     try:
         bad_lines = ["NVAR1     NVAR2", "1.2340E+00"]  # Missing value
         UnusedCorrelatedParameters.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for mismatched lines: {e}")
+        logger.debug(f"Caught expected error for mismatched lines: {e}")

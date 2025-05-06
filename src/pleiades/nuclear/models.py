@@ -9,12 +9,12 @@ from typing_extensions import Annotated
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo
 from pleiades.utils.helper import VaryFlag
-from pleiades.utils.logger import Logger
+from pleiades.utils.logger import loguru_logger
 
 NonNegativeFloat = Annotated[float, Field(ge=0)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 
-logger = Logger(__name__)
+logger = loguru_logger.bind(name=__name__)
 
 
 class DataRetrievalMethod(str, Enum):

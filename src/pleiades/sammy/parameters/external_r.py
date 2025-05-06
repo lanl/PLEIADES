@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """Data class for card 03::external R-function parameters."""
 
-import logging
 from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 from pleiades.utils.helper import VaryFlag, format_float, format_vary, safe_parse
+from pleiades.utils.logger import loguru_logger
 
 
 class ExternalRFormat(Enum):
@@ -338,10 +338,13 @@ class ExternalRFunction(BaseModel):
 
 if __name__ == "__main__":
     # Enable logging for debugging
-    logging.basicConfig(level=logging.DEBUG)
+    from pleiades.utils.logger import configure_logger
+
+    configure_logger(console_level="DEBUG")
+    logger = loguru_logger.bind(name=__name__)
 
     # Test ExternalREntry with both formats
-    logging.debug("**Testing ExternalREntry with Format 3**")
+    logger.debug("**Testing ExternalREntry with Format 3**")
     format3_examples = [
         " 1 2 1.2340E+00 5.6780E+00 1.2300E-01 4.5600E-01 7.8900E-01  1 0 1 0 1",
         " 2 1 2.3450E+00 6.7890E+00 2.3400E-01 5.6700E-01 8.9000E-01  0 1 0 0 1",
@@ -350,13 +353,13 @@ if __name__ == "__main__":
 
     for i, line in enumerate(format3_examples):
         entry = ExternalREntry.from_str(line, ExternalRFormat.FORMAT_3)
-        logging.debug(f"Format 3 Example {i+1}:")
-        logging.debug(f"Object     : {entry}")
-        logging.debug(f"Original   : {line}")
-        logging.debug(f"Reformatted: {entry.to_str()}")
-        logging.debug("")
+        logger.debug(f"Format 3 Example {i+1}:")
+        logger.debug(f"Object     : {entry}")
+        logger.debug(f"Original   : {line}")
+        logger.debug(f"Reformatted: {entry.to_str()}")
+        logger.debug("")
 
-    logging.debug("**Testing ExternalREntry with Format 3A**")
+    logger.debug("**Testing ExternalREntry with Format 3A**")
     format3a_examples = [
         "12100100001.2340E+005.6780E+001.2300E-014.5600E-017.8900E-018.9000E-019.0000E-01",
         "21201001012.3450E+006.7890E+002.3400E-015.6700E-018.9000E-019.1000E-019.2000E-01",
@@ -364,14 +367,14 @@ if __name__ == "__main__":
 
     for i, line in enumerate(format3a_examples):
         entry = ExternalREntry.from_str(line, ExternalRFormat.FORMAT_3A)
-        logging.debug(f"Format 3A Example {i+1}:")
-        logging.debug(f"Object     : {entry}")
-        logging.debug(f"Original   : {line}")
-        logging.debug(f"Reformatted: {entry.to_str()}")
-        logging.debug("")
+        logger.debug(f"Format 3A Example {i+1}:")
+        logger.debug(f"Object     : {entry}")
+        logger.debug(f"Original   : {line}")
+        logger.debug(f"Reformatted: {entry.to_str()}")
+        logger.debug("")
 
     # Test ExternalRFunction with complete card sets
-    logging.debug("**Testing ExternalRFunction with Format 3**")
+    logger.debug("**Testing ExternalRFunction with Format 3**")
     format3_lines = [
         "EXTERnal R-function parameters follow",
         " 1 2 1.2340E+00 5.6780E+00 1.2300E-01 4.5600E-01 7.8900E-01  1 0 0 1 0",
@@ -381,16 +384,16 @@ if __name__ == "__main__":
 
     try:
         r_function = ExternalRFunction.from_lines(format3_lines)
-        logging.debug("Successfully parsed Format 3 card set:")
-        logging.debug("Number of entries: {len(r_function.entries)}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed Format 3 card set:")
+        logger.debug(f"Number of entries: {len(r_function.entries)}")
+        logger.debug("Output lines:")
         for line in r_function.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse Format 3 card set: {e}")
+        logger.error(f"Failed to parse Format 3 card set: {e}")
 
-    logging.debug("**Testing ExternalRFunction with Format 3A**")
+    logger.debug("**Testing ExternalRFunction with Format 3A**")
     format3a_lines = [
         "R-EXTernal parameters follow",
         "12100100001.2340E+005.6780E+001.2300E-014.5600E-017.8900E-018.9000E-019.0000E-01",
@@ -400,30 +403,30 @@ if __name__ == "__main__":
 
     try:
         r_function = ExternalRFunction.from_lines(format3a_lines)
-        logging.debug("Successfully parsed Format 3A card set:")
-        logging.debug(f"Number of entries: {len(r_function.entries)}")
-        logging.debug("Output lines:")
+        logger.debug("Successfully parsed Format 3A card set:")
+        logger.debug(f"Number of entries: {len(r_function.entries)}")
+        logger.debug("Output lines:")
         for line in r_function.to_lines():
-            logging.debug(f"'{line}'")
-        logging.debug("")
+            logger.debug(f"'{line}'")
+        logger.debug("")
     except ValueError as e:
-        logging.error(f"Failed to parse Format 3A card set: {e}")
+        logger.error(f"Failed to parse Format 3A card set: {e}")
 
     # Test error handling
-    logging.debug("**Testing Error Handling**")
+    logger.debug("**Testing Error Handling**")
 
     # Test invalid s_alpha (negative value)
     try:
         bad_line = " 1 2 1.2340E+00 5.6780E+00 1.2300E-01 4.5600E-01 -7.8900E-01 1 0 0 1 0"
-        logging.debug(f"Testing line with negative s_alpha: '{bad_line}'")
+        logger.debug(f"Testing line with negative s_alpha: '{bad_line}'")
         ExternalREntry.from_str(bad_line, ExternalRFormat.FORMAT_3)
     except ValueError as e:
-        logging.debug(f"Caught expected error for negative s_alpha: {e}")
+        logger.debug(f"Caught expected error for negative s_alpha: {e}")
 
     # Test invalid header
     try:
         bad_lines = ["WRONG header line", " 1 2 1.2340E+00 5.6780E+00 1.2300E-01 4.5600E-01 7.8900E-01 1 0 0 1 0", ""]
-        logging.debug("Testing invalid header:")
+        logger.debug("Testing invalid header:")
         ExternalRFunction.from_lines(bad_lines)
     except ValueError as e:
-        logging.debug(f"Caught expected error for invalid header: {e}")
+        logger.debug(f"Caught expected error for invalid header: {e}")
