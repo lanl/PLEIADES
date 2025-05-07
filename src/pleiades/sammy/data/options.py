@@ -1,6 +1,7 @@
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+import numpy as np
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -105,43 +106,133 @@ class sammyData(BaseModel):
                     raise ValueError(f"Unexpected transmission column for cross-section data: {col}")
 
     def plot_transmission(self, show_diff=False, plot_uncertainty=False):
-        """Plot the transmission data."""
-        if self.data is not None:
-            plt.figure(figsize=(10, 6))
-            
-            # if plotting difference, create a subplot that shares the x-axis
-            if show_diff:
-                fig, ax1 = plt.subplots(figsize=(10, 6))
-                ax1.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
-                ax1.plot(self.data["Energy"], self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Final theoretical transmission")
-                ax1.set_xlabel(f"Energy ({self.energy_units})")
-                ax1.set_ylabel("Transmission (dimensionless)")
-                ax1.set_title("Transmission Data")
-                ax1.legend()
-                ax1.grid()
-                ax2 = ax1.twinx()
-                ax2.set_ylabel("Difference (dimensionless)")
-                ax2.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"] - self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Difference", color='red')
-                ax2.legend(loc='upper right')
-                ax2.grid()
-                plt.show()
-              
-            # if not plotting difference, plot the data normally
-            else:  
-                plt.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
-                plt.plot(
-                self.data["Energy"],
-                self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"],
-                label="Final theoretical transmission",
-            )
-                plt.xlabel(f"Energy ({self.energy_units})")
-                plt.ylabel("Transmission (dimensionless)")
-                plt.title("Transmission Data")
-                plt.legend()
-                plt.grid()
-                plt.show()
-        else:
+        """
+        Plot the transmission data and optionally the residuals.
+
+        Args:
+            show_diff (bool): If True, plot the residuals.
+            plot_uncertainty (bool): (Unused, for compatibility)
+        """
+        if self.data is None:
             raise ValueError("No data loaded to plot.")
+
+        data = self.data
+        data_color = "#433E3F"
+        initial_color = "#003f5c"
+        final_color = "#ff6361"
+
+        # Column name mapping for compatibility
+        col_exp = "Experimental transmission (dimensionless)"
+        col_exp_unc = "Absolute uncertainty in experimental transmission"
+        col_init = "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)"
+        col_final = "Final theoretical transmission as evaluated by SAMMY (dimensionless)"
+
+        if show_diff:
+            fig, ax = plt.subplots(
+                2, 2,
+                sharey=False,
+                figsize=(8, 6),
+                gridspec_kw={"width_ratios": [5, 1], "height_ratios": [5, 2]},
+            )
+            ax = np.ravel(ax)
+        else:
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax = [ax]
+
+        # Plot experimental transmission as scatter with error bars if available
+        yerr = data[col_exp_unc] if col_exp_unc in data.columns else None
+        data.plot.scatter(
+            x="Energy",
+            y=col_exp,
+            yerr=yerr,
+            ax=ax[0],
+            zorder=-1,
+            color=data_color,
+            alpha=0.25,
+            s=10,
+        )
+        # Plot final theoretical transmission
+        if col_final in data.columns:
+            data.plot(
+                x="Energy",
+                y=col_final,
+                ax=ax[0],
+                alpha=1.0,
+                color=final_color,
+                lw=1,
+            )
+        ax[0].set_xlabel("")
+        ax[0].set_xticks([])
+        ax[0].legend(["data", "final fit"])
+        ax[0].set_ylabel("transmission")
+        
+        # Determine y-axis limits
+        max_y = data[col_exp].max()
+        min_y = data[col_exp].min()
+        ax[0].set_ylim(min_y, max_y)
+        
+
+        if show_diff:
+            ax[1].spines["right"].set_visible(False)
+            ax[1].spines["top"].set_visible(False)
+            ax[1].spines["bottom"].set_visible(False)
+            ax[1].spines["left"].set_visible(False)
+            ax[1].set_xticks([])
+            ax[1].set_yticks([], [])
+
+            # Compute residuals
+            if col_init in data.columns:
+                data["residual_initial"] = data[col_init] - data[col_exp]
+            data["residual_final"] = data[col_final] - data[col_exp]
+
+            # Plot residuals (final fit)
+            data.plot.scatter(
+                x="Energy",
+                y="residual_final",
+                yerr=yerr,
+                lw=0,
+                ylim=(-10, 10),
+                color=final_color,
+                ax=ax[2],
+                alpha=0.5,
+                legend=False,
+            )
+            ax[2].set_ylabel("residuals\n(fit-data)/err [σ]")
+            ax[2].set_xlabel("energy [eV]")
+            ax[2].set_ylim(-1, 1)
+
+            # Plot histograms of residuals
+            if "residual_initial" in data.columns:
+                data.plot.hist(
+                    y=["residual_initial"],
+                    bins=np.arange(-1, 1, 0.01),
+                    ax=ax[3],
+                    orientation="horizontal",
+                    legend=False,
+                    alpha=0.8,
+                    histtype="stepfilled",
+                    color=initial_color,
+                )
+            data.plot.hist(
+                y=["residual_final"],
+                bins=np.arange(-1, 1, 0.01),
+                ax=ax[3],
+                orientation="horizontal",
+                legend=False,
+                alpha=0.8,
+                histtype="stepfilled",
+                color=final_color,
+            )
+            ax[3].set_xlabel("")
+            ax[3].set_xticks([], [])
+            ax[3].set_yticks([], [])
+            ax[3].spines["right"].set_visible(False)
+            ax[3].spines["top"].set_visible(False)
+            ax[3].spines["bottom"].set_visible(False)
+            ax[3].spines["left"].set_visible(False)
+
+        plt.subplots_adjust(wspace=0.003, hspace=0.03)
+        plt.show()
 
     def plot_cross_section(self, show_diff=False, plot_uncertainty=False):
         """Plot the cross-section data."""
