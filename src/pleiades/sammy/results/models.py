@@ -69,10 +69,10 @@ class RunResults(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        
+
         # Initialize the list of fit results
         self.fit_results = []
-        
+
         # Initialize the data container
         self.data = LstData()
 
