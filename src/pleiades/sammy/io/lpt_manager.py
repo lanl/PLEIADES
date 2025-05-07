@@ -37,58 +37,58 @@ def split_lpt_values(line):
 
 class LptManager:
     """
-    LptManager is a class designed to manage and extract results from SAMMY LPT files. 
-    These files typically contain information about nuclear resonance parameters, 
-    broadening parameters, normalization parameters, and chi-squared results for 
-    various fit iterations. The class provides methods to parse and process these 
+    LptManager is a class designed to manage and extract results from SAMMY LPT files.
+    These files typically contain information about nuclear resonance parameters,
+    broadening parameters, normalization parameters, and chi-squared results for
+    various fit iterations. The class provides methods to parse and process these
     files, extract relevant data, and organize it into structured objects for further analysis.
     Attributes:
-        lpt_delimiters (list): A list of delimiters used to split the LPT file content 
-            into blocks for processing. These delimiters correspond to specific sections 
-            in the LPT file, such as initial values, intermediate values, and new values 
+        lpt_delimiters (list): A list of delimiters used to split the LPT file content
+            into blocks for processing. These delimiters correspond to specific sections
+            in the LPT file, such as initial values, intermediate values, and new values
             for resonance parameters.
     Methods:
         __init__(file_path: str = None, run_results: RunResults = None):
-            Initializes the LptManager object. If a file path is provided, the LPT file 
-            is processed immediately. If a RunResults object is provided, it is used to 
+            Initializes the LptManager object. If a file path is provided, the LPT file
+            is processed immediately. If a RunResults object is provided, it is used to
             store the extracted results.
         extract_isotope_info(lines, nuclear_data):
-            Extracts isotope information, including isotopic abundance, mass, and spin 
-            groups, from the LPT file lines. Updates the nuclear_data.isotopes attribute 
+            Extracts isotope information, including isotopic abundance, mass, and spin
+            groups, from the LPT file lines. Updates the nuclear_data.isotopes attribute
             with the extracted data.
         extract_radius_info(lines, nuclear_data):
-            Extracts effective and true radii along with spin group numbers from the LPT 
-            file lines. Groups the extracted data by isotopes and stores it in the 
+            Extracts effective and true radii along with spin group numbers from the LPT
+            file lines. Groups the extracted data by isotopes and stores it in the
             radius_parameters attribute of each isotope in nuclear_data.isotopes.
         extract_broadening_info(lines, physics_data):
-            Extracts broadening parameters, such as temperature, thickness, and radius, 
-            from the LPT file lines. Updates the physics_data.broadening_parameters 
+            Extracts broadening parameters, such as temperature, thickness, and radius,
+            from the LPT file lines. Updates the physics_data.broadening_parameters
             attribute with the extracted data.
         extract_normalization_info(lines, physics_data):
-            Extracts normalization parameters, including background coefficients, from 
-            the LPT file lines. Updates the physics_data.normalization_parameters 
+            Extracts normalization parameters, including background coefficients, from
+            the LPT file lines. Updates the physics_data.normalization_parameters
             attribute with the extracted data.
         extract_chi_squared_info(lines, chi_squared_results):
-            Extracts chi-squared, reduced chi-squared, and degrees of freedom (dof) 
-            from the LPT file lines. Updates the chi_squared_results object with the 
+            Extracts chi-squared, reduced chi-squared, and degrees of freedom (dof)
+            from the LPT file lines. Updates the chi_squared_results object with the
             extracted data.
         extract_results_from_string(lpt_block_string: str) -> FitResults:
-            Processes a block of LPT file content as a string and extracts various 
-            results, including isotope, radius, broadening, normalization, and 
-            chi-squared information. Returns a FitResults object containing the 
+            Processes a block of LPT file content as a string and extracts various
+            results, including isotope, radius, broadening, normalization, and
+            chi-squared information. Returns a FitResults object containing the
             extracted data.
         split_lpt_blocks(lpt_content: str):
-            Splits the LPT file content into blocks based on predefined delimiters. 
-            Returns a list of tuples, where each tuple contains the block type and 
+            Splits the LPT file content into blocks based on predefined delimiters.
+            Returns a list of tuples, where each tuple contains the block type and
             the corresponding block text.
         process_lpt_file(file_path: str, run_results: RunResults = None) -> bool:
-            Processes a SAMMY LPT file by reading its content, splitting it into blocks, 
-            extracting results from each block, and storing the results in a RunResults 
+            Processes a SAMMY LPT file by reading its content, splitting it into blocks,
+            extracting results from each block, and storing the results in a RunResults
             object. Returns True if the file was processed successfully, otherwise False.
     Usage:
-        The LptManager class is typically used to parse SAMMY LPT files and extract 
-        structured data for further analysis. It can be initialized with a file path 
-        to process the file immediately or used with its methods to extract specific 
+        The LptManager class is typically used to parse SAMMY LPT files and extract
+        structured data for further analysis. It can be initialized with a file path
+        to process the file immediately or used with its methods to extract specific
         types of data from LPT file content.
     """
 

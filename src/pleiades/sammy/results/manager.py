@@ -62,7 +62,7 @@ class ResultsManager:
                 logger.info(f"Fit Result: {fit_result}")
         else:
             logger.warning("No fit results available.")
-            
+
     def print_results_data(self):
         """Print the results data in a readable format."""
         if self.run_results.data:
