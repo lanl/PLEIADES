@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 from pleiades.nuclear.models import IsotopeParameters, RadiusParameters
-from pleiades.sammy.results.models import FitResults, RunResults, ChiSquaredResults
+from pleiades.sammy.results.models import FitResults, RunResults
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import loguru_logger
 
@@ -315,9 +315,9 @@ class LptManager:
         and fills the ChiSquaredResults object.
         """
         logger.debug("Extracting chi-squared information...")
-        
+
         chi2_found = False
-        
+
         chi2 = None
         reduced_chi2 = None
         dof = None
@@ -342,9 +342,8 @@ class LptManager:
             chi_squared_results.reduced_chi_squared = reduced_chi2
             chi_squared_results.dof = dof
             chi2_found = True
-        
-        return chi2_found
 
+        return chi2_found
 
     def extract_results_from_string(self, lpt_block_string: str) -> FitResults:
         fit_results = FitResults()
@@ -364,7 +363,7 @@ class LptManager:
         normalization_results_found = self.extract_normalization_info(lines, fit_results.physics_data)
         if not normalization_results_found:
             logger.info("Normalization results not found.")
-            
+
         chi_squared_results_found = self.extract_chi_squared_info(lines, fit_results.chi_squared_results)
         if not chi_squared_results_found:
             logger.info("Chi-squared results not found.")
