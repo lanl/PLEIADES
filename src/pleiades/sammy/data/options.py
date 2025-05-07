@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Optional
+from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -22,31 +23,7 @@ class DataTypeOptions(str, Enum):
     INTEGRAL = "INTEGRAL"
     COMBINATION = "COMBINATION"
 
-
-class dataParameters(BaseModel):
-    """Container for data parameters.
-
-    Attributes:
-        data_file: File containing the data
-        data_format: Format of the data
-        data_type: Type of the data
-        energy_units: Units of energy
-        cross_section_units: Units of cross-section
-        data_title: Title of the data
-        data_comment: Comment for the data
-    """
-
-    data_file: str = Field(description="File containing the data", default=None)
-    data_type: DataTypeOptions = Field(description="Type of the data", default=DataTypeOptions.TRANSMISSION)
-    energy_units: EnergyUnitOptions = Field(description="Units of energy", default=EnergyUnitOptions.eV)
-    cross_section_units: CrossSectionUnitOptions = Field(
-        description="Units of cross-section", default=CrossSectionUnitOptions.barn
-    )
-    data_title: str = Field(description="Title of the data", default=None)
-    data_comment: str = Field(description="Comment for the data", default=None)
-
-
-class LstData(BaseModel):
+class sammyData(BaseModel):
     """
     Container for LST data, loaded from a SAMMY .LST file using pandas.
 
@@ -57,7 +34,7 @@ class LstData(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    data_file: str = Field(description="File containing the data", default=None)
+    data_file: Optional[Path] = Field(description="Path to the file containing the data", default=None)
     data_type: DataTypeOptions = Field(description="Type of the data", default=DataTypeOptions.TRANSMISSION)
     data_format: str = Field(description="Format of the data", default="LST")
     energy_units: EnergyUnitOptions = Field(description="Units of energy", default=EnergyUnitOptions.eV)
