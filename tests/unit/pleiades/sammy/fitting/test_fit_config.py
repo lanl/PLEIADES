@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
@@ -47,7 +48,6 @@ def test_fit_config_custom_values():
     nuclear_params = nuclearParameters()
     physics_params = PhysicsParameters()
     data_params = sammyData(
-        data_file=Path("custom.dat"),
         data_type="CAPTURE",
         energy_units="keV",
         cross_section_units="millibarn",
