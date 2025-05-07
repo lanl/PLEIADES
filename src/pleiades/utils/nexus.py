@@ -17,7 +17,7 @@ def get_proton_charge(nexus: str, units='pc') -> float:
         with h5py.File(nexus, 'r') as hdf5_data:
             proton_charge = hdf5_data["entry"]["proton_charge"][0]
             if units == 'c':
-                return float(proton_charge/1e12)
+                return proton_charge/1e12
             return proton_charge
     except FileNotFoundError:
         return None

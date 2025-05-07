@@ -1,7 +1,11 @@
 import os
+import glob
 
 from pleiades.processing import MasterDictKeys, Facility
 from pleiades.utils.nexus import get_proton_charge
+
+from pleiades.utils.logger import loguru_logger
+logger = loguru_logger.bind(name="timepix")
 
 
 def get_shutter_values_dict(list_sample_folders: list, list_obs_folders: list, timepix: object) -> dict:
@@ -84,3 +88,44 @@ def update_with_proton_charge_at_ornl(master_dict: dict) -> None:
             master_dict[key][MasterDictKeys.proton_charge] = proton_charge
         else:
             pass
+
+
+def update_with_shutter_counts(master_dict: dict, facility=Facility.ornl) -> None:
+    """
+    Update the master dictionary with the shutter counts.
+    """
+
+    if facility == Facility.ornl:
+        update_with_shutter_counts_at_ornl(master_dict)
+    else:
+        # Implement the logic for other facilities if needed
+        pass
+
+
+def update_with_shutter_counts_at_ornl(master_dict: dict) -> None:
+    """
+    Update the master dictionary with the shutter counts for ORNL.
+    """
+    logger.info(f"Updating master dictionary with shutter counts")
+
+    for data_path in master_dict.keys():
+
+        logger.info(f"\tUpdating shutter counts for {data_path}")
+        _list_files = glob.glob(os.path.join(data_path, "*_ShutterCount.txt"))
+        if len(_list_files) == 0:
+            logger.info(f"\tNo shutter count file found for {data_path}")
+            return
+        
+        else:
+            shutter_count_file = _list_files[0]
+            with open(shutter_count_file, 'r') as f:
+                lines = f.readlines()
+                list_shutter_counts = []
+                for _line in lines:
+                    _, _value = _line.strip().split("\t")
+                    if _value == "0":
+                        break
+                    list_shutter_counts.append(float(_value))
+                logger.info(f"\tShutter counts: {list_shutter_counts}")
+                master_dict[data_path][MasterDictKeys.shutter_counts] = list_shutter_counts
+    

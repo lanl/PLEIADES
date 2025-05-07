@@ -5,7 +5,7 @@ from pleiades.processing import Roi, MasterDictKeys, Facility
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
-from pleiades.utils.timepix import update_with_nexus_files, update_with_proton_charge
+from pleiades.utils.timepix import update_with_nexus_files, update_with_proton_charge, update_with_shutter_counts
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -137,10 +137,9 @@ def normalization(list_sample_folders: list,
     update_with_proton_charge(sample_master_dict, facility=facility)
     update_with_proton_charge(ob_master_dict, facility=facility)
 
-    logger.info(f"Sample master dict: {sample_master_dict}")
-
-    # update with the shutter values
-
+    # update with the shutter counts
+    update_with_shutter_counts(sample_master_dict, facility=facility)
+    update_with_shutter_counts(ob_master_dict, facility=facility)
     
 
 
