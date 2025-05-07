@@ -7,6 +7,7 @@ all SAMMY backend implementations.
 """
 
 import os
+import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -43,6 +44,11 @@ class SammyFiles:
     parameter_file: Path
     data_file: Path
 
+    # Store original paths for cleanup
+    _original_input_file: Optional[Path] = None
+    _original_parameter_file: Optional[Path] = None
+    _original_data_file: Optional[Path] = None
+
     def validate(self) -> None:
         """
         Validate that all required input files exist.
@@ -51,10 +57,103 @@ class SammyFiles:
             FileNotFoundError: If any required file is missing
         """
         for field_name, file_path in self.__dict__.items():
+            if field_name.startswith("_"):
+                continue
             if not file_path.exists():
                 raise FileNotFoundError(f"{field_name.replace('_', ' ').title()} not found: {file_path}")
             if not file_path.is_file():
                 raise FileNotFoundError(f"{field_name.replace('_', ' ').title()} is not a file: {file_path}")
+
+    def move_to_working_dir(self, working_dir: Path) -> None:
+        """
+        Move files to the working directory according to the desired strategy:
+        - input_file: copy to working directory
+        - parameter_file: copy to working directory
+        - data_file: symlink to working directory
+
+        Updates the object's file path attributes to point to the files in the working directory.
+        Can be safely called multiple times - will clean up previous working files first.
+
+        Args:
+            working_dir: Path to the working directory
+
+        Raises:
+            FileExistsError: If target files already exist in working directory
+            OSError: If file operations fail
+        """
+        logger.debug(f"Moving files to working directory: {working_dir}")
+
+        # If we already moved files to a working directory, clean them up first
+        if self._original_input_file is not None:
+            self.cleanup_working_files()
+
+        # Save original paths for cleanup (only if not already saved)
+        self._original_input_file = self.input_file
+        self._original_parameter_file = self.parameter_file
+        self._original_data_file = self.data_file
+
+        # Copy input file
+        working_input = working_dir / self.input_file.name
+        if working_input.exists():
+            logger.debug(f"Removing existing file: {working_input}")
+            working_input.unlink()
+        logger.debug(f"Copying input file: {self._original_input_file} -> {working_input}")
+        shutil.copy2(self._original_input_file, working_input)
+        self.input_file = working_input
+
+        # Copy parameter file
+        working_param = working_dir / self.parameter_file.name
+        if working_param.exists():
+            logger.debug(f"Removing existing file: {working_param}")
+            working_param.unlink()
+        logger.debug(f"Copying parameter file: {self._original_parameter_file} -> {working_param}")
+        shutil.copy2(self._original_parameter_file, working_param)
+        self.parameter_file = working_param
+
+        # Symlink data file
+        working_data = working_dir / self.data_file.name
+        if working_data.exists():
+            logger.debug(f"Removing existing file: {working_data}")
+            working_data.unlink()
+        logger.debug(f"Creating symlink for data file: {self._original_data_file} -> {working_data}")
+        working_data.symlink_to(self._original_data_file)
+        self.data_file = working_data
+
+    def cleanup_working_files(self) -> None:
+        """
+        Remove any files copied or symlinked to the working directory,
+        and restore original file paths.
+        """
+        logger.debug("Cleaning up working files")
+
+        # Only cleanup if we have moved files
+        if self._original_input_file is None:
+            return
+
+        # Remove symlinked data file
+        if self.data_file.exists() and self.data_file.is_symlink():
+            logger.debug(f"Removing symlink: {self.data_file}")
+            self.data_file.unlink()
+
+        # Remove copied input file
+        if self.input_file.exists() and not self.input_file.is_symlink():
+            logger.debug(f"Removing file: {self.input_file}")
+            self.input_file.unlink()
+
+        # Remove copied parameter file
+        if self.parameter_file.exists() and not self.parameter_file.is_symlink():
+            logger.debug(f"Removing file: {self.parameter_file}")
+            self.parameter_file.unlink()
+
+        # Restore original paths
+        self.input_file = self._original_input_file
+        self.parameter_file = self._original_parameter_file
+        self.data_file = self._original_data_file
+
+        # Clear backup paths
+        self._original_input_file = None
+        self._original_parameter_file = None
+        self._original_data_file = None
 
 
 @dataclass

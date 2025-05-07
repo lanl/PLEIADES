@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Local backend implementation for SAMMY execution."""
 
+import shlex
 import subprocess
 import textwrap
 from datetime import datetime
@@ -43,6 +44,10 @@ class LocalSammyRunner(SammyRunner):
             logger.debug("Validating input files")
             files.validate()
 
+            # Move files to working directory - copy input and parameter files, symlink data file
+            logger.debug("Moving files to working directory")
+            files.move_to_working_dir(self.config.working_dir)
+
             # No need to validate directories as this is done in config validation
             logger.debug("Environment preparation complete")
 
@@ -59,9 +64,9 @@ class LocalSammyRunner(SammyRunner):
 
         sammy_command = textwrap.dedent(f"""\
             {self.config.sammy_executable} <<EOF
-            {files.input_file.relative_to(self.config.working_dir)}
-            {files.parameter_file.relative_to(self.config.working_dir)}
-            {files.data_file.relative_to(self.config.working_dir)}
+            {shlex.quote(files.input_file.name)}
+            {shlex.quote(files.parameter_file.name)}
+            {shlex.quote(files.data_file.name)}
             EOF""")
 
         try:
