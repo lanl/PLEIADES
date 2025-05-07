@@ -66,18 +66,21 @@ class LstData(BaseModel):
     )
     data: Optional[pd.DataFrame] = Field(default=None, exclude=True)
 
-    # Column names as per SAMMY LST output (adjust as needed)
-    _column_names = [
+    # All possible columns in a SAMMY.LPT file (always in this order)
+    _all_column_names = [
         "Energy",
         "Experimental cross section (barns)",
-        "Absolute uncertainty in experimental cross section",
+        "Absolute uncertainty in experimental cross section (barns)",
         "Zeroth-order theoretical cross section as evaluated by SAMMY (barns)",
         "Final theoretical cross section as evaluated by SAMMY (barns)",
         "Experimental transmission (dimensionless)",
         "Absolute uncertainty in experimental transmission",
         "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)",
-        "Final theoretical transmission as evaluated by SAMMY (dimensionless)",
-        "Theoretical uncertainty",
+        "Final theoretical transmission as evaluated by SAMMY (dimensionless)",       
+        "Theoretical uncertainty on Zeroth-order theoretical cross section or transmission",
+        "Theoretical uncertainty on Final theoretical cross section or transmission",
+        "Adjusted energy initially",
+        "Adjusted energy finally",
     ]
 
     def model_post_init(self, __context):
@@ -87,7 +90,8 @@ class LstData(BaseModel):
     def load(self):
         """Load the LST file into a pandas DataFrame and validate columns."""
         self.data = pd.read_csv(self.data_file, sep=r"\s+", header=None, comment="#")
-        self.data.columns = self._column_names[: self.data.shape[1]]
+        n_cols = self.data.shape[1]
+        self.data.columns = self._all_column_names[:n_cols]
         self.validate_columns()
 
     def validate_columns(self):
@@ -97,14 +101,12 @@ class LstData(BaseModel):
             "Absolute uncertainty in experimental transmission",
             "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)",
             "Final theoretical transmission as evaluated by SAMMY (dimensionless)",
-            "Theoretical uncertainty",
         ]
         cross_section_cols = [
             "Experimental cross section (barns)",
             "Absolute uncertainty in experimental cross section",
             "Zeroth-order theoretical cross section as evaluated by SAMMY (barns)",
             "Final theoretical cross section as evaluated by SAMMY (barns)",
-            "Theoretical uncertainty",
         ]
 
         if self.data_type == DataTypeOptions.TRANSMISSION:
