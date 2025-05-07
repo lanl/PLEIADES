@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -22,6 +22,7 @@ class DataTypeOptions(str, Enum):
     SELF_INDICATION = "SELF INDICATION"
     INTEGRAL = "INTEGRAL"
     COMBINATION = "COMBINATION"
+
 
 class sammyData(BaseModel):
     """
