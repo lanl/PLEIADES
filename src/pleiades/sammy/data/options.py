@@ -121,7 +121,6 @@ class sammyData(BaseModel):
     def plot_cross_section(self):
         """Plot the cross-section data."""
         if self.data is not None:
-            import matplotlib.pyplot as plt
 
             plt.figure(figsize=(10, 6))
             plt.plot(self.data["Energy"], self.data["Experimental cross section (barns)"], label="Experimental cross section")
