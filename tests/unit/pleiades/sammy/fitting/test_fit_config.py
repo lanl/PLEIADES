@@ -2,7 +2,7 @@ import pytest
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
-from pleiades.sammy.data.options import dataParameters
+from pleiades.sammy.data.options import sammyData
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.sammy.fitting.options import (
     BroadeningTypeOptions,
@@ -18,7 +18,7 @@ def test_fit_config_defaults():
     """Test the default values of FitConfig."""
     nuclear_params = nuclearParameters()
     physics_params = PhysicsParameters()
-    data_params = dataParameters()
+    data_params = sammyData()
     options_and_routines = FitOptions()
 
     config = FitConfig(
@@ -46,13 +46,11 @@ def test_fit_config_custom_values():
     """Test custom values of FitConfig."""
     nuclear_params = nuclearParameters()
     physics_params = PhysicsParameters()
-    data_params = dataParameters(
-        data_file="custom.dat",
+    data_params = sammyData(
+        data_file=Path("custom.dat"),
         data_type="CAPTURE",
         energy_units="keV",
         cross_section_units="millibarn",
-        data_title="Custom Data",
-        data_comment="This is a custom data set.",
     )
     options_and_routines = FitOptions(
         RMatrix=RMatrixOptions.ORIGINAL_REICH_MOORE,
