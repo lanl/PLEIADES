@@ -78,7 +78,9 @@ class ResultsManager:
         else:
             logger.warning("No results data available.")
 
-    def plot_transmission(self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False):
+    def plot_transmission(
+        self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False
+    ):
         """Plot the transmission data from the results."""
         if self.run_results.data:
             # Check if data type is transmission
@@ -89,7 +91,9 @@ class ResultsManager:
         else:
             logger.warning("No results data available for plotting.")
 
-    def plot_cross_section(self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False):
+    def plot_cross_section(
+        self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False
+    ):
         """Plot the cross-section data from the results."""
         if self.run_results.data:
             if self.run_results.data.data_type == "CROSS_SECTION" or override_data_type:

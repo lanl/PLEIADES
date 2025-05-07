@@ -1,9 +1,9 @@
 from enum import Enum
 from pathlib import Path
 from typing import Optional
-import numpy as np
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
@@ -129,7 +129,8 @@ class sammyData(BaseModel):
 
         if show_diff:
             fig, ax = plt.subplots(
-                2, 2,
+                2,
+                2,
                 sharey=False,
                 figsize=(8, 6),
                 gridspec_kw={"width_ratios": [5, 1], "height_ratios": [5, 2]},
@@ -165,12 +166,11 @@ class sammyData(BaseModel):
         ax[0].set_xticks([])
         ax[0].legend(["data", "final fit"])
         ax[0].set_ylabel("transmission")
-        
+
         # Determine y-axis limits
         max_y = data[col_exp].max()
         min_y = data[col_exp].min()
         ax[0].set_ylim(min_y, max_y)
-        
 
         if show_diff:
             ax[1].spines["right"].set_visible(False)
