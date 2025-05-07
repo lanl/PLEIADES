@@ -43,3 +43,10 @@ class Facility:
     ornl = "ornl"
     lanl = "lanl"
     
+
+class NormalizationStatus:
+    all_nexus_file_found = False
+    all_spectra_file_found = False
+    all_shutter_counts_file_found = False
+    all_proton_charge_value_found = False
+    all_list_shutter_values_for_each_image_found = False

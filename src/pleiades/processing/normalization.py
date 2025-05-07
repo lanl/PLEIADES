@@ -1,11 +1,15 @@
 import os
 import numpy as np
 
-from pleiades.processing import Roi, MasterDictKeys, Facility
+from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
-from pleiades.utils.timepix import update_with_nexus_files, update_with_proton_charge, update_with_shutter_counts
+from pleiades.utils.timepix import update_with_nexus_files
+from pleiades.utils.timepix import update_with_shutter_counts
+from pleiades.utils.timepix import update_with_proton_charge
+from pleiades.utils.timepix import update_with_spectra_files
+from pleiades.utils.timepix import update_with_shutter_values
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -36,6 +40,7 @@ logger = loguru_logger.bind(name="normalization")
 #  - numpy (otional)
 #  - output folder (optional)
 
+
 def init_master_dict(list_folders: list) -> dict:
     """
     Initialize a master dictionary to store the data from each sample and open beam folders.
@@ -50,6 +55,7 @@ def init_master_dict(list_folders: list) -> dict:
                                MasterDictKeys.list_tif: [], 
                                MasterDictKeys.shutter_counts: None,
                                MasterDictKeys.list_spectra: [],
+                               MasterDictKeys.list_shutters: [],
                                MasterDictKeys.data: None}
     return master_dict
 
@@ -114,6 +120,8 @@ def normalization(list_sample_folders: list,
     logger.info(f"\tOutput numpy: {output_numpy}")
     logger.info(f"##############################")
 
+    normalization_status = NormalizationStatus()
+
     #checking all the inputs
     
     # Check if the input folders are valid
@@ -130,20 +138,25 @@ def normalization(list_sample_folders: list,
     ob_master_dict = init_master_dict(list_obs_folders)
 
     # update with the nexus files
-    update_with_nexus_files(sample_master_dict, nexus_path, facility=facility)
-    update_with_nexus_files(ob_master_dict, nexus_path, facility=facility)
+    update_with_nexus_files(sample_master_dict, normalization_status, nexus_path, facility=facility)
+    update_with_nexus_files(ob_master_dict, normalization_status, nexus_path, facility=facility)
 
     # update with proton charge
-    update_with_proton_charge(sample_master_dict, facility=facility)
-    update_with_proton_charge(ob_master_dict, facility=facility)
+    update_with_proton_charge(sample_master_dict, normalization_status, facility=facility)
+    update_with_proton_charge(ob_master_dict, normalization_status, facility=facility)
 
     # update with the shutter counts
-    update_with_shutter_counts(sample_master_dict, facility=facility)
-    update_with_shutter_counts(ob_master_dict, facility=facility)
+    update_with_shutter_counts(sample_master_dict, normalization_status, facility=facility)
+    update_with_shutter_counts(ob_master_dict, normalization_status, facility=facility)
     
+    # update with spectra files
+    update_with_spectra_files(sample_master_dict, normalization_status, facility=facility)
+    update_with_spectra_files(ob_master_dict, normalization_status, facility=facility)
 
+    # update with list of shutter values for each image
+    update_with_shutter_values(sample_master_dict, normalization_status, facility=facility)
+    update_with_shutter_values(ob_master_dict, normalization_status, facility=facility)
 
-    
 
     # # process open beams
     # for obs_folder in list_obs_folders:
