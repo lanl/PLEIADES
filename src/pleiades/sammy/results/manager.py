@@ -16,11 +16,7 @@ class ResultsManager:
     Attributes:
         run_results (RunResults): A container for multiple fit results.
     """
-
-    # initialize the ResultsManager with a fit result class
-    def __init__(self):
-        self.run_results = RunResults()
-
+    
     # Initialize a LptManager object to manage the LPT file
     def __init__(
         self,
@@ -60,6 +56,11 @@ class ResultsManager:
             logger.info(f"Fit Result {index}:\n{json.dumps(fit_result.model_dump(), indent=2, default=str)}")
         else:
             logger.warning(f"No fit result found at index {index}.")
+
+    def print_number_of_fit_results(self):
+        """Print the number of fit results."""
+        num_fit_results = len(self.run_results.fit_results)
+        logger.info(f"Number of fit results: {num_fit_results}")
 
     # Print the run results in a readable format
     def print_run_results(self):
