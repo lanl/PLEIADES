@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -22,6 +23,7 @@ class DataTypeOptions(str, Enum):
     SELF_INDICATION = "SELF INDICATION"
     INTEGRAL = "INTEGRAL"
     COMBINATION = "COMBINATION"
+
 
 class sammyData(BaseModel):
     """
