@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from pleiades.sammy.data.options import DataTypeOptions, sammyData
 from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
