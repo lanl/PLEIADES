@@ -20,13 +20,11 @@ def test_sammy_data_defaults():
 def test_sammy_data_custom_values():
     """Test custom values of sammyData."""
     params = sammyData(
-        data_file=Path("custom.dat"),
         data_type=DataTypeOptions.CAPTURE,
         energy_units=EnergyUnitOptions.keV,
         cross_section_units=CrossSectionUnitOptions.millibarn,
     )
 
-    assert params.data_file == Path("custom.dat")
     assert params.data_type == DataTypeOptions.CAPTURE
     assert params.energy_units == EnergyUnitOptions.keV
     assert params.cross_section_units == CrossSectionUnitOptions.millibarn
