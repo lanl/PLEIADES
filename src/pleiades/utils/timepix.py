@@ -1,6 +1,7 @@
 import os
 
 from pleiades.processing import MasterDictKeys, Facility
+from pleiades.utils.nexus import get_proton_charge
 
 
 def get_shutter_values_dict(list_sample_folders: list, list_obs_folders: list, timepix: object) -> dict:
@@ -58,3 +59,28 @@ def update_with_nexus_files_at_ornl(master_dict: dict, nexus_path: str) -> None:
             master_dict[folder][MasterDictKeys.nexus_path] = nexus_file
         else:
             return
+
+def update_with_proton_charge(master_dict: dict, facility=Facility.ornl) -> None:
+    """
+    Update the master dictionary with the proton charge values.
+    """
+
+    if facility == Facility.ornl:
+        update_with_proton_charge_at_ornl(master_dict)
+    else:
+        # Implement the logic for other facilities if needed
+        pass
+
+
+def update_with_proton_charge_at_ornl(master_dict: dict) -> None:
+    """
+    Update the master dictionary with the proton charge values for ORNL.
+    """
+
+    for key in master_dict.keys():
+        nexus = master_dict[key][MasterDictKeys.nexus_path]
+        proton_charge = get_proton_charge(nexus, units='c')
+        if proton_charge is not None:
+            master_dict[key][MasterDictKeys.proton_charge] = proton_charge
+        else:
+            pass

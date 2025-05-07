@@ -5,8 +5,7 @@ from pleiades.processing import Roi, MasterDictKeys, Facility
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
-from pleiades.utils.nexus import get_proton_charge_dict
-from pleiades.utils.timepix_at_VENUS import update_with_nexus_files
+from pleiades.utils.timepix import update_with_nexus_files, update_with_proton_charge
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -83,8 +82,6 @@ def normalization(list_sample_folders: list,
     if the output_folder is provided, the data will be saved in the folder
     if the output_numpy flag is True, the data will be saved as numpy arrays
     
-
-
     Parameters:
     - list_sample_folders: List of sample folders containing tiff or fits files.
     - list_obs_folders: List of open beam folders containing tiff or fits files.
@@ -137,6 +134,10 @@ def normalization(list_sample_folders: list,
     update_with_nexus_files(ob_master_dict, nexus_path, facility=facility)
 
     # update with proton charge
+    update_with_proton_charge(sample_master_dict, facility=facility)
+    update_with_proton_charge(ob_master_dict, facility=facility)
+
+    logger.info(f"Sample master dict: {sample_master_dict}")
 
     # update with the shutter values
 
@@ -145,48 +146,48 @@ def normalization(list_sample_folders: list,
 
     
 
-    # process open beams
-    for obs_folder in list_obs_folders:
-        if not os.path.exists(obs_folder):
-            raise ValueError(f"Observation folder {obs_folder} does not exist.")
+    # # process open beams
+    # for obs_folder in list_obs_folders:
+    #     if not os.path.exists(obs_folder):
+    #         raise ValueError(f"Observation folder {obs_folder} does not exist.")
 
-        # retrieve list of files in the observation folder
-        list_obs_files, ext = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
+    #     # retrieve list of files in the observation folder
+    #     list_obs_files, ext = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
 
-        # load the observation data
-        list_obs_data = load(list_obs_files, ext)
+    #     # load the observation data
+    #     list_obs_data = load(list_obs_files, ext)
 
-        # crop the data if requested
-        if crop_roi is not None:
-            list_obs_data = crop(list_obs_data, crop_roi)
+    #     # crop the data if requested
+    #     if crop_roi is not None:
+    #         list_obs_data = crop(list_obs_data, crop_roi)
 
-        # rebin the data if requested
-        if pixel_binning > 1:
-            list_obs_data = rebin(list_obs_data, pixel_binning)
+    #     # rebin the data if requested
+    #     if pixel_binning > 1:
+    #         list_obs_data = rebin(list_obs_data, pixel_binning)
 
-        # combine the normalized data
-        if len(list_obs_data) > 1:
-            ob_data = combine(list_obs_data)
-        else:
-            ob_data = list_obs_data[0]
+    #     # combine the normalized data
+    #     if len(list_obs_data) > 1:
+    #         ob_data = combine(list_obs_data)
+    #     else:
+    #         ob_data = list_obs_data[0]
 
-    for sample_folder in list_sample_folders:
-        if not os.path.exists(sample_folder):
-            raise ValueError(f"Sample folder {sample_folder} does not exist.")
+    # for sample_folder in list_sample_folders:
+    #     if not os.path.exists(sample_folder):
+    #         raise ValueError(f"Sample folder {sample_folder} does not exist.")
 
-        # retrieve list of files in the sample folder
-        list_sample_files, ext = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
+    #     # retrieve list of files in the sample folder
+    #     list_sample_files, ext = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
 
-        # load the sample data
-        list_sample_data = load(list_sample_files, ext)
+    #     # load the sample data
+    #     list_sample_data = load(list_sample_files, ext)
         
-        # crop the data if requested
-        if crop_roi is not None:
-            list_sample_data = crop(list_sample_data, crop_roi)
+    #     # crop the data if requested
+    #     if crop_roi is not None:
+    #         list_sample_data = crop(list_sample_data, crop_roi)
 
-        # rebin the data if requested
-        if pixel_binning > 1:
-            list_sample_data = rebin(list_sample_data, pixel_binning)
+    #     # rebin the data if requested
+    #     if pixel_binning > 1:
+    #         list_sample_data = rebin(list_sample_data, pixel_binning)
 
         # 
 
@@ -196,8 +197,7 @@ if __name__ == "__main__":
     normalization(
         list_sample_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7820"],
         list_obs_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7816"],
-        list_nexus_sample_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7820.nxs.h5"],
-        list_nexus_obs_file=["/Users/j35/SNS/VENUS/IPTS-35945/nexus/VENUS_7816.nxs.h5"],
+        nexus_path="/Users/j35/SNS/VENUS/IPTS-35945/nexus",
         # background_roi=Roi(0, 0, 10, 10),
         crop_roi=Roi(10, 10, 200, 200),
         timepix=True,
