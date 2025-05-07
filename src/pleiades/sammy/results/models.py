@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +11,7 @@ class ChiSquaredResults(BaseModel):
     """
     Container for chi-squared values and related statistics.
     """
+
     chi_squared: Optional[float] = Field(default=None, description="Chi-squared value")
     dof: Optional[int] = Field(default=None, description="Number of data points")
     reduced_chi_squared: Optional[float] = Field(default=None, description="Reduced chi-squared value")
