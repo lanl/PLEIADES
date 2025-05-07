@@ -16,7 +16,7 @@ class ResultsManager:
     Attributes:
         run_results (RunResults): A container for multiple fit results.
     """
-    
+
     # Initialize a LptManager object to manage the LPT file
     def __init__(
         self,
@@ -27,7 +27,7 @@ class ResultsManager:
 
         # Convert to Path if passed as string
         if lpt_file_path is not None and not isinstance(lpt_file_path, Path):
-            lpt_file_path = Path(lpt_file_path)            
+            lpt_file_path = Path(lpt_file_path)
         if lst_file_path is not None and not isinstance(lst_file_path, Path):
             lst_file_path = Path(lst_file_path)
 
@@ -88,7 +88,7 @@ class ResultsManager:
                 logger.warning("Data type is not transmission. Cannot plot.")
         else:
             logger.warning("No results data available for plotting.")
-    
+
     def plot_cross_section(self, override_data_type: bool = False):
         """Plot the cross-section data from the results."""
         if self.run_results.data:
@@ -98,7 +98,7 @@ class ResultsManager:
                 logger.warning("Data type is not cross-section. Cannot plot.")
         else:
             logger.warning("No results data available for plotting.")
-            
+
     def get_data(self):
         """Get the data from the results."""
         if self.run_results.data:

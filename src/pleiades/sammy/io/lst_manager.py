@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from pleiades.sammy.data.options import sammyData
 from pleiades.sammy.results.models import RunResults
 
@@ -41,11 +42,6 @@ class LstManager:
                 raise FileNotFoundError(f"The file {lst_file_path} does not exist.")
             else:
                 self.process_lst_file(lst_file_path, self.run_results)
-
-            
-            
-            
-            
 
     def process_lst_file(self, lst_file_path: Path, run_results: RunResults):
         """

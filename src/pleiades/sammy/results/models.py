@@ -65,7 +65,9 @@ class RunResults(BaseModel):
     """
 
     fit_results: list[FitResults] = Field(default_factory=list, description="List of FitResults from multiple fits.")
-    data: sammyData = Field(default_factory=sammyData, description="Container for LST data loaded from a SAMMY .LST file.")
+    data: sammyData = Field(
+        default_factory=sammyData, description="Container for LST data loaded from a SAMMY .LST file."
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
