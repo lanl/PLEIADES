@@ -1,6 +1,7 @@
 import json
 
 from pleiades.sammy.io.lpt_manager import LptManager
+from pleiades.sammy.io.lst_manager import LstManager
 from pleiades.sammy.results.models import FitResults, RunResults
 from pleiades.utils.logger import loguru_logger
 
@@ -32,8 +33,7 @@ class ResultsManager:
         if lpt_file_path is not None:
             self.lpt_manager = LptManager(lpt_file_path, self.run_results)
         if lst_file_path is not None:
-            # self.lst_manager = LstManager(lst_file_path)  # Implement if needed
-            pass
+            self.lst_manager = LstManager(lst_file_path, self.run_results)
 
     def add_fit_result(self, fit_result: FitResults):
         """Add a FitResults object to the RunResults."""
@@ -62,3 +62,10 @@ class ResultsManager:
                 logger.info(f"Fit Result: {fit_result}")
         else:
             logger.warning("No fit results available.")
+            
+    def print_results_data(self):
+        """Print the results data in a readable format."""
+        if self.run_results.data:
+            logger.info(f"Results Data: {self.run_results.data}")
+        else:
+            logger.warning("No results data available.")
