@@ -7,21 +7,13 @@ from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import LstData
 
 
-class Chi2Results(BaseModel):
+class ChiSquaredResults(BaseModel):
     """
     Container for chi-squared values and related statistics.
     """
-
-    chi2_values: List[float] = Field(default_factory=list, description="List of chi-squared values")
-    dof: Optional[int] = Field(default=None, description="Degrees of freedom")
-    reduced_chi2: Optional[float] = Field(default=None, description="Reduced chi-squared value")
-
-    def add_chi2(self, value: float):
-        self.chi2_values.append(value)
-
-    def calculate_reduced_chi2(self):
-        if self.dof and self.dof > 0 and self.chi2_values:
-            self.reduced_chi2 = sum(self.chi2_values) / self.dof
+    chi_squared: Optional[float] = Field(default=None, description="Chi-squared value")
+    dof: Optional[int] = Field(default=None, description="Number of data points")
+    reduced_chi_squared: Optional[float] = Field(default=None, description="Reduced chi-squared value")
 
 
 class FitResults(BaseModel):
@@ -34,7 +26,7 @@ class FitResults(BaseModel):
     physics_data: PhysicsParameters = Field(
         default_factory=PhysicsParameters, description="Experimental physics parameters"
     )
-    chi2_results: Chi2Results = Field(default_factory=Chi2Results, description="Chi-squared results")
+    chi_squared_results: ChiSquaredResults = Field(default_factory=ChiSquaredResults, description="Chi-squared results")
 
     def update_nuclear_data(self, new_data: nuclearParameters):
         """Update the nuclear data with new parameters."""
@@ -52,16 +44,16 @@ class FitResults(BaseModel):
         """Retrieve the current nuclear data."""
         return self.nuclear_data
 
-    def get_chi2_results(self) -> Chi2Results:
+    def get_chi_squared_results(self) -> ChiSquaredResults:
         """Retrieve the current chi-squared results."""
-        return self.chi2_results
+        return self.chi_squared_results
 
     def __init__(self, **data):
         super().__init__(**data)
         # Initialize nuclear and physics data with default values
         self.nuclear_data = nuclearParameters()
         self.physics_data = PhysicsParameters()
-        self.chi2_results = Chi2Results()
+        self.chi_squared_results = ChiSquaredResults()
 
 
 class RunResults(BaseModel):
