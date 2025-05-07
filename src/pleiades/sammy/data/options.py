@@ -1,7 +1,7 @@
 from enum import Enum
 from pathlib import Path
 from typing import Optional
-from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from pydantic import BaseModel, Field
@@ -107,10 +107,13 @@ class sammyData(BaseModel):
     def plot_transmission(self, show_diff=False, plot_uncertainty=False):
         """Plot the transmission data."""
         if self.data is not None:
-        
             plt.figure(figsize=(10, 6))
             plt.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
-            plt.plot(self.data["Energy"], self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Final theoretical transmission")
+            plt.plot(
+                self.data["Energy"],
+                self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"],
+                label="Final theoretical transmission",
+            )
             plt.xlabel(f"Energy ({self.energy_units})")
             plt.ylabel("Transmission (dimensionless)")
             plt.title("Transmission Data")
@@ -123,10 +126,15 @@ class sammyData(BaseModel):
     def plot_cross_section(self):
         """Plot the cross-section data."""
         if self.data is not None:
-
             plt.figure(figsize=(10, 6))
-            plt.plot(self.data["Energy"], self.data["Experimental cross section (barns)"], label="Experimental cross section")
-            plt.plot(self.data["Energy"], self.data["Final theoretical cross section as evaluated by SAMMY (barns)"], label="Final theoretical cross section")
+            plt.plot(
+                self.data["Energy"], self.data["Experimental cross section (barns)"], label="Experimental cross section"
+            )
+            plt.plot(
+                self.data["Energy"],
+                self.data["Final theoretical cross section as evaluated by SAMMY (barns)"],
+                label="Final theoretical cross section",
+            )
             plt.xlabel(f"Energy ({self.energy_units})")
             plt.ylabel(f"Cross section ({self.cross_section_units})")
             plt.title("Cross Section Data")
