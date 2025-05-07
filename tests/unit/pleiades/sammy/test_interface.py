@@ -53,6 +53,48 @@ class TestSammyFiles:
             files.validate()
         assert "is not a file" in str(exc.value)
 
+    def test_move_to_working_dir(self, mock_sammy_files, tmp_path):
+        """Test file copying and symlinking to working directory."""
+        # Create a new working directory
+        working_dir = tmp_path / "working_dir"
+        working_dir.mkdir()
+
+        # Create the files container with valid files
+        files = SammyFiles(**mock_sammy_files)
+
+        # Save original paths
+        original_input = files.input_file
+        original_parameter = files.parameter_file
+        original_data = files.data_file
+
+        # Move files to working directory
+        files.move_to_working_dir(working_dir)
+
+        # Check paths have been updated
+        assert files.input_file.parent == working_dir
+        assert files.parameter_file.parent == working_dir
+        assert files.data_file.parent == working_dir
+
+        # Check filenames remain the same
+        assert files.input_file.name == original_input.name
+        assert files.parameter_file.name == original_parameter.name
+        assert files.data_file.name == original_data.name
+
+        # Verify input and parameter files were copied
+        assert files.input_file.exists()
+        assert files.parameter_file.exists()
+        assert not files.input_file.is_symlink()
+        assert not files.parameter_file.is_symlink()
+
+        # Verify data file was symlinked
+        assert files.data_file.exists()
+        assert files.data_file.is_symlink()
+
+        # Verify original paths were stored
+        assert files._original_input_file == original_input
+        assert files._original_parameter_file == original_parameter
+        assert files._original_data_file == original_data
+
 
 class TestSammyExecutionResult:
     """Tests for SammyExecutionResult data structure."""
