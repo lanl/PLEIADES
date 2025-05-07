@@ -69,14 +69,15 @@ class LstData(BaseModel):
     # Column names as per SAMMY LST output (adjust as needed)
     _column_names = [
         "Energy",
-        "Experimental cross section",
+        "Experimental cross section (barns)",
         "Absolute uncertainty in experimental cross section",
-        "Zeroth-order theoretical cross section",
-        "Final theoretical cross section",
-        "Experimental transmission",
+        "Zeroth-order theoretical cross section as evaluated by SAMMY (barns)",
+        "Final theoretical cross section as evaluated by SAMMY (barns)",
+        "Experimental transmission (dimensionless)",
         "Absolute uncertainty in experimental transmission",
-        "Zeroth-order theoretical transmission",
-        "Final theoretical transmission",
+        "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)",
+        "Final theoretical transmission as evaluated by SAMMY (dimensionless)",
+        "Theoretical uncertainty",
     ]
 
     def model_post_init(self, __context):
@@ -92,16 +93,18 @@ class LstData(BaseModel):
     def validate_columns(self):
         """Validate columns based on data_type."""
         transmission_cols = [
-            "Experimental transmission",
+            "Experimental transmission (dimensionless)",
             "Absolute uncertainty in experimental transmission",
-            "Zeroth-order theoretical transmission",
-            "Final theoretical transmission",
+            "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)",
+            "Final theoretical transmission as evaluated by SAMMY (dimensionless)",
+            "Theoretical uncertainty",
         ]
         cross_section_cols = [
-            "Experimental cross section",
+            "Experimental cross section (barns)",
             "Absolute uncertainty in experimental cross section",
-            "Zeroth-order theoretical cross section",
-            "Final theoretical cross section",
+            "Zeroth-order theoretical cross section as evaluated by SAMMY (barns)",
+            "Final theoretical cross section as evaluated by SAMMY (barns)",
+            "Theoretical uncertainty",
         ]
 
         if self.data_type == DataTypeOptions.TRANSMISSION:
