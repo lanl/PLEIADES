@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from pleiades.sammy.io.lpt_manager import LptManager
 from pleiades.sammy.io.lst_manager import LstManager
@@ -23,10 +24,16 @@ class ResultsManager:
     # Initialize a LptManager object to manage the LPT file
     def __init__(
         self,
-        lpt_file_path: str = None,
-        lst_file_path: str = None,
+        lpt_file_path: Path = None,
+        lst_file_path: Path = None,
     ):
         self.run_results = RunResults()
+
+        # Convert to Path if passed as string
+        if lpt_file_path is not None and not isinstance(lpt_file_path, Path):
+            lpt_file_path = Path(lpt_file_path)            
+        if lst_file_path is not None and not isinstance(lst_file_path, Path):
+            lst_file_path = Path(lst_file_path)
 
         # Initialize the managers based on the provided file paths
         # If a file path is provided, process the file and extract results.
