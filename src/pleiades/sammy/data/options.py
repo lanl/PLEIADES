@@ -53,7 +53,7 @@ class sammyData(BaseModel):
         "Experimental transmission (dimensionless)",
         "Absolute uncertainty in experimental transmission",
         "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)",
-        "Final theoretical transmission as evaluated by SAMMY (dimensionless)",       
+        "Final theoretical transmission as evaluated by SAMMY (dimensionless)",
         "Theoretical uncertainty on Zeroth-order theoretical cross section or transmission",
         "Theoretical uncertainty on Final theoretical cross section or transmission",
         "Adjusted energy initially",
