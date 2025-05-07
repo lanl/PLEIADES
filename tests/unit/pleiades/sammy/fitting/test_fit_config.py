@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
