@@ -109,18 +109,38 @@ class sammyData(BaseModel):
         if self.data is not None:
         
             plt.figure(figsize=(10, 6))
-            plt.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
-            plt.plot(self.data["Energy"], self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Final theoretical transmission")
-            plt.xlabel(f"Energy ({self.energy_units})")
-            plt.ylabel("Transmission (dimensionless)")
-            plt.title("Transmission Data")
-            plt.legend()
-            plt.grid()
-            plt.show()
+            
+            # if plotting difference, create a subplot that shares the x-axis
+            if show_diff:
+                fig, ax1 = plt.subplots(figsize=(10, 6))
+                ax1.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
+                ax1.plot(self.data["Energy"], self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Final theoretical transmission")
+                ax1.set_xlabel(f"Energy ({self.energy_units})")
+                ax1.set_ylabel("Transmission (dimensionless)")
+                ax1.set_title("Transmission Data")
+                ax1.legend()
+                ax1.grid()
+                ax2 = ax1.twinx()
+                ax2.set_ylabel("Difference (dimensionless)")
+                ax2.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"] - self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Difference", color='red')
+                ax2.legend(loc='upper right')
+                ax2.grid()
+                plt.show()
+              
+            # if not plotting difference, plot the data normally
+            else:  
+                plt.plot(self.data["Energy"], self.data["Experimental transmission (dimensionless)"], label="Experimental")
+                plt.plot(self.data["Energy"], self.data["Final theoretical transmission as evaluated by SAMMY (dimensionless)"], label="Final theoretical transmission")
+                plt.xlabel(f"Energy ({self.energy_units})")
+                plt.ylabel("Transmission (dimensionless)")
+                plt.title("Transmission Data")
+                plt.legend()
+                plt.grid()
+                plt.show()
         else:
             raise ValueError("No data loaded to plot.")
 
-    def plot_cross_section(self):
+    def plot_cross_section(self, show_diff=False, plot_uncertainty=False):
         """Plot the cross-section data."""
         if self.data is not None:
 
