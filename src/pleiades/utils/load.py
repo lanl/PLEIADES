@@ -2,6 +2,7 @@ import numpy as np
 import os
 from dxchange.reader import read_tiff, read_fits
 
+from pleiades.processing import MasterDictKeys
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="load")
 

@@ -48,10 +48,16 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
     return rebinned_data
 
 
-def combine(data: np.ndarray) -> np.ndarray:
+def combine(data: np.ndarray, 
+            master_dict: dict, 
+            use_proton_charge: bool, 
+            use_shutter_counts: bool) -> np.ndarray:
     """
     Combine multiple 2D arrays using np.median
     """
+
+    # FIXME: this function should take into account proton charge and shutter counts
+
     logger.info(f"Combining data with shape {data.shape}")
     if data is None or len(data) == 0:
         raise ValueError("No data provided for combination.")

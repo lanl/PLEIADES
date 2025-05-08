@@ -36,6 +36,8 @@ class MasterDictKeys:
     data_type = "data_type"
     list_folders = "list_folders"
     
+    data = "data"
+
     frame_number = "frame_number"
     proton_charge = "proton_charge"
     matching_ob = "matching_ob"

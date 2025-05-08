@@ -10,6 +10,9 @@ from pleiades.utils.timepix import update_with_proton_charge
 from pleiades.utils.timepix import update_with_spectra_files
 from pleiades.utils.timepix import update_with_shutter_values
 from pleiades.processing.normalization_handler import update_with_list_of_files
+from pleiades.processing.normalization_handler import update_with_data
+from pleiades.processing.normalization_handler import update_with_crop
+from pleiades.processing.normalization_handler import update_with_rebin
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -50,6 +53,7 @@ def init_master_dict(list_folders: list, data_type: DataType = DataType.sample) 
                    }
     for folder in list_folders:
         master_dict[MasterDictKeys.list_folders][folder] = {MasterDictKeys.nexus_path: None, 
+                                                            MasterDictKeys.data: None,
                                                             MasterDictKeys.frame_number: None, 
                                                             MasterDictKeys.data_path: None, 
                                                             MasterDictKeys.proton_charge: None,
@@ -127,7 +131,8 @@ def normalization(list_sample_folders: list,
     logger.info(f"\tFacility: {facility}")
     logger.info(f"##############################")
 
-    normalization_status = NormalizationStatus()
+    sample_normalization_status = NormalizationStatus()
+    ob_normalization_status = NormalizationStatus()
 
     #checking all the inputs
     
@@ -145,78 +150,103 @@ def normalization(list_sample_folders: list,
     ob_master_dict = init_master_dict(list_obs_folders, data_type=DataType.ob)
 
     # update with the nexus files
-    update_with_nexus_files(sample_master_dict, normalization_status, nexus_path, facility=facility)
-    update_with_nexus_files(ob_master_dict, normalization_status, nexus_path, facility=facility)
+    update_with_nexus_files(sample_master_dict, sample_normalization_status, nexus_path, facility=facility)
+    update_with_nexus_files(ob_master_dict, ob_normalization_status, nexus_path, facility=facility)
 
     # update with list of files in sample and open beam folders
     update_with_list_of_files(sample_master_dict)
     update_with_list_of_files(ob_master_dict)
 
     # update with proton charge
-    update_with_proton_charge(sample_master_dict, normalization_status, facility=facility)
-    update_with_proton_charge(ob_master_dict, normalization_status, facility=facility)
+    update_with_proton_charge(sample_master_dict, sample_normalization_status, facility=facility)
+    update_with_proton_charge(ob_master_dict, ob_normalization_status, facility=facility)
 
     # update with the shutter counts
-    update_with_shutter_counts(sample_master_dict, normalization_status, facility=facility)
-    update_with_shutter_counts(ob_master_dict, normalization_status, facility=facility)
+    update_with_shutter_counts(sample_master_dict, sample_normalization_status, facility=facility)
+    update_with_shutter_counts(ob_master_dict, ob_normalization_status, facility=facility)
     
     # update with spectra files
-    update_with_spectra_files(sample_master_dict, normalization_status, facility=facility)
-    update_with_spectra_files(ob_master_dict, normalization_status, facility=facility)
+    update_with_spectra_files(sample_master_dict, sample_normalization_status, facility=facility)
+    update_with_spectra_files(ob_master_dict, ob_normalization_status, facility=facility)
 
     # update with list of shutter values for each image
-    update_with_shutter_values(sample_master_dict, normalization_status, facility=facility)
-    update_with_shutter_values(ob_master_dict, normalization_status, facility=facility)
+    update_with_shutter_values(sample_master_dict, sample_normalization_status, facility=facility)
+    update_with_shutter_values(ob_master_dict, ob_normalization_status, facility=facility)
 
-    # process open beams
-    logger.info(f"Processing open beam folders...")
-    for ob_folder in list_obs_folders:
+    # update with data
+    update_with_data(sample_master_dict)
+    update_with_data(ob_master_dict)
 
-        logger.info(f"\t working with {ob_folder} ...")
-        if not os.path.exists(ob_folder):
-            raise ValueError(f"Open beam folder {ob_folder} does not exist.")
-
-        # load the observation data
-        list_obs_data = load(list_of_files = ob_master_dict[MasterDictKeys.list_folders][ob_folder][MasterDictKeys.list_images], 
-                             file_extension = ob_master_dict[MasterDictKeys.list_folders][ob_folder][MasterDictKeys.ext])
-
-        # crop the data if requested
-        if crop_roi is not None:
-            list_obs_data = crop(list_obs_data, crop_roi)
-
-        # rebin the data if requested
-        if pixel_binning > 1:
-            list_obs_data = rebin(list_obs_data, pixel_binning)
-
-        # combine the normalized data
-        if len(list_obs_data) > 1:
-            ob_data = combine(list_obs_data)
-        else:
-            ob_data = list_obs_data[0]
-
-    # remove outliers if requested
-    if remove_outliers_flag:
-        ob_data = remove_outliers(data=ob_data[:],
-                                  dif=20,
-                                  num_threads=num_threads,)
-
-    for sample_folder in list_sample_folders:
-        if not os.path.exists(sample_folder):
-            raise ValueError(f"Sample folder {sample_folder} does not exist.")
-
-        # load the sample data
-        list_sample_data = load(list_of_files= sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_images],
-                                file_extension = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.ext])
+    # crop the data if requested
+    update_with_crop(sample_master_dict, roi=crop_roi)
+    update_with_crop(ob_master_dict, roi=crop_roi)
         
-        # crop the data if requested
-        if crop_roi is not None:
-            list_sample_data = crop(list_sample_data, crop_roi)
+    # rebin if requested
+    update_with_rebin(sample_master_dict, binning_factor=pixel_binning)
+    update_with_rebin(ob_master_dict, binning_factor=pixel_binning)
 
-        # rebin the data if requested
-        if pixel_binning > 1:
-            list_sample_data = rebin(list_sample_data, pixel_binning)
+    is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
+    is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
 
+    # # process open beams
+    # logger.info(f"Processing open beam folders...")
+    # for ob_folder in list_obs_folders:
+
+    #     logger.info(f"\t working with {ob_folder} ...")
+    #     if not os.path.exists(ob_folder):
+    #         raise ValueError(f"Open beam folder {ob_folder} does not exist.")
+
+    #     # crop the data if requested
+    #     if crop_roi is not None:
+    #         list_obs_data = crop(list_obs_data, crop_roi)
+
+    #     # rebin the data if requested
+    #     if pixel_binning > 1:
+    #         list_obs_data = rebin(list_obs_data, pixel_binning)
+
+    #     # combine the normalized data
+    
+    #     # if len(list_obs_data) > 1:
+    #     #     ob_data = combine(list_obs_data,
+    #     #                       ob_master_dict,
+    #     #                       use_proton_charge=is_normalization_by_proton_charge,
+    #     #                       use_shutter_counts=is_normalization_by_shutter_counts,)
+    #     # else:
+    #     #     ob_data = list_obs_data[0]
+
+    # # remove outliers if requested
+    # if remove_outliers_flag:
+    #     ob_data = remove_outliers(data=ob_data,
+    #                               dif=20,
+    #                               num_threads=num_threads,)
+
+    # for sample_folder in list_sample_folders:
+    #     if not os.path.exists(sample_folder):
+    #         raise ValueError(f"Sample folder {sample_folder} does not exist.")
+
+    #     # load the sample data
+    #     list_sample_data = load(list_of_files= sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_images],
+    #                             file_extension = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.ext])
         
+    #     # crop the data if requested
+    #     if crop_roi is not None:
+    #         list_sample_data = crop(list_sample_data, crop_roi)
+
+    #     # rebin the data if requested
+    #     if pixel_binning > 1:
+    #         list_sample_data = rebin(list_sample_data, pixel_binning)
+
+    #     # remove outliers if requested
+    #     if remove_outliers_flag:
+    #         list_sample_data = remove_outliers(data=list_sample_data,
+    #                                            dif=20,
+    #                                            num_threads=num_threads,)
+        
+    #     # normalization
+    #     is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
+
+
+
 
 
 if __name__ == "__main__":
