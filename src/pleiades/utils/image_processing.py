@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+from tomopy.misc.corr import remove_outlier
 
 from pleiades.processing import Roi
 from skimage.measure import block_reduce
@@ -59,3 +60,20 @@ def combine(data: np.ndarray) -> np.ndarray:
 
     logger.info(f"Combined data shape: {combined_data.shape}")  
     return combined_data
+
+
+def remove_outliers(data: np.ndarray, dif: float, num_threads: int) -> np.ndarray:
+    """
+    Remove outliers from a 2D array using tomopy remove_outliers.
+    https://tomopy.readthedocs.io/en/stable/api/tomopy.misc.corr.html#tomopy.misc.corr.remove_outlier
+    """
+    logger.info(f"Removing outliers from data with shape {data.shape} using threshold: {dif}")
+
+    if data is None or len(data) == 0:
+        raise ValueError("No data provided for outlier removal.")
+  
+    _data = np.array(data, dtype=np.float32)
+    cleaned_data = remove_outlier(_data, dif=dif, ncore=num_threads)
+
+    logger.info(f"Outliers removed. Data shape: {cleaned_data.shape} and data type: {cleaned_data.dtype}")
+    return cleaned_data

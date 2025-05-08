@@ -3,7 +3,7 @@ import numpy as np
 
 from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus, DataType
 from pleiades.utils.load import load
-from pleiades.utils.image_processing import rebin, crop, combine
+from pleiades.utils.image_processing import rebin, crop, combine, remove_outliers
 from pleiades.utils.timepix import update_with_nexus_files
 from pleiades.utils.timepix import update_with_shutter_counts
 from pleiades.utils.timepix import update_with_proton_charge
@@ -70,11 +70,12 @@ def normalization(list_sample_folders: list,
                   crop_roi: Roi = None,
                   timepix: bool = True, 
                   pixel_binning: int = 1, 
-                  remove_outliers: bool = False, 
+                  remove_outliers_flag: bool = False, 
                   rolling_average: bool = False, 
                   output_folder: str = None, 
                   output_numpy: bool = True,
-                  facility=Facility.ornl):
+                  facility=Facility.ornl,
+                  num_threads: int = 1):
     """
     Normalize the data from the sample and observation folders.
 
@@ -86,7 +87,7 @@ def normalization(list_sample_folders: list,
     if the background_roi is provided, the data will be normalized using the background region
     if the crop_roi is provided, the data will be cropped to the region of interest
     if the pixel_binning is provided, the data will be binned using the binning factor
-    if the remove_outliers flag is True, the data will be filtered using the outlier removal method
+    if the remove_outliers_flag flag is True, the data will be filtered using the outlier removal method
     if the rolling_average flag is True, the data will be smoothed using the rolling average method
     if the output_folder is provided, the data will be saved in the folder
     if the output_numpy flag is True, the data will be saved as numpy arrays
@@ -103,6 +104,7 @@ def normalization(list_sample_folders: list,
     - remove_outliers: Boolean indicating if outliers should be removed.
     - rolling_average: should a rolling average be applied.
     - output_folder: Folder to save the output (optional).
+    - num_threads: Number of threads to use for processing (default is 1).
 
     Returns:
     - Normalized data.
@@ -117,10 +119,12 @@ def normalization(list_sample_folders: list,
     logger.info(f"\tCrop ROI: {crop_roi}")
     logger.info(f"\tTimepix: {timepix}")
     logger.info(f"\tPixel binning: {pixel_binning}")
-    logger.info(f"\tRemove outliers: {remove_outliers}")
+    logger.info(f"\tRemove outliers flag: {remove_outliers_flag}")
     logger.info(f"\tRolling average: {rolling_average}")
     logger.info(f"\tOutput folder: {output_folder}")
     logger.info(f"\tOutput numpy: {output_numpy}")
+    logger.info(f"\tNumber of threads: {num_threads}")
+    logger.info(f"\tFacility: {facility}")
     logger.info(f"##############################")
 
     normalization_status = NormalizationStatus()
@@ -165,7 +169,10 @@ def normalization(list_sample_folders: list,
     update_with_shutter_values(ob_master_dict, normalization_status, facility=facility)
 
     # process open beams
+    logger.info(f"Processing open beam folders...")
     for ob_folder in list_obs_folders:
+
+        logger.info(f"\t working with {ob_folder} ...")
         if not os.path.exists(ob_folder):
             raise ValueError(f"Open beam folder {ob_folder} does not exist.")
 
@@ -187,25 +194,29 @@ def normalization(list_sample_folders: list,
         else:
             ob_data = list_obs_data[0]
 
-    # for sample_folder in list_sample_folders:
-    #     if not os.path.exists(sample_folder):
-    #         raise ValueError(f"Sample folder {sample_folder} does not exist.")
+    # remove outliers if requested
+    if remove_outliers_flag:
+        ob_data = remove_outliers(data=ob_data[:],
+                                  dif=20,
+                                  num_threads=num_threads,)
 
-    #     # retrieve list of files in the sample folder
-    #     list_sample_files, ext = retrieve_list_of_most_dominant_extension_from_folder(sample_folder)
+    for sample_folder in list_sample_folders:
+        if not os.path.exists(sample_folder):
+            raise ValueError(f"Sample folder {sample_folder} does not exist.")
 
-    #     # load the sample data
-    #     list_sample_data = load(list_sample_files, ext)
+        # load the sample data
+        list_sample_data = load(list_of_files= sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_images],
+                                file_extension = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.ext])
         
-    #     # crop the data if requested
-    #     if crop_roi is not None:
-    #         list_sample_data = crop(list_sample_data, crop_roi)
+        # crop the data if requested
+        if crop_roi is not None:
+            list_sample_data = crop(list_sample_data, crop_roi)
 
-    #     # rebin the data if requested
-    #     if pixel_binning > 1:
-    #         list_sample_data = rebin(list_sample_data, pixel_binning)
+        # rebin the data if requested
+        if pixel_binning > 1:
+            list_sample_data = rebin(list_sample_data, pixel_binning)
 
-        # 
+        
 
 
 if __name__ == "__main__":
@@ -218,9 +229,10 @@ if __name__ == "__main__":
         crop_roi=Roi(10, 10, 200, 200),
         timepix=True,
         pixel_binning=2,
-        remove_outliers=True,
-        rolling_average=True,
+        remove_outliers_flag=True,
+        rolling_average=False,
         output_folder="/Users/j35/SNS/IPTS-35945/processed",
-        output_numpy=True
+        output_numpy=True,
+        num_threads=4,
     )
 
