@@ -18,7 +18,7 @@ def load(list_of_files: list, file_extension: str) -> np.ndarray:
     - Loaded data.
     """
     
-    logger.info(f"Number of files: {len(list_of_files)}")
+    logger.info(f"loading {len(list_of_files)} files with extension {file_extension}")
 
     # Check if the input files are valid
     if not list_of_files:

@@ -44,6 +44,9 @@ def update_with_nexus_files(master_dict: dict,
     """
     Update the master dictionary with the nexus files.
     """
+    data_type = master_dict[MasterDictKeys.data_type]
+    logger.info(f"Updating {data_type} master dictionary with nexus files")
+
     if nexus_path is None:
         return
 
@@ -60,14 +63,14 @@ def update_with_nexus_files_at_ornl(master_dict: dict,
                                     normalization_status: NormalizationStatus, 
                                     nexus_path: str) -> None:
 
-    for folder in master_dict.keys():
+    for folder in master_dict[MasterDictKeys.list_folders].keys():
         run_number = isolate_run_number(folder)
         if run_number == -1:
             return
         
         nexus_file = os.path.join(nexus_path, f"VENUS_{run_number}.nxs.h5")
         if os.path.exists(nexus_file):
-            master_dict[folder][MasterDictKeys.nexus_path] = nexus_file
+            master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.nexus_path] = nexus_file
         else:
             return
         
@@ -79,6 +82,8 @@ def update_with_proton_charge(master_dict: dict,
     """
     Update the master dictionary with the proton charge values.
     """
+    data_type = master_dict[MasterDictKeys.data_type]
+    logger.info(f"Updating {data_type} master dictionary with proton charge values")
 
     if facility == Facility.ornl:
         update_with_proton_charge_at_ornl(master_dict, normalization_status)
@@ -93,11 +98,11 @@ def update_with_proton_charge_at_ornl(master_dict: dict,
     Update the master dictionary with the proton charge values for ORNL.
     """
 
-    for key in master_dict.keys():
-        nexus = master_dict[key][MasterDictKeys.nexus_path]
+    for key in master_dict[MasterDictKeys.list_folders].keys():
+        nexus = master_dict[MasterDictKeys.list_folders][key][MasterDictKeys.nexus_path]
         proton_charge = get_proton_charge(nexus, units='c')
         if proton_charge is not None:
-            master_dict[key][MasterDictKeys.proton_charge] = proton_charge
+            master_dict[MasterDictKeys.list_folders][key][MasterDictKeys.proton_charge] = proton_charge
         else:
             pass
 
@@ -121,9 +126,10 @@ def update_with_shutter_counts_at_ornl(master_dict: dict, normalization_status: 
     """
     Update the master dictionary with the shutter counts for ORNL.
     """
-    logger.info(f"Updating master dictionary with shutter counts")
+    data_type = master_dict[MasterDictKeys.data_type]
+    logger.info(f"Updating {data_type} master dictionary with shutter counts")
 
-    for data_path in master_dict.keys():
+    for data_path in master_dict[MasterDictKeys.list_folders].keys():
 
         logger.info(f"\tUpdating shutter counts for {data_path}")
         _list_files = glob.glob(os.path.join(data_path, "*_ShutterCount.txt"))
@@ -142,7 +148,7 @@ def update_with_shutter_counts_at_ornl(master_dict: dict, normalization_status: 
                         break
                     list_shutter_counts.append(float(_value))
                 logger.info(f"\tShutter counts: {list_shutter_counts}")
-                master_dict[data_path][MasterDictKeys.shutter_counts] = list_shutter_counts
+                master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.shutter_counts] = list_shutter_counts
     
     normalization_status.all_shutter_counts_file_found = True
 
@@ -153,6 +159,9 @@ def update_with_spectra_files(master_dict: dict,
     """
     Update the master dictionary with the spectra files.
     """
+    data_type = master_dict[MasterDictKeys.data_type]
+    logger.info(f"Updating {data_type} master dictionary with spectra files")
+
     if facility == Facility.ornl:
         update_with_spectra_files_at_ornl(master_dict, normalization_status)
     else:
@@ -164,7 +173,7 @@ def update_with_spectra_files_at_ornl(master_dict: dict, normalization_status: N
     """
     Update the master dictionary with the spectra files for ORNL.
     """
-    for data_path in master_dict.keys():
+    for data_path in master_dict[MasterDictKeys.list_folders].keys():
         spectra_files = glob.glob(os.path.join(data_path, "*_Spectra.txt"))
         if len(spectra_files) == 0:
             logger.info(f"\tNo spectra file found for {data_path}")
@@ -174,18 +183,18 @@ def update_with_spectra_files_at_ornl(master_dict: dict, normalization_status: N
             spectra_file = spectra_files[0]
             pd_spectra = pd.read_csv(spectra_file, sep=",", header=0)
             shutter_time = pd_spectra["shutter_time"].values
-            master_dict[data_path][MasterDictKeys.list_spectra] = shutter_time
+            master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_spectra] = shutter_time
 
     normalization_status.all_spectra_file_found = True
 
 
 def update_with_shutter_values(master_dict: dict,
-                                 normalization_status: NormalizationStatus, 
-                                 facility=Facility.ornl) -> None:
+                               normalization_status: NormalizationStatus, 
+                               facility=Facility.ornl) -> None:
      """
      Update the master dictionary with the shutter values.
      """
-     logger.info(f"Updating master dictionary with shutter values")
+     logger.info(f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with shutter values")
      if facility == Facility.ornl:
           update_with_shutter_values_at_ornl(master_dict, normalization_status)
      else:
@@ -199,12 +208,12 @@ def update_with_shutter_values_at_ornl(master_dict: dict,
     Update the master dictionary with the shutter values for ORNL.
     """
     if normalization_status.all_shutter_counts_file_found and normalization_status.all_spectra_file_found:
-        for data_path in master_dict.keys():
-            list_time_spectra = master_dict[data_path][MasterDictKeys.list_spectra]
+        for data_path in master_dict[MasterDictKeys.list_folders].keys():
+            list_time_spectra = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_spectra]
             # delta_time_spectra = list_time_spectra[1] - list_time_spectra[0]
             list_index_jump = np.where(np.diff(list_time_spectra) > 0.0001)[0]
 
-            list_shutter_counts = master_dict[data_path][MasterDictKeys.shutter_counts]
+            list_shutter_counts = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.shutter_counts]
             list_shutter_values_for_each_image = np.zeros(len(list_time_spectra), dtype=np.float32)
             list_shutter_values_for_each_image[0: list_index_jump[0]+1].fill(list_shutter_counts[0])
             for _index in range(1, len(list_index_jump)):
@@ -214,7 +223,6 @@ def update_with_shutter_values_at_ornl(master_dict: dict,
 
             list_shutter_values_for_each_image[list_index_jump[-1]+1:] = list_shutter_counts[-1]
 
-            master_dict[data_path][MasterDictKeys.list_shutters] = list_shutter_values_for_each_image
+            master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_shutters] = list_shutter_values_for_each_image
 
         normalization_status.all_list_shutter_values_for_each_image_found = True
-        

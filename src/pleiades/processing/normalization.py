@@ -1,8 +1,7 @@
 import os
 import numpy as np
 
-from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus
-from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
+from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus, DataType
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import rebin, crop, combine
 from pleiades.utils.timepix import update_with_nexus_files
@@ -10,6 +9,7 @@ from pleiades.utils.timepix import update_with_shutter_counts
 from pleiades.utils.timepix import update_with_proton_charge
 from pleiades.utils.timepix import update_with_spectra_files
 from pleiades.utils.timepix import update_with_shutter_values
+from pleiades.processing.normalization_handler import update_with_list_of_files
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -41,22 +41,25 @@ logger = loguru_logger.bind(name="normalization")
 #  - output folder (optional)
 
 
-def init_master_dict(list_folders: list) -> dict:
+def init_master_dict(list_folders: list, data_type: DataType = DataType.sample) -> dict:
     """
     Initialize a master dictionary to store the data from each sample and open beam folders.
     """
-    master_dict = {}
+    master_dict = {MasterDictKeys.data_type: data_type,
+                   MasterDictKeys.list_folders: {},
+                   }
     for folder in list_folders:
-        master_dict[folder] = {MasterDictKeys.nexus_path: None, 
-                               MasterDictKeys.frame_number: None, 
-                               MasterDictKeys.data_path: None, 
-                               MasterDictKeys.proton_charge: None,
-                               MasterDictKeys.matching_ob: [] ,
-                               MasterDictKeys.list_tif: [], 
-                               MasterDictKeys.shutter_counts: None,
-                               MasterDictKeys.list_spectra: [],
-                               MasterDictKeys.list_shutters: [],
-                               MasterDictKeys.data: None}
+        master_dict[MasterDictKeys.list_folders][folder] = {MasterDictKeys.nexus_path: None, 
+                                                            MasterDictKeys.frame_number: None, 
+                                                            MasterDictKeys.data_path: None, 
+                                                            MasterDictKeys.proton_charge: None,
+                                                            MasterDictKeys.matching_ob: [],
+                                                            MasterDictKeys.list_images: [],
+                                                            MasterDictKeys.ext: None, 
+                                                            MasterDictKeys.shutter_counts: None,
+                                                            MasterDictKeys.list_spectra: [],
+                                                            MasterDictKeys.list_shutters: [],
+                                                            MasterDictKeys.data: None}
     return master_dict
 
 
@@ -134,12 +137,16 @@ def normalization(list_sample_folders: list,
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
 
-    sample_master_dict = init_master_dict(list_sample_folders)
-    ob_master_dict = init_master_dict(list_obs_folders)
+    sample_master_dict = init_master_dict(list_sample_folders, data_type=DataType.sample)
+    ob_master_dict = init_master_dict(list_obs_folders, data_type=DataType.ob)
 
     # update with the nexus files
     update_with_nexus_files(sample_master_dict, normalization_status, nexus_path, facility=facility)
     update_with_nexus_files(ob_master_dict, normalization_status, nexus_path, facility=facility)
+
+    # update with list of files in sample and open beam folders
+    update_with_list_of_files(sample_master_dict)
+    update_with_list_of_files(ob_master_dict)
 
     # update with proton charge
     update_with_proton_charge(sample_master_dict, normalization_status, facility=facility)
@@ -157,31 +164,28 @@ def normalization(list_sample_folders: list,
     update_with_shutter_values(sample_master_dict, normalization_status, facility=facility)
     update_with_shutter_values(ob_master_dict, normalization_status, facility=facility)
 
+    # process open beams
+    for ob_folder in list_obs_folders:
+        if not os.path.exists(ob_folder):
+            raise ValueError(f"Open beam folder {ob_folder} does not exist.")
 
-    # # process open beams
-    # for obs_folder in list_obs_folders:
-    #     if not os.path.exists(obs_folder):
-    #         raise ValueError(f"Observation folder {obs_folder} does not exist.")
+        # load the observation data
+        list_obs_data = load(list_of_files = ob_master_dict[MasterDictKeys.list_folders][ob_folder][MasterDictKeys.list_images], 
+                             file_extension = ob_master_dict[MasterDictKeys.list_folders][ob_folder][MasterDictKeys.ext])
 
-    #     # retrieve list of files in the observation folder
-    #     list_obs_files, ext = retrieve_list_of_most_dominant_extension_from_folder(obs_folder)
+        # crop the data if requested
+        if crop_roi is not None:
+            list_obs_data = crop(list_obs_data, crop_roi)
 
-    #     # load the observation data
-    #     list_obs_data = load(list_obs_files, ext)
+        # rebin the data if requested
+        if pixel_binning > 1:
+            list_obs_data = rebin(list_obs_data, pixel_binning)
 
-    #     # crop the data if requested
-    #     if crop_roi is not None:
-    #         list_obs_data = crop(list_obs_data, crop_roi)
-
-    #     # rebin the data if requested
-    #     if pixel_binning > 1:
-    #         list_obs_data = rebin(list_obs_data, pixel_binning)
-
-    #     # combine the normalized data
-    #     if len(list_obs_data) > 1:
-    #         ob_data = combine(list_obs_data)
-    #     else:
-    #         ob_data = list_obs_data[0]
+        # combine the normalized data
+        if len(list_obs_data) > 1:
+            ob_data = combine(list_obs_data)
+        else:
+            ob_data = list_obs_data[0]
 
     # for sample_folder in list_sample_folders:
     #     if not os.path.exists(sample_folder):

@@ -27,16 +27,26 @@ class Roi:
         return f"Roi: (x1={self.x1}, y1={self.y1}) to (x2={self.x2}, y2={self.y2})"
 
 
+class DataType:
+    sample = "sample"
+    ob = "ob"
+
+
 class MasterDictKeys:
+    data_type = "data_type"
+    list_folders = "list_folders"
+    
     frame_number = "frame_number"
     proton_charge = "proton_charge"
     matching_ob = "matching_ob"
-    list_tif = "list_tif"
+    list_images = "list_images"
     data = "data"
     nexus_path = "nexus_path"
     data_path = "data_path"
     shutter_counts = "shutter_counts"
     list_spectra = "list_spectra"
+    list_shutters = "list_shutters"
+    ext = "ext"
     
 
 class Facility:
