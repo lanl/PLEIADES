@@ -51,10 +51,10 @@ class ResultsManager:
 
     def print_fit_result(self, index: int):
         """Print a specific fit result in a readable format."""
-        fit_result = self.get_single_fit_results(index)
-        if fit_result:
+        try:
+            fit_result = self.get_single_fit_results(index)
             logger.info(f"Fit Result {index}:\n{json.dumps(fit_result.model_dump(), indent=2, default=str)}")
-        else:
+        except ValueError:
             logger.warning(f"No fit result found at index {index}.")
 
     def print_number_of_fit_results(self):
@@ -73,7 +73,7 @@ class ResultsManager:
 
     def print_results_data(self):
         """Print the results data in a readable format."""
-        if self.run_results.data:
+        if self.run_results.data and self.run_results.data.data_file:
             logger.info(f"Results Data: {self.run_results.data}")
         else:
             logger.warning("No results data available.")
