@@ -2,7 +2,7 @@ import pytest
 from scipy.constants import h, c, electron_volt
 
 from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions, convert_to_cross_section, convert_to_energy
-from pleiades.utils.units import convert_from_wavelength_to_energy, WavelengthUnitOptions
+from pleiades.utils.units import convert_from_wavelength_to_energy_ev, WavelengthUnitOptions
 
 
 def test_convert_to_energy():
@@ -21,24 +21,13 @@ def test_convert_from_wavelength_to_energy():
     wavelength_angstrom = 3.5  # 3.5 angstrom
     wavelength_m = 3.5e-10
     expected_energy_eV = (h * c) / (wavelength_m * electron_volt)
-    assert convert_from_wavelength_to_energy(wavelength_angstrom, 
-                                             unit_from=WavelengthUnitOptions.angstrom) == pytest.approx(expected_energy_eV)
+    assert convert_from_wavelength_to_energy_ev(wavelength_angstrom, 
+                                               unit_from=WavelengthUnitOptions.angstrom) == pytest.approx(expected_energy_eV)
 
-    # # Test conversion from angstrom to eV
-    # wavelength_angstrom = 3.5  # angstrom
-    # expected_energy_eV = h * c / wavelength_angstrom / j
-    # assert convert_from_wavelength_to_energy(wavelength_angstrom) == pytest.approx(expected_energy_eV)
-
-    # # Test conversion from nm to eV
-    # wavelength_nm = 1.0  # 1 nm
-    # expected_energy_eV = h * c / (wavelength_nm * 1e-9)
-    # assert convert_from_wavelength_to_energy(wavelength_nm, WavelengthUnitOptions.nm) == pytest.approx(expected_energy_eV)
-
-    # # Test conversion from pm to keV
-    # wavelength_pm = 1.0  # 1 pm
-    # expected_energy_keV = (h * c / (wavelength_pm * 1e-12)) * 1e-3
-    # assert convert_from_wavelength_to_energy(wavelength_pm, WavelengthUnitOptions.pm, EnergyUnitOptions.keV) == pytest.approx(expected_energy_keV)
-
+    # Test conversion from nm to eV
+    wavelength_nm = 1.0  # 1 nm
+    expected_energy_eV = h * c / (wavelength_nm * 1e-9 * electron_volt)
+    assert convert_from_wavelength_to_energy_ev(wavelength_nm, WavelengthUnitOptions.nm) == pytest.approx(expected_energy_eV)
 
 if __name__ == "__main__":
     pytest.main()

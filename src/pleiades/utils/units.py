@@ -100,15 +100,13 @@ def convert_to_cross_section(from_unit, to_unit):
     return conversion_factors[from_unit] / conversion_factors[to_unit]
 
 
-def convert_from_wavelength_to_energy(wavelength, 
-                                      unit_from=WavelengthUnitOptions.angstrom, 
-                                      unit_to=EnergyUnitOptions.eV):
+def convert_from_wavelength_to_energy_ev(wavelength, 
+                                      unit_from=WavelengthUnitOptions.angstrom): 
     """Convert wavelength to energy based on the given units.
 
     Args:
         wavelength (float): Wavelength value.
         unit_from (WavelengthUnitOptions): Unit of the input wavelength.
-        unit_to (EnergyUnitOptions): Unit of the output energy.
 
     Returns:
         float: Energy in the new unit.
