@@ -148,4 +148,27 @@ def correct_data_for_shutter_counts(master_dict: dict, is_normalization_by_shutt
         for i in range(len(data)):
             data[i] /= list_shutters_values_for_each_image[i]
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
-        
+
+
+def performing_normalization(sample_master_dict, normalization_dict, background_roi=None):
+    logger.info(f"Performing normalization:")
+    ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
+
+    for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
+        logger.info(f"Normalizing sample folder: {sample_folder}")
+
+        sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
+    
+        normalized_sample = np.empty_like(sample_data, dtype=np.float32)
+        for _index, _sample, _ob in zip(np.arange(len(sample_data)), sample_data, ob_data_combined): 
+
+            coeff = 1
+            if not (background_roi is None):
+                x0, y0, x1, y1 = background_roi.get_roi()
+                median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
+                median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
+                coeff = median_roi_of_ob / median_roi_of_sample
+
+            normalized_sample[_index] = (_sample / _ob) * coeff
+
+        normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample

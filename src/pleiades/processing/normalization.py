@@ -17,6 +17,7 @@ from pleiades.processing.normalization_handler import combine_data
 from pleiades.processing.normalization_handler import remove_outliers
 from pleiades.processing.normalization_handler import correct_data_for_proton_charge
 from pleiades.processing.normalization_handler import correct_data_for_shutter_counts
+from pleiades.processing.normalization_handler import performing_normalization
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -75,11 +76,12 @@ def init_normalization_dict(list_folders: list) -> dict:
     """
     Initialize a normalization dictionary to store the normalized data.
     """
-    normalization_dict = {}
+    normalization_dict = {MasterDictKeys.obs_data_combined: None,
+                          MasterDictKeys.sample_data: {},
+                          }
     for folder in list_folders:
-        normalization_dict[folder] = {MasterDictKeys.obs_data_combined: None, 
-                                      MasterDictKeys.sample_data: None,
-                                    }
+        normalization_dict[MasterDictKeys.sample_data][folder] = None
+
     return normalization_dict
 
 
@@ -219,27 +221,15 @@ def normalization(list_sample_folders: list,
     correct_data_for_shutter_counts(sample_master_dict, is_normalization_by_shutter_counts)
 
     # normalization
-    ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
-    for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
-        logger.info(f"Normalizing sample folder: {sample_folder}")
-
-        sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
-    
-        normalized_sample = np.empty_like(sample_data, dtype=np.float32)
-        for _index, _sample, _ob in zip(np.arange(len(sample_data)), sample_data, ob_data_combined): 
-
-            coeff = 1
-            if not (background_roi is None):
-                x0, y0, x1, y1 = background_roi.get_roi()
-                median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
-                median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
-                coeff = median_roi_of_ob / median_roi_of_sample
-
-            normalized_sample[_index] = (_sample / _ob) * coeff
-
-        normalization_dict[sample_folder][MasterDictKeys.sample_data] = normalized_sample
-
+    performing_normalization(sample_master_dict, normalization_dict, background_roi=background_roi)
     logger.info(f"Normalization completed successfully!")
+
+    # format the data for export
+    for folder in normalization_dict[MasterDictKeys.sample_data].keys():
+        logger.info(f"Exporting data for folder: {folder}")
+        spectra_file = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
+        logger.info(f"\tSpectra file: {spectra_file}")
+
 
 if __name__ == "__main__":
     # Example usage
