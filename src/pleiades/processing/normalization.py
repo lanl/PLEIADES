@@ -218,39 +218,28 @@ def normalization(list_sample_folders: list,
     # correct the sample by shutter counts
     correct_data_for_shutter_counts(sample_master_dict, is_normalization_by_shutter_counts)
 
-    # # normalization
-    # for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
-    #     logger.info(f"Normalizing sample folder: {sample_folder}")
+    # normalization
+    ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
+    for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
+        logger.info(f"Normalizing sample folder: {sample_folder}")
 
-    #     sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
-    #     ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
-    #     proton_charge = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.proton_charge]
-    #     list_shutters_values_for_each_image = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_shutters]
-       
-    #     for _sample, _ob in zip(sample_data, ob_data_combined): 
+        sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
+    
+        normalized_sample = np.empty_like(sample_data, dtype=np.float32)
+        for _index, _sample, _ob in zip(np.arange(len(sample_data)), sample_data, ob_data_combined): 
 
-    #         coeff = 1
-    #         if not (background_roi is None):
-    #             x0, y0, x1, y1 = background_roi.get_roi()
-    #             median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
-    #             median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
-    #             coeff = median_roi_of_ob
+            coeff = 1
+            if not (background_roi is None):
+                x0, y0, x1, y1 = background_roi.get_roi()
+                median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
+                median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
+                coeff = median_roi_of_ob / median_roi_of_sample
 
-    #         if is_normalization_by_proton_charge:
-    #             sample_data = _sample / proton_charge
+            normalized_sample[_index] = (_sample / _ob) * coeff
 
-    #         if is_normalization_by_shutter_counts:
-    #             temp_data = np.empty_like(sample_data, dtype=np.float32)
-    #             for _index in range(len(list_shutters_values_for_each_image)):
-    #                 temp_data[_index] = sample_data[_index] / list_shutters_values_for_each_image[_index]
-    #             sample_data = temp_data[:]
-    #             del temp_data
+        normalization_dict[sample_folder][MasterDictKeys.sample_data] = normalized_sample
 
-    #     normalization_dict[sample_folder][MasterDictKeys.sample_data] = sample_data / ob_data_combined * coeff
-
-
-        
-
+    logger.info(f"Normalization completed successfully!")
 
 if __name__ == "__main__":
     # Example usage
