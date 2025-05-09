@@ -1,6 +1,7 @@
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
+
 from pleiades.sammy.results.manager import ResultsManager
 from pleiades.sammy.results.models import FitResults, RunResults
 from pleiades.utils.logger import loguru_logger
