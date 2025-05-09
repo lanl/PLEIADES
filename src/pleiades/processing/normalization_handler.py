@@ -79,8 +79,8 @@ def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
 
 
 def combine_data(master_dict: dict, 
-                sample_normalization_status: NormalizationStatus,
-                ob_normalization_status: NormalizationStatus,
+                is_normalization_by_proton_charge: bool,
+                is_normalization_by_shutter_counts: bool,
                 normalization_dict: dict,
                 ) -> None :
                 
@@ -88,8 +88,6 @@ def combine_data(master_dict: dict,
     Combine the open beams data.
     """
     logger.info(f"Combining {master_dict[MasterDictKeys.data_type]} master dictionary!")
-    is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
-    is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
     logger.info(f"\tis_normalization_by_proton_charge: {is_normalization_by_proton_charge}")
     logger.info(f"\tis_normalization_by_shutter_counts: {is_normalization_by_shutter_counts}")
 
@@ -118,3 +116,36 @@ def combine_data(master_dict: dict,
 
     normalization_dict[MasterDictKeys.obs_data_combined] = obs_data_combined
     
+
+def correct_data_for_proton_charge(master_dict: dict, is_normalization_by_proton_charge: bool) -> None:
+    """
+    Correct the data for proton charge.
+    """
+    logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for proton charge")
+    if not is_normalization_by_proton_charge:
+        logger.info(f"Normalization by proton charge is not enabled, skipping correction")
+        return
+        
+    for folder in master_dict[MasterDictKeys.list_folders].keys():
+        data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
+        proton_charge = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.proton_charge]
+        data /= proton_charge
+        master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
+
+
+def correct_data_for_shutter_counts(master_dict: dict, is_normalization_by_shutter_counts: bool) -> None:
+    """
+    Correct the data for shutter counts.
+    """
+    logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for shutter counts")
+    if not is_normalization_by_shutter_counts:
+        logger.info(f"Normalization by shutter counts is not enabled, skipping correction")
+        return
+
+    for folder in master_dict[MasterDictKeys.list_folders].keys():
+        data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
+        list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_shutters]
+        for i in range(len(data)):
+            data[i] /= list_shutters_values_for_each_image[i]
+        master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
+        

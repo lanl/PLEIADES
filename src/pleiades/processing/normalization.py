@@ -15,6 +15,8 @@ from pleiades.processing.normalization_handler import update_with_crop
 from pleiades.processing.normalization_handler import update_with_rebin
 from pleiades.processing.normalization_handler import combine_data
 from pleiades.processing.normalization_handler import remove_outliers
+from pleiades.processing.normalization_handler import correct_data_for_proton_charge
+from pleiades.processing.normalization_handler import correct_data_for_shutter_counts
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -204,73 +206,50 @@ def normalization(list_sample_folders: list,
     remove_outliers(sample_master_dict, dif=20, num_threads=num_threads)
     remove_outliers(ob_master_dict, dif=20, num_threads=num_threads)
 
+    is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
+    is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
+
     # combine the obs
-    combine_data(ob_master_dict, sample_normalization_status, ob_normalization_status, normalization_dict)
+    combine_data(ob_master_dict, is_normalization_by_proton_charge, is_normalization_by_shutter_counts, normalization_dict)
 
-    # normalization
-    for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
-        sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
-        ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
+    # correct the sample by proton charge
+    correct_data_for_proton_charge(sample_master_dict, is_normalization_by_proton_charge)
+
+    # correct the sample by shutter counts
+    correct_data_for_shutter_counts(sample_master_dict, is_normalization_by_shutter_counts)
+
+    # # normalization
+    # for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
+    #     logger.info(f"Normalizing sample folder: {sample_folder}")
+
+    #     sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
+    #     ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
+    #     proton_charge = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.proton_charge]
+    #     list_shutters_values_for_each_image = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_shutters]
+       
+    #     for _sample, _ob in zip(sample_data, ob_data_combined): 
+
+    #         coeff = 1
+    #         if not (background_roi is None):
+    #             x0, y0, x1, y1 = background_roi.get_roi()
+    #             median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
+    #             median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
+    #             coeff = median_roi_of_ob
+
+    #         if is_normalization_by_proton_charge:
+    #             sample_data = _sample / proton_charge
+
+    #         if is_normalization_by_shutter_counts:
+    #             temp_data = np.empty_like(sample_data, dtype=np.float32)
+    #             for _index in range(len(list_shutters_values_for_each_image)):
+    #                 temp_data[_index] = sample_data[_index] / list_shutters_values_for_each_image[_index]
+    #             sample_data = temp_data[:]
+    #             del temp_data
+
+    #     normalization_dict[sample_folder][MasterDictKeys.sample_data] = sample_data / ob_data_combined * coeff
+
+
         
-        is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
-        is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
-
-        if is_normalization_by_proton_charge:
-            proton_charge = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.proton_charge]
-            sample_data = sample_data / proton_charge
-
-        if is_normalization_by_shutter_counts:
-            list_shutters_values_for_each_image = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_shutters]
-            temp_data = np.empty_like(sample_data, dtype=np.float32)
-            for _index in range(len(list_shutters_values_for_each_image)):
-                temp_data[_index] = sample_data[_index] / list_shutters_values_for_each_image[_index]
-            sample_data = temp_data[:]
-            del temp_data
-
-        normalization_dict[sample_folder][MasterDictKeys.sample_data] = sample_data / ob_data_combined
-
-
-
-
-
-        # # check if the data is empty
-        # if sample_data is None or ob_data is None:
-        #     raise ValueError(f"Data for {sample_folder} is empty.")
-
-
-    # # remove outliers if requested
-    # if remove_outliers_flag:
-    #     ob_data = remove_outliers(data=ob_data,
-    #                               dif=20,
-    #                               num_threads=num_threads,)
-
-    # for sample_folder in list_sample_folders:
-    #     if not os.path.exists(sample_folder):
-    #         raise ValueError(f"Sample folder {sample_folder} does not exist.")
-
-    #     # load the sample data
-    #     list_sample_data = load(list_of_files= sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_images],
-    #                             file_extension = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.ext])
-        
-    #     # crop the data if requested
-    #     if crop_roi is not None:
-    #         list_sample_data = crop(list_sample_data, crop_roi)
-
-    #     # rebin the data if requested
-    #     if pixel_binning > 1:
-    #         list_sample_data = rebin(list_sample_data, pixel_binning)
-
-    #     # remove outliers if requested
-    #     if remove_outliers_flag:
-    #         list_sample_data = remove_outliers(data=list_sample_data,
-    #                                            dif=20,
-    #                                            num_threads=num_threads,)
-        
-    #     # normalization
-    #     is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
-
-
-
 
 
 if __name__ == "__main__":
@@ -279,11 +258,11 @@ if __name__ == "__main__":
         list_sample_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7820"],
         list_obs_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7816"],
         nexus_path="/Users/j35/SNS/VENUS/IPTS-35945/nexus",
-        # background_roi=Roi(0, 0, 10, 10),
+        background_roi=Roi(0, 0, 10, 10),
         crop_roi=Roi(10, 10, 200, 200),
         timepix=True,
         pixel_binning=2,
-        remove_outliers_flag=True,
+        remove_outliers_flag=False,
         rolling_average=False,
         output_folder="/Users/j35/SNS/IPTS-35945/processed",
         output_numpy=True,
