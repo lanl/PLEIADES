@@ -1,8 +1,7 @@
-import pytest
-from pleiades.sammy.results.models import FitResults, RunResults, ChiSquaredResults
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
 from pleiades.sammy.data.options import sammyData
+from pleiades.sammy.results.models import ChiSquaredResults, FitResults, RunResults
 
 
 def test_fit_results_initialization():
