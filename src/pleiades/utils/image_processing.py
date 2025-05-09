@@ -1,6 +1,6 @@
 import numpy as np
 import logging
-from tomopy.misc.corr import remove_outlier
+from tomopy.misc.corr import remove_outlier as tomopy_remove_outlier
 
 from pleiades.processing import Roi
 from skimage.measure import block_reduce
@@ -48,26 +48,6 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
     return rebinned_data
 
 
-def combine(data: np.ndarray, 
-            master_dict: dict, 
-            use_proton_charge: bool, 
-            use_shutter_counts: bool) -> np.ndarray:
-    """
-    Combine multiple 2D arrays using np.median
-    """
-
-    # FIXME: this function should take into account proton charge and shutter counts
-
-    logger.info(f"Combining data with shape {data.shape}")
-    if data is None or len(data) == 0:
-        raise ValueError("No data provided for combination.")
-  
-    combined_data = np.median(data, axis=0)
-
-    logger.info(f"Combined data shape: {combined_data.shape}")  
-    return combined_data
-
-
 def remove_outliers(data: np.ndarray, dif: float, num_threads: int) -> np.ndarray:
     """
     Remove outliers from a 2D array using tomopy remove_outliers.
@@ -79,7 +59,7 @@ def remove_outliers(data: np.ndarray, dif: float, num_threads: int) -> np.ndarra
         raise ValueError("No data provided for outlier removal.")
   
     _data = np.array(data, dtype=np.float32)
-    cleaned_data = remove_outlier(_data, dif=dif, ncore=num_threads)
+    cleaned_data = tomopy_remove_outlier(_data, dif=dif, ncore=num_threads)
 
     logger.info(f"Outliers removed. Data shape: {cleaned_data.shape} and data type: {cleaned_data.dtype}")
     return cleaned_data

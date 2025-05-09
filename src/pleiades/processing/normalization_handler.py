@@ -7,6 +7,7 @@ logger = loguru_logger.bind(name="normalization_handler")
 from pleiades.processing import NormalizationStatus, MasterDictKeys, Roi
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import crop, rebin
+from pleiades.utils.image_processing import  remove_outliers as image_processing_remove_outliers 
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 
 
@@ -63,6 +64,18 @@ def update_with_rebin(master_dict: dict, binning_factor: int) -> None:
     for folder in master_dict[MasterDictKeys.list_folders].keys():
             rebinned_data = rebin(master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data], binning_factor)
             master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = rebinned_data
+
+
+def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
+    """
+    Remove outliers from the data in the master dictionary.
+    """
+    logger.info(f"Removing outliers from {master_dict[MasterDictKeys.data_type]} master dictionary with threshold {dif}")
+
+    for folder in master_dict[MasterDictKeys.list_folders].keys():
+        data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
+        data = image_processing_remove_outliers(data, dif, num_threads)
+        master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
 def combine_data(master_dict: dict, 

@@ -3,7 +3,7 @@ import numpy as np
 
 from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus, DataType
 from pleiades.utils.load import load
-from pleiades.utils.image_processing import rebin, crop, combine, remove_outliers
+from pleiades.utils.image_processing import remove_outliers
 from pleiades.utils.timepix import update_with_nexus_files
 from pleiades.utils.timepix import update_with_shutter_counts
 from pleiades.utils.timepix import update_with_proton_charge
@@ -14,6 +14,7 @@ from pleiades.processing.normalization_handler import update_with_data
 from pleiades.processing.normalization_handler import update_with_crop
 from pleiades.processing.normalization_handler import update_with_rebin
 from pleiades.processing.normalization_handler import combine_data
+from pleiades.processing.normalization_handler import remove_outliers
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -199,35 +200,33 @@ def normalization(list_sample_folders: list,
     update_with_rebin(sample_master_dict, binning_factor=pixel_binning)
     update_with_rebin(ob_master_dict, binning_factor=pixel_binning)
 
+    # remove outliers if requested
+    remove_outliers(sample_master_dict, dif=20, num_threads=num_threads)
+    remove_outliers(ob_master_dict, dif=20, num_threads=num_threads)
+
     # combine the obs
     combine_data(ob_master_dict, sample_normalization_status, ob_normalization_status, normalization_dict)
 
+    # # normalization
+    # for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
+    #     sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
+    #     ob_data_combined = normalization_dict[sample_folder][MasterDictKeys.obs_data_combined]
+        
 
-    # # process open beams
-    # logger.info(f"Processing open beam folders...")
-    # for ob_folder in list_obs_folders:
 
-    #     logger.info(f"\t working with {ob_folder} ...")
-    #     if not os.path.exists(ob_folder):
-    #         raise ValueError(f"Open beam folder {ob_folder} does not exist.")
 
-    #     # crop the data if requested
-    #     if crop_roi is not None:
-    #         list_obs_data = crop(list_obs_data, crop_roi)
 
-    #     # rebin the data if requested
-    #     if pixel_binning > 1:
-    #         list_obs_data = rebin(list_obs_data, pixel_binning)
 
-    #     # combine the normalized data
-    
-    #     # if len(list_obs_data) > 1:
-    #     #     ob_data = combine(list_obs_data,
-    #     #                       ob_master_dict,
-    #     #                       use_proton_charge=is_normalization_by_proton_charge,
-    #     #                       use_shutter_counts=is_normalization_by_shutter_counts,)
-    #     # else:
-    #     #     ob_data = list_obs_data[0]
+
+
+
+
+
+
+        # # check if the data is empty
+        # if sample_data is None or ob_data is None:
+        #     raise ValueError(f"Data for {sample_folder} is empty.")
+
 
     # # remove outliers if requested
     # if remove_outliers_flag:
