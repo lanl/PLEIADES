@@ -162,7 +162,7 @@ def normalization(list_sample_folders: list,
 
     sample_master_dict = init_master_dict(list_sample_folders, data_type=DataType.sample)
     ob_master_dict = init_master_dict(list_obs_folders, data_type=DataType.ob)
-    normalization_dict = init_normalization_dict(list_obs_folders)
+    normalization_dict = init_normalization_dict(list_sample_folders)
 
     # update with the nexus files
     update_with_nexus_files(sample_master_dict, sample_normalization_status, nexus_path, facility=facility)
@@ -207,17 +207,27 @@ def normalization(list_sample_folders: list,
     # combine the obs
     combine_data(ob_master_dict, sample_normalization_status, ob_normalization_status, normalization_dict)
 
-    # # normalization
-    # for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
-    #     sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
-    #     ob_data_combined = normalization_dict[sample_folder][MasterDictKeys.obs_data_combined]
+    # normalization
+    for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
+        sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
+        ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
         
+        is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
+        is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
 
+        if is_normalization_by_proton_charge:
+            proton_charge = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.proton_charge]
+            sample_data = sample_data / proton_charge
 
+        if is_normalization_by_shutter_counts:
+            list_shutters_values_for_each_image = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.list_shutters]
+            temp_data = np.empty_like(sample_data, dtype=np.float32)
+            for _index in range(len(list_shutters_values_for_each_image)):
+                temp_data[_index] = sample_data[_index] / list_shutters_values_for_each_image[_index]
+            sample_data = temp_data[:]
+            del temp_data
 
-
-
-
+        normalization_dict[sample_folder][MasterDictKeys.sample_data] = sample_data / ob_data_combined
 
 
 
