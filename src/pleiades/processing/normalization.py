@@ -13,6 +13,7 @@ from pleiades.processing.normalization_handler import update_with_list_of_files
 from pleiades.processing.normalization_handler import update_with_data
 from pleiades.processing.normalization_handler import update_with_crop
 from pleiades.processing.normalization_handler import update_with_rebin
+from pleiades.processing.normalization_handler import combine_data
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -65,6 +66,18 @@ def init_master_dict(list_folders: list, data_type: DataType = DataType.sample) 
                                                             MasterDictKeys.list_shutters: [],
                                                             MasterDictKeys.data: None}
     return master_dict
+
+
+def init_normalization_dict(list_folders: list) -> dict:
+    """
+    Initialize a normalization dictionary to store the normalized data.
+    """
+    normalization_dict = {}
+    for folder in list_folders:
+        normalization_dict[folder] = {MasterDictKeys.obs_data_combined: None, 
+                                      MasterDictKeys.sample_data: None,
+                                    }
+    return normalization_dict
 
 
 def normalization(list_sample_folders: list, 
@@ -148,6 +161,7 @@ def normalization(list_sample_folders: list,
 
     sample_master_dict = init_master_dict(list_sample_folders, data_type=DataType.sample)
     ob_master_dict = init_master_dict(list_obs_folders, data_type=DataType.ob)
+    normalization_dict = init_normalization_dict(list_obs_folders)
 
     # update with the nexus files
     update_with_nexus_files(sample_master_dict, sample_normalization_status, nexus_path, facility=facility)
@@ -173,7 +187,7 @@ def normalization(list_sample_folders: list,
     update_with_shutter_values(sample_master_dict, sample_normalization_status, facility=facility)
     update_with_shutter_values(ob_master_dict, ob_normalization_status, facility=facility)
 
-    # update with data
+    # load data
     update_with_data(sample_master_dict)
     update_with_data(ob_master_dict)
 
@@ -185,8 +199,9 @@ def normalization(list_sample_folders: list,
     update_with_rebin(sample_master_dict, binning_factor=pixel_binning)
     update_with_rebin(ob_master_dict, binning_factor=pixel_binning)
 
-    is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
-    is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
+    # combine the obs
+    combine_data(ob_master_dict, sample_normalization_status, ob_normalization_status, normalization_dict)
+
 
     # # process open beams
     # logger.info(f"Processing open beam folders...")
