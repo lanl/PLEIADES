@@ -257,20 +257,20 @@ class SammyData(BaseModel):
 
     @property
     def energy(self):
-        return self.data["Energy"] if self.data is not None else None
+        return self.data.get("Energy")
 
     @property
     def experimental_cross_section(self):
-        return self.data["Experimental cross section"] if self.data is not None else None
+        return self.data.get("Experimental cross section")
 
     @property
     def theoretical_cross_section(self):
-        return self.data["Final theoretical cross section"] if self.data is not None else None
+        return self.data.get("Final theoretical cross section")
 
     @property
     def experimental_transmission(self):
-        return self.data["Experimental transmission"] if self.data is not None else None
+        return self.data.get("Experimental transmission")
 
     @property
     def theoretical_transmission(self):
-        return self.data["Final theoretical transmission"] if self.data is not None else None
+        return self.data.get("Final theoretical transmission")
