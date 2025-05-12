@@ -26,7 +26,7 @@ class DataTypeOptions(str, Enum):
     COMBINATION = "COMBINATION"
 
 
-class sammyData(BaseModel):
+class SammyData(BaseModel):
     """
     Container for LST data, loaded from a SAMMY .LST file using pandas.
 
