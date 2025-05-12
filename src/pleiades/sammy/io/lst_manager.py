@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pleiades.sammy.data.options import sammyData
+from pleiades.sammy.data.options import SammyData
 from pleiades.sammy.results.models import RunResults
 
 
@@ -13,12 +13,12 @@ class LstManager:
 
     Attributes:
         lst_file_path (Path): Path to the SAMMY LST file.
-        data (sammyData): An instance of sammyData to hold the extracted data.
+        data (SammyData): An instance of SammyData to hold the extracted data.
     Methods:
         __init__(lst_file_path: Path, run_results: RunResults = None):
             Initializes the LstManager with the path to a SAMMY LST file.
         process_lst_file():
-            Parses the SAMMY LST file and extracts relevant data in a sammyData object
+            Parses the SAMMY LST file and extracts relevant data in a SammyData object
     """
 
     def __init__(self, lst_file_path: Path = None, run_results: RunResults = None):
@@ -45,11 +45,11 @@ class LstManager:
 
     def process_lst_file(self, lst_file_path: Path, run_results: RunResults):
         """
-        Parse the SAMMY LST file and extract relevant data in a sammyData object.
-        The sammyData object is stored in self.run_results.data.
+        Parse the SAMMY LST file and extract relevant data in a SammyData object.
+        The SammyData object is stored in self.run_results.data.
         """
-        # Create sammyData and load the file
-        lst_data = sammyData(data_file=lst_file_path)
+        # Create SammyData and load the file
+        lst_data = SammyData(data_file=lst_file_path)
         lst_data.load()  # Explicitly load and validate
 
         # Store in RunResults

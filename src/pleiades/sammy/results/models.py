@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
-from pleiades.sammy.data.options import sammyData
+from pleiades.sammy.data.options import SammyData
 
 
 class ChiSquaredResults(BaseModel):
@@ -65,8 +65,8 @@ class RunResults(BaseModel):
     """
 
     fit_results: list[FitResults] = Field(default_factory=list, description="List of FitResults from multiple fits.")
-    data: sammyData = Field(
-        default_factory=sammyData, description="Container for LST data loaded from a SAMMY .LST file."
+    data: SammyData = Field(
+        default_factory=SammyData, description="Container for LST data loaded from a SAMMY .LST file."
     )
 
     def __init__(self, **data):
@@ -76,7 +76,7 @@ class RunResults(BaseModel):
         self.fit_results = []
 
         # Initialize the data container
-        self.data = sammyData()
+        self.data = SammyData()
 
     def add_fit_result(self, fit_result: FitResults):
         """Add a FitResults object to the list of fit results."""

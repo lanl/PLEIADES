@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from pleiades.sammy.data.options import DataTypeOptions, sammyData
+from pleiades.sammy.data.options import DataTypeOptions, SammyData
 from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
 
 
 def test_sammy_data_defaults():
-    """Test the default values of sammyData."""
-    params = sammyData()
+    """Test the default values of SammyData."""
+    params = SammyData()
 
     assert params.data_file is None
     assert params.data_type == DataTypeOptions.TRANSMISSION
@@ -18,8 +18,8 @@ def test_sammy_data_defaults():
 
 
 def test_sammy_data_custom_values():
-    """Test custom values of sammyData."""
-    params = sammyData(
+    """Test custom values of SammyData."""
+    params = SammyData(
         data_type=DataTypeOptions.CAPTURE,
         energy_units=EnergyUnitOptions.keV,
         cross_section_units=CrossSectionUnitOptions.millibarn,
@@ -33,7 +33,7 @@ def test_sammy_data_custom_values():
 def test_invalid_data_type():
     """Test invalid data type."""
     with pytest.raises(ValueError):
-        sammyData(data_file=Path("invalid.dat"), data_type="INVALID_TYPE")
+        SammyData(data_file=Path("invalid.dat"), data_type="INVALID_TYPE")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
-from pleiades.sammy.data.options import sammyData
+from pleiades.sammy.data.options import SammyData
 from pleiades.sammy.results.models import ChiSquaredResults, FitResults, RunResults
 
 
@@ -35,7 +35,7 @@ def test_fit_results_getters():
 def test_run_results_initialization():
     run_results = RunResults()
     assert isinstance(run_results.fit_results, list)
-    assert isinstance(run_results.data, sammyData)
+    assert isinstance(run_results.data, SammyData)
     assert len(run_results.fit_results) == 0
 
 
