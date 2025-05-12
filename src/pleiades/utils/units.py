@@ -1,8 +1,17 @@
 from enum import Enum
+import numpy as np
 from scipy.constants import h, c, electron_volt
 
 
 """ Small library of units and conversions for use in SAMMY fitting. """
+
+
+class TimeUnitOptions(str, Enum):
+    s = "s"
+    ms = "ms"
+    us = "us"
+    ns = "ns"
+    ps = "ps"
 
 
 class EnergyUnitOptions(str, Enum):
@@ -21,31 +30,55 @@ class CrossSectionUnitOptions(str, Enum):
     cm2 = "cm^2"
 
 
-class WavelengthUnitOptions(str, Enum):
+class DistanceUnitOptions(str, Enum):
     nm = "nm"
     pm = "pm"
     m = "m"
     angstrom = "angstrom"
 
 
-def convert_wavlength_units(from_unit, to_unit):
-    """Convert wavelength from one unit to another unit
-    based on WavelengthUnitOptions options
+def convert_time_units(from_unit, to_unit):
+    """Convert time from one unit to another unit
+    based on TimeUnitOptions options
 
     Args:
-        from_unit (WavelengthUnitOptions): Unit to convert from.
-        to_unit (WavelengthUnitOptions): Unit to convert to.
+        from_unit (TimeUnitOptions): Unit to convert from.
+        to_unit (TimeUnitOptions): Unit to convert to.
 
     Returns:
-        float: Wavelength in the new unit.
+        float: Time in the new unit.
     """
 
     # Conversion factors
     conversion_factors = {
-        WavelengthUnitOptions.nm: 1e-9,
-        WavelengthUnitOptions.pm: 1e-12,
-        WavelengthUnitOptions.m: 1,
-        WavelengthUnitOptions.angstrom: 1e-10,
+        TimeUnitOptions.s: 1,
+        TimeUnitOptions.ms: 1e-3,
+        TimeUnitOptions.us: 1e-6,
+        TimeUnitOptions.ns: 1e-9,
+        TimeUnitOptions.ps: 1e-12,
+    }
+
+    return conversion_factors[from_unit] / conversion_factors[to_unit]
+
+
+def convert_distance_units(from_unit, to_unit):
+    """Convert distance from one unit to another unit
+    based on DistanceUnitOptions options
+
+    Args:
+        from_unit (DistanceUnitOptions): Unit to convert from.
+        to_unit (DistanceUnitOptions): Unit to convert to.
+
+    Returns:
+        float: distance in the new unit.
+    """
+
+    # Conversion factors
+    conversion_factors = {
+        DistanceUnitOptions.nm: 1e-9,
+        DistanceUnitOptions.pm: 1e-12,
+        DistanceUnitOptions.m: 1,
+        DistanceUnitOptions.angstrom: 1e-10,
     }
 
     return conversion_factors[from_unit] / conversion_factors[to_unit]
@@ -101,7 +134,7 @@ def convert_to_cross_section(from_unit, to_unit):
 
 
 def convert_from_wavelength_to_energy_ev(wavelength, 
-                                      unit_from=WavelengthUnitOptions.angstrom): 
+                                      unit_from=DistanceUnitOptions.angstrom): 
     """Convert wavelength to energy based on the given units.
 
     Args:
@@ -111,7 +144,43 @@ def convert_from_wavelength_to_energy_ev(wavelength,
     Returns:
         float: Energy in the new unit.
     """
-    wavelength_m = wavelength * convert_wavlength_units(unit_from, WavelengthUnitOptions.m)
+    wavelength_m = wavelength * convert_distance_units(unit_from, DistanceUnitOptions.m)
     energy = h * c / wavelength_m
     energy = energy * convert_to_energy(EnergyUnitOptions.J, EnergyUnitOptions.eV)
     return energy
+
+
+
+def convert_array_from_time_to_lambda(time_array: np.ndarray, 
+                                      time_unit: TimeUnitOptions,       
+                                      distance_source_detector: float,
+                                      distance_source_detector_unit: DistanceUnitOptions,
+                                      detector_offset: float,   
+                                      detector_offset_unit: DistanceUnitOptions,
+                                      lambda_unit: DistanceUnitOptions) -> np.ndarray:
+    """Convert an array of time values to wavelength values.
+
+    Args:
+        time_array (np.ndarray): Array of time values.
+        time_unit (TimeUnitOptions): Unit of the input time.
+        distance_source_detector (float): Distance from the source to the detector.
+        distance_source_detector_unit (DistanceUnitOptions): Unit of the distance.
+        detector_offset (float): Offset of the detector.
+        detector_offset_unit (DistanceUnitOptions): Unit of the offset.
+        lambda_unit (DistanceUnitOptions): Unit of the output wavelength.
+
+    Returns:
+        np.ndarray: Array of wavelength values.
+    """
+    time_array_micros = time_array * convert_time_units(time_unit, TimeUnitOptions.us)
+    distance_source_detector_m = distance_source_detector * convert_distance_units(distance_source_detector_unit, DistanceUnitOptions.m)
+    detector_offset_micros = detector_offset * convert_time_units(detector_offset_unit, TimeUnitOptions.us)
+
+
+    # # Convert time to energy
+    # energy_array = convert_array_from_time_to_energy(time_array, time_unit)
+    
+    # # Convert energy to wavelength
+    # wavelength_array = convert_energy_to_wavelength(energy_array, lambda_unit)
+    
+    return None

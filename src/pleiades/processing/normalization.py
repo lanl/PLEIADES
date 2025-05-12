@@ -94,6 +94,8 @@ def normalization(list_sample_folders: list,
                   pixel_binning: int = 1, 
                   remove_outliers_flag: bool = False, 
                   rolling_average: bool = False, 
+                  distance_source_detector_m: float = 25,
+                  detector_offset_micros: float = 0,
                   output_folder: str = None, 
                   output_numpy: bool = True,
                   facility=Facility.ornl,
@@ -122,6 +124,8 @@ def normalization(list_sample_folders: list,
     - crop_roi: Region of interest (optional) used to define the crop region
     - timepix: Boolean indicating if timepix data is used.
     - pixel_binning: Pixel binning factor (1 means no binning).
+    - distance_source_detector_m: Distance from the source to the detector in meters.
+    - detector_offset_micros: Detector offset in microseconds.
     - output_numpy: Boolean indicating if the output should be saved as numpy arrays.
     - remove_outliers: Boolean indicating if outliers should be removed.
     - rolling_average: should a rolling average be applied.
@@ -143,6 +147,8 @@ def normalization(list_sample_folders: list,
     logger.info(f"\tPixel binning: {pixel_binning}")
     logger.info(f"\tRemove outliers flag: {remove_outliers_flag}")
     logger.info(f"\tRolling average: {rolling_average}")
+    logger.info(f"\tDistance source to detector (m): {distance_source_detector_m}")
+    logger.info(f"\tDetector offset (micros): {detector_offset_micros}")
     logger.info(f"\tOutput folder: {output_folder}")
     logger.info(f"\tOutput numpy: {output_numpy}")
     logger.info(f"\tNumber of threads: {num_threads}")
@@ -243,6 +249,8 @@ if __name__ == "__main__":
         pixel_binning=2,
         remove_outliers_flag=False,
         rolling_average=False,
+        distance_source_detector_m=25,
+        detector_offset_micros=0,
         output_folder="/Users/j35/SNS/IPTS-35945/processed",
         output_numpy=True,
         num_threads=4,
