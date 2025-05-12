@@ -290,7 +290,7 @@ class IsotopeParameters(BaseModel):
 
     """
 
-    isotope_infomation: IsotopeInfo = Field(default=None, description="Isotope information")
+    isotope_information: IsotopeInfo = Field(default=None, description="Isotope information")
     abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
