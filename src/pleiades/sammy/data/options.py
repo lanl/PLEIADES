@@ -7,7 +7,10 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
+from pleiades.utils.logger import loguru_logger
 from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
+
+logger = loguru_logger.bind(name=__name__)
 
 
 class DataTypeOptions(str, Enum):
