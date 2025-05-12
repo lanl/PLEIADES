@@ -9,6 +9,7 @@ from pleiades.utils.load import load
 from pleiades.utils.image_processing import crop, rebin
 from pleiades.utils.image_processing import  remove_outliers as image_processing_remove_outliers 
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
+from pleiades.utils.units import convert_array_from_time_to_energy
 
 
 def update_with_list_of_files(master_dict: dict) -> None:
@@ -24,6 +25,8 @@ def update_with_list_of_files(master_dict: dict) -> None:
             logger.info(f"Found {len(list_files)} files in {folder} with extension {ext}")
             master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_images] = list_files
             master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.ext] = ext
+        else:
+            raise FileNotFoundError(f"Folder {folder} does not exist")
 
 
 def update_with_data(master_dict: dict):

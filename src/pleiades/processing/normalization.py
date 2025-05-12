@@ -2,7 +2,6 @@ import os
 import numpy as np
 
 from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus, DataType
-from pleiades.utils.load import load
 from pleiades.utils.image_processing import remove_outliers
 from pleiades.utils.timepix import update_with_nexus_files
 from pleiades.utils.timepix import update_with_shutter_counts
@@ -18,6 +17,7 @@ from pleiades.processing.normalization_handler import remove_outliers
 from pleiades.processing.normalization_handler import correct_data_for_proton_charge
 from pleiades.processing.normalization_handler import correct_data_for_shutter_counts
 from pleiades.processing.normalization_handler import performing_normalization
+from pleiades.utils.units import convert_array_from_time_to_energy, TimeUnitOptions, EnergyUnitOptions, DistanceUnitOptions
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -233,8 +233,17 @@ def normalization(list_sample_folders: list,
     # format the data for export
     for folder in normalization_dict[MasterDictKeys.sample_data].keys():
         logger.info(f"Exporting data for folder: {folder}")
-        spectra_file = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
-        logger.info(f"\tSpectra file: {spectra_file}")
+        spectra_array = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
+        energy_array = convert_array_from_time_to_energy(spectra_array,
+                                                         time_unit=TimeUnitOptions.s,
+                                                         distance_source_detector=distance_source_detector_m,
+                                                         distance_source_detector_unit=DistanceUnitOptions.m,
+                                                         detector_offset=detector_offset_micros,
+                                                         detector_offset_unit=TimeUnitOptions.us,
+                                                         energy_unit=EnergyUnitOptions.eV)
+
+
+        logger.info(f"\tSpectra file: {energy_array}")
 
 
 if __name__ == "__main__":
@@ -255,4 +264,3 @@ if __name__ == "__main__":
         output_numpy=True,
         num_threads=4,
     )
-

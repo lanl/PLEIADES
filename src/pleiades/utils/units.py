@@ -136,7 +136,7 @@ def convert_to_cross_section(from_unit, to_unit):
 
 
 def convert_from_wavelength_to_energy_ev(wavelength, 
-                                      unit_from=DistanceUnitOptions.angstrom): 
+                                         unit_from=DistanceUnitOptions.angstrom): 
     """Convert wavelength to energy based on the given units.
 
     Args:
@@ -185,3 +185,40 @@ def convert_array_from_time_to_lambda(time_array: np.ndarray,
     lambda_converted = lambda_m * convert_distance_units(DistanceUnitOptions.m, lambda_unit)
 
     return lambda_converted
+
+
+def convert_array_from_time_to_energy(time_array: np.ndarray, 
+                                      time_unit: TimeUnitOptions,       
+                                      distance_source_detector: float,
+                                      distance_source_detector_unit: DistanceUnitOptions,
+                                      detector_offset: float,   
+                                      detector_offset_unit: DistanceUnitOptions,
+                                      energy_unit: EnergyUnitOptions) -> np.ndarray:
+    """Convert an array of time values to energy values.
+
+    Args:
+        time_array (np.ndarray): Array of time values.
+        time_unit (TimeUnitOptions): Unit of the input time.
+        distance_source_detector (float): Distance from the source to the detector.
+        distance_source_detector_unit (DistanceUnitOptions): Unit of the distance.
+        detector_offset (float): Offset of the detector.
+        detector_offset_unit (DistanceUnitOptions): Unit of the offset.
+        energy_unit (EnergyUnitOptions): Unit of the output energy.
+
+    This is using the formula: E = h/(m_n * distance_source_detector_m) * (time_array_s + detector_offset_s)
+
+    Returns:
+        np.ndarray: Array of energy values.
+    """
+    lambda_in_angstroms = convert_array_from_time_to_lambda(time_array, 
+                                                            time_unit, 
+                                                            distance_source_detector,
+                                                            distance_source_detector_unit, 
+                                                            detector_offset, 
+                                                            detector_offset_unit, 
+                                                            DistanceUnitOptions.angstrom)
+
+    energy_array_ev = [convert_from_wavelength_to_energy_ev(l, DistanceUnitOptions.angstrom) for l in lambda_in_angstroms]
+    energy_array = np.array(energy_array_ev)
+
+    return energy_array
