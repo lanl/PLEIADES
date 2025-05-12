@@ -1,6 +1,6 @@
 from enum import Enum
 import numpy as np
-from scipy.constants import h, c, electron_volt
+from scipy.constants import h, c, electron_volt, m_n
 
 
 """ Small library of units and conversions for use in SAMMY fitting. """
@@ -31,6 +31,7 @@ class CrossSectionUnitOptions(str, Enum):
 
 
 class DistanceUnitOptions(str, Enum):
+    cm = "cm"
     nm = "nm"
     pm = "pm"
     m = "m"
@@ -76,6 +77,7 @@ def convert_distance_units(from_unit, to_unit):
     # Conversion factors
     conversion_factors = {
         DistanceUnitOptions.nm: 1e-9,
+        DistanceUnitOptions.cm: 1e-2,
         DistanceUnitOptions.pm: 1e-12,
         DistanceUnitOptions.m: 1,
         DistanceUnitOptions.angstrom: 1e-10,
@@ -150,7 +152,6 @@ def convert_from_wavelength_to_energy_ev(wavelength,
     return energy
 
 
-
 def convert_array_from_time_to_lambda(time_array: np.ndarray, 
                                       time_unit: TimeUnitOptions,       
                                       distance_source_detector: float,
@@ -169,18 +170,18 @@ def convert_array_from_time_to_lambda(time_array: np.ndarray,
         detector_offset_unit (DistanceUnitOptions): Unit of the offset.
         lambda_unit (DistanceUnitOptions): Unit of the output wavelength.
 
+    This is using the formula: lambda_m = h/(m_n * distance_source_detector_m) * (time_array_s + detector_offset_s)
+
     Returns:
         np.ndarray: Array of wavelength values.
     """
-    time_array_micros = time_array * convert_time_units(time_unit, TimeUnitOptions.us)
+    time_array_s = time_array * convert_time_units(time_unit, TimeUnitOptions.s)
+    detector_offset_s = detector_offset * convert_time_units(detector_offset_unit, TimeUnitOptions.s)
     distance_source_detector_m = distance_source_detector * convert_distance_units(distance_source_detector_unit, DistanceUnitOptions.m)
-    detector_offset_micros = detector_offset * convert_time_units(detector_offset_unit, TimeUnitOptions.us)
 
+    h_over_mn = h / m_n
+    lambda_m = h_over_mn * (time_array_s + detector_offset_s) / distance_source_detector_m
 
-    # # Convert time to energy
-    # energy_array = convert_array_from_time_to_energy(time_array, time_unit)
-    
-    # # Convert energy to wavelength
-    # wavelength_array = convert_energy_to_wavelength(energy_array, lambda_unit)
-    
-    return None
+    lambda_converted = lambda_m * convert_distance_units(DistanceUnitOptions.m, lambda_unit)
+
+    return lambda_converted

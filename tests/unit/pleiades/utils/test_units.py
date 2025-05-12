@@ -1,8 +1,9 @@
 import pytest
-from scipy.constants import h, c, electron_volt
+import numpy as np
+from scipy.constants import h, c, electron_volt, m_n
 
 from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions, TimeUnitOptions, convert_to_cross_section, convert_to_energy, convert_time_units
-from pleiades.utils.units import convert_from_wavelength_to_energy_ev, DistanceUnitOptions
+from pleiades.utils.units import convert_from_wavelength_to_energy_ev, DistanceUnitOptions, convert_array_from_time_to_lambda
 
 
 def test_convert_to_energy():
@@ -45,6 +46,61 @@ def test_convert_time_units():
     # Test conversion from milliseconds to seconds
     assert convert_time_units(TimeUnitOptions.ms, TimeUnitOptions.s) == 1e-3
 
+def test_convert_array_from_time_to_lambda():
+    # Test case 1: Simple conversion with no detector offset
+    time_array = np.array([1.0, 2.0, 3.0])  # in microseconds
+    time_unit = TimeUnitOptions.us
+    distance_source_detector = 5.0  # in meters
+    distance_source_detector_unit = DistanceUnitOptions.m
+    detector_offset = 0.0  # no offset
+    detector_offset_unit = TimeUnitOptions.s
+    lambda_unit = DistanceUnitOptions.angstrom
+
+    expected_lambda = (h / m_n) * (time_array * 1e-6 + detector_offset) / distance_source_detector * 1e10
+    result = convert_array_from_time_to_lambda(
+        time_array, time_unit, distance_source_detector, distance_source_detector_unit, detector_offset, detector_offset_unit, lambda_unit
+    )
+    assert np.allclose(result, expected_lambda)
+
+
+    time_array = np.array([6319])  # in microseconds
+    time_unit = TimeUnitOptions.us
+    distance_source_detector = 25.0  # in meters
+    distance_source_detector_unit = DistanceUnitOptions.m
+    detector_offset = 0.0  # no offset
+    detector_offset_unit = TimeUnitOptions.s
+    lambda_unit = DistanceUnitOptions.angstrom
+
+    expected_lambda = ((h / m_n) * (time_array * 1e-6) / distance_source_detector ) * 1e10  # convert to angstrom
+    result = convert_array_from_time_to_lambda(
+        time_array, time_unit, distance_source_detector, distance_source_detector_unit, detector_offset, detector_offset_unit, lambda_unit
+    )
+    assert np.allclose(result, expected_lambda)
+
+
+    # Test case 2: Conversion with detector offset
+    detector_offset = 0.5  # in microseconds
+    detector_offset_unit = TimeUnitOptions.us
+    lambda_unit = DistanceUnitOptions.nm
+
+    expected_lambda = (h / m_n) * ((time_array * 1e-6) + (detector_offset * 1e-6)) / distance_source_detector * 1e9  # convert to 
+    result = convert_array_from_time_to_lambda(
+        time_array, time_unit, distance_source_detector, distance_source_detector_unit, detector_offset, detector_offset_unit, lambda_unit
+    )
+    assert np.allclose(result, expected_lambda)
+
+    # Test case 3: Different distance and time units
+    time_array = np.array([1000.0, 2000.0, 3000.0])  # in nanoseconds
+    time_unit = TimeUnitOptions.ns
+    distance_source_detector = 500.0  # in centimeters
+    distance_source_detector_unit = DistanceUnitOptions.cm
+    lambda_unit = DistanceUnitOptions.angstrom
+
+    expected_lambda = (h / m_n) * (time_array * 1e-9 + detector_offset * 1e-6) / (distance_source_detector * 1e-2) * 1e10  # convert to angstrom
+    result = convert_array_from_time_to_lambda(
+        time_array, time_unit, distance_source_detector, distance_source_detector_unit, detector_offset, detector_offset_unit, lambda_unit
+    )
+    assert np.allclose(result, expected_lambda)
 
 
 if __name__ == "__main__":
