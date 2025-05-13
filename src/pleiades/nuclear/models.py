@@ -106,16 +106,18 @@ class RadiusParameters(BaseModel):
         of input format.
     """
 
-    effective_radius: float = Field(description="Radius for potential scattering (Fermi)", ge=0)
-    true_radius: float = Field(description="Radius for penetrabilities and shifts (Fermi)")
-    channel_mode: int = Field(
+    effective_radius: Optional[float] = Field(default=None, description="Radius for potential scattering (Fermi)", ge=0)
+    true_radius: Optional[float] = Field(default=None, description="Radius for penetrabilities and shifts (Fermi)")
+    channel_mode: Optional[int] = Field(
+        default=None,
         description="Channel specification mode (0: all channels, 1: specific channels)",
-        ge=0,  # Greater than or equal to 0
-        le=1,  # Less than or equal to 1
+        ge=0,
+        le=1,
     )
-    vary_effective: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying effective radius")
-    vary_true: VaryFlag = Field(default=VaryFlag.NO, description="Flag for varying true radius")
+    vary_effective: Optional[VaryFlag] = Field(default=None, description="Flag for varying effective radius")
+    vary_true: Optional[VaryFlag] = Field(default=None, description="Flag for varying true radius")
     spin_groups: Optional[List[int]] = Field(
+        default=None,
         description="List of spin group numbers",
     )
     channels: Optional[List[int]] = Field(
@@ -212,19 +214,20 @@ class RadiusParameters(BaseModel):
                 raise ValueError("When vary_true is USE_FROM_PARFILE (-1), true_radius must match effective_radius")
 
         # Special cases for true_radius
-        if self.true_radius == 0:
-            if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
-                raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
+        if self.true_radius is not None:
+            if self.true_radius == 0:
+                if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                    logger.error("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
+                    raise ValueError("When true_radius=0 (use CRFN value), vary_true cannot be USE_FROM_PARFILE (-1)")
 
-        if self.true_radius < 0:
-            if self.vary_true == VaryFlag.USE_FROM_PARFILE:
-                logger.error(
-                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
-                )
-                raise ValueError(
-                    "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
-                )
+            if self.true_radius < 0:
+                if self.vary_true == VaryFlag.USE_FROM_PARFILE:
+                    logger.error(
+                        "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                    )
+                    raise ValueError(
+                        "When true_radius is negative (AWRI specification), vary_true cannot be USE_FROM_PARFILE (-1)"
+                    )
 
         return self
 
@@ -287,7 +290,7 @@ class IsotopeParameters(BaseModel):
 
     """
 
-    isotope_infomation: IsotopeInfo = Field(description="Isotope information")
+    isotope_information: IsotopeInfo = Field(default=None, description="Isotope information")
     abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
@@ -400,19 +403,28 @@ class nuclearParameters(BaseModel):
         where_am_i = "nuclear_params.validate_isotopes()"
 
         # Check for duplicate isotope names in isotopeInfo
-        names = [iso.isotope_infomation.name for iso in self.isotopes]
+        names = [iso.isotope_information.name for iso in self.isotopes]
 
         if len(names) != len(set(names)):
             logger.info(f"{where_am_i}:Duplicate isotope names found")
             raise ValueError("Duplicate isotope names found")
 
         # Check for duplicate masses
-        masses = [iso.isotope_infomation.mass_data.atomic_mass for iso in self.isotopes]
+        masses = [iso.isotope_information.mass_data.atomic_mass for iso in self.isotopes]
         if len(masses) != len(set(masses)):
             logger.info(f"{where_am_i}:Duplicate masses found")
             raise ValueError("Duplicate masses found")
 
         return self
+
+    def append_isotope(self, isotope: IsotopeParameters):
+        """Append an isotope to the list of isotopes.
+
+        Args:
+            isotope (IsotopeParameters): The isotope to append
+        """
+        self.isotopes.append(isotope)
+        logger.info(f"Isotope {isotope.isotope_information.name} appended to nuclear parameters")
 
 
 # example usage

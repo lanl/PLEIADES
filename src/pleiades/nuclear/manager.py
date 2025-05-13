@@ -113,7 +113,7 @@ class NuclearDataManager:
             raise ValueError(f"Isotope information for '{isotope_str}' not found.")
 
         # Create and return an IsotopeParameters instance with default library
-        return IsotopeParameters(isotope_infomation=isotope_info, endf_library=self.default_library)
+        return IsotopeParameters(isotope_information=isotope_info, endf_library=self.default_library)
 
     def clear_cache(self, method: Optional[DataRetrievalMethod] = None, library: Optional[EndfLibrary] = None) -> None:
         """

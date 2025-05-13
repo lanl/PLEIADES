@@ -48,10 +48,10 @@ class FileCategory(Enum):
 class IsotopeMassData(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    atomic_mass: float = Field(description="Mass in atomic mass units")
-    mass_uncertainty: NonNegativeFloat
-    binding_energy: Optional[float] = Field(description="Binding energy in MeV")
-    beta_decay_energy: Optional[float] = Field(description="Beta decay energy in MeV")
+    atomic_mass: Optional[float] = Field(default=None, description="Mass in atomic mass units")
+    mass_uncertainty: Optional[NonNegativeFloat] = Field(default=None)
+    binding_energy: Optional[float] = Field(default=None, description="Binding energy in MeV")
+    beta_decay_energy: Optional[float] = Field(default=None, description="Beta decay energy in MeV")
 
 
 class IsotopeInfo(BaseModel):
@@ -81,12 +81,12 @@ class IsotopeInfo(BaseModel):
         Convert the IsotopeInfo instance to a string in the format 'element-mass_number'.
     """
 
-    name: str = Field(description="Isotope name")
-    mass_number: int = Field(gt=0)
-    element: str = Field(description="Element symbol")
-    atomic_number: Optional[int] = Field(gt=0, default=None)
-    mass_data: Optional[IsotopeMassData] = Field(description="Isotope mass data", default=None)
-    abundance: Optional[float] = Field(ge=0, default=None)
+    name: Optional[str] = Field(default=None, description="Isotope name")
+    mass_number: Optional[int] = Field(default=None, gt=0)
+    element: Optional[str] = Field(default=None, description="Element symbol")
+    atomic_number: Optional[int] = Field(default=None, gt=0)
+    mass_data: Optional[IsotopeMassData] = Field(default=None, description="Isotope mass data")
+    abundance: Optional[float] = Field(default=None, ge=0)
     spin: Optional[float] = Field(default=None)
     material_number: Optional[int] = Field(default=None)
 

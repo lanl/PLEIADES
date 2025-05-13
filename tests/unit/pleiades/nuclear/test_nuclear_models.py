@@ -96,11 +96,11 @@ class TestIsotopeParameters(unittest.TestCase):
         isotope_params.vary_abundance = VaryFlag.YES
         isotope_params.spin_groups = [1, 2, 3]
 
-        self.assertEqual(isotope_params.isotope_infomation.name, "U-238")
-        self.assertEqual(isotope_params.isotope_infomation.mass_number, 238)
-        self.assertEqual(isotope_params.isotope_infomation.element, "U")
-        self.assertEqual(isotope_params.isotope_infomation.material_number, 9237)
-        self.assertEqual(isotope_params.isotope_infomation.abundance, 99.2745)
+        self.assertEqual(isotope_params.isotope_information.name, "U-238")
+        self.assertEqual(isotope_params.isotope_information.mass_number, 238)
+        self.assertEqual(isotope_params.isotope_information.element, "U")
+        self.assertEqual(isotope_params.isotope_information.material_number, 9237)
+        self.assertEqual(isotope_params.isotope_information.abundance, 99.2745)
 
         self.assertEqual(isotope_params.abundance, 1)
         self.assertEqual(isotope_params.uncertainty, 0.001)
@@ -147,10 +147,10 @@ class TestNuclearParameters(unittest.TestCase):
         params = nuclearParameters(isotopes=[isotope_params])
 
         # Assert that the first isotope in the nuclearParameters object matches the expected IsotopeParameters object
-        self.assertEqual(params.isotopes[0].isotope_infomation.name, "U-238")
-        self.assertEqual(params.isotopes[0].isotope_infomation.mass_number, 238)
-        self.assertEqual(params.isotopes[0].isotope_infomation.element, "U")
-        self.assertEqual(params.isotopes[0].isotope_infomation.material_number, 9237)
+        self.assertEqual(params.isotopes[0].isotope_information.name, "U-238")
+        self.assertEqual(params.isotopes[0].isotope_information.mass_number, 238)
+        self.assertEqual(params.isotopes[0].isotope_information.element, "U")
+        self.assertEqual(params.isotopes[0].isotope_information.material_number, 9237)
         self.assertEqual(params.isotopes[0].abundance, 1)
         self.assertEqual(params.isotopes[0].uncertainty, 0.001)
         self.assertEqual(params.isotopes[0].vary_abundance, VaryFlag.YES)

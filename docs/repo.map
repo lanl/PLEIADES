@@ -13,22 +13,34 @@ PLEIADES
 |       ├── __init__.py
 |       ├── __main__.py
 |       ├── utils/
-|       ├── data/
-|       |   ├── cross-sections/
+|       |   ├── config.py
+|       |   ├── helper.py
+|       |   ├── logger.py
+|       |   ├── plotter.py
+|       |   └── units.py
+|       ├── nuclear/
 |       |   ├── isotopes/
-|       |   └── resonances/
+|       |   |   ├── files/
+|       |   |   ├── manager.py
+|       |   |   └── models.py
+|       |   ├── resonances/
+|       |   |   └── res_endf8.endf
+|       |   ├── manager.py
+|       |   └── models.py
+|       ├── experimental/
+|       |   ├── UserResolutionFiles/
+|       |   └── models.py
 |       ├── core/
-|       │   ├── transmission.py
-|       │   ├── constants.py
-|       │   ├── __init__.py
-|       │   ├── models.py
-|       │   └── data_manager.py
+|       │   └── constants.py
+|       ├── results/
+|       │   └── models.py
 |       └── sammy/
 |           ├── interface.py
 |           ├── config.py
-|           ├── __init__.py
 |           ├── factory.py
 |           ├── parfile.py
+|           ├── results/
+|           │   └── models.py
 |           ├── backends/
 |           │   ├── nova_ornl.py
 |           │   ├── __init__.py

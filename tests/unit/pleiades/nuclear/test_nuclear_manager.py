@@ -82,10 +82,10 @@ def test_create_isotope_parameters_from_string_valid(data_manager):
     isotope_params = data_manager.create_isotope_parameters_from_string("U-238")
 
     # Assert that the returned IsotopeParameters instance is correct
-    assert isotope_params.isotope_infomation.name == "U-238"
-    assert isotope_params.isotope_infomation.mass_number == 238
-    assert isotope_params.isotope_infomation.element == "U"
-    assert isotope_params.isotope_infomation.material_number == 9237
+    assert isotope_params.isotope_information.name == "U-238"
+    assert isotope_params.isotope_information.mass_number == 238
+    assert isotope_params.isotope_information.element == "U"
+    assert isotope_params.isotope_information.material_number == 9237
     assert isotope_params.abundance is None  # Default value
     assert isotope_params.spin_groups == []  # Default empty list
     # New test for default library
