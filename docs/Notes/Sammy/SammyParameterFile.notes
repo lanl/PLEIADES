@@ -719,10 +719,10 @@ Note:   Numbers in the second column (labeled “P, T”) indicate position numb
             21–30   | F    | DELISO      | Uncertainty on abundance (dimensionless)
 
             31–32   | I    | IFLISO      | Abundance treatment flag:
-                                          | 0 = fixed, 1 = vary, 2 = use INPut file value, 3 = PUP
+                                         | 0 = fixed, 1 = vary, 2 = use INPut file value, 3 = PUP
 
             33–34+  | I    | IGRISO(n)   | Spin group numbers associated with this isotope
-                                          | Each spin group occupies 2 columns (or 5 columns if >99 groups)
+                                         | Each spin group occupies 2 columns (or 5 columns if >99 groups)
 
             Optional Continuation Line:
             If more than 24 spin groups are associated with an isotope, end the line with “-1” in columns 79–80.
