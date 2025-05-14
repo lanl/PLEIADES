@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.bayes import BayesSolutionOptions
+from pleiades.sammy.alphanumerics.bayes_solution import BayesSolutionOptions
 
 
 def test_default_option():
@@ -34,19 +34,19 @@ def test_valid_option_with_single_boolean():
 
 
 def test_mutually_exclusive_options_1():
-    """Test mutually exclusive options."""
+    """Test mutually exclusive options for solving Bayes equations."""
     with pytest.raises(ValueError):
         BayesSolutionOptions(solve_bayes_equations=True, do_not_solve_bayes_equations=True)
 
 
 def test_mutually_exclusive_options_2():
-    """Test mutually exclusive options."""
+    """Test mutually exclusive options for inversion schemes."""
     with pytest.raises(ValueError):
         BayesSolutionOptions(let_sammy_choose_which_inversion_scheme_to_use=True, use_npv_inversion_scheme=True)
 
 
 def test_valid_combination_of_options_1():
-    """Test a valid combination of options."""
+    """Test a valid combination of options using NPV and least squares."""
     options = BayesSolutionOptions(
         use_npv_inversion_scheme=True, use_least_squares_to_define_prior_parameter_covariance_matrix=True
     )
@@ -61,7 +61,7 @@ def test_valid_combination_of_options_1():
 
 
 def test_valid_combination_of_options_2():
-    """Test a valid combination of options."""
+    """Test a valid combination of options using IPQ and baby steps."""
     options = BayesSolutionOptions(use_ipq_inversion_scheme=True, take_baby_steps_with_least_squares_method=True)
     assert options.let_sammy_choose_which_inversion_scheme_to_use is False
     assert options.use_ipq_inversion_scheme is True
@@ -83,6 +83,7 @@ def test_invalid_option():
 
 def test_switching_options():
     """Test switching options."""
+    # Default options
     options = BayesSolutionOptions()
     assert options.solve_bayes_equations is True
     assert options.get_alphanumeric_commands() == [
@@ -90,6 +91,7 @@ def test_switching_options():
         "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
     ]
 
+    # Test different Bayes solving options
     options = BayesSolutionOptions(do_not_solve_bayes_equations=True)
     assert options.do_not_solve_bayes_equations is True
     assert options.get_alphanumeric_commands() == [
@@ -97,6 +99,7 @@ def test_switching_options():
         "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",
     ]
 
+    # Test different inversion schemes
     options = BayesSolutionOptions(use_npv_inversion_scheme=True)
     assert options.use_npv_inversion_scheme is True
     assert options.get_alphanumeric_commands() == ["SOLVE BAYES EQUATIONS", "USE (N+V) INVERSION SCHEME"]
@@ -109,6 +112,7 @@ def test_switching_options():
     assert options.use_mpw_inversion_scheme is True
     assert options.get_alphanumeric_commands() == ["SOLVE BAYES EQUATIONS", "USE (M+W) INVERSION SCHEME"]
 
+    # Test special fitting options
     options = BayesSolutionOptions(use_least_squares_to_define_prior_parameter_covariance_matrix=True)
     assert options.use_least_squares_to_define_prior_parameter_covariance_matrix is True
     assert options.get_alphanumeric_commands() == [
