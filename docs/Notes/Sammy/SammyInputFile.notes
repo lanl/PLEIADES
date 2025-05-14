@@ -1,0 +1,701 @@
+Max Number of Columns in the fortran input file = 80
+
+Data input types
+“A” can be numbers or letters or symbols
+“F” requires a number with a decimal point
+“I” implies a number without a decimal point like an integer and requires that the number be in the right-most columns
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 1 – Title Line
+
+    Purpose:
+        Provides a descriptive title for the SAMMY run. The contents of this line
+        are used only for documentation and are printed in the output LPT file
+        (SAMMY.LPT). This title does not affect the calculations.
+
+    Structure:
+
+        Line 1 (Only Line in Card Set 1)
+            Columns | Type | Name   | Description
+            --------|------|--------|--------------------------------------------------
+            1–80    | A    | TITLE  | Descriptive title for the run (free text)
+
+    Notes:
+        - Only one line is allowed for Card Set 1.
+        - This card set is optional but recommended for clarity and output traceability.
+        - The title is not used by SAMMY in any calculations.
+        - Appears at the top of SAMMY.LPT output for identification purposes.
+
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 2 – General Experimental Setup Parameters
+
+    Purpose:
+        Specifies core settings related to the experimental sample and numerical controls.
+        Includes the sample's element name, energy range, atomic weight, and tuning
+        parameters for grid generation, iteration limits, and covariance handling.
+
+    Structure:
+
+        Line 1 (Only Line in Card Set 2)
+            Columns | Type | Name     | Description
+            --------|------|----------|------------------------------------------------------------
+            1–10    | A    | ELMNT    | Name of the sample element (e.g., U235, Cd, etc.)
+            11–20   | F    | AW       | Atomic weight of the sample isotope (amu)
+            21–30   | F    | EMIN     | Minimum energy of the experimental data (eV)
+            31–40   | F    | EMAX     | Maximum energy of the experimental data (eV)
+            41–45   | I    | NEPNTS   | Points in artificial energy grid (default = 10001)
+            46–50   | I    | ITMAX    | Maximum iterations for Bayes’ solution (default = 2)
+            51–52   | I    | ICORR    | Correlation threshold ×100 (default = 50)
+            53–55   | I    | NXTRA    | Extra points between experimental points for grid (default = 0)
+            56–57   | I    | IPTDOP   | Grid enhancement for Doppler broadening (default = 9)
+            59–60   | I    | IPTWID   | Grid enhancement for resonance tails (default = 5)
+            61–70   | I    | IXXCHN   | Special: channels to skip (ODF) or ZA for ENDF output
+            71–72   | I    | NDIGIT   | Digits for compact covariance output (1–6, default = 2)
+            73–74   | I    | IDROPP   | % below which covariances are zeroed (default = 2)
+            75–80   | I    | MATNUM   | ENDF Material Number (typically ignored)
+
+    Notes:
+        - EMIN/EMAX are ignored if energy range is provided interactively or from ENDF
+        - ITMAX can be set negative to allow more than 9 iterations (see manual)
+        - ICORR is used only when printing is requested for small correlations
+        - NXTRA and IPTDOP affect interpolation accuracy for Doppler broadening
+        - IXXCHN is rarely used; useful only for skipping channels in ODF files or specifying ENDF ZA
+        - NDIGIT controls output format of covariance in SAMMY.CCV
+        - IDROPP only applies if “DROP SMALL VALUES OF correlation matrix” appears in Card Set 3
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 3 – Alphanumeric Command Statements
+
+    Purpose:
+        Card Set 3 specifies SAMMY control behavior using plain English alphanumeric
+        commands. These statements activate specific models, options, and processing modes,
+        including formalism selection, data handling, broadening choices, print settings, etc.
+
+        This is the core instruction set for customizing a SAMMY run.
+
+    Structure:
+
+        Line 1, 2, ... N
+            Each line contains one or more commands (typically one per line)
+            Commands must be in columns 1–20 (free format)
+            Case insensitive, first 20 characters are significant
+            Comments:
+                - Use "#" in column 1 to comment out a line
+                - Use a full line of hyphens ("--------------------") to start/end a block comment
+
+    Example Commands:
+        REICH-MOORE FORMALISm is wanted
+        USE FREE GAS MODEL OF doppler broadening
+        SOLVE BAYES EQUATIONs
+        BROADENING IS WANTED
+        DATA ARE IN ORIGINAL multi-style format
+        DROP SMALL VALUES OF correlation matrix
+        PLOT RESOLUTION FUNCTION
+        KEY-WORD PARTICLE-PAIR definitions are given
+
+    Categories (see full tables in manual for command lists):
+        - R-matrix Formalism: REICH-MOORE, MLBW, SLBW, etc.
+        - Data Input: formats for experiment and covariances
+        - Broadening: resolution and Doppler function flags
+        - Multiple-Scattering: inclusion of shielding and corrections
+        - Quantum Numbers: formats and overrides for spin group/channel inputs
+        - Output Control: LPT file print options, compact covariance, etc.
+        - ENDF Output: file types, flags, MAT values
+        - Fitting Procedure: solve Bayes, inversion schemes, PUP generation
+
+    End of Card 3:
+        - Followed by next card set (usually card set 4 or 4a)
+        - No specific terminator is required
+
+    Notes:
+        - Commands are parsed in order; last occurrence overrides previous ones
+        - Each command typically begins in column 1 and ends by column 20
+        - SAMMY prints all unrecognized commands as warnings and ignores them
+        - Some commands affect which later card sets must or must not be present
+        - See Table VI A1.2 (manual) for a full list of supported commands
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 4 – Particle Pair Definitions (Keyword Format)
+
+    Purpose:
+        Provides definitions of particle pairs involved in the reaction channels.
+        This format uses keywords for specifying properties of particles A and B.
+        It supports isotopic details, spins, charges, Q-values, and channel radii.
+
+        This is the preferred format over Card Set 4a due to flexibility and clarity.
+
+    Structure:
+
+        Line 1 (Header – Required)
+            Trigger: Must be preceded by the command:
+                     “KEY-WORD PARTICLE PAir definitions are given” (in Card Set 3)
+
+        Lines 2, 3, ..., N: Definitions for each particle pair using keyword=value format
+            Keywords (capital letters required):
+                - NAME = Unique 8-character name for the particle pair
+                - Particle A or PA = Name of incident particle
+                - Particle B or PB = Name of target particle
+                - Mass A or MA = Mass of particle A (amu)
+                - Mass B or MB = Mass of particle B (amu)
+                - Charge A or ZA = Charge of particle A (in e)
+                - Charge B or ZB = Charge of particle B
+                - Spin A or SA = Spin (±parity) of particle A
+                - Spin B or SB = Spin (±parity) of particle B
+                - PARIty A = Needed only if Spin A = 0 and parity is negative
+                - PARIty B = Same for B
+                - PEnetrability = Yes or No (1 or 0)
+                - Shift = Yes or No (1 or 0)
+                - Q-value or THreshold = Reaction Q-value (in eV)
+                - EFfective radius or RE = Channel effective radius (fermi)
+                - TRue radius or RT = True channel radius (fermi)
+
+        Repeat:
+            Repeat blocks for each particle pair.
+            Use another NAME=... to start a new pair definition.
+            End card set with a blank line.
+
+    Notes:
+        - Keywords are case-insensitive; spacing is flexible.
+        - SAMMY supports shorthand for particle types:
+            NEUtron / N
+            PROton / P
+            DEUteron / D
+            ALPha / A
+            HE3 / H
+            TRIton / T
+        - Mass, spin, and charge defaults will be applied if particle type is known.
+        - Channel radii here are “default” values and can be overridden by Card Set 7 or 7a in the PARameter file.
+
+    Example:
+        NAME = nPb208
+        PA = N    PB = Pb208
+        MA = 1.008665   ZA = 0   SA = 0.5
+        MB = 207.9766   ZB = 82  SB = 0
+        PENETRABILITY = YES
+        SHIFT = YES
+        Q-VALUE = 0.0
+        RE = 5.0
+        RT = 5.0
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 4a – Particle Pair Definitions (Fixed Format)
+
+    Purpose:
+        Defines particle-pair information using a fixed-column format. This includes
+        particle types, charges, spins, masses, and threshold energies. It is functionally
+        equivalent to Card Set 4 but uses a legacy column-based input format.
+
+        This card set is used when the command:
+            "PARTICLE-PAIR DEFINItions are used"
+        appears in Card Set 3.
+
+    Structure:
+
+        Line 1, 2, 3, ..., N: One line per particle pair
+            Columns | Type | Name     | Description
+            --------|------|----------|--------------------------------------------------------------
+            1–8     | A    | NAMPP    | Name of the particle pair (used in other card sets)
+            9–10    | A    | Aa       | Type of particle A (incident, e.g., 'n', 'p', 'de', etc.)
+            11–12   | A    | Ab       | Type of particle B (target)
+            13–15   | I    | Za       | Charge of particle A
+            16–18   | I    | Zb       | Charge of particle B
+            19      | I    | Lpent    | 1 = calculate penetrability, 0 = assume P = 1
+            20      | I    | Ishift   | 1 = calculate shift factor, 0 = assume S - B = 0
+            21–25   | F    | Sa       | Spin (+ parity) of particle A
+            26–30   | F    | Sb       | Spin (+ parity) of particle B
+            31–40   | F    | Ma       | Mass of particle A (amu)
+            41–50   | F    | Mb       | Mass of particle B (amu)
+            51–60   | F    | Ex       | Excitation energy (threshold) (eV)
+            61–70   | F    | Re       | Effective radius for this particle pair (fermi)
+            71–80   | F    | Rt       | True channel radius (fermi)
+
+        Repeat:
+            Repeat line for each particle pair.
+            End card set with a blank line.
+
+    Notes:
+        - Special particle abbreviations like "n", "p", "de", "al" auto-fill mass, spin, etc.
+        - Channel radii (Re, Rt) can be overwritten in the PARameter file
+        - This fixed format is deprecated in favor of the keyword format in Card 4, but is still supported
+
+    Example:
+        nU235   n  U  0 92  1 1 0.5 3.5 1.0087 235.0439 0.0  5.0 5.0
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 5 – Doppler and Resolution Broadening Parameters
+
+    Purpose:
+        Specifies values used in modeling Doppler and resolution broadening.
+        These parameters are used unless overridden by the PARameter file.
+
+        Required only if “BROADENING IS WANTED” is specified in Card Set 3.
+        SAMMY will abort if this card set is omitted when broadening is requested.
+
+    Structure:
+
+        Line 1 (Only Line in Card Set 5)
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------------------------------------
+            1–10    | F    | TEMP     | Effective sample temperature (K)
+            11–20   | F    | DIST     | Flight-path length (m)
+            21–30   | F    | DELTAL   | Portion of Gaussian resolution width from flight path (m)
+            31–40   | F    | DELTAE   | E-folding width of exponential resolution function (s)
+            41–50   | F    | DELTAG   | FWHM of Gaussian resolution from burst width (s)
+            51–60   | F    | DELTTT   | Step size for Leal-Hwang Doppler method (K)
+            61–70   | F    | ELOWBR   | Energy below which no broadening is applied (eV)
+            71–80   | F    | DDDEEE   | Range for straight-line energy-average resolution (eV)
+
+    Notes:
+        - TEMP = 0 disables Doppler broadening
+        - DELTAG = 0 disables Gaussian burst broadening
+        - DELTAE = 0 disables exponential tail broadening
+        - DELTTT > 0 is required for Leal-Hwang Doppler method; default is 5.0
+        - ELOWBR sets a cutoff for Doppler broadening
+        - DDDEEE used for simplified energy-averaging resolution model
+        - These values may be overridden by PAR file Card Set 4 (see Table VI B.2)
+        - Do not include this card if using Card 14, 14a, or 16 exclusively
+
+    Example:
+        300.0     12.5     0.0500   0.0000   0.0005   5.0    0.0     0.0
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 6 – Channel Widths for Crunch Regions
+
+    Purpose:
+        Specifies how the auxiliary energy grid is refined across narrow resonances
+        using energy-dependent “crunch” factors. Only required if DELTAG < 0
+        in Card Set 5, which signals use of this format.
+
+        This card lets you define a piecewise grid width used for resolution
+        calculations, offering finer control across different energy regions.
+
+    Structure:
+
+        Line 1 (Crunch Settings Header)
+            6:1
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------------------------------------
+            1–10    | F    | DELTAB   | Minimum channel width (s) from EMIN to EMAX
+            11–15   | I    | NCF      | Number of crunch intervals (energy subregions)
+
+        Line 2 (First Crunch Interval)
+            6:2
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------------------------------------
+            1–10    | F    | BCF(1)   | Upper energy limit of first interval (eV)
+            11–15   | I    | CF(1)    | Crunch factor for this region (applies to DELTAB)
+
+        Lines 3, 4, ..., N
+            6:3,4,...
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------------------------------------
+            1–10    | F    | BCF(i)   | Upper energy boundary for interval i (increasing)
+            11–15   | I    | CF(i)    | Crunch factor for interval i (integer multiple of DELTAB)
+
+            Notes:
+            - DELTAB × CF(i) gives the actual channel width used in region i
+            - BCF(i−1) < E < BCF(i) defines each energy subrange
+
+        End of Card 6:
+            - After N = NCF lines have been given for the intervals, insert a blank line
+
+    Notes:
+        - Used only when Gaussian resolution broadening is active and DELTAG < 0
+        - Allows very fine grid control near resonances
+        - Grid refinement across energy ranges enables accurate convolution
+        - Not needed for standard constant resolution widths
+
+    Example:
+        Line 1: 0.000001  3
+        Line 2:  10.0     10
+        Line 3: 100.0     5
+        Line 4:1000.0     1
+
+        → Crunch width = 10 × DELTAB for E < 10 eV,
+                         5 × DELTAB for 10–100 eV,
+                         1 × DELTAB for 100–1000 eV
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 7 – Matching Radius, Sample Thickness, and Covariance Parameters
+
+    Purpose:
+        Specifies physical and statistical modeling parameters related to the experimental setup.
+        This includes the R-matrix channel radius, sample thickness, and terms used in defining
+        experimental data covariance.
+
+        These parameters may be overridden by PAR file entries (Card Set 4 or 7 of PAR).
+
+    Structure:
+
+        Line 1 (Only Line in Card Set 7)
+            7:1
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------------------------------------
+            1–10    | F    | CRFN     | Channel (matching) radius (fermi)
+            11–20   | F    | THICK    | Sample thickness (atoms/barn)
+            21–30   | F    | DCOVA    | Constant term in data covariance (default = 0.0)
+            31–40   | F    | DCOVB    | Linear term in data covariance (default = 0.0)
+            41–50   | F    | VMIN     | Minimum absolute uncertainty on experimental data
+
+    Notes:
+        - If CRFN = 0, SAMMY calculates: CRFN = 1.45 × (1.008665 + AW)^(1/3)
+        - THICK is required only for transmission, total cross section, or when
+          multiple scattering/self-shielding is enabled
+        - DCOVA and DCOVB define a contribution to data covariance:
+              (DCOVA + Ei × DCOVB) × (DCOVA + Ej × DCOVB)
+        - VMIN sets a floor for uncertainty. If a DATa file value < VMIN,
+          SAMMY increases it to match
+
+    Example:
+        5.2000    0.0020   0.0050     0.0005     0.0001
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 8 – Experimental Data Type and Angular Distribution
+
+    Purpose:
+        Specifies the type of experimental data being analyzed and, if applicable,
+        the angular distribution information. This includes transmission, capture,
+        and various reaction data types.
+
+        Required for all runs. Determines the form of the cross section calculated.
+
+    Structure:
+
+        Line 1 – Data Type Specification
+            8:1
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–80    | A    | CROSS    | Type of data (must begin in column 1)
+
+            Accepted values (only uppercase portion required):
+                TRANSmission
+                TOTAL cross section
+                ELASTic or SCATTering
+                DIFFErential elastic
+                DIFFErentiAL REaction
+                REACTion or INELAstic or FISSion
+                FINAL state pairs = ...
+                CAPTUre
+                SELF-indication
+                ABSORption
+                ETA (must be followed by two spaces)
+                INTEGral
+                CONSTant, LINEAr, QUADRatic, DIRAC delta function, 1/V
+
+            Notes: Only one entry allowed
+
+    If Data is Angular Distribution Data:
+        Line 2 – Angle Definitions
+            8:2
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | I    | NANGLE   | Number of angles
+            11–20   | F    | ANGLE(1) | First angle (deg, lab system)
+            21–30   | F    | ANGLE(2) | Second angle (deg)
+            ...
+            71–80   | F    | ANGLE(7) | Seventh angle
+
+        Line 3, 4, ... – Additional Angles (if NANGLE > 7)
+            8:3,4,...
+            ANGLE(8), ANGLE(9), ...
+
+        Line N+1 – Angular Spreads
+            8:4,5,...
+            11–20   | F    | DANGLE(1) | Spread at ANGLE(1)
+            ...
+            71–80   | F    | DANGLE(N) | Spread at ANGLE(N)
+
+    Notes:
+        - Cross section types are case-insensitive; only required characters must match
+        - Angular data only needed for differential cross section data
+        - Angle units are degrees (lab frame)
+        - Spreads are optional but recommended if detector coverage is broad
+
+    Example:
+        TRANSmission
+        3     45.0     90.0     135.0
+               1.0      1.0      1.0
+
+Card 9 -
+    Note:   No longer used.
+
+Card 10.1 -
+    Note:   It is no longer necessary to have “USE NEW SPIN GROUP Format” in
+            card set 3 in order to use this alternative; card set 10.1 is now
+            the default.
+            Line 2 is repeated for a total of (NENT + NEXT) lines!
+            Line 1 followed by multiple line 2s is repeated for all spin groups
+    Line 1:
+        1-3 column, I "JJ"              # Spin group number: 1,2,3, ...
+        5 column, A "EXCL"              # Flag to exclude this spin group from calculation of cross section
+        6-10 column, I "NENT(JJ)"       # Number of entrance channels (must be > 0)
+        11-15 column, I "NEXT(JJ)"      # Number of exit channels, excluding those that are also entrance channels (can be zero)
+        16-20 column, F "SPINJ(JJ)"     # Integer or half-integer spin for resonances in group JJ
+        21-30 column, F "ABNDNC(JJ)"    # Isotopic abundance for this spin group (These values may be overwritten in the PARameter file)
+        31-35 column, F "SPINI"         # Ground-state spin for the nuclide (i.e., for the target particle)
+        35-80 column, A "Comments"      # Use this to state which nuclei is covered by this spin group!
+
+    Line 2:
+        4-5, I "N"              # Channel number (One line is needed for each channel!)
+        6-8, I "KZ1(N,JJ)"      # Charge number Z1 for the first particle in this channel
+        10, I "LPENT(N,JJ)"     # Is SAMMY to calculate the penetrability for channel N, spin group JJ?
+        11-13, I "KZ2(N,JJ)"    # Charge number Z2 for the second particle in this channel
+        15, I "ISHIFT(N,JJ)"    # 1 if calculate shift; 0 Otherwise
+        18, I "IFEXCL"          # 1 if exclude this channel from final-state calculation for reaction cross section; 0 if include
+        19-20, I "LSPIN"        # Orbital angular momentum for channel
+        21-30, F "CHSPIN(N,JJ)" # Channel spin (integer or halfinteger, sign implies parity)
+        31-40, F "ENBND(N,JJ)"  # Boundary condition (eV). Used only if ISHIFT = 1
+        41-50, F "ECHAN(N,JJ)"  # Excitation energy of residual nucleus in an inelastic channel (eV)
+        51-55, F "RDEFF(N,JJ)"  # Effective radius (fermi)
+        56-60, F "RDTRU(N,JJ)"  # True radius (fermi) (Value may be overwritten in the PARameter file.)
+        61-70, F "EMM1(N,JJ)"   # Mass of first particle in this channel (that is, of the target nuclide, in the case of an incident channel) (amu)
+        71-80, F "EMM2(N,JJ)"   # Mass of second particle in the channel (that is, of the neutron or other incident particle, for entrance channels) (amu)
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 9 – Obsolete Target Spin/Parity Specification (Ignored)
+\
+    Purpose:
+        Historically used to specify the spin and parity of the target nucleus.
+        This card set is now obsolete and should not be used in new INPut files.
+
+        It is preserved here for completeness and historical documentation only.
+
+    Structure:
+
+        Line 1 (Ignored)
+            9:1
+            Contents of this line (if present) are ignored by SAMMY.
+
+    Notes:
+        - This card was used in early versions of SAMMY to provide quantum number input
+        - For SAMMY version M6 and newer:
+            → Spin/parity information should be defined in:
+                - Card Set 10.1 (new spin group format)
+                - or Card Set 10.2 + Card Set 4 or 4a (preferred method)
+        - SAMMY will currently ignore Card Set 9 without error
+        - Future versions may require its complete removal from INPut files
+        - If present, this line has no effect on results
+
+    Recommendation:
+        - Do not use Card Set 9
+        - Use Card Set 4 or 4a and Card Set 10.2 to define spin/parity info for target nuclide
+
+    Example (ignored):
+        0.5 +
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 10.1 – Spin Group and Channel Definitions (New Format, Default)
+
+    Purpose:
+        Defines spin groups and associated channels using a structured, column-based format.
+        This format supersedes the original Card Set 10 and is now the default.
+        It allows specification of spin/parity, abundance, entrance/exit channels, and
+        channel-level quantum numbers and radii.
+
+        Preferred for evaluations without complex charged-particle structure.
+        For charged-particle flexibility, use Card Set 10.2 + Card Set 4 or 4a.
+
+    Structure:
+
+        Line 1 – Spin Group Definition
+            10.1:1
+            Columns | Type | Name       | Description
+            --------|------|------------|------------------------------------------------------------
+            1–3     | I    | JJ         | Spin group number (1, 2, 3, ...)
+            5       | A    | EXCL       | "X" to exclude this spin group (blank = include)
+            6–10    | I    | NENT       | Number of entrance channels (> 0)
+            11–15   | I    | NEXT       | Number of non-entrance exit channels (can be 0)
+            16–20   | F    | SPINJ      | Resonance spin J (± for parity)
+            21–30   | F    | ABNDNC     | Isotopic abundance for this spin group
+            31–35   | F    | SPINI      | Target nuclide spin (± for parity)
+
+        Line 2, ..., NENT+NEXT – Channel Definitions
+            10.1:2,3,...
+            Columns | Type | Name        | Description
+            --------|------|-------------|------------------------------------------------------------
+            4–5     | I    | N           | Channel number
+            6–8     | I    | KZ1         | Charge of particle 1 (e.g., projectile)
+            10      | I    | LPENT       | 1 = calc. penetrability, 0 = P = 1
+            11–13   | I    | KZ2         | Charge of particle 2 (target)
+            15      | I    | ISHIFT      | 1 = calc. shift, 0 = S - B = 0
+            18      | I    | IFEXCL      | 1 = exclude from final-state calc, 0 = include
+            19–20   | I    | LSPIN       | Orbital angular momentum ℓ
+            21–30   | F    | CHSPIN      | Channel spin (± parity)
+            31–40   | F    | ENBND       | Boundary condition (eV)
+            41–50   | F    | ECHAN       | Excitation energy of residual (eV)
+            51–55   | F    | RDEFF       | Effective radius (fermi)
+            56–60   | F    | RDTRU       | True radius (fermi)
+            61–70   | F    | EMM1        | Mass of first particle (amu)
+            71–80   | F    | EMM2        | Mass of second particle (amu)
+
+        Repeat Line 2 for NENT + NEXT times for each spin group
+
+        Repeat Lines 1 and 2+ for each spin group (JJ)
+
+    Notes:
+        - This is the default spin group format in SAMMY 8+
+        - Use EXCL = 'X' to deactivate spin group from cross section
+        - Boundary condition ENBND < 0 means B = ENBND directly
+        - Radius values may be overridden by the PARameter file
+        - Mass = 0 triggers auto-assignment using AW (from Card 2) or default neutron mass
+        - SPINI applies to all spin groups and matches target nuclide definition
+
+    Example:
+        1   2 1   0.5  0.9  0.5
+            1 0 1 92 1 0 0 0.5 -1.0 0.0 0.0 238.0 1.0087
+
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 10.2 – Spin Group Definitions Using Particle-Pair Names
+
+    Purpose:
+        Defines spin groups and channels using particle-pair names from Card Set 4 or 4a.
+        This is the preferred modern format for flexible specification of quantum numbers,
+        especially for charged-particle channels.
+
+        Must be used with Card Set 4 or 4a and the command:
+            “KEY-WORD PARTICLE-PAir definitions are given” (in Card Set 3)
+
+    Structure:
+
+        Line 1 – Spin Group Definition
+            10.2:1
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–3     | I    | JJ        | Spin group number (consecutive, 1+)
+            5       | A    | EXCL(JJ)  | Exclude flag: "X" = exclude, blank = include
+            8–10    | I    | NENT      | Number of entrance channels (> 0)
+            13–15   | I    | NEXT      | Number of non-entrance exit channels (can be 0)
+            16–20   | F    | SPINJ     | Resonance spin J (± for parity)
+            21–30   | F    | ABNDNC    | Isotopic abundance for spin group
+
+        Line 2+ – Channel Definitions (NENT + NEXT lines per spin group)
+            10.2:2,3,...
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            3–5     | I    | N         | Channel number
+            8–15    | A    | PPTYPE    | Particle pair name (from Card Set 4 or 4a)
+            18      | A/I  | IFEXCL    | 1 = exclude from final state calc, blank = include
+                                       | X or x = exclude from all cross section calc (test only)
+            19–20   | I    | LSPIN     | Orbital angular momentum ℓ
+            21–30   | F    | CHSPIN    | Channel spin (± for parity)
+            31–40   | F    | ENBND     | Boundary condition (eV)
+            41–50   | F    | RDEFF     | Effective radius (fermi)
+            51–60   | F    | RDTRU     | True radius (fermi)
+
+        Repeat Line 2 for NENT + NEXT channels, then repeat Lines 1–2 for each spin group.
+
+    Notes:
+        - Must be paired with Card Set 4 or 4a for particle pair definitions
+        - Particle-pair names must match exactly those declared in Card Set 4/4a
+        - RDEFF/RDTRU override values from Card Set 4/4a unless PAR file entries are used
+        - ENBND < 0: B = ENBND (constant)
+          ENBND > 0: B = Sl(ka) evaluated at ENBND
+        - This format is highly recommended over Card Set 10.1
+
+    Example:
+        1   2 1   0.5  0.9
+          1  nU235       0 0 0.5 -1.0  0.0  5.0 5.0
+
+///////////////////////////////////////////////////////////////////////////////
+Card Set 11 – Multiple-Scattering and Self-Shielding Parameters
+
+    Purpose:
+        Specifies geometry and integration parameters for self-shielding and
+        multiple-scattering corrections. Required only when such corrections
+        are enabled using a command in Card Set 3.
+
+    Structure:
+
+        Line 1 – Geometry and Integration Settings
+            11:1
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–10    | F    | THSAMP    | Sample thickness (cm)
+            11–20   | F    | XSAMP     | Sample height or radius (cm)
+            21–30   | F    | YSAMP     | Unused
+            31–40   | F    | XBEAM     | Beam height or radius (cm)
+            41–50   | F    | YBEAM     | Unused
+            51–55   | I    | NTHETA    | Points for θ integration (default = 33)
+            56–60   | I    | NGAUSZ    | Points for z-integration (default = 16)
+            61–65   | I    | NGAUS     | Points for cross-section integration (default = 16)
+            66–70   | I    | MTHETA    | θ-points near integration endpoints (default = 5)
+            71–75   | I    | NXTPT     | Interpolation points for σ function (default = 32)
+            76–80   | I    | MXTPT     | Interpolation points for σ′ function (default = 32)
+
+        Line 2 (Optional) – Q Function Interpolation and θ Range
+            11:2
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–10    | F    | XTMIN     | Minimum log(σ_t) for Q (barns), default = −20.0
+            11–20   | F    | XTMAX     | Maximum log(σ_t) for Q (barns), default = +20.0
+            21–50   | —    | —         | Unused
+            51–55   | I    | JTHETA    | Points for θ near cos(θ)=1 (default = 5)
+            56–60   | I    | KTHETA    | Points for θ near cos(θ)=0 (default = 5)
+
+    Notes:
+        - THSAMP = thickness in cm (convert from atoms/barn using material density)
+        - XBEAM, XSAMP: height or radius depending on geometry
+        - θ and z integrations are used in computing multiple-scattering and
+          self-shielding corrections with Gaussian quadrature
+        - XTMIN/XTMAX control range of log(σ_t) used in interpolation of Q
+        - This card must be omitted if corrections are not requested (SAMMY will abort)
+
+    Example:
+        0.100     0.500   0.0     0.500   0.0    33  16  16  5   32   32
+        -20.0     20.0              5    5
+
+///////////////////////////////////////////////////////////////////////////////
+ Remaining card sets in the INPut file
+
+
+    Notes:
+        These are all exact duplicates of corresponding card sets in the PARameter file.
+        Any given card set can appear in either the INPut file or the PARameter file,
+        but not both. If the same card set is found in both locations, SAMMY will abort.
+
+        These remaining INPut card sets allow users to specify experimental-setup-dependent
+        parameters locally (rather than globally through the PARameter file), which is
+        useful when performing evaluations across multiple experiments using the same
+        resonance structure but different sample conditions.
+
+        Flags:
+            - A variation flag of 1 is ignored when the card set appears in the INPut file
+            - A variation flag of 3 is allowed and treated as a Propagated Uncertainty Parameter (PUP)
+
+    Remaining INPut Card Sets:
+
+        P4    – BROADening parameters
+        P6    – NORMAlization and background
+        P8    – DATA reduction parameters
+        P9    – ORRES (Oak Ridge Resolution Function)
+        P10   – ISOTOpic or NUCLIde abundances
+        P11   – MISCEllaneous parameters
+        P12   – PARAMagnetic cross section parameters
+        P13   – BACKGround functions
+        P14   – RPI, GEEL, GELINa, or NTOF resolution function
+        P14a  – RPI (T/C) or GELINa/GEEL defaults (keyword format)
+        P15   – DETECtor efficiencies
+        P16   – USER-Defined resolution function
+
+    Additional Notes:
+        - If Card Set 11 is omitted from the INPut file, two blank lines must precede the P-card sets
+        - The ordering of the P-card sets is flexible but must follow all numbered card sets
+        - These card sets share the same format and logic as defined in the PAR file documentation
+
+///////////////////////////////////////////////////////////////////////////////
+ Additional run time notes
+
+    If performing a multi-isotope fit, then the lowest mass of the compound nuclei fit
+    needs to be used in Line 2 of Card Set 2 (i.e., the AW field), otherwise you get
+    the following error message.
+
+    ***************************************************************************
+    * Warning -- Mass used to determine limits for auxiliary grid (for Dopplr *
+    * and multiple-scattering corrections) may be too big. SAMMY is using the *
+    * mass from nuclide number 2 (238.050770), because that is closest to the *
+    * mass from Line 2 of the INPut file (238.050800).  For more accurate     *
+    * results, use the mass of the smallest nuclide (235.043940).  (Expect    *
+    * longer runtime if you change to the smaller mass.)                      *
+    ***************************************************************************
