@@ -280,7 +280,7 @@ class IsotopeParameters(BaseModel):
     spin groups.
 
     Attributes:
-        mass (float): Atomic mass in atomic mass units (amu)
+        IsotopeInformation (Optional[IsotopeInfo]): Information about the isotope
         abundance (float): Fractional abundance (dimensionless)
         uncertainty (Optional[float]): Uncertainty on abundance (dimensionless)
         flag (VaryFlag): Treatment flag for abundance (-2=use input, 0=fixed, 1=vary, 3=PUP)
@@ -290,7 +290,7 @@ class IsotopeParameters(BaseModel):
 
     """
 
-    isotope_information: IsotopeInfo = Field(default=None, description="Isotope information")
+    isotope_information: Optional[IsotopeInfo] = Field(default=None, description="Isotope information")
     abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
