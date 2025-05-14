@@ -1,0 +1,1261 @@
+commands:
+  - UID: 1
+    Command: UNRESOLVED RESONANCE region
+    Brief: Use the SAMMY version of Fritz Froehner's code FITACS for analysis of the unresolved resonance region (URR).
+    Relationship: Mutually exclusive with RRR analysis.
+    Related_UID: null
+    Source_Page_#: 334
+  - UID: 2
+    Command: REICH-MOORE FORMALISm is wanted
+    Brief: Use the more accurate computational method for the Reich-Moore formalism for Resolved Resonance Region (RRR). (Default)
+    Relationship: Default for RRR. Mutually exclusive with other R-matrix approximations.
+    Related_UID: [3, 4, 5]
+    Source_Page_#: 335
+  - UID: 3
+    Command: ORIGINAL REICH-MOORE formalism
+    Brief: Use the original (potentially less accurate, especially at low energies for capture) method of calculating the Reich-Moore formalism.
+    Relationship: Mutually exclusive with other R-matrix approximations.
+    Related_UID: [2, 4, 5]
+    Source_Page_#: 335
+  - UID: 4
+    Command: MULTILEVEL BREIT-WIGner is wanted
+    Brief: Use Multilevel Breit-Wigner formalism. Note - Only elastic cross sections are MLBW; fission and capture are SLBW.
+    Relationship: Mutually exclusive with other R-matrix approximations.
+    Related_UID: [2, 3, 5]
+    Source_Page_#: 335
+  - UID: 5
+    Command: SINGLE LEVEL BREIT-Wigner is wanted
+    Brief: Use Single Level Breit-Wigner formalism.
+    Relationship: Mutually exclusive with other R-matrix approximations.
+    Related_UID: [2, 3, 4]
+    Source_Page_#: 335
+  - UID: 6
+    Command: REDUCED WIDTH AMPLITudes are used for input
+    Brief: Use reduced width amplitudes and square root of resonance energy as input for resonance parameters (Card set 1a of PARameter file).
+    Relationship: Affects PARameter file format for resonance parameters.
+    Related_UID: null
+    Source_Page_#: 335
+  - UID: 7
+    Command: USE NEW SPIN GROUP Format
+    Brief: Use card set 10.1 in Table VI A.1 for spin-group information. (Default, but not preferred over KEY-WORD PARTICLE-PAir).
+    Relationship: Default for spin group input if not using KEY-WORD. Mutually exclusive with 8, 9.
+    Related_UID: [8, 9, 10]
+    Source_Page_#: 336
+  - UID: 8
+    Command: USE OBSOLETE SPIN GRoup format
+    Brief: (No longer available for running SAMMY). SAMMY will attempt to convert to the "USE NEW SPIN GROUP Format".
+    Relationship: Obsolete.
+    Related_UID: [7, 9, 10]
+    Source_Page_#: 336
+  - UID: 9
+    Command: PARTICLE PAIR DEFINItions are used
+    Brief: Use card set 4a in Table VI A.1 for particle-pair definitions (fixed format).
+    Relationship: Mutually exclusive with KEY-WORD PARTICLE-PAir.
+    Related_UID: [7, 8, 10]
+    Source_Page_#: 336
+  - UID: 10
+    Command: KEY-WORD PARTICLE-PAir definitions are given
+    Brief: Use card set 4 in Table VI A.1 for particle-pair definitions using key-word format (Preferred method).
+    Relationship: Preferred method for particle-pair definitions. Mutually exclusive with 9.
+    Related_UID: [7, 8, 9]
+    Source_Page_#: 336
+  - UID: 11
+    Command: QUANTUM NUMBERS ARE in parameter file
+    Brief: Key-word particle-pair definitions and spin-group definitions are given in the PARameter file (see Table VI B.3).
+    Relationship: Changes location of quantum number definitions.
+    Related_UID: null
+    Source_Page_#: 336
+  - UID: 12
+    Command: PUT QUANTUM NUMBERS into parameter file
+    Brief: Convert initial spin-group definitions into key-word particle-pair format and write to SAMQUA.PAR.
+    Relationship: Action command.
+    Related_UID: null
+    Source_Page_#: 336
+  - UID: 13
+    Command: SPIN OF INCIDENT PARticle is +value / -value
+    Brief: Specify spin and parity of incident particle if not a neutron (used with "USE NEW SPIN GROUP Format"). `value` after sign.
+    Relationship: Used with UID 7. Sign in col 30.
+    Related_UID: [7]
+    Source_Page_#: 337
+  - UID: 14
+    Command: USE I4 FORMAT TO REAd spin group number
+    Brief: Use four columns for spin group number in PARameter file (allows >50 spin groups, up to 500).
+    Relationship: Affects PARameter file reading for spin group numbers.
+    Related_UID: null
+    Source_Page_#: 337
+  - UID: 15
+    Command: INPUT IS ENDF/B FILE 2
+    Brief: Resonance parameters and spin-group quantum number information are taken from an ENDF/B File 2. `MAT=xxxx` can be specified.
+    Relationship: Replaces part of INPut and all of PARameter file for resonance parameters.
+    Related_UID: [16]
+    Source_Page_#: 337, 357
+  - UID: 16
+    Command: USE ENERGY RANGE FROm endf/b file 2
+    Brief: Use energy range from ENDF File 2 instead of INPut file or interactive input.
+    Relationship: Used with UID 15.
+    Related_UID: [15]
+    Source_Page_#: 337, 357
+  - UID: 17
+    Command: FLAG ALL RESONANCE PArameters
+    Brief: All resonance parameters are to be varied (equivalent to setting flags to "1" in the PARameter file).
+    Relationship: Overrides flags in PARameter file.
+    Related_UID: null
+    Source_Page_#: 337
+  - UID: 18
+    Command: IGNORE INPUT BINARY covariance file
+    Brief: Ignore prior parameter covariance matrix file; use large uncertainties indicating no prior knowledge.
+    Relationship: Affects how prior uncertainties are handled. No COVariance file name in input.
+    Related_UID: null
+    Source_Page_#: 338
+  - UID: 19
+    Command: ENERGY UNCERTAINTIES are at end of line
+    Brief: Prior absolute uncertainty on Eλ is at end of line in PARameter file (card set 1, cols 68-80, option 2).
+    Relationship: Affects PARameter file reading.
+    Related_UID: null
+    Source_Page_#: 338
+  - UID: 20
+    Command: RETROACTIVE OLD PARAmeter file new covariance
+    Brief: Use original PARameter file with a new COVariance file (u-parameter covariance is assumed correct). Creates approximate PCM.
+    Relationship: For specific retroactive covariance generation workflow.
+    Related_UID: [21]
+    Source_Page_#: 338
+  - UID: 21
+    Command: P COVARIANCE MATRIX is correct, u is not
+    Brief: p-parameter covariance matrix is assumed correct in the initial (retroactive) covariance file.
+    Relationship: Used with UID 20 or for specific scenarios.
+    Related_UID: [20]
+    Source_Page_#: 338
+  - UID: 22
+    Command: MODIFY P COVARIANCE matrix before using
+    Brief: Correlation matrix in covariance file is correct, but the uncertainties will be modified via a new uncertainty file.
+    Relationship: Usually used with UID 21.
+    Related_UID: [21]
+    Source_Page_#: 338
+  - UID: 23
+    Command: INITIAL DIAGONAL U Covariance
+    Brief: The initial u-parameter covariance matrix is assumed to be diagonal; p-parameter covariance matrix is not.
+    Relationship: Affects prior covariance matrix assumption.
+    Related_UID: [24]
+    Source_Page_#: 338
+  - UID: 24
+    Command: INITIAL DIAGONAL P Covariance
+    Brief: The initial p-parameter covariance matrix is assumed to be diagonal; u-parameter covariance matrix is not.
+    Relationship: Affects prior covariance matrix assumption.
+    Related_UID: [23]
+    Source_Page_#: 338
+  - UID: 25
+    Command: PERMIT NON POSITIVE definite parameter
+    Brief: Allow use of non-positive definite parameter covariance matrices (use with caution, e.g., for post-processing).
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 339
+  - UID: 26
+    Command: PERMIT ZERO UNCERTAInties on parameters
+    Brief: Allow zero uncertainties on parameters (use with caution).
+    Relationship: Related to UID 25.
+    Related_UID: [25]
+    Source_Page_#: 339
+  - UID: 27
+    Command: READ COMPACT COVARIAnces for parameter prior
+    Brief: Read parameter prior covariances from a compact format ASCII file (SAMMY.CCV).
+    Relationship: Alternative to binary COVariance file for input.
+    Related_UID: null
+    Source_Page_#: 339
+  - UID: 28
+    Command: PARAMETER COVARIANCE matrix is in endf forma
+    Brief: Parameter covariance matrix is taken from an ENDF File 32.
+    Relationship: Reads prior covariance from ENDF File 32.
+    Related_UID: null
+    Source_Page_#: 339
+  - UID: 29
+    Command: USE LEAST SQUARES TO define prior parameter
+    Brief: Assume inverse of prior parameter covariance matrix is zero (least-squares fitting).
+    Relationship: Overrides other prior covariance info.
+    Related_UID: [101, 102, 103]
+    Source_Page_#: 339, 353
+  - UID: 30
+    Command: WRITE CORRELATIONS INto compact format
+    Brief: Create SAMMY.CCV file with an abbreviated (compact) version of the initial parameter correlation matrix.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 340
+  - UID: 31
+    Command: PUT COVARIANCE MATRIx into endf file 32
+    Brief: Output parameter covariance matrix into ENDF File 32 format.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 340
+  - UID: 32
+    Command: DATA ARE IN ORIGINAL multi-style format
+    Brief: Data file has 3 points/line, relative uncertainties, 3(2F15.5,F7.3) format. (Default)
+    Relationship: Default. Mutually exclusive with other data formats.
+    Related_UID: [33,34,35,36]
+    Source_Page_#: 341
+  - UID: 33
+    Command: DATA FORMAT IS ONE Point per line
+    Brief: Data file has 1 point/line, (3G11.8) format, absolute uncertainties (CSISRS format).
+    Relationship: Mutually exclusive with other data formats.
+    Related_UID: [32,34,35,36]
+    Source_Page_#: 341
+  - UID: 34
+    Command: USE TWENTY SIGNIFICAnt digits
+    Brief: Data file has 1 point/line, (3F20.10) format, absolute uncertainties.
+    Relationship: Mutually exclusive with other data formats.
+    Related_UID: [32,33,35,36]
+    Source_Page_#: 341
+  - UID: 35
+    Command: DATA ARE IN STANDARD odf format
+    Brief: Data file is "standard" ODF with energies, data, abs. uncertainties, and optional partial derivatives. Energies must be high to low.
+    Relationship: Mutually exclusive with other data formats.
+    Related_UID: [32,33,34,36]
+    Source_Page_#: 341
+  - UID: 36
+    Command: DATA ARE IN ODF FILE
+    Brief: Data file is ODF with energies, data, and abs. uncertainties. (Discouraged)
+    Relationship: Mutually exclusive with other data formats.
+    Related_UID: [32,33,34,35]
+    Source_Page_#: 341
+  - UID: 37
+    Command: DATA ARE ENDF/B FILE
+    Brief: Data file is an ENDF File 3 (point-wise cross sections). `MAT=xxxx` must be specified on the same line after col 20.
+    Relationship: Mutually exclusive with other data formats.
+    Related_UID: null
+    Source_Page_#: 341
+  - UID: 38
+    Command: DIFFERENTIAL DATA ARe in ascii file
+    Brief: For angle-differential data, use ASCII file (8F10.1 format) instead of ODF.
+    Relationship: Used with differential elastic/reaction data types.
+    Related_UID: null
+    Source_Page_#: 342
+  - UID: 39
+    Command: DO NOT DIVIDE DATA Into regions
+    Brief: Analyze entire energy range in a single SAMMY run. (Default)
+    Relationship: Default. Mutually exclusive with DIVIDE DATA.
+    Related_UID: [40]
+    Source_Page_#: 342
+  - UID: 40
+    Command: DIVIDE DATA INTO REGions with a fixed number
+    Brief: Automatically choose energy regions of NEPNTS data points each for sequential analysis. (Use with caution)
+    Relationship: Mutually exclusive with DO NOT DIVIDE.
+    Related_UID: [39]
+    Source_Page_#: 342
+  - UID: 41
+    Command: IMPLICIT DATA COVARIance is wanted
+    Brief: Use implicit data covariance for normalization and background from SAMMY.IDC file.
+    Relationship: Mutually exclusive with USER SUPPLIED IDC, explicit DCM.
+    Related_UID: [42, 43, 49]
+    Source_Page_#: 343
+  - UID: 42
+    Command: USER SUPPLIED IMPLICit data covariance matrix
+    Brief: Use user-supplied components (derivatives g, covariance m) for implicit data covariance from a user file.
+    Relationship: Mutually exclusive with IDC, explicit DCM.
+    Related_UID: [41, 43, 49]
+    Source_Page_#: 343
+  - UID: 43
+    Command: PUP COVARIANCE IS IN an ascii file
+    Brief: Covariance matrix for Propagated Uncertainty Parameters (PUPs) is in an ASCII file.
+    Relationship: Used with PUPs.
+    Related_UID: null
+    Source_Page_#: 343
+  - UID: 44
+    Command: CREATE PUP FILE FROM varied parameters used
+    Brief: Generate a PUP covariance file (SAMPUP.COV) from parameters varied in the current run.
+    Relationship: Action command.
+    Related_UID: null
+    Source_Page_#: 343
+  - UID: 45
+    Command: ADD CONSTANT TERM TO data covariance
+    Brief: Add a constant term (specified in PARameter file, card 1, col 68-80) to data covariance matrix for non-s-wave resonances.
+    Relationship: Mutually exclusive with DO NOT ADD CONSTANT and USE DEFAULT.
+    Related_UID: [46, 47]
+    Source_Page_#: 343
+  - UID: 46
+    Command: DO NOT ADD CONSTANT term to data covariance
+    Brief: Do not add constant term to data covariance matrix. (Default)
+    Relationship: Default. Mutually exclusive with ADD CONSTANT and USE DEFAULT.
+    Related_UID: [45, 47]
+    Source_Page_#: 343
+  - UID: 47
+    Command: USE DEFAULT FOR CONStant term to add
+    Brief: Use default constant term (1.0E-6) for non-s-wave resonance covariance.
+    Relationship: Mutually exclusive with ADD CONSTANT and DO NOT ADD CONSTANT.
+    Related_UID: [45, 46]
+    Source_Page_#: 343
+  - UID: 48
+    Command: USE TEN PERCENT DATA uncertainty
+    Brief: Assume "experimental uncertainty" is 10% of "measured value". (Use with caution, not for real data analysis).
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 344
+  - UID: 49
+    Command: DATA COVARIANCE IS Diagonal
+    Brief: Explicit data covariance matrix is diagonal (default, but IDC/PUPs can still make it effectively off-diagonal).
+    Relationship: Default. Mutually exclusive with explicit off-diagonal DCM options.
+    Related_UID: [50, 51, 52]
+    Source_Page_#: 344
+  - UID: 50
+    Command: DATA HAS OFF-DIAGONAl contribution
+    Brief: Add (a+bEi)(a+bEj) to data covariance matrix. `a` and `b` from INPut file card set 7 (DCOVA, DCOVB).
+    Relationship: Mutually exclusive with DATA COVARIANCE IS Diagonal.
+    Related_UID: [49, 51, 52]
+    Source_Page_#: 344
+  - UID: 51
+    Command: DATA COVARIANCE FILE is named YYYYYY.YYY
+    Brief: Specify filename (cols 31-40) for explicit data covariance matrix (fixed 10-char format).
+    Relationship: Mutually exclusive with DATA COVARIANCE IS Diagonal. Filename is 10 chars.
+    Related_UID: [49, 50, 52]
+    Source_Page_#: 344
+  - UID: 52
+    Command: FREE FORMAT DATA COVariance YYYYYY.YYY
+    Brief: Specify filename (cols 31-40) for explicit data covariance matrix (free format).
+    Relationship: Mutually exclusive with DATA COVARIANCE IS Diagonal. Filename is 10 chars.
+    Related_UID: [49, 50, 51]
+    Source_Page_#: 344
+  - UID: 53
+    Command: USE LABORATORY CROSS sections
+    Brief: For angle-differential data, output cross sections in laboratory frame.
+    Relationship: Mutually exclusive with USE CENTER-OF-MASS.
+    Related_UID: [54]
+    Source_Page_#: 345
+  - UID: 54
+    Command: USE CENTER-OF-MASS Cross sections
+    Brief: For angle-differential data, output cross sections in center-of-mass frame. (Default)
+    Relationship: Default. Mutually exclusive with USE LABORATORY.
+    Related_UID: [53]
+    Source_Page_#: 345
+  - UID: 55
+    Command: PREPARE LEGENDRE COEfficients in endf format
+    Brief: Generate SAMMY.N04 with ENDF File-4 Legendre coefficients for elastic angular distributions.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 345
+  - UID: 56
+    Command: OMIT FINITE SIZE CORrections
+    Brief: Do not include finite size corrections for angular distributions.
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 345
+  - UID: 57
+    Command: INCIDENT NEUTRON ATTenuation is included
+    Brief: Include incident neutron attenuation for angular distributions.
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 345
+  - UID: 58
+    Command: APPROXIMATE SCATTEREd neutron attenuation
+    Brief: Include approximate scattered neutron attenuation for angular distributions.
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 345
+  - UID: 59
+    Command: ANGLE-AVERAGE FOR DIfferential cross section
+    Brief: Perform angle averaging for differential cross sections using quadratic interpolation.
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 345
+  - UID: 60
+    Command: BROADENING IS WANTED
+    Brief: Perform some form of broadening (Doppler and/or resolution). (Default)
+    Relationship: Default. Mutually exclusive with BROADENING IS NOT WAnted.
+    Related_UID: [61]
+    Source_Page_#: 346
+  - UID: 61
+    Command: BROADENING IS NOT WAnted
+    Brief: Do not perform Doppler or resolution broadening. INPut card sets 5 & 6 should be removed.
+    Relationship: Mutually exclusive with BROADENING IS WANTED.
+    Related_UID: [60]
+    Source_Page_#: 346
+  - UID: 62
+    Command: USE FREE GAS MODEL Of doppler broadening
+    Brief: Use free-gas model for Doppler broadening (Section III.B.1). (Default)
+    Relationship: Default. Mutually exclusive with other Doppler models.
+    Related_UID: [63, 64, 65]
+    Source_Page_#: 347
+  - UID: 63
+    Command: USE LEAL-HWANG DOPPLer broadening
+    Brief: Use Leal-Hwang method for Doppler broadening (Section III.B.2).
+    Relationship: Mutually exclusive with other Doppler models.
+    Related_UID: [62, 64, 65]
+    Source_Page_#: 347
+  - UID: 64
+    Command: HIGH ENERGY GAUSSIAN approximation
+    Brief: Use high-energy Gaussian approximation to free-gas model for Doppler broadening (Section III.B.3). (Discouraged)
+    Relationship: Mutually exclusive with other Doppler models.
+    Related_UID: [62, 63, 65]
+    Source_Page_#: 347
+  - UID: 65
+    Command: USE CRYSTAL LATTICE model of doppler
+    Brief: Use crystal lattice (DOPUSH) model for Doppler broadening (Section III.B.4).
+    Relationship: Mutually exclusive with other Doppler models.
+    Related_UID: [62, 63, 64]
+    Source_Page_#: 347
+  - UID: 66
+    Command: NO LOW-ENERGY BROADEning is to be used
+    Brief: Do not broaden theoretical values below ELOWBR (INPut card set 5). Works only with high-energy Gaussian approx. for Doppler.
+    Relationship: Used with UID 64.
+    Related_UID: [64]
+    Source_Page_#: 347
+  - UID: 67
+    Command: TWO RESOLUTION FUNCTions together
+    Brief: Allow use of more than one type of resolution function in the same run (Gaussian + Exponential AND (ORR or RPI or UDR) AND Straight-line).
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 68
+    Command: USE TRUE TOTAL CROSS section for resolution
+    Brief: For resolution broadening, use total cross section directly instead of converting to/from transmission. (Not for fitting experimental data).
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 69
+    Command: EXPONENTIAL FOLDING width is energy-dependent
+    Brief: Exponential folding width (DELTAE) for resolution is energy-dependent per Eq. (III C1 b.6).
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 70
+    Command: SHIFT ENERGY FOR EXPonential tail on resolut
+    Brief: Shift energy for exponential tail on resolution to center the broadening function so peak is not shifted. (Default)
+    Relationship: Default. Mutually exclusive with DO NOT SHIFT.
+    Related_UID: [71]
+    Source_Page_#: 348
+  - UID: 71
+    Command: DO NOT SHIFT ENERGY for exponential tail
+    Brief: Do not shift energy for exponential tail on resolution; peak of resolution may be shifted.
+    Relationship: Mutually exclusive with SHIFT ENERGY.
+    Related_UID: [70]
+    Source_Page_#: 348
+  - UID: 72
+    Command: PLOT RESOLUTION FUNCtion
+    Brief: Plot the original (Gaussian and/or exponential) resolution function. Energies specified in card set 4.5.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 73
+    Command: RPI DEBUG
+    Brief: Obtain extra printouts when debugging the RPI resolution function.
+    Relationship: Debug option.
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 74
+    Command: CENTER THE CONSTANT energy resolution functi
+    Brief: Center the straight-line energy average resolution function so peak is not shifted.
+    Relationship: Used with straight-line energy average resolution.
+    Related_UID: null
+    Source_Page_#: 348
+  - UID: 75
+    Command: SHIFT RPI RESOLUTION function to center
+    Brief: Center the RPI/GELINA/nTOF resolution function so peak is not shifted.
+    Relationship: Mutually exclusive with DO NOT SHIFT RPI versions.
+    Related_UID: [76,77,78,79,80,81,82]
+    Source_Page_#: 349
+  - UID: 76
+    Command: SHIFT GEEL RESOLUTIOn function to center
+    Brief: Center the GELINA resolution function.
+    Relationship: Mutually exclusive with DO NOT SHIFT RPI versions.
+    Related_UID: [75,77,78,79,80,81,82]
+    Source_Page_#: 349
+  - UID: 77
+    Command: SHIFT GELINA RESOLUtion function to center
+    Brief: Center the GELINA resolution function.
+    Relationship: Mutually exclusive with DO NOT SHIFT RPI versions.
+    Related_UID: [75,76,78,79,80,81,82]
+    Source_Page_#: 349
+  - UID: 78
+    Command: SHIFT NTOF RESOLUTIOn function to center
+    Brief: Center the NTOF resolution function.
+    Relationship: Mutually exclusive with DO NOT SHIFT RPI versions.
+    Related_UID: [75,76,77,79,80,81,82]
+    Source_Page_#: 349
+  - UID: 79
+    Command: DO NOT SHIFT RPI RESolution function to cent
+    Brief: Use the RPI/GELINA/nTOF resolution function exactly as input with no centering.
+    Relationship: Mutually exclusive with SHIFT RPI versions.
+    Related_UID: [75,76,77,78]
+    Source_Page_#: 349
+  - UID: 80
+    Command: DO NOT SHIFT GEEL REsolution function to cent
+    Brief: Use the GELINA resolution function as input.
+    Relationship: Mutually exclusive with SHIFT RPI versions.
+    Related_UID: [75,76,77,78]
+    Source_Page_#: 349
+  - UID: 81
+    Command: DO NOT SHIFT GELINA resolution function to c
+    Brief: Use the GELINA resolution function as input.
+    Relationship: Mutually exclusive with SHIFT RPI versions.
+    Related_UID: [75,76,77,78]
+    Source_Page_#: 349
+  - UID: 82
+    Command: DO NOT SHIFT NTOF REsolution function to cen
+    Brief: Use the NTOF resolution function as input.
+    Relationship: Mutually exclusive with SHIFT RPI versions.
+    Related_UID: [75,76,77,78]
+    Source_Page_#: 349
+  - UID: 83
+    Command: DO NOT INCLUDE SELF-shielding or multiple-sc
+    Brief: Do not include self-shielding or multiple-scattering corrections. (Default)
+    Relationship: Default. Mutually exclusive with other MSC options.
+    Related_UID: [84,85,86]
+    Source_Page_#: 350
+  - UID: 84
+    Command: USE SELF SHIELDING Only, no scattering
+    Brief: Include only self-shielding; no single- or double-scattering.
+    Relationship: Mutually exclusive with other MSC options.
+    Related_UID: [83,85,86]
+    Source_Page_#: 350
+  - UID: 85
+    Command: USE SINGLE SCATTERINg plus self shielding
+    Brief: Include self-shielding plus single-scattering corrections.
+    Relationship: Mutually exclusive with other MSC options.
+    Related_UID: [83,84,86]
+    Source_Page_#: 350
+  - UID: 86
+    Command: INCLUDE DOUBLE SCATTering corrections
+    Brief: Include self-shielding, single-scattering, and double-scattering corrections.
+    Relationship: Mutually exclusive with other MSC options.
+    Related_UID: [83,84,85]
+    Source_Page_#: 350
+  - UID: 87
+    Command: INFINITE SLAB
+    Brief: Single-scattering correction does not include edge effects.
+    Relationship: Modifies UID 85 or 86.
+    Related_UID: [85, 86, 88]
+    Source_Page_#: 350
+  - UID: 88
+    Command: FINITE SLAB
+    Brief: Edge effects corrections are included for single scattering. (Default)
+    Relationship: Default. Modifies UID 85 or 86.
+    Related_UID: [85, 86, 87]
+    Source_Page_#: 350
+  - UID: 89
+    Command: MAKE NEW FILE WITH Edge effects
+    Brief: Generate SAMMY.SSM file with edge-effects corrections. (Default, ignored if INFINITE SLAB).
+    Relationship: Default. Mutually exclusive with FILE WITH EDGE EFFECts.
+    Related_UID: [90]
+    Source_Page_#: 351
+  - UID: 90
+    Command: FILE WITH EDGE EFFECts already exists
+    Brief: Use existing SAMMY.SSM file. Name given after DATa file.
+    Relationship: Mutually exclusive with MAKE NEW FILE.
+    Related_UID: [89]
+    Source_Page_#: 351
+  - UID: 91
+    Command: MAKE PLOT FILE OF MUltiple scattering pieces
+    Brief: Store Y0, Y1, and Y2 in SAM53.DAT for SAMCPR.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 351
+  - UID: 92
+    Command: NORMALIZE AS CROSS Section rather than yield
+    Brief: Normalize capture/fission yield as cross section. (Required if MSC used).
+    Relationship: Required if MSC used. Mutually exclusive with other NORMALIZE AS options.
+    Related_UID: [93, 94]
+    Source_Page_#: 351
+  - UID: 93
+    Command: NORMALIZE AS YIELD Rather than cross section
+    Brief: Normalize capture/fission yield as yield. (Required if MSC used).
+    Relationship: Required if MSC used. Mutually exclusive with other NORMALIZE AS options.
+    Related_UID: [92, 94]
+    Source_Page_#: 351
+  - UID: 94
+    Command: NORMALIZE AS (1-E)SIgma
+    Brief: Normalize capture/fission yield as (1-exp(-nσ_tot))σ_reaction / σ_tot. (Required if MSC used).
+    Relationship: Required if MSC used. Mutually exclusive with other NORMALIZE AS options.
+    Related_UID: [92, 93]
+    Source_Page_#: 351
+  - UID: 95
+    Command: PRINT MULTIPLE SCATTering corrections
+    Brief: Create ASCII file SAM012.DAT with E, Y0, Y1, Y2, Y (energy and components of corrected yield).
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 351
+  - UID: 96
+    Command: PREPARE INPUT FOR MOnte carlo simulation
+    Brief: Initial SAMMY run to generate cross sections (SAM51.DAT, SAM54.DAT) and SAMMY.MCR for SAMSMC Monte Carlo simulation.
+    Relationship: Action command.
+    Related_UID: null
+    Source_Page_#: 351
+  - UID: 97
+    Command: Y2 VALUES ARE TABULAted
+    Brief: Use tabulated Y2 values from SAMSMC/SAMGY2 (file SAMY2.DAT) instead of SAMMY's calculation for double-plus scattering.
+    Relationship: Modifies MSC.
+    Related_UID: null
+    Source_Page_#: 351
+  - UID: 98
+    Command: USE QUADRATIC INTERPolation for y1
+    Brief: Use quadratic interpolation for Q-functions in MSC (more accurate and efficient).
+    Relationship: Modifies MSC. Mutually exclusive with LINEAR INTERPOLAtion.
+    Related_UID: [99]
+    Source_Page_#: 352
+  - UID: 99
+    Command: USE LINEAR INTERPOLAtion for y1
+    Brief: Use linear interpolation for Q-functions in MSC. (Default, but less accurate/efficient).
+    Relationship: Default. Modifies MSC. Mutually exclusive with QUADRATIC INTERPOLAtion.
+    Related_UID: [98]
+    Source_Page_#: 352
+  - UID: 100
+    Command: VERSION 7.0.0 FOR Multiple scattering
+    Brief: Use "old" (pre-version 7.0.1) version of single-scattering corrections (faster, less accurate). For preliminary runs only.
+    Relationship: Modifies MSC.
+    Related_UID: null
+    Source_Page_#: 352
+  - UID: 101
+    Command: DO NOT CALCULATE Y0
+    Brief: For debugging purposes only for MSC.
+    Relationship: Debug option for MSC.
+    Related_UID: null
+    Source_Page_#: 352
+  - UID: 102
+    Command: SOLVE BAYES EQUATIONs
+    Brief: Update parameter values and covariances using Bayes' equations. (Default)
+    Relationship: Default. Mutually exclusive with DO NOT SOLVE.
+    Related_UID: [103]
+    Source_Page_#: 353
+  - UID: 103
+    Command: DO NOT SOLVE BAYES Equations
+    Brief: Calculate theoretical values but do not update parameters (no fitting).
+    Relationship: Mutually exclusive with SOLVE BAYES.
+    Related_UID: [102]
+    Source_Page_#: 353
+  - UID: 104
+    Command: LET SAMMY CHOOSE WHIch inversion scheme to
+    Brief: SAMMY chooses N+V or I+Q based on which requires less memory. (Default)
+    Relationship: Default. Mutually exclusive with specific inversion scheme commands.
+    Related_UID: [105,106,107]
+    Source_Page_#: 353
+  - UID: 105
+    Command: USE (N+V) INVERSION scheme
+    Brief: Use N+V inversion scheme for Bayes' equations (Section IV.B.1).
+    Relationship: Mutually exclusive with other inversion scheme commands.
+    Related_UID: [104,106,107]
+    Source_Page_#: 353
+  - UID: 106
+    Command: USE (I+Q) INVERSION scheme
+    Brief: Use I+Q inversion scheme for Bayes' equations (Section IV.B.2).
+    Relationship: Mutually exclusive with other inversion scheme commands.
+    Related_UID: [104,105,107]
+    Source_Page_#: 353
+  - UID: 107
+    Command: USE (M+W) INVERSION scheme
+    Brief: Use M+W inversion scheme for Bayes' equations (Section IV.B.3).
+    Relationship: Mutually exclusive with other inversion scheme commands.
+    Related_UID: [104,105,106]
+    Source_Page_#: 353
+  - UID: 108
+    Command: TAKE BABY STEPS WITH least-squares method
+    Brief: When using least squares, parameter increments are 1/10 of calculated value to aid convergence.
+    Relationship: Used with UID 29.
+    Related_UID: [29]
+    Source_Page_#: 353
+  - UID: 109
+    Command: REMEMBER ORIGINAL PArameter values
+    Brief: Create REMORI.PAR file with (0)P and M^-1 for iterative M+W or least-squares.
+    Relationship: Used for iterative M+W or least-squares (UID 29 or 107).
+    Related_UID: [29, 107, 110]
+    Source_Page_#: 353
+  - UID: 110
+    Command: USE REMEMBERED ORIGInal parameter values
+    Brief: Use (0)P and M^-1 from REMORI.PAR in iterative M+W or least-squares calculations (Eq. IV A3.3).
+    Relationship: Used for iterative M+W or least-squares and requires REMEMBER ORIGINAL.
+    Related_UID: [29, 107, 109]
+    Source_Page_#: 353
+  - UID: 111
+    Command: DO NOT PRINT ANY INPut parameters
+    Brief: Do not print input resonance parameters in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with other PRINT ... INPUT PArameters options.
+    Related_UID: [112, 113]
+    Source_Page_#: 354
+  - UID: 112
+    Command: PRINT ALL INPUT PARAmeters
+    Brief: Print all resonance parameters in SAMMY.LPT.
+    Relationship: Mutually exclusive with other PRINT ... INPUT PArameters options.
+    Related_UID: [111, 113]
+    Source_Page_#: 354
+  - UID: 113
+    Command: PRINT VARIED INPUT Parameters
+    Brief: Print only resonances for which parameters are flagged to be varied in SAMMY.LPT.
+    Relationship: Mutually exclusive with other PRINT ... INPUT PArameters options.
+    Related_UID: [111, 112]
+    Source_Page_#: 354
+  - UID: 114
+    Command: DO NOT PRINT INPUT Data
+    Brief: Do not print experimental data values in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT INPUT DATA.
+    Related_UID: [115]
+    Source_Page_#: 354
+  - UID: 115
+    Command: PRINT INPUT DATA
+    Brief: Print experimental data values (from DATa file) in SAMMY.LPT.
+    Relationship: Mutually exclusive with DO NOT PRINT INPUT Data.
+    Related_UID: [114]
+    Source_Page_#: 354
+  - UID: 116
+    Command: DO NOT PRINT THEORETical values
+    Brief: Do not print calculated theoretical cross sections/transmissions in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT THEORETICAL VAlues.
+    Related_UID: [117]
+    Source_Page_#: 354
+  - UID: 117
+    Command: PRINT THEORETICAL VAlues
+    Brief: Print calculated theoretical cross sections/transmissions (broadened and corrected) in SAMMY.LPT.
+    Relationship: Mutually exclusive with DO NOT PRINT THEORETical values.
+    Related_UID: [116]
+    Source_Page_#: 354
+  - UID: 118
+    Command: DO NOT PRINT PARTIAL derivatives
+    Brief: Do not print partial derivatives in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT PARTIAL DERIVAtives.
+    Related_UID: [119]
+    Source_Page_#: 354
+  - UID: 119
+    Command: PRINT PARTIAL DERIVAtives
+    Brief: Print partial derivatives in SAMMY.LPT. (Debug option, use only for short runs).
+    Relationship: Debug option. Mutually exclusive with DO NOT PRINT PARTIAL derivatives.
+    Related_UID: [118]
+    Source_Page_#: 354
+  - UID: 120
+    Command: SUPPRESS INTERMEDIATe printout
+    Brief: Print updated parameter values and covariance matrix elements only upon completion of the entire run.
+    Relationship: Mutually exclusive with other SUPPRESS options.
+    Related_UID: [121, 122]
+    Source_Page_#: 354
+  - UID: 121
+    Command: DO NOT SUPPRESS INTErmediate printout
+    Brief: Print updated parameter values and covariance matrix elements after completion of each energy region.
+    Relationship: Mutually exclusive with other SUPPRESS options.
+    Related_UID: [120, 122]
+    Source_Page_#: 354
+  - UID: 122
+    Command: DO NOT SUPPRESS ANY intermediate printout
+    Brief: Print updated parameter values after each Bayes' iteration; print updated covariance matrix after each energy region. (Default)
+    Relationship: Default. Mutually exclusive with other SUPPRESS options.
+    Related_UID: [120, 121]
+    Source_Page_#: 354
+  - UID: 123
+    Command: DO NOT USE SHORT FORmat for output
+    Brief: Use E format for resonance parameters in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with USE SHORT FORMAT.
+    Related_UID: [124]
+    Source_Page_#: 355
+  - UID: 124
+    Command: USE SHORT FORMAT FOR output
+    Brief: Use F12.4 format for resonance parameters in SAMMY.LPT (more legible, fewer significant digits).
+    Relationship: Mutually exclusive with DO NOT USE SHORT FORmat.
+    Related_UID: [123]
+    Source_Page_#: 355
+  - UID: 125
+    Command: DO NOT PRINT REDUCED widths
+    Brief: Do not print reduced width amplitudes and sqrt(Eλ) (u-parameters) in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT REDUCED WIDTHS.
+    Related_UID: [126]
+    Source_Page_#: 355
+  - UID: 126
+    Command: PRINT REDUCED WIDTHS
+    Brief: Print reduced width amplitudes and sqrt(Eλ) (u-parameters) in SAMMY.LPT.
+    Relationship: Mutually exclusive with DO NOT PRINT REDUCED widths.
+    Related_UID: [125]
+    Source_Page_#: 355
+  - UID: 127
+    Command: DO NOT PRINT SMALL Correlation coefficients
+    Brief: Print all lines of correlation matrix in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT...SMALL Correlation.
+    Related_UID: [128]
+    Source_Page_#: 355
+  - UID: 128
+    Command: PRINT...SMALL Correlation coefficients
+    Brief: Do not print lines of correlation matrix if all off-diagonal elements are smaller than ICORR/100.
+    Relationship: Mutually exclusive with DO NOT PRINT SMALL Correlation. `ICORR` from INPut card 2.
+    Related_UID: [127]
+    Source_Page_#: 355
+  - UID: 129
+    Command: DO NOT PRINT DEBUG Info
+    Brief: Do not print extensive debug information in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT DEBUG INFORMATion.
+    Related_UID: [130]
+    Source_Page_#: 355
+  - UID: 130
+    Command: PRINT DEBUG INFORMATion
+    Brief: Print extensive debug information in SAMMY.LPT. (Debug option, use only for short runs).
+    Relationship: Debug option. Mutually exclusive with DO NOT PRINT DEBUG Info.
+    Related_UID: [129]
+    Source_Page_#: 355
+  - UID: 131
+    Command: PRINT CAPTURE AREA In lpt file
+    Brief: Print capture area (gΓnΓγ/Γ) in SAMMY.LPT.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 355
+  - UID: 132
+    Command: CHI SQUARED IS NOT Wanted
+    Brief: Do not print LS chi-squared values in SAMMY.LPT.
+    Relationship: Mutually exclusive with CHI SQUARED IS WANTEd.
+    Related_UID: [133]
+    Source_Page_#: 355
+  - UID: 133
+    Command: CHI SQUARED IS WANTEd
+    Brief: Print LS chi-squared values in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with CHI SQUARED IS NOT Wanted.
+    Related_UID: [132]
+    Source_Page_#: 355
+  - UID: 134
+    Command: PRINT BAYES CHI SQUAred
+    Brief: Print Bayesian chi-squared values in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with DO NOT PRINT BAYES Chi squared.
+    Related_UID: [135]
+    Source_Page_#: 355
+  - UID: 135
+    Command: DO NOT PRINT BAYES Chi squared
+    Brief: Do not print Bayesian chi-squared values in SAMMY.LPT.
+    Relationship: Mutually exclusive with PRINT BAYES CHI SQUAred.
+    Related_UID: [134]
+    Source_Page_#: 355
+  - UID: 136
+    Command: DO NOT PRINT WEIGHTEd Residuals
+    Brief: Do not print LS weighted residuals in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT WEIGHTED RESIDuals.
+    Related_UID: [137]
+    Source_Page_#: 356
+  - UID: 137
+    Command: PRINT WEIGHTED RESIDuals
+    Brief: Print LS weighted residuals ( (D-T)/sqrt(Vii) ) in SAMMY.LPT (only if DCM is diagonal).
+    Relationship: Mutually exclusive with DO NOT PRINT WEIGHTED Residuals.
+    Related_UID: [136]
+    Source_Page_#: 356
+  - UID: 138
+    Command: PRINT BAYES WEIGHTED residuals
+    Brief: Print Bayesian weighted residuals in SAMMY.LPT (if generated).
+    Relationship: Mutually exclusive with DO NOT PRINT BAYES Weighted residuals.
+    Related_UID: [139]
+    Source_Page_#: 356
+  - UID: 139
+    Command: DO NOT PRINT BAYES Weighted residuals
+    Brief: Do not print Bayesian weighted residuals in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT BAYES WEIGHTED residuals.
+    Related_UID: [138]
+    Source_Page_#: 356
+  - UID: 140
+    Command: DO NOT PRINT PHASE Shifts
+    Brief: Do not print hard-sphere phase shifts in SAMMY.LPT. (Default)
+    Relationship: Default. Mutually exclusive with PRINT PHASE SHIFTS.
+    Related_UID: [141]
+    Source_Page_#: 356
+  - UID: 141
+    Command: PRINT PHASE SHIFTS For input parameters
+    Brief: Print hard-sphere phase shifts (Section II.A) in SAMMY.LPT.
+    Relationship: Mutually exclusive with DO NOT PRINT PHASE Shifts.
+    Related_UID: [140]
+    Source_Page_#: 356
+  - UID: 142
+    Command: PRESERVE GAMMA_N NOT g_gamma_n from endf
+    Brief: When reading ENDF File 2 where J is not well-determined (AJ=I), assume ENDF neutron width is Γn not gΓn.
+    Relationship: Used with UID 15.
+    Related_UID: [15]
+    Source_Page_#: 357
+  - UID: 143
+    Command: ENDF/B-VI FILE 2 IS wanted
+    Brief: Output resonance parameters in ENDF/B-VI File 2 format to SAMMY.NDF.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 358
+  - UID: 144
+    Command: NDF FILE IS IN KEY-Word Format
+    Brief: The "ndf" file (for ENDF output options) uses key-word format (Table VI F2.2) instead of fixed format (Table VI F2.1).
+    Relationship: Affects "ndf" file reading.
+    Related_UID: null
+    Source_Page_#: 358
+  - UID: 145
+    Command: GENERATE FILE 3 POINt-wise cross section
+    Brief: Output point-wise cross sections in ENDF File 3 format to SAMMY.FL3.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 358
+  - UID: 146
+    Command: FILE 33 LB=1 COVARIAnce is wanted
+    Brief: Output group average cross sections (SAMMY.CRS) and covariance matrix (SAMMY.N33, similar to ENDF File 33). Not for official ENDF.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 358
+  - UID: 147
+    Command: AUTOMATIC NDF FILE Creation
+    Brief: When input is ENDF File 2, SAMMY automatically creates the *.ndf file for ENDF File 32 output.
+    Relationship: Used with UID 15 and 31.
+    Related_UID: [15, 31]
+    Source_Page_#: 358
+  - UID: 148
+    Command: INCLUDE MIN & MAX ENergies in endf file
+    Brief: For URR ENDF File 2 output, include Emin and Emax from SAMMY run in the energy list.
+    Relationship: Used with URR ENDF output.
+    Related_UID: null
+    Source_Page_#: 358
+  - UID: 149
+    Command: EV = UNITS ON ENERGY in plot file
+    Brief: Energies in plot file are in eV. (Default if Emax < 1 keV. Angular distribution plots always use eV).
+    Relationship: Plot output option. Mutually exclusive with KEV, MEV.
+    Related_UID: [150, 151]
+    Source_Page_#: 359
+  - UID: 150
+    Command: KEV = UNITS ON ENERGy in plot file
+    Brief: Energies in plot file are in keV. (Default if Emax > 1 keV. Angular distribution plots always use eV).
+    Relationship: Plot output option. Mutually exclusive with EV, MEV.
+    Related_UID: [149, 151]
+    Source_Page_#: 359
+  - UID: 151
+    Command: MEV = UNITS ON ENERGy in plot file
+    Brief: Energies in plot file are in MeV. (Angular distribution plots always use eV).
+    Relationship: Plot output option. Mutually exclusive with EV, KEV.
+    Related_UID: [149, 150]
+    Source_Page_#: 359
+  - UID: 152
+    Command: ODF FILE IS WANTED-- XXXXXX.XXX,ZEROth order
+    Brief: (Largely obsolete) Specify ODF output filename (cols 21-30, 10 chars) for zeroth order calculation.
+    Relationship: Rarely used.
+    Related_UID: [153]
+    Source_Page_#: 359
+  - UID: 153
+    Command: ODF FILE IS WANTED-- XXXXXX.XXX,FINAl calcul
+    Brief: (Largely obsolete) Specify ODF output filename (cols 21-30, 10 chars) for final calculation.
+    Relationship: Rarely used.
+    Related_UID: [152]
+    Source_Page_#: 359
+  - UID: 154
+    Command: DO NOT GENERATE PLOT file automatically
+    Brief: Do not automatically create SAMMY.ODF, SAMMY.LST, SAMMY.PLT. (Default)
+    Relationship: Default. Mutually exclusive with GENERATE PLOT FILE.
+    Related_UID: [155]
+    Source_Page_#: 359
+  - UID: 155
+    Command: GENERATE PLOT FILE Automatically
+    Brief: Automatically create SAMMY.ODF (plot file), SAMMY.LST (ASCII), SAMMY.PLT (binary) with results.
+    Relationship: Mutually exclusive with DO NOT GENERATE PLOT.
+    Related_UID: [154]
+    Source_Page_#: 359
+  - UID: 156
+    Command: DO NOT INCLUDE THEORetical uncertainties
+    Brief: Do not include theoretical uncertainties (ΔTi) in plot file. (Default)
+    Relationship: Default. Mutually exclusive with INCLUDE THEORETICAL.
+    Related_UID: [157]
+    Source_Page_#: 360
+  - UID: 157
+    Command: INCLUDE THEORETICAL uncertainties in Plot fi
+    Brief: Include theoretical uncertainties (ΔTi from parameter covariance) in plot file.
+    Relationship: Mutually exclusive with DO NOT INCLUDE THEORETICAL.
+    Related_UID: [156]
+    Source_Page_#: 360
+  - UID: 158
+    Command: PLOT UNBROADENED CROss sections
+    Brief: Create SAMMY.UNB (ODF), SAMUNB.DAT (ASCII TWENTY), SAMUNX.DAT (ASCII CSISRS) with unbroadened theoretical cross sections on auxiliary grid.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 360
+  - UID: 159
+    Command: AVERAGE OVER ENERGY Ranges
+    Brief: Produce energy-averaged experimental and theoretical values (histogram-based, use with caution for theoretical). AVG file needed.
+    Relationship: Mutually exclusive with other average types.
+    Related_UID: [160, 161]
+    Source_Page_#: 361
+  - UID: 160
+    Command: GROUP AVERAGE OVER Energy ranges
+    Brief: Produce Bondarenko-weighted multigroup cross sections. BON file needed.
+    Relationship: Mutually exclusive with other average types.
+    Related_UID: [159, 161]
+    Source_Page_#: 361
+  - UID: 161
+    Command: ENERGY AVERAGE USING constant flux
+    Brief: Produce unweighted energy average of theoretical cross sections (constant flux). AVG or BON file needed. Preferred for theoretical constant flux averages.
+    Relationship: Mutually exclusive with other average types.
+    Related_UID: [159, 160]
+    Source_Page_#: 361
+  - UID: 162
+    Command: MAXWELLIAN-AVERAGED capture cross sections
+    Brief: Generate stellar (Maxwellian) averaged capture cross sections. MXW file needed.
+    Relationship: Output option.
+    Related_UID: [163]
+    Source_Page_#: 361
+  - UID: 163
+    Command: CALCULATE MAXWELLIAN averages after reconstr
+    Brief: Calculate stellar averages using an energy grid reconstructed by SAMMY (NJOY method).
+    Relationship: Combines RECONSTRUCT and MAXWELLIAN.
+    Related_UID: [162, 170]
+    Source_Page_#: 361
+  - UID: 164
+    Command: MAKE NO CORRECTIONS to theoretical values
+    Brief: Do not perform Doppler/resolution broadening or apply normalization/backgrounds before averaging.
+    Relationship: Modifies averaging commands (UID 159, 160, 161).
+    Related_UID: [159,160,161]
+    Source_Page_#: 362
+  - UID: 165
+    Command: ADD CROSS SECTIONS From endf/b file 3
+    Brief: For stellar averages, add smooth cross sections from an ENDF File 3 to resolved resonance calculation. ENDF File 3 name after MXW file name.
+    Relationship: Used with UID 162 or 163.
+    Related_UID: [162, 163]
+    Source_Page_#: 362
+  - UID: 166
+    Command: PRINT AVERAGED SENSItivities for endf parame
+    Brief: Output SAMAVG.COV, SAMSEN.DAT, SAMMY.LLL, SAMMY.MGS for multigroup averages.
+    Relationship: Output option for multigroup averages.
+    Related_UID: null
+    Source_Page_#: 362
+  - UID: 167
+    Command: USE ENDF VALUES FOR constants
+    Brief: Use physical constants from 1999 ENDF-102. (Default)
+    Relationship: Default. Mutually exclusive with other constant sets.
+    Related_UID: [168, 169]
+    Source_Page_#: 363
+  - UID: 168
+    Command: USE 1995 ENDF-102 COnstant values
+    Brief: Use physical constants from 1995 ENDF-102.
+    Relationship: Mutually exclusive with other constant sets.
+    Related_UID: [167, 169]
+    Source_Page_#: 363
+  - UID: 169
+    Command: USE SAMMY-K1 DEFAULTs for constants
+    Brief: Use physical constants from SAMMY version K1 (for comparison only).
+    Relationship: Mutually exclusive with other constant sets.
+    Related_UID: [167, 168]
+    Source_Page_#: 363
+  - UID: 170
+    Command: RECONSTRUCT CROSS SEction from resonance par
+    Brief: Automatically choose energy grid and evaluate total, elastic, capture, fission cross sections (NJOY method). (No experimental grid needed).
+    Relationship: Can be combined with UID 163.
+    Related_UID: [163]
+    Source_Page_#: 366
+  - UID: 171
+    Command: ARTIFICIAL ENERGY Grid is needed
+    Brief: Automatically choose auxiliary grid based on NEPNTS, EMIN, EMAX (uniform in velocity space), then add points for structure. (No experimental grid needed).
+    Relationship: Alternative to RECONSTRUCT if no experimental data.
+    Related_UID: null
+    Source_Page_#: 366
+  - UID: 172
+    Command: RELEVANT PARAMETERS are chosen via uncertain
+    Brief: Solve Bayes' once, choose relevant R-matrix parameters based on uncertainty ratio, create SAMMY.REL with only relevant parameters flagged.
+    Relationship: Special analysis mode.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 173
+    Command: CROSS SECTION COVARIance matrix is wanted
+    Brief: Calculate and print point-wise cross section covariance matrix to SAMMY.LPT and SAMCOV.PUB. (No-Bayes run).
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 174
+    Command: INITIAL UNCERTAINTY multiplier = value
+    Brief: Multiply all prior parameter uncertainties by `value`. `value` after "=".
+    Relationship: Modifies prior PCM.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 175
+    Command: FINAL UNCERTAINTY MUltiplier = value
+    Brief: Multiply all output parameter uncertainties by `value`. `value` after "=". (Discouraged).
+    Relationship: Modifies output PCM.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 176
+    Command: E-DEPENDENT INITIAL Uncertainty multiplier
+    Brief: Multiply prior parameter uncertainties by an energy- and spin-group-dependent multiplier from EDU file.
+    Relationship: Modifies prior PCM. EDU file name after COV file.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 177
+    Command: SUMMED STRENGTH FUNCtion is wanted
+    Brief: Evaluate and print summed strength function and its covariance matrix. COVariance file needed as input.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 367
+  - UID: 178
+    Command: GENERATE PARTIAL DERivatives only
+    Brief: Assume all and only resonance parameters are varied, do not solve Bayes', write partial derivatives of theory to SAMMY.PDS.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 179
+    Command: GENERATE SPIN GROUP cross sections
+    Brief: Output ODF file with unbroadened total cross section and contributions from each spin group on auxiliary grid.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 180
+    Command: REFORMULATE DATA FOR implicit data covarianc
+    Brief: Create SAMMY.DA2 (corrected data), SAMMY.IDC (norm/bkgd info), SAMMY.PA2 (params w/o norm/bkgd) for IDC use.
+    Relationship: Action command for IDC setup.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 181
+    Command: COMPARE EXPERIMENT To theory
+    Brief: Output SAM53.DAT for SAMCPR to compare SAMMY calculations with other "experimental" data (e.g., from another code).
+    Relationship: Output option for SAMCPR.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 182
+    Command: GENERATE Y AND W MATrices
+    Brief: For M+W simultaneous fit, generate Yi and Wi sub-matrices for the current dataset and store in SAMMY.YWY.
+    Relationship: Part of M+W workflow. Mutually exclusive with READ Y AND W.
+    Related_UID: [183]
+    Source_Page_#: 368
+  - UID: 183
+    Command: READ Y AND W MATRICEs
+    Brief: For M+W simultaneous fit, read Yi and Wi sub-matrices from files (specified in interactive input) and solve Bayes'.
+    Relationship: Part of M+W workflow. Mutually exclusive with GENERATE Y AND W.
+    Related_UID: [182]
+    Source_Page_#: 368
+  - UID: 184
+    Command: STOP abc n
+    Brief: Cease execution prior to nth occurrence of segment `abc`. (Debug/Monte Carlo prep). `n` after 2 spaces.
+    Relationship: Debug/special purpose.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 185
+    Command: WRITE CALCULATED CROss sections into ascii
+    Brief: Write energies and theoretical values to SAMTHE.DAT (2F20.10 format).
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 368
+  - UID: 186
+    Command: UNIFORM ENERGY GRID
+    Brief: Create an "experimental" energy grid of NEPNTS points uniformly spaced in energy E. (Testing only, no-Bayes runs).
+    Relationship: Mutually exclusive with other UNIFORM grids.
+    Related_UID: [187, 188]
+    Source_Page_#: 369
+  - UID: 187
+    Command: UNIFORM VELOCITY GRId
+    Brief: Create an "experimental" energy grid of NEPNTS points uniformly spaced in velocity (sqrt(E)). (Testing only, no-Bayes runs).
+    Relationship: Mutually exclusive with other UNIFORM grids.
+    Related_UID: [186, 188]
+    Source_Page_#: 369
+  - UID: 188
+    Command: UNIFORM TIME GRID
+    Brief: Create an "experimental" energy grid of NEPNTS points uniformly spaced in time (1/sqrt(E)). (Testing only, no-Bayes runs).
+    Relationship: Mutually exclusive with other UNIFORM grids.
+    Related_UID: [186, 187]
+    Source_Page_#: 369
+  - UID: 189
+    Command: CREATE PUBLISHABLE List of parameters
+    Brief: Create SAMMY.PUB file with resonance parameters and uncertainties, tab-separated for spreadsheets.
+    Relationship: Output option.
+    Related_UID: null
+    Source_Page_#: 369
+  - UID: 190
+    Command: DO NOT TEST FOR EIGEnvalues
+    Brief: Do not test if parameter covariance matrix is positive-definite.
+    Relationship: null
+    Related_UID: null
+    Source_Page_#: 369
+  - UID: 191
+    Command: EXPERIMENTAL DATA ARe in separate files
+    Brief: For URR, experimental data are in separate files (names given interactively) rather than in URR PARameter file.
+    Relationship: URR option.
+    Related_UID: null
+    Source_Page_#: 370
+  - UID: 192
+    Command: NO ANNOTATED PARAMETer file for urr input
+    Brief: For URR, PARameter file is in original FITACS format (Table VIII B.1).
+    Relationship: URR option. Mutually exclusive with ANNOTATED PARAMETER.
+    Related_UID: [193]
+    Source_Page_#: 370
+  - UID: 193
+    Command: ANNOTATED PARAMETER file for urr
+    Brief: For URR, PARameter file is in annotated, key-word based format (Table VIII B.2). (Default)
+    Relationship: URR option. Default. Mutually exclusive with NO ANNOTATED.
+    Related_UID: [192]
+    Source_Page_#: 370
+  - UID: 194
+    Command: OUTPUT IN ANNOTATED parameter file for urr
+    Brief: For URR, output PARameter file is annotated. (Always true for output).
+    Relationship: URR output. (Default and only option for output).
+    Related_UID: null
+    Source_Page_#: 370
+  - UID: 195
+    Command: USE ALL EXPERIMENTAL data points
+    Brief: For URR, use all data points in URR PARameter file or separate data files. Ignore EMIN/EMAX from INPut file. (Default for URR).
+    Relationship: URR option. Default. Mutually exclusive with USE ENERGY LIMITS.
+    Related_UID: [196]
+    Source_Page_#: 370
+  - UID: 196
+    Command: USE ENERGY LIMITS AS Given in the input file
+    Brief: For URR, use EMIN/EMAX from INPut file card set 2 to define which data points are analyzed.
+    Relationship: URR option. Mutually exclusive with USE ALL EXPERIMENTAL.
+    Related_UID: [195]
+    Source_Page_#: 370
+  - UID: 197
+    Command: CALCULATE WIDTH FLUCtuation factors more acc
+    Brief: For URR, use 1001 grid points (instead of 101) for Dresner integrals.
+    Relationship: URR option.
+    Related_UID: null
+    Source_Page_#: 371
+  - UID: 198
+    Command: MOLDAUER PRESCRIPTIOn is to be used
+    Brief: For URR, use Moldauer’s “effective degree of freedom” to compensate for strong resonance overlap.
+    Relationship: URR option.
+    Related_UID: null
+    Source_Page_#: 371
+  - UID: 199
+    Command: USE POLAR COORDINATEs for fission widths
+    Brief: For two fission channels, treat as vector (magnitude & polar angle) instead of two widths.
+    Relationship: CS calc option.
+    Related_UID: null
+    Source_Page_#: 364
+  - UID: 200
+    Command: NUMERICAL DERIVATIVEs for resonance paramete
+    Brief: (Debug) Use numerical derivatives for resonance parameters instead of analytic.
+    Relationship: Debug option.
+    Related_UID: null
+    Source_Page_#: 364
+  - UID: 201
+    Command: DO NOT USE S-WAVE CUtoff
+    Brief: (Default) Do not truncate derivatives for s-wave resonances far from resonance.
+    Relationship: Default. Mutually exclusive with USE S-WAVE CUTOFF and USE NO CUTOFFS.
+    Related_UID: [202, 203]
+    Source_Page_#: 364
+  - UID: 202
+    Command: USE S-WAVE CUTOFF
+    Brief: Truncate derivatives for s-wave resonances far away (2x distance for non-s-waves). (Not encouraged, may reduce accuracy).
+    Relationship: Mutually exclusive with DO NOT USE S-WAVE CUtoff and USE NO CUTOFFS.
+    Related_UID: [201, 203]
+    Source_Page_#: 364
+  - UID: 203
+    Command: USE NO CUTOFFS FOR DErivatives or cross sect
+    Brief: Do not truncate derivatives for any l-wave resonances. (Recommended for final, accurate uncertainty calculations).
+    Relationship: Mutually exclusive with USE S-WAVE CUTOFF and DO NOT USE S-WAVE CUtoff.
+    Related_UID: [201, 202]
+    Source_Page_#: 364
+  - UID: 204
+    Command: USE ALTERNATIVE COULomb functions
+    Brief: Use more accurate (but slower) version of Coulomb functions, especially for low ρ and high η.
+    Relationship: CS calc option for charged particles.
+    Related_UID: null
+    Source_Page_#: 364
+  - UID: 205
+    Command: ADD DIRECT CAPTURE Component to cross sectio
+    Brief: Add externally generated direct capture component (from ADRC file) to capture, total, absorption. Coefficient DRCAP can be varied.
+    Relationship: CS calc option.
+    Related_UID: null
+    Source_Page_#: 364
+  - UID: 206
+    Command: LAB NON COULOMB EXCItation energies
+    Brief: Excitation energy (ECHAN in INPut card 10.1/10.2) for non-Coulomb channels is defined in laboratory system. (Default)
+    Relationship: Default. Mutually exclusive with CM NON COULOMB.
+    Related_UID: [207]
+    Source_Page_#: 364
+  - UID: 207
+    Command: CM NON COULOMB EXCITation energies
+    Brief: Excitation energy (ECHAN) for non-Coulomb channels is in center-of-mass system.
+    Relationship: Mutually exclusive with LAB NON COULOMB.
+    Related_UID: [206]
+    Source_Page_#: 364
+  - UID: 208
+    Command: LAB COULOMB EXCITATIon energies
+    Brief: Excitation energy (ECHAN or Q-value from particle-pair) for Coulomb channels is in laboratory system. (Default if ECHAN used).
+    Relationship: Default if ECHAN used. Mutually exclusive with CM COULOMB.
+    Related_UID: [209]
+    Source_Page_#: 364
+  - UID: 209
+    Command: CM COULOMB EXCITATIOn energies
+    Brief: Excitation energy (ECHAN or Q-value from particle-pair) for Coulomb channels is in center-of-mass system. (Default if Q-value used).
+    Relationship: Default if Q-value used. Mutually exclusive with LAB COULOMB.
+    Related_UID: [208]
+    Source_Page_#: 364
+  - UID: 210
+    Command: ADD ELIMINATED CAPTUre channel to final stat
+    Brief: When using pseudo full R-matrix (some gamma channels as explicit particle channels), add contribution from Reich-Moore aggregate gamma channel to calculated capture.
+    Relationship: Used with pseudo full R-matrix setup (Section II.B.2 for details of setup).
+    Related_UID: null
+    Source_Page_#: 365
