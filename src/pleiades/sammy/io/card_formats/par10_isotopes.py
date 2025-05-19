@@ -50,8 +50,38 @@ CARD_10_HEADERS = ["ISOTOpic abundances and masses", "NUCLIde abundances and mas
 
 
 def logical_line_two(lst) -> bool:
-    """Validate a list of spin group numbers. The first entry (flag) must be 0 or 1.
-    Remaining entries must be unique, positive, and strictly increasing.
+    """Validates a list representing spin group numbers according to specific rules.
+
+    The input list is expected to have the following structure:
+        - The first element is a flag (vary flag) that must be either 0 or 1.
+        - The remaining elements represent spin group numbers.
+
+    Validation criteria:
+        1. The list must not be empty.
+        2. The first element (flag) must be 0 or 1.
+        3. All spin group numbers (elements after the first) must be:
+            - Positive integers (> 0)
+            - Unique (no duplicates)
+            - Strictly increasing (each subsequent number is greater than the previous)
+
+    Parameters
+    ----------
+    lst : list
+        A list where the first element is a flag (0 or 1), followed by spin group numbers.
+
+    Returns
+    -------
+    bool
+        True if the list meets all validation criteria, False otherwise.
+
+    Examples
+    --------
+    >>> logical_line_two([1, 2, 3, 5])
+    True
+    >>> logical_line_two([0, 1, 1, 2])
+    False
+    >>> logical_line_two([2, 1, 2, 3])
+    False
     """
 
     # Check if the list is empty or if the first element, the vary flag, is not 0 or 1
@@ -71,13 +101,34 @@ def logical_line_two(lst) -> bool:
 
 
 def get_line_two_format_and_parse(line):
-    """Try to parse spin groups from a line using the given back_format.
-    Returns a list of parsed spin group numbers."""
-    line = line.rstrip()  # Strip the line of any trailing whitespace
+    """
+    Parses a line to extract spin group numbers using either the standard or extended format.
 
-    # Set both formats to False
-    extended_format = False
-    standard_format = False
+    This function attempts to parse a given line, extracting spin group numbers based on two possible
+    formats: standard and extended. The function first strips trailing whitespace from the line, then
+    divides the relevant portion of the line into fields according to the widths defined in the
+    LINE_TWO_BACK_MATTER_STANDARD and LINE_TWO_BACK_MATTER_EXTENDED dictionaries. It attempts to
+    convert each field to an integer, stopping at the first occurrence of "-1" or an invalid value.
+
+    The function then checks which format (standard or extended) yields a logically valid result
+    using the logical_line_two function. If a valid format is found, it returns a tuple containing
+    the first spin group number and a list of the remaining spin group numbers. If neither format
+    is valid, it logs an error and raises a ValueError.
+
+    Args:
+        line (str): The input line from which to parse spin group numbers.
+
+    Returns:
+        tuple: A tuple (first_group, remaining_groups), where first_group is the first parsed spin group
+               number (int), and remaining_groups is a list of the remaining parsed spin group numbers (List[int]).
+
+    Raises:
+        ValueError: If neither the standard nor extended format yields a valid set of spin group numbers.
+
+    Logs:
+        Error messages if the input line cannot be parsed into a valid format.
+    """
+    line = line.rstrip()  # Strip the line of any trailing whitespace
 
     # Create empty lists to hold the spin groups
     temp_standard_groups = []
@@ -131,7 +182,21 @@ def get_line_two_format_and_parse(line):
 
 
 def parse_line_three(line):
-    """Parse a line based on the Card-10 line-3 format (extended) and return a list of spin groups."""
+    """
+    Parse a line according to the Card-10 line-3 extended format and return a list of spin groups.
+
+    This function processes a fixed-width formatted line, extracting integer values representing spin groups.
+    It iterates over the line in field-width increments, starting from a specified offset, and attempts to
+    convert each field to an integer. If a field contains the continuation marker "-1", parsing stops.
+    If a field cannot be converted to an integer, -1 is appended as a placeholder.
+
+    Args:
+        line (str): The input line to parse, expected to follow the Card-10 line-3 extended format.
+
+    Returns:
+        List[int]: A list of integers representing the parsed spin groups. Invalid or empty fields are
+        represented by -1. Parsing stops at the first occurrence of the "-1" marker.
+    """
     line = line.rstrip()  # Strip the line of any trailing whitespace
 
     # Create an empty list to hold the spin groups
@@ -173,9 +238,6 @@ class Card10(BaseModel):
     - Multiple isotope entries
     - Total abundance validation
     - Format selection (standard vs extended)
-
-    NOTE:   Fixed formats for both standard and extended are defined in the
-            IsotopeParameters class. But only using the standard format for now.
     """
 
     @classmethod
