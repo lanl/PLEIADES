@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from pleiades.nuclear.isotopes.models import FileCategory, IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import IsotopeParameters
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -71,11 +72,11 @@ class IsotopeManager:
                 f"Allowed extensions: {self._CATEGORY_FILE_EXTENSIONS[category]}"
             )
 
-        print(f"Searching for {filename} in cached files for {category}: {self._cached_files[category]}")
+        logger.info(f"Searching for {filename} in cached files for {category}: {self._cached_files[category]}")
         for file in self._cached_files[category]:
-            print(f"Checking file: {file.name}")
+            logger.info(f"Checking file: {file.name}")
             if file.name == filename:
-                print(f"Found file: {file}")
+                logger.info(f"Found file: {file}")
                 return file
 
         raise FileNotFoundError(f"File {filename} not found in {category}")
@@ -119,6 +120,39 @@ class IsotopeManager:
         except Exception:
             return False
 
+    def get_istotpe_info_from_mass(self, mass: float) -> Optional[IsotopeInfo]:
+        """
+        Extract isotope information from the mass.mas20 file based on the given mass
+        and return the corresponding IsotopeInfo object.
+
+        NOTE: This function is not used in the current implementation but is provided
+        for future use or testing purposes. We will need to figure out how to use masses
+        provided by SAMMY to look up the exact isotope in the mass.mas20 file.
+
+        Args:
+            mass: The mass of the isotope
+        Returns:
+            IsotopeInfo object containing isotope details if found, None otherwise
+        """
+
+        # Iterate through the mass.mas20 file to find the isotope with the given mass
+        try:
+            with self.get_file_path(FileCategory.ISOTOPES, "mass.mas20").open() as f:
+                # Skip header lines
+                for _ in range(36):
+                    next(f)
+
+                for line in f:
+                    if str(mass) in line:
+                        # Parse the line according to mass.mas20 format
+                        element = line[0:2].strip()
+                        mass_number = int(line[3:6].strip())
+                        return self.get_isotope_info(f"{element}-{mass_number}")
+            return None
+        except Exception as e:
+            logger.error(f"Error reading mass data for mass {mass}: {str(e)}")
+            raise
+
     def get_isotope_info(self, isotope_str: str) -> Optional[IsotopeInfo]:
         """
         Extract isotope information from the isotopes.info file.
@@ -129,6 +163,8 @@ class IsotopeManager:
         Returns:
             IsotopeInfo containing isotope details if found, None otherwise
         """
+
+        logger.info(f"Getting isotope parameters for {isotope_str}")
 
         # Create a IsotopeInfo instance from the isotope string
         isotope = IsotopeInfo.from_string(isotope_str)
@@ -248,4 +284,22 @@ class IsotopeManager:
             return None
         except Exception as e:
             logger.error(f"Error getting MAT number for {isotope}: {str(e)}")
+            raise
+
+    def get_isotope_parameters_from_isotope_string(self, isotope_str: str) -> Optional[IsotopeParameters]:
+        """
+        Get isotope parameters from an isotope string.
+
+        Args:
+            isotope_str: String representation of the isotope (e.g., "U-238")
+
+        Returns:
+            IsotopeParameters containing nuclear data if found, None otherwise
+        """
+
+        try:
+            return IsotopeParameters(isotope_information=self.get_isotope_info(isotope_str))
+
+        except Exception as e:
+            logger.error(f"Error getting isotope parameters for {isotope_str}: {str(e)}")
             raise
