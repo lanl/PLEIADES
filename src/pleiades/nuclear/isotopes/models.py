@@ -103,7 +103,3 @@ class IsotopeInfo(BaseModel):
             mass_number = int(match.group(3))
         name = f"{element}-{mass_number}"
         return cls(name=name, element=element, mass_number=mass_number)
-
-    def __str__(self) -> str:
-        """Convert to string format 'element-mass_number'."""
-        return f"IsotopeInfo class for: {self.element}-{self.mass_number}"
