@@ -39,6 +39,10 @@ def test_init_defaults():
     """Test that InpManager initializes with default values."""
     inp_manager = InpManager()
     assert isinstance(inp_manager.options, FitOptions)
+    assert inp_manager.title is None
+    assert inp_manager.isotope_info is None
+    assert inp_manager.physical_constants is None
+    assert inp_manager.reaction_type is None
 
 
 def test_init_with_options():
@@ -46,6 +50,29 @@ def test_init_with_options():
     options = FitOptions()
     inp_manager = InpManager(options)
     assert inp_manager.options is options
+
+
+def test_init_with_all_parameters():
+    """Test that InpManager initializes with all parameters."""
+    options = FitOptions()
+    title = "Test Title"
+    isotope_info = {"name": "Fe56", "mass": 55.934}
+    physical_constants = {"temperature": 300, "flight_path": 200}
+    reaction_type = "TRANSMISSION"
+
+    inp_manager = InpManager(
+        options=options,
+        title=title,
+        isotope_info=isotope_info,
+        physical_constants=physical_constants,
+        reaction_type=reaction_type,
+    )
+
+    assert inp_manager.options is options
+    assert inp_manager.title == title
+    assert inp_manager.isotope_info == isotope_info
+    assert inp_manager.physical_constants == physical_constants
+    assert inp_manager.reaction_type == reaction_type
 
 
 def test_set_options():
@@ -73,21 +100,41 @@ def test_generate_commands(mock_fit_options):
     ]
 
 
+def test_generate_title_section():
+    """Test generating title section."""
+    # With no title
+    inp_manager = InpManager()
+    assert inp_manager.generate_title_section() == "# PLACEHOLDER: Replace with actual title/description"
+
+    # With title
+    inp_manager = InpManager(title="Test Title")
+    assert inp_manager.generate_title_section() == "Test Title"
+
+
 def test_generate_inp_content(mock_fit_options):
     """Test generating content for SAMMY input file."""
-    inp_manager = InpManager(mock_fit_options)
+    inp_manager = InpManager(mock_fit_options, title="Test Title")
     content = inp_manager.generate_inp_content()
 
     assert isinstance(content, str)
-    expected_content = (
-        "PUT QUANTUM NUMBERS INTO PARAMETER FILE\n" "DO NOT SOLVE BAYES EQUATIONS\n" "USE ENDF PARAMETERS"
-    )
-    assert content == expected_content
+    expected_sections = [
+        "Test Title",
+        "# PLACEHOLDER: Replace with isotope information",
+        "PUT QUANTUM NUMBERS INTO PARAMETER FILE",
+        "DO NOT SOLVE BAYES EQUATIONS",
+        "USE ENDF PARAMETERS",
+        "# PLACEHOLDER: Replace with physical constants",
+        "# PLACEHOLDER: Replace with reaction type",
+        "# PLACEHOLDER: Replace with spin group",
+    ]
+
+    for section in expected_sections:
+        assert section in content
 
 
 def test_write_inp_file(temp_dir, mock_fit_options):
     """Test writing SAMMY input file to disk."""
-    inp_manager = InpManager(mock_fit_options)
+    inp_manager = InpManager(mock_fit_options, title="Test Title")
     output_path = temp_dir / "test.inp"
 
     result_path = inp_manager.write_inp_file(output_path)
@@ -98,10 +145,15 @@ def test_write_inp_file(temp_dir, mock_fit_options):
     with open(output_path, "r") as f:
         content = f.read()
 
-    expected_content = (
-        "PUT QUANTUM NUMBERS INTO PARAMETER FILE\n" "DO NOT SOLVE BAYES EQUATIONS\n" "USE ENDF PARAMETERS"
-    )
-    assert content == expected_content
+    expected_sections = [
+        "Test Title",
+        "PUT QUANTUM NUMBERS INTO PARAMETER FILE",
+        "DO NOT SOLVE BAYES EQUATIONS",
+        "USE ENDF PARAMETERS",
+    ]
+
+    for section in expected_sections:
+        assert section in content
 
 
 def test_write_inp_file_creates_directories(temp_dir, mock_fit_options):
@@ -146,7 +198,8 @@ def test_create_endf_inp(temp_dir):
         with open(output_path, "r") as f:
             content = f.read()
 
-        assert content == "USE ENDF PARAMETERS"
+        assert "ENDF extraction mode" in content
+        assert "USE ENDF PARAMETERS" in content
         mock_from_endf.assert_called_once()
 
 
@@ -167,7 +220,8 @@ def test_create_fitting_inp(temp_dir):
         with open(output_path, "r") as f:
             content = f.read()
 
-        assert content == "SOLVE BAYES EQUATIONS"
+        assert "Bayesian fitting mode" in content
+        assert "SOLVE BAYES EQUATIONS" in content
         mock_from_fitting.assert_called_once()
 
 
