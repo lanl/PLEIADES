@@ -3,10 +3,13 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from pleiades.experimental.models import PhysicsParameters
-from pleiades.nuclear.models import nuclearParameters
+from pleiades.nuclear.models import nuclearParameters, IsotopeParameters
+from pleiades.nuclear.isotopes.manager import IsotopeManager   
 from pleiades.sammy.data.options import SammyData
 from pleiades.sammy.fitting.options import FitOptions
+from pleiades.utils.logger import loguru_logger
 
+logger = loguru_logger.bind(name=__name__)
 
 class FitConfig(BaseModel):
     """Container for fit parameters including nuclear and physics parameters.
@@ -36,6 +39,14 @@ class FitConfig(BaseModel):
         default_factory=FitOptions, description="Fit options used in SAMMY calculations"
     )
 
+    def append_isotope_from_string(self, isotope_string: str) -> None:
+        isotope_info = IsotopeManager().get_isotope_parameters_from_isotope_string(isotope_string)
+        
+        if isotope_info:
+            logger.info(f"Appending Isotope {isotope_string} to isotope list in nuclear parameters.")
+            self.nuclear_params.isotopes.append(isotope_info)
+        else:
+            logger.error(f"Could not append Isotope {isotope_string}.")
 
 # example usage
 if __name__ == "__main__":
