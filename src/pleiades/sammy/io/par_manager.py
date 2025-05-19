@@ -1,13 +1,78 @@
 # This file contains the ParManager class, which is responsible for managing the file input/output operations
 # around SAMMY parameter files. It handles reading, writing, and updating parameter files, using the FitConfig class.
+from enum import Enum
 from pathlib import Path
 
-from pleiades.nuclear.models import ResonanceEntry
 from pleiades.sammy.fitting.config import FitConfig
-from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
+
+
+class Cards(Enum):
+    PAR_CARD_1 = "Parameter Card 1"  # Resonance data
+    PAR_CARD_2 = "Parameter Card 2"  # Fudge Factor
+    PAR_CARD_3 = "Parameter Card 3"  # External R-function parameters
+    PAR_CARD_3A = "Parameter Card 3a"  # alternative for External R-function parameters
+    PAR_CARD_4 = "Parameter Card 4"  # Broadening parameters
+    PAR_CARD_5 = "Parameter Card 5"  # Unused but correlated variables
+    PAR_CARD_6 = "Parameter Card 6"  # Normalization and background
+    PAR_CARD_7 = "Parameter Card 7"  # Radius parameters (default format)
+    PAR_CARD_7A = "Parameter Card 7a"  # Radius parameters (alternative format)
+    PAR_CARD_8 = "Parameter Card 8"  # Data reduction parameters
+    PAR_CARD_9 = "Parameter Card 9"  # ORRES
+    PAR_CARD_10 = "Parameter Card 10"  # Isotopic abundances and masses
+    PAR_CARD_11 = "Parameter Card 11"  # Miscellaneous parameters
+    PAR_CARD_12 = "Parameter Card 12"  # Paramagnetic cross section parameters
+    PAR_CARD_13 = "Parameter Card 13"  # Background functions
+    PAR_CARD_14 = "Parameter Card 14"  # RPI Resolution function
+    PAR_CARD_14A = "Parameter Card 14a"  # RPI Transmission resolution function
+    PAR_CARD_15 = "Parameter Card 15"  # DETECtor efficiencies
+    PAR_CARD_16 = "Parameter Card 16"  # USER-Defined resolution function
+    PAR_LAST_B = "Parameter Card Last B"  # EXPLIcit uncertainties and correlations follow
+    PAR_LAST_C = "Parameter Card Last C"  # RELATive uncertainties follow
+    PAR_LAST_D = "Parameter Card Last D"  # PRIOR uncertainties follow in key-word format
+
+    # If command “QUANTUM NUMBERS ARE inparameter file” is used, then
+    # the following input cards will be in the parameter file.
+    INP_CARD_4 = "Input Card 4"  # Particle pair definitions
+    INP_CARD_10_2 = "Input Card 10.2"  # Spin groups
+
+
+PAR_HEADER_MAP = {
+    "RESONANCES are listed next": Cards.PAR_CARD_1,
+    "EXTERnal R-function parameters follow": Cards.PAR_CARD_3,
+    "R-EXTernal parameters follow": Cards.PAR_CARD_3A,
+    "BROADening parameters may be varied": Cards.PAR_CARD_4,
+    "UNUSEd but correlated variables": Cards.PAR_CARD_5,
+    "NORMAlization and background": Cards.PAR_CARD_6,
+    "RADIUs parameters follow": Cards.PAR_CARD_7,
+    "RADII are in KEY-WORD format": Cards.PAR_CARD_7A,
+    "CHANNel radius parameters follow": Cards.PAR_CARD_7A,
+    "DATA reduction parameters are next": Cards.PAR_CARD_8,
+    "ORRES": Cards.PAR_CARD_9,
+    "ISOTOpic abundances and masses": Cards.PAR_CARD_10,
+    "NUCLIde abundances and masses": Cards.PAR_CARD_10,
+    "MISCEllaneous parameters follow": Cards.PAR_CARD_11,
+    "PARAMagnetic cross section parameters follow": Cards.PAR_CARD_12,
+    "BACKGround functions": Cards.PAR_CARD_13,
+    "RPI Resolution function": Cards.PAR_CARD_14,
+    "GEEL resolution function": Cards.PAR_CARD_14,
+    "GELINa resolution": Cards.PAR_CARD_14,
+    "NTOF resolution function": Cards.PAR_CARD_14,
+    "RPI Transmission resolution function": Cards.PAR_CARD_14A,
+    "RPI Capture resolution function": Cards.PAR_CARD_14A,
+    "GEEL DEFAUlts": Cards.PAR_CARD_14A,
+    "GELINa DEFAUlts": Cards.PAR_CARD_14A,
+    "NTOF DEFAUlts": Cards.PAR_CARD_14A,
+    "DETECtor efficiencies": Cards.PAR_CARD_15,
+    "USER-Defined resolution function": Cards.PAR_CARD_16,
+    "EXPLIcit uncertainties and correlations follow": Cards.PAR_LAST_B,
+    "RELATive uncertainties follow": Cards.PAR_LAST_C,
+    "PRIOR uncertainties follow in key-word format": Cards.PAR_LAST_D,
+    "PARTIcle pair definitions": Cards.INP_CARD_4,
+    "SPIN GROUPs": Cards.INP_CARD_10_2,
+}
 
 
 class ParManager:
@@ -47,7 +112,7 @@ class ParManager:
                 continue
             if in_block:
                 # Stop at blank line or next section header
-                if not line.strip() or line.upper().startswith("COVARIANCE") or "FOLLOW" in line.upper():
+                if not line.strip():
                     break
                 block.append(line.rstrip())
 
@@ -65,52 +130,52 @@ class ParManager:
         Returns:
             bool: True if resonance data was successfully found and processed, False otherwise.
         """
+        from pleiades.sammy.io.card_formats.par01_resonances import Card01
 
         # Create a list of ResonanceEntry objects
-        resonance_entries = []
-        found_resonance_data = False
+        block = []
+        in_block = False
 
         for line in lines:
-            if not line.strip():
-                break
-            if line.strip().startswith("#") or not any(c.isdigit() for c in line):
+            if not in_block and line.strip().upper().startswith("RESONANCES"):
+                in_block = True
+                block.append(line.rstrip())
                 continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip():
+                    break
+                block.append(line.rstrip())
 
-            try:
-                resonance_energy = float(line[0:11].strip())
-                capture_width = float(line[11:22].strip()) if line[11:22].strip() else None
-                channel1_width = float(line[22:33].strip()) if line[22:33].strip() else None
-                channel2_width = float(line[33:44].strip()) if line[33:44].strip() else None
-                channel3_width = float(line[44:55].strip()) if line[44:55].strip() else None
-                vary_energy = VaryFlag(int(line[55:57].strip())) if line[55:57].strip() else VaryFlag.NO
-                vary_capture_width = VaryFlag(int(line[57:59].strip())) if line[57:59].strip() else VaryFlag.NO
-                vary_channel1 = VaryFlag(int(line[59:61].strip())) if line[59:61].strip() else VaryFlag.NO
-                vary_channel2 = VaryFlag(int(line[61:63].strip())) if line[61:63].strip() else VaryFlag.NO
-                vary_channel3 = VaryFlag(int(line[63:65].strip())) if line[63:65].strip() else VaryFlag.NO
-                igroup = int(line[65:67].strip()) if line[65:67].strip() else 0
-            except Exception as e:
-                logger.warning(f"Failed to parse resonance line: {line.strip()} ({e})")
-                print(line)
-                continue
+        if block:
+            Card01.from_lines(block, self.fit_config)
+            return True
 
-            resonance = ResonanceEntry(
-                resonance_energy=resonance_energy,
-                capture_width=capture_width,
-                channel1_width=channel1_width,
-                channel2_width=channel2_width,
-                channel3_width=channel3_width,
-                vary_energy=vary_energy,
-                vary_capture_width=vary_capture_width,
-                vary_channel1=vary_channel1,
-                vary_channel2=vary_channel2,
-                vary_channel3=vary_channel3,
-                igroup=igroup,
-            )
+        return False
 
-            resonance_entries.append(resonance)
-            found_resonance_data = True
+    def detect_par_cards(self, lines):
+        """
+        Scans a list of lines from a SAMMY parameter file to identify and collect parameter card headers.
+        This method iterates through each line in the provided list, checking for the presence of known
+        parameter card headers as defined in the `PAR_HEADER_MAP`. When a header is detected at the start
+        of a line (after stripping whitespace), the corresponding card enumeration is added to a set to
+        ensure uniqueness. The set is then sorted and returned as a list.
 
-        return found_resonance_data
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+
+        Returns:
+            list: A sorted list of detected parameter cards.
+        """
+
+        found_cards = set()
+        for line in lines:
+            line_key = line.strip()[:5].upper()
+            for header, card_enum in PAR_HEADER_MAP.items():
+                header_key = header.strip()[:5].upper()
+                if line_key == header_key:
+                    found_cards.add(card_enum)
+        return sorted(found_cards, key=lambda x: x.name)
 
     def read_par_file(self, par_file: Path) -> None:
         """
@@ -128,11 +193,24 @@ class ParManager:
             logger.info(f"Reading parameter file {par_file}")
             lines = f.readlines()
 
-        # First check on if the par_file has any isotope and abundance information with Card 10
-        # This helps us determine spin groups that are needed to sort the resonance data
-        found_isotope_data = self.extract_isotopes_and_abundances(lines)
-        if not found_isotope_data:
-            logger.warning(f"Could not find isotope data in {par_file}.")
+        detected = self.detect_par_cards(lines)
+        logger.info(f"Detected cards in parFile: {detected}")
 
-        # Extract resonance information from Card 1
-        # found_resonance_data = self.extract_resonance_entries(lines, self.fit_config)
+        for cards in detected:
+            # Read Card 10 first to get isotopes and spin groups
+            if cards == Cards.PAR_CARD_10:
+                found_isotope_data = self.extract_isotopes_and_abundances(lines)
+                if not found_isotope_data:
+                    logger.error(f"Could not find isotope data in {par_file}.")
+                else:
+                    logger.info(f"Updated isotope and abundance data from {par_file}.")
+
+            # Read Card 1 to get resonance data
+            if cards == Cards.PAR_CARD_1:
+                found_resonance_data = self.extract_resonance_entries(lines)
+                if not found_resonance_data:
+                    logger.error(f"Could not find resonance data in {par_file}.")
+                else:
+                    logger.info(f"Updated resonance data from {par_file}.")
+
+            # Add more card processing as needed
