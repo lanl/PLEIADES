@@ -220,7 +220,7 @@ Note:   Numbers in the second column (labeled “P, T”) indicate position numb
             6       | I    | ISRcon      | Vary Rcon? (0 = no, 1 = yes, 3 = PUP)
             7       | I    | ISRlin      | Vary Rlin? (0 = no, 1 = yes, 3 = PUP)
             8       | I    | ISscon      | Vary scon? (0 = no, 1 = yes, 3 = PUP)
-            9       | I    | ISslin      | Vary slin? (0 = no, 1 = yes, 3 = PUP)
+            9       | I    | ISs_lin     | Vary s_lin? (0 = no, 1 = yes, 3 = PUP)
             10      | I    | ISRq        | Vary Rq? (0 = no, 1 = yes, 3 = PUP)
 
             Parameters:
@@ -231,7 +231,7 @@ Note:   Numbers in the second column (labeled “P, T”) indicate position numb
             31–40   | F    | Rcon        | Constant term
             41–50   | F    | Rlin        | Linear term (1/eV)
             51–60   | F    | scon        | Constant coefficient of logarithmic term (≥ 0)
-            61–70   | F    | slin        | Linear coefficient of logarithmic term
+            61–70   | F    | s_lin       | Linear coefficient of logarithmic term
             71–80   | F    | Rq          | Quadratic term
 
         Repeat Line 2 as needed:
