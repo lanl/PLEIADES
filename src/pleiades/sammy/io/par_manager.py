@@ -27,13 +27,41 @@ class ParManager:
         if par_file:
             self.read_par_file(par_file)
 
-    def extract_resonance_entries(self, lines, fit_config: FitConfig) -> bool:
+    def extract_isotopes_and_abundances(self, lines) -> bool:
+        """
+        Search for isotopes in the lines of the SAMMY parameter file. If found, update the FitConfig object with the isotope information.
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+        Returns:
+            bool: True if isotope data was found and processed, False otherwise.
+        """
+        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
+
+        block = []
+        in_block = False
+
+        for line in lines:
+            if not in_block and (line.upper().startswith("ISOTO") or line.upper().startswith("NUCLI")):
+                in_block = True
+                block.append(line.rstrip())
+                continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip() or line.upper().startswith("COVARIANCE") or "FOLLOW" in line.upper():
+                    break
+                block.append(line.rstrip())
+
+        if block:
+            Card10.from_lines(block, self.fit_config)
+            return True
+        return False
+
+    def extract_resonance_entries(self, lines) -> bool:
         """
         Extract resonance information from the lines of the SAMMY parameter file (Card 1).
         Process the resonance data and update the FitConfig object.
         Args:
             lines (list): The lines of the SAMMY parameter file.
-            fit_config (FitConfig): The FitConfig object containing the configuration for the SAMMY fitting process.
         Returns:
             bool: True if resonance data was successfully found and processed, False otherwise.
         """
@@ -84,7 +112,7 @@ class ParManager:
 
         return found_resonance_data
 
-    def read_par_file(self, par_file: Path):
+    def read_par_file(self, par_file: Path) -> None:
         """
         Read the SAMMY parameter file and update the FitConfig object.
         Args:
@@ -94,12 +122,17 @@ class ParManager:
         # Check if the file exists
         if not par_file.exists():
             raise FileNotFoundError(f"Parameter file {par_file} does not exist.")
+
         # Read the parameter file and update the FitConfig object
         with open(par_file, "r") as f:
             logger.info(f"Reading parameter file {par_file}")
             lines = f.readlines()
 
-        # First check on if the par_file is a multi-isotope file
+        # First check on if the par_file has any isotope and abundance information with Card 10
+        # This helps us determine spin groups that are needed to sort the resonance data
+        found_isotope_data = self.extract_isotopes_and_abundances(lines)
+        if not found_isotope_data:
+            logger.warning(f"Could not find isotope data in {par_file}.")
 
         # Extract resonance information from Card 1
-        found_resonance_data = self.extract_resonance_entriess(lines, self.fit_config)
+        # found_resonance_data = self.extract_resonance_entries(lines, self.fit_config)
