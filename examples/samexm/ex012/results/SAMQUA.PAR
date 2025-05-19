@@ -19,7 +19,7 @@ Name=Inc Ch#2     Particle a=neutron       Particle b=Other
 Name=Inc Ch#3     Particle a=neutron       Particle b=Other
      Za= 0        Zb= 0         Pent=1     Shift=0
      Sa=  0.5     Sb=   0.0     Ma=   1.008664915780000     Mb=  16.000000000000
- 
+
 SPIN GROUPS
   1      1    1  0.5 1.0000000
     1  Inc Chan    0  0.5
@@ -90,7 +90,7 @@ SPIN GROUPS
     1  Inc Ch#3    3  0.5
  29 X    1    0 -3.5 1.0000000
     1  Inc Ch#3    3  0.5
- 
+
 RESONANCES are listed next
 -3661600.00 158770.000 3698500.+3  0.0000               0 0 1 0   1
 -873730.000 1025.30000 101.510000  0.0000               0 0 1 0   1
@@ -254,7 +254,7 @@ RESONANCES are listed next
 10934820.00 1200.00000 276110.000                       0 0 0    23
 15050371.00 1200.00000 634990.000                       0 0 0    23
 25004488.00 1200.00000 6918.60000                       0 0 0    23
- 
+
 .100000000
 Channel radii in key-word format
 Radii=  4.136420,  4.136420    Flags=0,-1
@@ -291,10 +291,10 @@ Radii=  4.200000,  4.200000    Flags=0,-1
    Group= 27   Chan=  1,
    Group= 28   Chan=  1,
    Group= 29   Chan=  1,
- 
+
 NUCLIDE MASSES AND ABUNDANCES FOLLOW
 27.9769290 1.0000000 .92000000 1 1 2 3 4 5 6 7
 28.9764960 .04670000 .05000000 1 8 91011121314151617
 29.9737720 .03100000 .02000000 11819202122
 16.0000000 1.0000000 .01000000 023242526272829
- 
+
