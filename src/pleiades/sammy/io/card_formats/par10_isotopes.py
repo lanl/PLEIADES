@@ -282,17 +282,12 @@ class Card10(BaseModel):
             logger.error(message)
             raise ValueError(message)
 
-        # if fit_config is not an instance of FitConfig, raise an error
-        if fit_config is not None and not isinstance(fit_config, FitConfig):
-            message = "fit_config must be an instance of FitConfig"
-            logger.error(message)
-            raise ValueError(message)
-
         elif fit_config is None:
             fit_config = FitConfig()
 
         # Remove header and trailing blank spaces in lines
         content_lines = [line for line in lines[1:] if line.rstrip()]
+
         if not content_lines:
             message = "No content lines found after header and blank lines"
             logger.error(message)
@@ -378,3 +373,11 @@ class Card10(BaseModel):
                             spin_groups=spin_groups,
                         )
                     )
+
+    def to_lines(self, fit_config: FitConfig) -> List[str]:
+        """Convert a fit_config object to a Card 10 list of lines.
+
+        Returns:
+            List[str]: List of lines representing the Card10 object.
+        """
+        raise NotImplementedError("Card 10 does not have a to_lines method")

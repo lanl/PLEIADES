@@ -157,8 +157,8 @@ class Card01(BaseModel):
                 # and that it has a single spin group.
                 fit_config.nuclear_params.isotopes[0].resonances.append(resonance)
 
-    def to_lines(self) -> List[str]:
-        """Convert the Card 1 object to lines for output.
+    def to_lines(self, fit_config: FitConfig) -> List[str]:
+        """Convert a fit_config object to Card 1 list of lines.
 
         Returns:
             List[str]: List of lines representing the Card 1 object.
