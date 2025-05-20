@@ -81,7 +81,7 @@ class Card01(BaseModel):
         # Check to see if the the first line is a header line, if so skip it
         if cls.is_header_line(lines[0]):
             header_line = lines[0]
-            logger.debug(f"Header line found: {header_line.strip()}")
+            logger.info(f"Header line found: {header_line.strip()}")
             # Skip the header line
             lines = lines[1:]
         else:
