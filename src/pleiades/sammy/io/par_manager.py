@@ -92,6 +92,37 @@ class ParManager:
         if par_file:
             self.read_par_file(par_file)
 
+    def extract_radii_parameters(self, lines) -> bool:
+        """
+        Extract radius parameters from the lines of the SAMMY parameter file (Card 7).
+        Process the radius data and update the FitConfig object.
+
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+        Returns:
+            bool: True if radius data was successfully found and processed, False otherwise.
+        """
+        from pleiades.sammy.io.card_formats.par07_radii import Card07
+
+        block = []
+        in_block = False
+
+        for line in lines:
+            if not in_block and line.strip().upper().startswith("RADI"):
+                in_block = True
+                block.append(line.rstrip())
+                continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip():
+                    break
+                block.append(line.rstrip())
+
+        if block:
+            Card07.from_lines(block, self.fit_config)
+            return True
+        return False
+
     def extract_isotopes_and_abundances(self, lines) -> bool:
         """
         Search for isotopes in the lines of the SAMMY parameter file. If found, update the FitConfig object with the isotope information.
@@ -146,7 +177,6 @@ class ParManager:
         header_found = any(line.strip().upper().startswith("RESONANCES") for line in lines)
 
         if header_found:
-            logger.error("Header line found: RESONANCES are listed next-------------------")
             # If the header is present, we will read until the next blank line or the next section header.
             # We will also skip the header line.
             for line in lines:
@@ -176,7 +206,6 @@ class ParManager:
                     block.append(line.rstrip())
 
         if block:
-            print(block)
             Card01.from_lines(block, self.fit_config)
             return True
 
