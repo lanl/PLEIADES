@@ -3,12 +3,32 @@ from typing import List
 
 from pydantic import BaseModel
 
+from pleiades.nuclear.isotopes.manager import (
+    IsotopeManager,  # Needed to create isotopes if no isotopes are found in fit_config
+)
 from pleiades.nuclear.models import ResonanceEntry  # Needed to store resonance data
-from pleiades.sammy.fitting.config import FitConfig  # FitConfig object to contain list of resonance enerties
-from pleiades.utils.helper import VaryFlag
-from pleiades.utils.logger import loguru_logger
+from pleiades.sammy.fitting.config import FitConfig  # FitConfig object to contain list of resonance entries
+from pleiades.utils.helper import VaryFlag  # VaryFlag object to determine if a parameter is varied
+from pleiades.utils.logger import loguru_logger  # Logger for debugging
 
 logger = loguru_logger.bind(name=__name__)
+
+
+def fix_pseudo_scientific(val):
+    """Fix pseudo scientific notation in SAMMY files.
+
+    Args:
+        val (str): The input string potentially containing pseudo scientific notation.
+
+    Returns:
+        str: The fixed string with proper scientific notation.
+    """
+    import re
+
+    m = re.match(r"^([+-]?\d*\.?\d+)\.(\+|\-)(\d+)$", val)
+    if m:
+        return f"{m.group(1)}e{m.group(2)}{m.group(3)}"
+    return val
 
 
 class Card01(BaseModel):
@@ -43,7 +63,47 @@ class Card01(BaseModel):
         Raises:
             ValueError: If no valid header found or invalid format
         """
-        resonance_entries = []
+
+        if not lines:
+            message = "No lines provided"
+            logger.error(message)
+            raise ValueError(message)
+
+        # if fit_config is not an instance of FitConfig, raise an error
+        if fit_config is not None and not isinstance(fit_config, FitConfig):
+            message = "fit_config must be an instance of FitConfig"
+            logger.error(message)
+            raise ValueError(message)
+
+        elif fit_config is None:
+            fit_config = FitConfig()
+
+        # Check to see if the the first line is a header line, if so skip it
+        if cls.is_header_line(lines[0]):
+            header_line = lines[0]
+            logger.debug(f"Header line found: {header_line.strip()}")
+            # Skip the header line
+            lines = lines[1:]
+        else:
+            # If no header line, log a warning
+            logger.warning("No header line found, assuming first line is data")
+
+        if not lines:
+            message = "No content lines found after header and blank lines"
+            logger.error(message)
+            raise ValueError(message)
+
+        multiple_isotopes = False
+        # Check if there are multiple isotopes in the fit_config object
+        if fit_config.nuclear_params.isotopes:
+            for isotope in fit_config.nuclear_params.isotopes:
+                if len(isotope.spin_groups) > 1:
+                    multiple_isotopes = True
+                    break
+
+        # If there are no isotopes in the fit_config, create a "unknown" [UNKN] isotope
+        if not fit_config.nuclear_params.isotopes:
+            fit_config.nuclear_params.isotopes.append(IsotopeManager.create_isotope_from_string("UNKN-01"))
 
         for line in lines:
             if not line.strip():
@@ -52,11 +112,11 @@ class Card01(BaseModel):
                 continue
 
             try:
-                resonance_energy = float(line[0:11].strip())
-                capture_width = float(line[11:22].strip()) if line[11:22].strip() else None
-                channel1_width = float(line[22:33].strip()) if line[22:33].strip() else None
-                channel2_width = float(line[33:44].strip()) if line[33:44].strip() else None
-                channel3_width = float(line[44:55].strip()) if line[44:55].strip() else None
+                resonance_energy = float(fix_pseudo_scientific(line[0:11].strip()))
+                capture_width = float(fix_pseudo_scientific(line[11:22].strip())) if line[11:22].strip() else None
+                channel1_width = float(fix_pseudo_scientific(line[22:33].strip())) if line[22:33].strip() else None
+                channel2_width = float(fix_pseudo_scientific(line[33:44].strip())) if line[33:44].strip() else None
+                channel3_width = float(fix_pseudo_scientific(line[44:55].strip())) if line[44:55].strip() else None
                 vary_energy = VaryFlag(int(line[55:57].strip())) if line[55:57].strip() else VaryFlag.NO
                 vary_capture_width = VaryFlag(int(line[57:59].strip())) if line[57:59].strip() else VaryFlag.NO
                 vary_channel1 = VaryFlag(int(line[59:61].strip())) if line[59:61].strip() else VaryFlag.NO
@@ -82,6 +142,20 @@ class Card01(BaseModel):
                 igroup=igroup,
             )
 
-            resonance_entries.append(resonance)
+            # If multiple isotopes are present, add the resonance entry to corresponding isotopes by
+            # matching spin group in the fit_config with the igroup in the resonance entry
+            if multiple_isotopes:
+                # Check if igroup is in the spin groups of any isotope
+                for isotope in fit_config.nuclear_params.isotopes:
+                    if igroup in isotope.spin_groups:
+                        # Add the resonance entry to the isotope's resonance list
+                        isotope.resonances.append(resonance)
+                        break
+            else:
+                # If only one isotope, add the resonance entry to that isotope's resonance list
+                # This assumes that there is only one isotope in the fit_config
+                # and that it has a single spin group.
+                fit_config.nuclear_params.isotopes[0].resonances.append(resonance)
 
-        print(f"Found {len(resonance_entries)} resonance entries.")
+        # logger.debug(f"{fit_config.nuclear_params.isotopes[0].spin_groups}")
+        # print(f"found {len(resonance_entries)} resonance entries")
