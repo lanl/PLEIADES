@@ -11,7 +11,8 @@ logger = loguru_logger.bind(name=__name__)
 
 class Card07(BaseModel):
     """
-    Card 07: Radii
+    Class representing the Card 7 format for radii parameters in the SAMMY parameter file.
+    This class is used to extract radii information based on a default format.
     """
 
     @classmethod
@@ -45,3 +46,9 @@ class Card07(BaseModel):
 
         elif fit_config is None:
             fit_config = FitConfig()
+
+        # Not currently supporting the default format for Card 7
+        # Raise an error if the default format is not supported
+        message = "Default format for Card 7 is not supported"
+        logger.error(message)
+        raise ValueError(message)
