@@ -157,5 +157,10 @@ class Card01(BaseModel):
                 # and that it has a single spin group.
                 fit_config.nuclear_params.isotopes[0].resonances.append(resonance)
 
-        # logger.debug(f"{fit_config.nuclear_params.isotopes[0].spin_groups}")
-        # print(f"found {len(resonance_entries)} resonance entries")
+    def to_lines(self) -> List[str]:
+        """Convert the Card 1 object to lines for output.
+
+        Returns:
+            List[str]: List of lines representing the Card 1 object.
+        """
+        raise NotImplementedError("Card 01 does not have a to_lines method")
