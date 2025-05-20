@@ -125,6 +125,10 @@ class ParManager:
         """
         Extract resonance information from the lines of the SAMMY parameter file (Card 1).
         Process the resonance data and update the FitConfig object.
+
+        NOTE:   This card will either be the first card in the file (without a header)
+                or be listed later in the file with a header.
+
         Args:
             lines (list): The lines of the SAMMY parameter file.
         Returns:
@@ -132,22 +136,47 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.par01_resonances import Card01
 
-        # Create a list of ResonanceEntry objects
+        # Create a block to hold the lines of the resonance data
+        # and a flag to indicate if we are in the resonance block
         block = []
         in_block = False
+        header_found = False
 
-        for line in lines:
-            if not in_block and line.strip().upper().startswith("RESONANCES"):
-                in_block = True
-                block.append(line.rstrip())
-                continue
-            if in_block:
-                # Stop at blank line or next section header
-                if not line.strip():
-                    break
-                block.append(line.rstrip())
+        # Check if the header is present
+        header_found = any(line.strip().upper().startswith("RESONANCES") for line in lines)
+
+        if header_found:
+            logger.error("Header line found: RESONANCES are listed next-------------------")
+            # If the header is present, we will read until the next blank line or the next section header.
+            # We will also skip the header line.
+            for line in lines:
+                if not in_block and line.strip().upper().startswith("RESONANCES"):
+                    in_block = True
+                    block.append(line.rstrip())
+                    continue
+                if in_block:
+                    # Stop at blank line or next section header
+                    if not line.strip():
+                        break
+                    block.append(line.rstrip())
+
+        # If the header is not present, we will just read the first lines of
+        # the card until we reach a blank line or the next section header.
+        else:
+            logger.error("No header line found, assuming first line is data")
+            for line in lines:
+                if not in_block:
+                    in_block = True
+                    block.append(line.rstrip())
+                    continue
+                if in_block:
+                    # Stop at blank line or next section header
+                    if not line.strip():
+                        break
+                    block.append(line.rstrip())
 
         if block:
+            print(block)
             Card01.from_lines(block, self.fit_config)
             return True
 
@@ -160,6 +189,8 @@ class ParManager:
         parameter card headers as defined in the `PAR_HEADER_MAP`. When a header is detected at the start
         of a line (after stripping whitespace), the corresponding card enumeration is added to a set to
         ensure uniqueness. The set is then sorted and returned as a list.
+        NOTE:   By default, there should always be a Card 1 in the file, but there may not be a header line
+                for Card 1. Therefore, Card 1 will always be included in the detected cards.
 
         Args:
             lines (list): The lines of the SAMMY parameter file.
@@ -175,6 +206,11 @@ class ParManager:
                 header_key = header.strip()[:5].upper()
                 if line_key == header_key:
                     found_cards.add(card_enum)
+
+        # If no Card 1 is found, add it to the list
+        if Cards.PAR_CARD_1 not in found_cards:
+            found_cards.add(Cards.PAR_CARD_1)
+
         return sorted(found_cards, key=lambda x: x.name)
 
     def read_par_file(self, par_file: Path) -> None:
