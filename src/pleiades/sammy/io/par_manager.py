@@ -78,8 +78,8 @@ PAR_HEADER_MAP = {
 class ParManager:
     def __init__(self, fit_config: FitConfig = None, par_file: Path = None):
         """
-        Initialize the ParManager class. This may or may not be passes a FitConfig object.
-        If a FitConfig object is none, then a new one is created with default values.
+        Initialize the ParManager class. This may or may not be passed a FitConfig object.
+        If a FitConfig object is None, then a new one is created with default values.
         Args:
             fit_config (FitConfig): The FitConfig object containing the configuration for the SAMMY fitting process. default=None
             par_file (Path): The path to the SAMMY parameter file. default=None
