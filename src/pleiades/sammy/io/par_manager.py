@@ -18,7 +18,7 @@ class Cards(Enum):
     PAR_CARD_5 = "Parameter Card 5"  # Unused but correlated variables
     PAR_CARD_6 = "Parameter Card 6"  # Normalization and background
     PAR_CARD_7 = "Parameter Card 7"  # Radius parameters (default format)
-    PAR_CARD_7A = "Parameter Card 7a"  # Radius parameters (alternative format)
+    PAR_CARD_7A = "Parameter Card 7a"  # Radius parameters (“key-word” format)
     PAR_CARD_8 = "Parameter Card 8"  # Data reduction parameters
     PAR_CARD_9 = "Parameter Card 9"  # ORRES
     PAR_CARD_10 = "Parameter Card 10"  # Isotopic abundances and masses
@@ -96,6 +96,11 @@ class ParManager:
         """
         Extract radius parameters from the lines of the SAMMY parameter file (Card 7).
         Process the radius data and update the FitConfig object.
+        NOTE: There are two formats for the radius parameters. The first is the default format
+              and the second is the key-word format. In total, there are 3 different headers
+              - “RADIUs parameters follow”
+              - “RADIIs are in KEY-WORD format”
+              - “CHANNel radius parameters follow”
 
         Args:
             lines (list): The lines of the SAMMY parameter file.
@@ -103,24 +108,34 @@ class ParManager:
             bool: True if radius data was successfully found and processed, False otherwise.
         """
         from pleiades.sammy.io.card_formats.par07_radii import Card07
+        from pleiades.sammy.io.card_formats.par07a_radii import Card07a
 
         block = []
         in_block = False
+        header_line = None
 
         for line in lines:
-            if not in_block and line.strip().upper().startswith("RADI"):
+            first5 = line[:5].upper().strip()
+            # Start block if first 5 chars match or KEY-WORD in line
+            if not in_block and (first5 in ("RADIU", "RADII", "CHANN") or "KEY-WORD" in line):
                 in_block = True
+                header_line = line.rstrip()
                 block.append(line.rstrip())
                 continue
             if in_block:
-                # Stop at blank line or next section header
                 if not line.strip():
                     break
                 block.append(line.rstrip())
 
+        # Decide which parser to use
         if block:
-            Card07.from_lines(block, self.fit_config)
-            return True
+            header = block[0].upper()
+            if header.startswith("RADIU"):
+                Card07.from_lines(block, self.fit_config)
+                return True
+            elif header.startswith("RADII") or header.startswith("CHANN") or "KEY-WORD" in header:
+                Card07a.from_lines(block, self.fit_config)
+                return True
         return False
 
     def extract_isotopes_and_abundances(self, lines) -> bool:
@@ -193,7 +208,7 @@ class ParManager:
         # If the header is not present, we will just read the first lines of
         # the card until we reach a blank line or the next section header.
         else:
-            logger.error("No header line found, assuming first line is data")
+            logger.debug("No header line found, assuming first line is data")
             for line in lines:
                 if not in_block:
                     in_block = True
@@ -283,4 +298,11 @@ class ParManager:
                 else:
                     logger.info(f"Updated resonance data from {par_file}.")
 
+            # Read Card 7 to get radius data
+            elif cards == Cards.PAR_CARD_7 or cards == Cards.PAR_CARD_7A:
+                found_radius_data = self.extract_radii_parameters(lines)
+                if not found_radius_data:
+                    logger.error(f"Could not find radius data in {par_file}.")
+                else:
+                    logger.info(f"Updated radius data from {par_file}.")
             # Add more card processing as needed
