@@ -196,14 +196,19 @@ class ParManager:
         detected = self.detect_par_cards(lines)
         logger.info(f"Detected cards in parFile: {detected}")
 
+        # Always process Card 10 first if present as this
+        # contains the spin groups for each isotope
+        if Cards.PAR_CARD_10 in detected:
+            found_isotope_data = self.extract_isotopes_and_abundances(lines)
+            if not found_isotope_data:
+                logger.error(f"Could not find isotope data in {par_file}.")
+            else:
+                logger.info(f"Updated isotope and abundance data from {par_file}.")
+
         for cards in detected:
-            # Read Card 10 first to get isotopes and spin groups
+            # Already processed Card 10 so skip it here.
             if cards == Cards.PAR_CARD_10:
-                found_isotope_data = self.extract_isotopes_and_abundances(lines)
-                if not found_isotope_data:
-                    logger.error(f"Could not find isotope data in {par_file}.")
-                else:
-                    logger.info(f"Updated isotope and abundance data from {par_file}.")
+                continue
 
             # Read Card 1 to get resonance data
             if cards == Cards.PAR_CARD_1:
