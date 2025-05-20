@@ -103,6 +103,7 @@ class Card01(BaseModel):
 
         # If there are no isotopes in the fit_config, create a "unknown" [UNKN] isotope
         if not fit_config.nuclear_params.isotopes:
+            logger.warning("No isotopes found in fit_config, creating a default UNKN isotope")
             fit_config.nuclear_params.isotopes.append(IsotopeManager.create_isotope_from_string("UNKN-01"))
 
         for line in lines:
