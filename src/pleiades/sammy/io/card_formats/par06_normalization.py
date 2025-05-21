@@ -87,9 +87,9 @@ class Card06(BaseModel):
         elif fit_config is None:
             fit_config = FitConfig()
 
-        # Ensure fit_config.physics_parameters exists
-        if not hasattr(fit_config, "physics_parameters") or fit_config.physics_parameters is None:
-            fit_config.physics_parameters = PhysicsParameters()
+        # Ensure fit_config.physics_params exists
+        if not hasattr(fit_config, "physics_params") or fit_config.physics_params is None:
+            fit_config.physics_params = PhysicsParameters()
 
         # --- Begin parsing ---
         # Card 6 main line is usually the second line (after header)
@@ -124,5 +124,5 @@ class Card06(BaseModel):
                 main_kwargs[key] = float(val) if val else None
 
         norm_params = NormalizationParameters(**main_kwargs)
-        fit_config.physics_parameters.normalization_parameters = norm_params
-        logger.info("Assigned normalization parameters to fit_config.physics_parameters.normalization_parameters")
+        fit_config.physics_params.normalization_parameters = norm_params
+        logger.info("Assigned normalization parameters to fit_config.physics_params.normalization_parameters")
