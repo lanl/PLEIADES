@@ -291,7 +291,7 @@ class IsotopeParameters(BaseModel):
     """
 
     isotope_information: Optional[IsotopeInfo] = Field(default=None, description="Isotope information")
-    abundance: Optional[float] = Field(default=None, description="Fractional abundance", ge=0)
+    abundance: Optional[float] = Field(default=None, description="Fractional abundance")
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
     vary_abundance: Optional[VaryFlag] = Field(default=None, description="Treatment flag for varying abundance")
     endf_library: Optional[EndfLibrary] = Field(
@@ -318,17 +318,16 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If spin group validation fails
         """
-        where_am_i = "IsotopeParameters.validate_groups()"
         max_standard = 99  # Maximum group number for standard format
 
         for group in self.spin_groups:
             if group == 0:
-                logger.info(f"{where_am_i}:Spin group number cannot be 0")
+                logger.error("Spin group number cannot be 0")
                 raise ValueError("Spin group number cannot be 0")
 
             # Check if we need extended format
             if abs(group) > max_standard:
-                logger.info(f"{where_am_i}:Group number {group} requires extended format")
+                logger.error(f"Group number {group} requires extended format")
 
         return self
 
@@ -345,11 +344,10 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If resonance igroup validation fails
         """
-        where_am_i = "IsotopeParameters.validate_resonances()"
 
         for resonance in self.resonances:
             if resonance.igroup not in self.spin_groups:
-                logger.info(f"{where_am_i}:Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
+                logger.error(f"Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
                 raise ValueError(f"Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
 
         return self
@@ -367,14 +365,11 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If radius parameter spin group validation fails
         """
-        where_am_i = "IsotopeParameters.validate_radius_parameters()"
 
         for radius in self.radius_parameters:
             for group in radius.spin_groups:
                 if group not in self.spin_groups:
-                    logger.info(
-                        f"{where_am_i}:Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
-                    )
+                    logger.error(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
                     raise ValueError(
                         f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
                     )
@@ -400,19 +395,18 @@ class nuclearParameters(BaseModel):
         - Each isotope has a unique mass
         - Each isotope has a unique abundance
         """
-        where_am_i = "nuclear_params.validate_isotopes()"
 
         # Check for duplicate isotope names in isotopeInfo
         names = [iso.isotope_information.name for iso in self.isotopes]
 
         if len(names) != len(set(names)):
-            logger.info(f"{where_am_i}:Duplicate isotope names found")
+            logger.error("Duplicate isotope names found")
             raise ValueError("Duplicate isotope names found")
 
         # Check for duplicate masses
         masses = [iso.isotope_information.mass_data.atomic_mass for iso in self.isotopes]
         if len(masses) != len(set(masses)):
-            logger.info(f"{where_am_i}:Duplicate masses found")
+            logger.error("Duplicate masses found")
             raise ValueError("Duplicate masses found")
 
         return self
