@@ -231,6 +231,33 @@ class RadiusParameters(BaseModel):
 
         return self
 
+    # Define a print method for debugging
+    def __str__(self) -> str:
+        """Return a text table representation of the RadiusParameters object."""
+        headers = ["Parameter", "Value"]
+        rows = [
+            ["Effective Radius (F)", self.effective_radius],
+            ["True Radius (F)", self.true_radius],
+            ["Channel Mode", self.channel_mode],
+            ["Vary Effective", self.vary_effective],
+            ["Vary True", self.vary_true],
+            ["Spin Groups", self.spin_groups],
+            ["Channels", self.channels],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
+
 
 class ResonanceEntry(BaseModel):
     """This class handles the parameters for a single resonance entry.
