@@ -92,6 +92,36 @@ class ParManager:
         if par_file:
             self.read_par_file(par_file)
 
+    def extract_broadening_parameters(self, lines) -> bool:
+        """
+        Extract broadening parameters from the lines of the SAMMY parameter file (Card 4).
+        Process the broadening data and update the FitConfig object.
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+        Returns:
+            bool: True if broadening data was successfully found and processed, False otherwise.
+        """
+        from pleiades.sammy.io.card_formats.par04_broadening import Card04
+
+        block = []
+        in_block = False
+
+        for line in lines:
+            if not in_block and line.upper().startswith("BROAD"):
+                in_block = True
+                block.append(line.rstrip())
+                continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip():
+                    break
+                block.append(line.rstrip())
+
+        if block:
+            Card04.from_lines(block, self.fit_config)
+            return True
+        return False
+
     def extract_normalization_parameters(self, lines) -> bool:
         """
         Extract normalization parameters from the lines of the SAMMY parameter file (Card 6).
@@ -343,3 +373,11 @@ class ParManager:
                     logger.error(f"Could not find normalization data in {par_file}.")
                 else:
                     logger.info(f"Updated normalization data from {par_file}.")
+
+            # Read Card 4 to get broadening data
+            elif cards == Cards.PAR_CARD_4:
+                found_broadening_data = self.extract_broadening_parameters(lines)
+                if not found_broadening_data:
+                    logger.error(f"Could not find broadening data in {par_file}.")
+                else:
+                    logger.info(f"Updated broadening data from {par_file}.")
