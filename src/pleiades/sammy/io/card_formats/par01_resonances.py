@@ -8,27 +8,13 @@ from pleiades.nuclear.isotopes.manager import (
 )
 from pleiades.nuclear.models import ResonanceEntry  # Needed to store resonance data
 from pleiades.sammy.fitting.config import FitConfig  # FitConfig object to contain list of resonance entries
-from pleiades.utils.helper import VaryFlag  # VaryFlag object to determine if a parameter is varied
+from pleiades.utils.helper import (  # VaryFlag and check_pseudo_scientific for parameter parsing
+    VaryFlag,
+    check_pseudo_scientific,
+)
 from pleiades.utils.logger import loguru_logger  # Logger for debugging
 
 logger = loguru_logger.bind(name=__name__)
-
-
-def fix_pseudo_scientific(val):
-    """Fix pseudo scientific notation in SAMMY files.
-
-    Args:
-        val (str): The input string potentially containing pseudo scientific notation.
-
-    Returns:
-        str: The fixed string with proper scientific notation.
-    """
-    import re
-
-    m = re.match(r"^([+-]?\d*\.?\d+)\.(\+|\-)(\d+)$", val)
-    if m:
-        return f"{m.group(1)}e{m.group(2)}{m.group(3)}"
-    return val
 
 
 class Card01(BaseModel):
@@ -113,11 +99,11 @@ class Card01(BaseModel):
                 continue
 
             try:
-                resonance_energy = float(fix_pseudo_scientific(line[0:11].strip()))
-                capture_width = float(fix_pseudo_scientific(line[11:22].strip())) if line[11:22].strip() else None
-                channel1_width = float(fix_pseudo_scientific(line[22:33].strip())) if line[22:33].strip() else None
-                channel2_width = float(fix_pseudo_scientific(line[33:44].strip())) if line[33:44].strip() else None
-                channel3_width = float(fix_pseudo_scientific(line[44:55].strip())) if line[44:55].strip() else None
+                resonance_energy = check_pseudo_scientific(line[0:11].strip())
+                capture_width = check_pseudo_scientific(line[11:22].strip()) if line[11:22].strip() else None
+                channel1_width = check_pseudo_scientific(line[22:33].strip()) if line[22:33].strip() else None
+                channel2_width = check_pseudo_scientific(line[33:44].strip()) if line[33:44].strip() else None
+                channel3_width = check_pseudo_scientific(line[44:55].strip()) if line[44:55].strip() else None
                 vary_energy = VaryFlag(int(line[55:57].strip())) if line[55:57].strip() else VaryFlag.NO
                 vary_capture_width = VaryFlag(int(line[57:59].strip())) if line[57:59].strip() else VaryFlag.NO
                 vary_channel1 = VaryFlag(int(line[59:61].strip())) if line[59:61].strip() else VaryFlag.NO
