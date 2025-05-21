@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 from pleiades.nuclear.models import IsotopeParameters
 from pleiades.sammy.fitting.config import FitConfig
+from pleiades.utils.helper import check_pseudo_scientific
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -318,9 +319,9 @@ class Card10(BaseModel):
             line_two = group[0]
             line_threes = group[1:] if len(group) > 1 else []
 
-            mass = float(line_two[LINE_TWO_FRONT_MATTER["mass"]])
-            abundance = float(line_two[LINE_TWO_FRONT_MATTER["abundance"]])
-            uncertainty = float(line_two[LINE_TWO_FRONT_MATTER["uncertainty"]])
+            mass = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["mass"]])
+            abundance = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["abundance"]])
+            uncertainty = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["uncertainty"]])
             flag, spin_groups = get_line_two_format_and_parse(line_two)
 
             # Check the rest of the lines to append to the spin groups
