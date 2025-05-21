@@ -192,20 +192,17 @@ class Card07a(BaseModel):
             else:
                 line_index += 1
 
-        logger.info(f"Parsed RadiusParameters: {radius_params_list}")
-
         # --- Check if there are multiple isotopes in the fit_config object ---
         multiple_isotopes = False
 
         # if there are multiple isotopes then check if spin groups of the isotopes match the spin groups of the radius parameters
         if len(fit_config.nuclear_params.isotopes) > 1:
-            logger.debug(f"Number of isotopes in fit_config: {len(fit_config.nuclear_params.isotopes)}")
             multiple_isotopes = True
 
         # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
         if multiple_isotopes:
             for isotope in fit_config.nuclear_params.isotopes:
-                logger.debug(f"Isotope: {isotope.isotope_information.name}, Spin Groups: {isotope.spin_groups}")
+                logger.info(f"Isotope: {isotope.isotope_information.name}, Spin Groups: {isotope.spin_groups}")
 
                 # Assign matching radius parameters to each isotope
                 matching_radii = []
@@ -219,7 +216,7 @@ class Card07a(BaseModel):
                         matching_radii.append(radius_param)
                 if matching_radii:
                     isotope.radius_parameters = matching_radii
-                    logger.debug(
+                    logger.info(
                         f"Assigned {len(matching_radii)} RadiusParameters to Isotope: {isotope.isotope_information.name}"
                     )
 
