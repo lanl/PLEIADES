@@ -233,7 +233,7 @@ class RadiusParameters(BaseModel):
 
     # Define a print method for debugging
     def __str__(self) -> str:
-        """Return a text table representation of the RadiusParameters object."""
+        """Return a text table representation of the RadiusParameters object with aligned columns."""
         headers = ["Parameter", "Value"]
         rows = [
             ["Effective Radius (F)", self.effective_radius],
@@ -244,14 +244,12 @@ class RadiusParameters(BaseModel):
             ["Spin Groups", self.spin_groups],
             ["Channels", self.channels],
         ]
-        # Calculate column widths
         col_widths = [
             max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
         ]
-        # Build table
         lines = []
         header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
-        sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
+        sep_line = " | ".join("-" * col_widths[i] for i in range(len(headers)))
         lines.append(header_line)
         lines.append(sep_line)
         for row in rows:
@@ -298,6 +296,35 @@ class ResonanceEntry(BaseModel):
     vary_channel2: VaryFlag = Field(default=VaryFlag.NO)
     vary_channel3: VaryFlag = Field(default=VaryFlag.NO)
     igroup: int = Field(description="Quantum numbers group number")
+
+    # Define print method for debugging
+    def __str__(self) -> str:
+        """Return a text table representation of the ResonanceEntry object."""
+        headers = ["Parameter", "Value"]
+        rows = [
+            ["Resonance Energy (eV)", self.resonance_energy],
+            ["Capture Width (meV)", self.capture_width],
+            ["Channel 1 Width (meV)", self.channel1_width],
+            ["Channel 2 Width (meV)", self.channel2_width],
+            ["Channel 3 Width (meV)", self.channel3_width],
+            ["Vary Energy", self.vary_energy],
+            ["Vary Capture Width", self.vary_capture_width],
+            ["Vary Channel 1", self.vary_channel1],
+            ["Vary Channel 2", self.vary_channel2],
+            ["Vary Channel 3", self.vary_channel3],
+            ["Igroup", self.igroup],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
 
 
 class IsotopeParameters(BaseModel):
@@ -402,6 +429,62 @@ class IsotopeParameters(BaseModel):
                     )
 
         return self
+
+    def print_resonances(self) -> str:
+        """Print the resonance entries in a formatted table."""
+        headers = ["Resonance Energy (eV)", "Capture Width (meV)", "Channel 1 Width (meV)", "Igroup"]
+        rows = [
+            [
+                resonance.resonance_energy,
+                resonance.capture_width,
+                resonance.channel1_width,
+                resonance.igroup,
+            ]
+            for resonance in self.resonances
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = " | ".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
+
+    def __str__(self) -> str:
+        """
+        Return a text table representation of the IsotopeParameters object.
+        """
+        headers = ["Parameter", "Value"]
+        rows = [
+            ["Isotope Name", self.isotope_information.name],
+            ["Mass (amu)", self.isotope_information.mass_data.atomic_mass],
+            ["Abundance", self.abundance],
+            ["Uncertainty", self.uncertainty],
+            ["Vary Abundance", self.vary_abundance],
+            ["ENDF Library", self.endf_library],
+            ["Spin Groups", self.spin_groups],
+            ["Num of Resonances", len(self.resonances)],
+            ["Num of Radius Parameters", len(self.radius_parameters)],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = "-" * (col_widths[0]) + "-+-" + "-" * (col_widths[1])
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
 
 
 class nuclearParameters(BaseModel):
