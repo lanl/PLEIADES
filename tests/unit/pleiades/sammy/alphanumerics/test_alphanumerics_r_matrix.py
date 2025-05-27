@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.rm import RMatrixOptions
+from pleiades.sammy.alphanumerics.r_matrix import RMatrixOptions
 
 
 def test_default_option():
@@ -86,6 +86,15 @@ def test_switching_options():
     r_matrix_options = RMatrixOptions(reduced_width_amplitudes=True)
     assert r_matrix_options.reduced_width_amplitudes is True
     assert r_matrix_options.get_alphanumeric_commands() == ["REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT"]
+
+
+# Additional test for enhancements to the R-matrix options
+def test_unresolved_resonance_region():
+    """Test the unresolved resonance region flag."""
+    r_matrix_options = RMatrixOptions(unresolved_resonance_region=True)
+    assert r_matrix_options.reich_moore is False  # Should turn off default options
+    assert r_matrix_options.unresolved_resonance_region is True
+    assert "UNRESOLVED RESONANCE REGION" in r_matrix_options.get_alphanumeric_commands()
 
 
 if __name__ == "__main__":

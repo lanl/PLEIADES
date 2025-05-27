@@ -2,16 +2,17 @@ import pytest
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
-from pleiades.sammy.data.options import SammyData
-from pleiades.sammy.fitting.config import FitConfig
-from pleiades.sammy.fitting.options import (
-    BroadeningTypeOptions,
-    DataFormatOptions,
-    FitOptions,
+from pleiades.sammy.alphanumerics import (
+    BayesSolutionOptions,
+    BroadeningOptions,
+    ENDFOptions,
+    ExperimentalDataInputOptions,
     QuantumNumbersOptions,
     RMatrixOptions,
-    SpinGroupOptions,
 )
+from pleiades.sammy.data.options import SammyData
+from pleiades.sammy.fitting.config import FitConfig
+from pleiades.sammy.fitting.options import FitOptions
 
 
 def test_fit_config_defaults():
@@ -51,15 +52,24 @@ def test_fit_config_custom_values():
         energy_units="keV",
         cross_section_units="millibarn",
     )
+    # Create customized alphanumerics options
+    r_matrix = RMatrixOptions(reich_moore=False, original_reich_moore=True)
+    quantum_numbers = QuantumNumbersOptions(
+        put_quantum_numbers_into_parameter_file=True, key_word_particle_pair_definitions_are_given=True
+    )
+    experimental_data = ExperimentalDataInputOptions(data_are_endf_b_file=True)
+    broadening = BroadeningOptions(broadening_is_wanted=True)
+    endf = ENDFOptions(input_is_endf_b_file_2=True)
+    bayes = BayesSolutionOptions(solve_bayes_equations=True)
+
+    # Create the FitOptions using the alphanumerics options
     options_and_routines = FitOptions(
-        RMatrix=RMatrixOptions.ORIGINAL_REICH_MOORE,
-        SpinGroupFormat=SpinGroupOptions.PARTICLE_PAIR_DEFINITION,
-        QuantumNumbers=QuantumNumbersOptions.PUT_Q_NUMBERS_IN_PARAM_FILE,
-        input_is_endf_b_file_2=True,
-        DataFormat=DataFormatOptions.DATA_IN_ENDF_FORMAT,
-        ImplementBroadeningOption=True,
-        BroadeningType=BroadeningTypeOptions.FREE_GAS_MODEL,
-        SolveBayesEquation=True,
+        r_matrix=r_matrix,
+        quantum_numbers=quantum_numbers,
+        experimental_data=experimental_data,
+        broadening=broadening,
+        endf=endf,
+        bayes_solution=bayes,
     )
 
     config = FitConfig(

@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.pcm_in import CovarianceMatrixOptions
+from pleiades.sammy.alphanumerics.p_covariance_matrix_in import CovarianceMatrixOptions
 
 
 def test_default_option():

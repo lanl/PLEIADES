@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.msc import MultipleScatteringCorrectionsOptions
+from pleiades.sammy.alphanumerics.multiple_scattering_corrections import MultipleScatteringCorrectionsOptions
 
 
 def test_default_option():

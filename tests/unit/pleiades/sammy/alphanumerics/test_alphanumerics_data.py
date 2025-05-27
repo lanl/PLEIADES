@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.data import ExperimentalDataInputOptions
+from pleiades.sammy.alphanumerics.experimental_data_input import ExperimentalDataInputOptions
 
 
 def test_default_option():
