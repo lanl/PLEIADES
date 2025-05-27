@@ -381,3 +381,89 @@ class ParManager:
                     logger.error(f"Could not find broadening data in {par_file}.")
                 else:
                     logger.info(f"Updated broadening data from {par_file}.")
+
+    # Generation of parameter file sections
+    def generate_card1_section(self) -> str:
+        """
+        Generate Card 1 (resonance data) section for the parameter file.
+        Returns:
+            str: Card 1 section as a string.
+        """
+        # Example: Use FitConfig or a Card01 class to format resonance data
+        # Replace with actual formatting logic
+        from pleiades.sammy.io.card_formats.par01_resonances import Card01
+        return Card01.to_string(self.fit_config)
+
+    def generate_card4_section(self) -> str:
+        """
+        Generate Card 4 (broadening parameters) section.
+        Returns:
+            str: Card 4 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.par04_broadening import Card04
+        return Card04.to_lines(self.fit_config)
+
+    def generate_card6_section(self) -> str:
+        """
+        Generate Card 6 (normalization and background) section.
+        Returns:
+            str: Card 6 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.par06_normalization import Card06
+        return Card06.to_lines(self.fit_config)
+
+    def generate_card7_section(self) -> str:
+        """
+        Generate Card 7 (radius parameters) section.
+        Returns:
+            str: Card 7 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.par07_radii import Card07
+        return Card07.to_lines(self.fit_config)
+
+    def generate_card10_section(self) -> str:
+        """
+        Generate Card 10 (isotopic abundances and masses) section.
+        Returns:
+            str: Card 10 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
+        return Card10.to_lines(self.fit_config)
+
+    def generate_par_content(self) -> str:
+        """
+        Generate the full content for the SAMMY parameter file.
+        Returns:
+            str: Complete parameter file content.
+        """
+        sections = [
+            self.generate_card10_section(),
+            self.generate_card1_section(),
+            self.generate_card7_section(),
+            self.generate_card6_section(),
+            self.generate_card4_section(),
+            # Need to add other cards as they are implemented
+        ]
+        
+        # Filter out empty sections
+        return "\n\n".join([s for s in sections if s])
+
+    def write_par_file(self, file_path: Path) -> Path:
+        """
+        Write the SAMMY parameter file to disk.
+        Args:
+            file_path (Path): Path to write the parameter file.
+        Returns:
+            Path: Path to the created file.
+        """
+        try:
+            content = self.generate_par_content()
+            file_path = Path(file_path)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "w") as f:
+                f.write(content)
+            logger.info(f"Successfully wrote SAMMY parameter file to {file_path}")
+            return file_path
+        except Exception as e:
+            logger.error(f"Failed to write SAMMY parameter file: {str(e)}")
+            raise IOError(f"Failed to write SAMMY parameter file: {str(e)}")
