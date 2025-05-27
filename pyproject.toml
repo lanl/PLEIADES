@@ -170,6 +170,7 @@ versioningit = "*"
 pre-commit = "*"
 conda-tree = "*"
 ruff = "*"
+viztracer = ">=1.0.4,<2"
 
 [tool.pixi.feature.docs.dependencies]
 sphinx = ">=8.2.1,<9"

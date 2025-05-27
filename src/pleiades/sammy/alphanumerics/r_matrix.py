@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
     -   Mutually exclusive options are grouped together starting with ------ and ending with ------
     -   options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
 
-        Commands for R-matrix approximation
+        Commands for R-matrix approximation and general options
         Define which approximation to the R-matrix is to be used for this calculation
         r_matrix_options = [
         ----------------------------
@@ -19,17 +19,27 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
             "REDUCED WIDTH AMPLITudes are used for input"
         ----------------------------
         ]
+
+        General options = [
+        ----------------------------
+            "UNRESOLVED RESONANCE region", or "FRITZ FROEHNERS FITACS", or "FITACS"
+        ----------------------------
+        ]
 """
 
 
 class RMatrixOptions(BaseModel):
     model_config = ConfigDict(validate_default=True)
 
+    # R-Matrix approximation options
     reich_moore: bool = Field(default=True, description="REICH-MOORE FORMALISM IS WANTED")
     original_reich_moore: bool = Field(default=False, description="ORIGINAL REICH-MOORE FORMALISM")
     multilevel_breit_wigner: bool = Field(default=False, description="MULTILEVEL BREIT-WIGNER FORMALISM IS WANTED")
     single_level_breit_wigner: bool = Field(default=False, description="SINGLE LEVEL BREIT-WIGNER FORMALISM IS WANTED")
     reduced_width_amplitudes: bool = Field(default=False, description="REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
+
+    # General options
+    unresolved_resonance_region: bool = Field(default=False, description="UNRESOLVED RESONANCE REGION")
 
     # Define mutually exclusive groups as a class attribute
     mutually_exclusive_groups: List[List[str]] = [
@@ -39,6 +49,7 @@ class RMatrixOptions(BaseModel):
             "multilevel_breit_wigner",
             "single_level_breit_wigner",
             "reduced_width_amplitudes",
+            "unresolved_resonance_region",
         ]
     ]
 
@@ -84,6 +95,8 @@ class RMatrixOptions(BaseModel):
             commands.append("SINGLE LEVEL BREIT-WIGNER FORMALISM IS WANTED")
         if self.reduced_width_amplitudes:
             commands.append("REDUCED WIDTH AMPLITUDES ARE USED FOR INPUT")
+        if self.unresolved_resonance_region:
+            commands.append("UNRESOLVED RESONANCE REGION")
         return commands
 
 
