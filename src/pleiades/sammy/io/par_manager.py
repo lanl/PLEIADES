@@ -392,6 +392,7 @@ class ParManager:
         # Example: Use FitConfig or a Card01 class to format resonance data
         # Replace with actual formatting logic
         from pleiades.sammy.io.card_formats.par01_resonances import Card01
+
         return Card01.to_string(self.fit_config)
 
     def generate_card4_section(self) -> str:
@@ -401,6 +402,7 @@ class ParManager:
             str: Card 4 section as a string.
         """
         from pleiades.sammy.io.card_formats.par04_broadening import Card04
+
         return Card04.to_lines(self.fit_config)
 
     def generate_card6_section(self) -> str:
@@ -410,6 +412,7 @@ class ParManager:
             str: Card 6 section as a string.
         """
         from pleiades.sammy.io.card_formats.par06_normalization import Card06
+
         return Card06.to_lines(self.fit_config)
 
     def generate_card7_section(self) -> str:
@@ -419,6 +422,7 @@ class ParManager:
             str: Card 7 section as a string.
         """
         from pleiades.sammy.io.card_formats.par07_radii import Card07
+
         return Card07.to_lines(self.fit_config)
 
     def generate_card10_section(self) -> str:
@@ -428,6 +432,7 @@ class ParManager:
             str: Card 10 section as a string.
         """
         from pleiades.sammy.io.card_formats.par10_isotopes import Card10
+
         return Card10.to_lines(self.fit_config)
 
     def generate_par_content(self) -> str:
@@ -444,7 +449,7 @@ class ParManager:
             self.generate_card4_section(),
             # Need to add other cards as they are implemented
         ]
-        
+
         # Filter out empty sections
         return "\n\n".join([s for s in sections if s])
 
