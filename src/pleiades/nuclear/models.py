@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing_extensions import Annotated
 
-from pleiades.nuclear.isotopes.models import IsotopeInfo
+from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 from pleiades.utils.helper import VaryFlag
 from pleiades.utils.logger import loguru_logger
 
@@ -491,10 +491,17 @@ class nuclearParameters(BaseModel):
     """Container for nuclear parameters used in SAMMY calculations.
 
     Attributes:
+        particle (IsotopeInfo): Incoming particle information (default is a neutron)
         isotopes (List[IsotopeParameters]): List of isotope parameters
 
     """
 
+    particle: IsotopeInfo = Field(
+        default=IsotopeInfo(
+            name="n", atomic_number=1, mass_data=IsotopeMassData(atomic_mass=1.00866491578), spin=0.5, mass_number=1
+        ),
+        description="Default particle information (neutron)",
+    )
     isotopes: List[IsotopeParameters] = Field(default_factory=list, description="List of isotope parameters")
 
     @model_validator(mode="after")
