@@ -53,6 +53,59 @@ LIBRARY_FILENAME_PATTERNS = {
 }
 
 
+class ParticlePair(BaseModel):
+    """Container for information about a pair of particles used in nuclear calculations.
+    Attributes:
+        name (str): Name of the particle pair (e.g., 'n+U235' for neutron + Uranium-235).
+        name_a (str): Name of particle A (e.g., 'neutron').
+        name_b (str): Name of particle B (e.g., 'U-238').
+        parity_a (int): Parity of particle A; relevant if spin is zero and parity is negative.
+        parity_b (int): Parity of particle B; relevant if spin is zero and parity is negative.
+        charge_a (int): Atomic number of particle A (e.g., 0 for neutron).
+        charge_b (int): Atomic number of particle B (e.g., 92 for Uranium).
+        mass_a (float): Mass of particle A in atomic mass units (default is neutron mass).
+        mass_b (float): Mass of particle B in atomic mass units.
+        spin_a (float): Spin of particle A (default is 0.5 for neutron).
+        spin_b (float): Spin of particle B (default is 0 for Uranium-238).
+        calculate_penetrabilities (bool): Whether to calculate penetrabilities for nuclear reactions.
+        calculate_shifts (bool): Whether to calculate shifts for nuclear reactions.
+        calculate_phase_shifts (bool): Whether to calculate potential-scattering phase shifts.
+        effective_radius (float): Effective radius for channels of this particle pair (in fermi).
+        true_radius (float): True radius for channels of this particle pair (in fermi).
+    """
+
+    name: str = Field(default="n+", description="Name of the particle pair (e.g., 'n+U235' for neutron)")
+    name_a: str = Field(default="neutron", description="Name of particle A (e.g., 'neutron' for neutron)")
+    name_b: str = Field(default="UNK-000", description="Name of particle B (e.g., 'U-238' for Uranium-238)")
+    parity_a: int = Field(
+        default=1,
+        description="Parity of particle A; needed only if the spin of particle A is zero and the parity is negative (e.g., 1 for neutron)",
+    )
+    parity_b: int = Field(
+        default=1,
+        description="Parity of particle B; needed only if the spin of particle B is zero and the parity is negative (e.g., 1 for Uranium-238)",
+    )
+    charge_a: int = Field(default=0, description="Atomic number of particle A (e.g., 0 for neutron)")
+    charge_b: int = Field(default=0, description="Atomic number of particle B (e.g., 92 for Uranium)")
+    mass_a: float = Field(
+        default=1.00866491578, description="Mass of particle A in atomic mass units (default is neutron mass)"
+    )
+    mass_b: float = Field(default=0.0, description="Mass of particle B in atomic mass units (default is 0)")
+    spin_a: float = Field(default=0.5, description="Spin of particle A (default is 0.5 for neutron)")
+    spin_b: float = Field(default=0.0, description="Spin of particle B (default is 0 for Uranium-238)")
+    calculate_penetrabilities: bool = Field(
+        default=False, description="Whether to calculate penetrabilities for nuclear reactions"
+    )
+    calculate_shifts: bool = Field(default=False, description="Whether to calculate shifts for nuclear reactions")
+    calculate_phase_shifts: bool = Field(
+        default=False, description="Whether to calculate potential-scattering phase shifts for nuclear reactions"
+    )
+    effective_radius: float = Field(
+        default=1.0, description="Effective radius for channels of this particle pair (fermi)"
+    )
+    true_radius: float = Field(default=1.0, description="True radius for channels of this particle pair (fermi)")
+
+
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
 
@@ -344,6 +397,9 @@ class IsotopeParameters(BaseModel):
 
     """
 
+    particle_pairs: Optional[List[ParticlePair]] = Field(
+        default_factory=list, description="List of reaction channel particle pairs (e.g. n+U235 or fission+fission)"
+    )
     isotope_information: Optional[IsotopeInfo] = Field(default=None, description="Isotope information")
     abundance: Optional[float] = Field(default=None, description="Fractional abundance")
     uncertainty: Optional[float] = Field(default=None, description="Uncertainty on abundance")
@@ -462,8 +518,10 @@ class IsotopeParameters(BaseModel):
         """
         headers = ["Parameter", "Value"]
         rows = [
+            ["Particle Pair Name", self.pair_name],
             ["Isotope Name", self.isotope_information.name],
             ["Mass (amu)", self.isotope_information.mass_data.atomic_mass],
+            ["Spin", self.isotope_information.spin],
             ["Abundance", self.abundance],
             ["Uncertainty", self.uncertainty],
             ["Vary Abundance", self.vary_abundance],
