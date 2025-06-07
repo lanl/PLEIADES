@@ -92,6 +92,36 @@ class ParManager:
         if par_file:
             self.read_par_file(par_file)
 
+    def extract_particle_pairs(self, lines) -> bool:
+        """
+        Extract particle pair definitions from the lines of the SAMMY parameter file (Card 4).
+        Process the particle pair data and update the FitConfig object.
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+        Returns:
+            bool: True if particle pair data was successfully found and processed, False otherwise.
+        """
+        from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
+
+        block = []
+        in_block = False
+
+        for line in lines:
+            if not in_block and line.upper().startswith("PARTI"):
+                in_block = True
+                block.append(line.rstrip())
+                continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip():
+                    break
+                block.append(line.rstrip())
+
+        if block:
+            Card04.from_lines(block, self.fit_config)
+            return True
+        return False
+
     def extract_broadening_parameters(self, lines) -> bool:
         """
         Extract broadening parameters from the lines of the SAMMY parameter file (Card 4).
@@ -346,6 +376,14 @@ class ParManager:
                 logger.info(f"Updated isotope and abundance data from {par_file}.")
 
         for cards in detected:
+            # If Input Card 4 is present, it will be processed
+            if cards == Cards.INP_CARD_4:
+                found_particle_pairs = self.extract_particle_pairs(lines)
+                if not found_particle_pairs:
+                    logger.error(f"Could not find particle pair data in {par_file}.")
+                else:
+                    logger.info(f"Updated particle pair data from {par_file}.")
+
             # Already processed Card 10 so skip it here.
             if cards == Cards.PAR_CARD_10:
                 continue
@@ -383,7 +421,7 @@ class ParManager:
                     logger.info(f"Updated broadening data from {par_file}.")
 
     # Generation of parameter file sections
-    def generate_card1_section(self) -> str:
+    def generate_par_card1_section(self) -> str:
         """
         Generate Card 1 (resonance data) section for the parameter file.
         Returns:
@@ -395,7 +433,7 @@ class ParManager:
 
         return Card01.to_string(self.fit_config)
 
-    def generate_card4_section(self) -> str:
+    def generate_par_card4_section(self) -> str:
         """
         Generate Card 4 (broadening parameters) section.
         Returns:
@@ -405,7 +443,7 @@ class ParManager:
 
         return Card04.to_lines(self.fit_config)
 
-    def generate_card6_section(self) -> str:
+    def generate_par_card6_section(self) -> str:
         """
         Generate Card 6 (normalization and background) section.
         Returns:
@@ -415,7 +453,7 @@ class ParManager:
 
         return Card06.to_lines(self.fit_config)
 
-    def generate_card7_section(self) -> str:
+    def generate_par_card7_section(self) -> str:
         """
         Generate Card 7 (radius parameters) section.
         Returns:
@@ -425,7 +463,7 @@ class ParManager:
 
         return Card07.to_lines(self.fit_config)
 
-    def generate_card10_section(self) -> str:
+    def generate_par_card10_section(self) -> str:
         """
         Generate Card 10 (isotopic abundances and masses) section.
         Returns:
@@ -435,6 +473,16 @@ class ParManager:
 
         return Card10.to_lines(self.fit_config)
 
+    def generate_inp_card4_section(self) -> str:
+        """
+        Generate Input Card 4 (particle pair definitions) section.
+        Returns:
+            str: Input Card 4 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
+
+        return Card04.to_lines(self.fit_config)
+
     def generate_par_content(self) -> str:
         """
         Generate the full content for the SAMMY parameter file.
@@ -442,11 +490,11 @@ class ParManager:
             str: Complete parameter file content.
         """
         sections = [
-            self.generate_card10_section(),
-            self.generate_card1_section(),
-            self.generate_card7_section(),
-            self.generate_card6_section(),
-            self.generate_card4_section(),
+            self.generate_par_card10_section(),
+            self.generate_par_card1_section(),
+            self.generate_par_card7_section(),
+            self.generate_par_card6_section(),
+            self.generate_par_card4_section(),
             # Need to add other cards as they are implemented
         ]
 
