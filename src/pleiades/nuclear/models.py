@@ -100,10 +100,39 @@ class ParticlePair(BaseModel):
     calculate_phase_shifts: bool = Field(
         default=False, description="Whether to calculate potential-scattering phase shifts for nuclear reactions"
     )
-    effective_radius: float = Field(
-        default=1.0, description="Effective radius for channels of this particle pair (fermi)"
-    )
-    true_radius: float = Field(default=1.0, description="True radius for channels of this particle pair (fermi)")
+
+    def __str__(self):
+        """Print the particle pair information in a formatted table."""
+        headers = ["Parameter", "Value"]
+        rows = [
+            ["Name", self.name],
+            ["Name A", self.name_a],
+            ["Name B", self.name_b],
+            ["Parity A", self.parity_a],
+            ["Parity B", self.parity_b],
+            ["Charge A", self.charge_a],
+            ["Charge B", self.charge_b],
+            ["Mass A (amu)", self.mass_a],
+            ["Mass B (amu)", self.mass_b],
+            ["Spin A", self.spin_a],
+            ["Spin B", self.spin_b],
+            ["Calculate Penetrabilities", self.calculate_penetrabilities],
+            ["Calculate Shifts", self.calculate_shifts],
+            ["Calculate Phase Shifts", self.calculate_phase_shifts],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = " | ".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
 
 
 class RadiusParameters(BaseModel):
@@ -512,13 +541,24 @@ class IsotopeParameters(BaseModel):
             lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
         return "\n".join(lines)
 
+    def append_particle_pair(self, particle_pair: ParticlePair):
+        """Append a particle pair to the list of particle pairs, if no particle pairs exist then create a new list.
+        This method is used to add a new particle pair to the isotope parameters.
+
+        Args:
+            particle_pair (ParticlePair): The particle pair to append
+        """
+        if not self.particle_pairs:
+            self.particle_pairs = []
+        self.particle_pairs.append(particle_pair)
+        logger.info(f"Particle pair {particle_pair.name} appended to isotope {self.isotope_information.name}")
+
     def __str__(self) -> str:
         """
         Return a text table representation of the IsotopeParameters object.
         """
         headers = ["Parameter", "Value"]
         rows = [
-            ["Particle Pair Name", self.pair_name],
             ["Isotope Name", self.isotope_information.name],
             ["Mass (amu)", self.isotope_information.mass_data.atomic_mass],
             ["Spin", self.isotope_information.spin],
@@ -527,6 +567,7 @@ class IsotopeParameters(BaseModel):
             ["Vary Abundance", self.vary_abundance],
             ["ENDF Library", self.endf_library],
             ["Spin Groups", self.spin_groups],
+            ["Num of Particle Pairs", len(self.particle_pairs)],
             ["Num of Resonances", len(self.resonances)],
             ["Num of Radius Parameters", len(self.radius_parameters)],
         ]
