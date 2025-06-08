@@ -31,7 +31,10 @@ class Card04(BaseModel):
             (r"(?i)Sb\s*=\s*", "SB="),
             (r"(?i)Ma\s*=\s*", "MA="),
             (r"(?i)Mb\s*=\s*", "MB="),
-            (r"(?i)Q-?Value\s*=\s*", "Q="),
+            # Accept any Q* (Q-value, Q-V, QVAL, Q, etc, case-insensitive, with or without dash/space/underscore)
+            (r"(?i)Q[\-_ ]?([A-Za-z]*)\s*=\s*", "Q="),
+            # Accept both THreshold and Threshold (case-insensitive)
+            (r"(?i)THreshold\s*=\s*", "THRESHOLD="),
         ]
         for pattern, replacement in replacements:
             line = re.sub(pattern, replacement, line)
@@ -89,23 +92,77 @@ class Card04(BaseModel):
 
         # Count the number of '=' in the line and process each keyword pair
         if format_type == "keyword":
+            # Accumulate lines for each particle pair block, ending on a blank line or a new NAME= line
+            particle_lines = []
             for line in lines[1:]:
                 if line.strip() == "":
+                    # End of a block, process accumulated lines
+                    if particle_lines:
+                        block = " ".join(particle_lines)
+                        norm_block = cls.normalize_keywords(block)
+                        # Allow for split key-value pairs across lines (e.g., Name=... on one line, Particle a=... on next)
+                        # Find all key-value pairs, even if separated by newlines or extra spaces
+                        pairs = re.findall(r"(\w+)=\s*([^=]+?)(?=\s+\w+=|$)", norm_block, re.DOTALL)
+                        # Also catch any single key-value at the end
+                        if not pairs:
+                            m = re.match(r"\s*(\w+)=\s*(.+)", norm_block)
+                            if m:
+                                pairs = [(m.group(1), m.group(2))]
+                        kv = {k.upper(): v.strip() for k, v in pairs}
+                        # If PA or PB are missing, try to recover from multi-line split (e.g., Particle a=... on its own line)
+                        if "PA" not in kv or "PB" not in kv:
+                            # Try to find PA and PB in the original lines
+                            for particle_line in particle_lines:
+                                lnorm = cls.normalize_keywords(particle_line)
+                                if lnorm.strip().startswith("PA="):
+                                    kv["PA"] = lnorm.split("=", 1)[1].strip()
+                                if lnorm.strip().startswith("PB="):
+                                    kv["PB"] = lnorm.split("=", 1)[1].strip()
+                        if all(k in kv for k in ("NAME", "PA", "PB")):
+                            particle_pairs.append(cls._build_particle_pair(kv))
+                        particle_lines = []
                     continue
+                # If a new NAME= line and we already have lines, process previous block
                 norm_line = cls.normalize_keywords(line)
-                eq_count = norm_line.count("=")
-                if eq_count == 0:
-                    continue
-                # Split and process each key-value pair
-                pairs = re.findall(r"(\w+)=\s*([^=]+?)(?=\s+\w+=|$)", norm_line)
-                for k, v in pairs:
-                    current_block[k.upper()] = v.strip()
-
-                # If a new NAME= is found, treat as new block
-                if "NAME" in [k.upper() for k, _ in pairs]:
-                    if current_block and all(k in current_block for k in ("NAME", "PA", "PB")):
-                        particle_pairs.append(cls._build_particle_pair(current_block))
-                    current_block = {}
+                if norm_line.strip().startswith("NAME=") and particle_lines:
+                    block = " ".join(particle_lines)
+                    norm_block = cls.normalize_keywords(block)
+                    pairs = re.findall(r"(\w+)=\s*([^=]+?)(?=\s+\w+=|$)", norm_block, re.DOTALL)
+                    if not pairs:
+                        m = re.match(r"\s*(\w+)=\s*(.+)", norm_block)
+                        if m:
+                            pairs = [(m.group(1), m.group(2))]
+                    kv = {k.upper(): v.strip() for k, v in pairs}
+                    if "PA" not in kv or "PB" not in kv:
+                        for particle_line in particle_lines:
+                            lnorm = cls.normalize_keywords(particle_line)
+                            if lnorm.strip().startswith("PA="):
+                                kv["PA"] = lnorm.split("=", 1)[1].strip()
+                            if lnorm.strip().startswith("PB="):
+                                kv["PB"] = lnorm.split("=", 1)[1].strip()
+                    if all(k in kv for k in ("NAME", "PA", "PB")):
+                        particle_pairs.append(cls._build_particle_pair(kv))
+                    particle_lines = []
+                particle_lines.append(line)
+            # After all lines, process any remaining block
+            if particle_lines:
+                block = " ".join(particle_lines)
+                norm_block = cls.normalize_keywords(block)
+                pairs = re.findall(r"(\w+)=\s*([^=]+?)(?=\s+\w+=|$)", norm_block, re.DOTALL)
+                if not pairs:
+                    m = re.match(r"\s*(\w+)=\s*(.+)", norm_block)
+                    if m:
+                        pairs = [(m.group(1), m.group(2))]
+                kv = {k.upper(): v.strip() for k, v in pairs}
+                if "PA" not in kv or "PB" not in kv:
+                    for particle_line in particle_lines:
+                        lnorm = cls.normalize_keywords(particle_line)
+                        if lnorm.strip().startswith("PA="):
+                            kv["PA"] = lnorm.split("=", 1)[1].strip()
+                        if lnorm.strip().startswith("PB="):
+                            kv["PB"] = lnorm.split("=", 1)[1].strip()
+                if all(k in kv for k in ("NAME", "PA", "PB")):
+                    particle_pairs.append(cls._build_particle_pair(kv))
 
         elif format_type == "fixed":
             for line in lines[1:]:
@@ -157,6 +214,18 @@ class Card04(BaseModel):
 
     @staticmethod
     def _build_particle_pair(kv: Dict[str, str]) -> ParticlePair:
+        # Handle q_value and threshold as optional floats, treat missing/empty/zero as None
+        def parse_optional_float(val):
+            if val is None or str(val).strip() == "":
+                return None
+            try:
+                f = float(val)
+                if abs(f) < 1e-12:
+                    return None
+                return f
+            except Exception:
+                return None
+
         return ParticlePair(
             name=kv.get("NAME", ""),
             name_a=kv.get("PA", ""),
@@ -169,22 +238,33 @@ class Card04(BaseModel):
             charge_b=int(kv.get("ZB", 0)),
             calculate_penetrabilities=kv.get("PENT", "0") in ("1", "YES"),
             calculate_shifts=kv.get("SHIFT", "0") in ("1", "YES"),
-            # The following fields use defaults from the model, but you can map more if needed:
-            # parity_a, parity_b, calculate_phase_shifts, effective_radius, true_radius
+            q_value=parse_optional_float(kv.get("Q", None)),
+            threshold=parse_optional_float(kv.get("THRESHOLD", None)),
         )
 
     @staticmethod
     def to_lines(fit_config: FitConfig) -> List[str]:
-        """Convert the particle pairs to lines for Card 4 in keyword format."""
+        """Convert the particle pairs to lines for Card 4 in keyword format, including Q and Threshold if present and nonzero."""
         lines = ["PARTICLE PAIR DEFINITIONS"]
         for isotope in fit_config.nuclear_params.isotopes:
             for pair in isotope.particle_pairs:
+                # Always write the first line
                 lines.append(f"Name={pair.name:<12} Particle a={pair.name_a:<12} Particle b={pair.name_b:<12}")
+                # Second line: charges, pent, shift
                 lines.append(
                     f"     Za={pair.charge_a:<3}        Zb={pair.charge_b:<3}         Pent={int(pair.calculate_penetrabilities):<1}     Shift={int(pair.calculate_shifts):<1}"
                 )
+                # Third line: spins, masses
                 lines.append(
                     f"     Sa={pair.spin_a:6.1f}     Sb={pair.spin_b:7.1f}     Ma={pair.mass_a:15.12f}     Mb={pair.mass_b:15.12f}"
                 )
+                # Fourth line: Q and Threshold, only if present and nonzero
+                qval = pair.q_value if pair.q_value is not None and abs(pair.q_value) > 1e-12 else None
+                thresh = pair.threshold if pair.threshold is not None and abs(pair.threshold) > 1e-12 else None
+                if qval is not None or thresh is not None:
+                    qstr = f"Q={qval:.8f}" if qval is not None else ""
+                    tstr = f"Threshold={thresh:.8f}" if thresh is not None else ""
+                    # Write both if both present, else just one
+                    lines.append(f"     {qstr} {tstr}".strip())
         lines.append("")
         return lines
