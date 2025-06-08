@@ -137,6 +137,22 @@ class ParticlePair(BaseModel):
             lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
         return "\n".join(lines)
 
+    # Need to make sure that the q_value and threshold are not both set at the same time
+    @model_validator(mode="after")
+    def validate_q_or_threshold(self) -> "ParticlePair":
+        """Validate that both q_value and threshold are not set at the same time.
+
+        Returns:
+            ParticlePair: Self if validation passes
+
+        Raises:
+            ValueError: If both q_value and threshold are set
+        """
+        if self.q_value is not None and self.threshold is not None:
+            logger.error("Both q_value and threshold cannot be set at the same time")
+            raise ValueError("Both q_value and threshold cannot be set at the same time")
+        return self
+
 
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
