@@ -69,7 +69,6 @@ class ParticlePair(BaseModel):
         spin_b (float): Spin of particle B (default is 0 for Uranium-238).
         calculate_penetrabilities (bool): Whether to calculate penetrabilities for nuclear reactions.
         calculate_shifts (bool): Whether to calculate shifts for nuclear reactions.
-        calculate_phase_shifts (bool): Whether to calculate potential-scattering phase shifts.
         effective_radius (float): Effective radius for channels of this particle pair (in fermi).
         true_radius (float): True radius for channels of this particle pair (in fermi).
     """
@@ -97,8 +96,11 @@ class ParticlePair(BaseModel):
         default=False, description="Whether to calculate penetrabilities for nuclear reactions"
     )
     calculate_shifts: bool = Field(default=False, description="Whether to calculate shifts for nuclear reactions")
-    calculate_phase_shifts: bool = Field(
-        default=False, description="Whether to calculate potential-scattering phase shifts for nuclear reactions"
+    q_value: Optional[float] = Field(
+        default=None, description="Q value for the reaction (optional, can be set to actual Q value)"
+    )
+    threshold: Optional[float] = Field(
+        default=None, description="Threshold energy for the reaction (optional, can be set to actual threshold)"
     )
 
     def __str__(self):
@@ -116,9 +118,10 @@ class ParticlePair(BaseModel):
             ["Mass B (amu)", self.mass_b],
             ["Spin A", self.spin_a],
             ["Spin B", self.spin_b],
+            ["Q-Value (MeV)", self.q_value],
+            ["Threshold (MeV)", self.threshold],
             ["Calculate Penetrabilities", self.calculate_penetrabilities],
             ["Calculate Shifts", self.calculate_shifts],
-            ["Calculate Phase Shifts", self.calculate_phase_shifts],
         ]
         # Calculate column widths
         col_widths = [
