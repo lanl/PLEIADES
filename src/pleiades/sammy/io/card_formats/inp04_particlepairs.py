@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from pydantic import BaseModel
 
-from pleiades.nuclear.models import ParticlePair
+from pleiades.nuclear.models import IsotopeInfo, IsotopeMassData, IsotopeParameters, ParticlePair
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.logger import loguru_logger
 
@@ -21,16 +21,16 @@ class Card04(BaseModel):
         # Use regex for robust, case-insensitive, and space-tolerant replacements
         replacements = [
             (r"(?i)\bName\s*=\s*", "NAME="),
-            (r"(?i)Particle a\s*=\s*", "PA="),
-            (r"(?i)Particle b\s*=\s*", "PB="),
-            (r"(?i)Za\s*=\s*", "ZA="),
-            (r"(?i)Zb\s*=\s*", "ZB="),
-            (r"(?i)Pent\s*=\s*", "PENT="),
+            (r"(?i)Particle A\s*=\s*", "PA="),
+            (r"(?i)Particle B\s*=\s*", "PB="),
+            (r"(?i)Charge_A\s*=\s*", "ZA="),
+            (r"(?i)Charge_B\s*=\s*", "ZB="),
+            (r"(?i)PEnetrability\s*=\s*", "PENT="),
             (r"(?i)Shift\s*=\s*", "SHIFT="),
-            (r"(?i)Sa\s*=\s*", "SA="),
-            (r"(?i)Sb\s*=\s*", "SB="),
-            (r"(?i)Ma\s*=\s*", "MA="),
-            (r"(?i)Mb\s*=\s*", "MB="),
+            (r"(?i)Spin A\s*=\s*", "SA="),
+            (r"(?i)Spin B\s*=\s*", "SB="),
+            (r"(?i)Mass A\s*=\s*", "MA="),
+            (r"(?i)Mass B\s*=\s*", "MB="),
             # Accept any Q* (Q-value, Q-V, QVAL, Q, etc, case-insensitive, with or without dash/space/underscore)
             (r"(?i)Q[\-_ ]?([A-Za-z]*)\s*=\s*", "Q="),
             # Accept both THreshold and Threshold (case-insensitive)
@@ -175,8 +175,7 @@ class Card04(BaseModel):
             logger.error("Unable to determine format (keyword or fixed) for Card 4.")
             raise ValueError("Unable to determine format (keyword or fixed) for Card 4.")
 
-        print(f"Found {len(particle_pairs)} particle pairs in Card 4.")
-        print("Particle pairs:", particle_pairs)
+        logger.info(f"Found {len(particle_pairs)} particle pairs in Card 4.")
 
         # If fit_config is None, create a new FitConfig instance
         if fit_config is None:
@@ -187,30 +186,43 @@ class Card04(BaseModel):
             raise ValueError("fit_config must be an instance of FitConfig")
 
         # add the particle pairs info to the fit_config
-        for pair in particle_pairs:
-            add_flag = False
-            for isotope in fit_config.nuclear_params.isotopes:
-                # calculate the mass differences for Ma and Mb with the isotope
-                ma_diff = (
-                    abs(isotope.isotope_information.mass_data.atomic_mass - pair.mass_a)
-                    if isotope.isotope_information.mass_data
-                    else "unknown"
-                )
-                mb_diff = (
-                    abs(isotope.isotope_information.mass_data.atomic_mass - pair.mass_b)
-                    if isotope.isotope_information.mass_data
-                    else "unknown"
-                )
-
-                if ma_diff != "unknown" and ma_diff < 0.01:
-                    add_flag = True
-                    logger.info(f"Pair name set for isotope {isotope.isotope_information.name}: {pair.name}")
-                elif mb_diff != "unknown" and mb_diff < 0.01:
-                    add_flag = True
-                    logger.info(f"Pair name set for isotope {isotope.isotope_information.name}: {pair.name}")
-
-                if add_flag:
-                    isotope.append_particle_pair(pair)
+        if not fit_config.nuclear_params.isotopes or len(fit_config.nuclear_params.isotopes) == 0:
+            # Create a dummy isotope UNK-000 and append all particle pairs to it
+            unk_isotope = IsotopeParameters(
+                isotope_information=IsotopeInfo(
+                    name="UNK-000",
+                    element="UNK",
+                    mass_number=0,
+                    atomic_number=0,
+                    mass_data=IsotopeMassData(atomic_mass=0.0),
+                ),
+                particle_pairs=[],
+            )
+            for pair in particle_pairs:
+                if not any(existing_pair.name == pair.name for existing_pair in unk_isotope.particle_pairs):
+                    unk_isotope.append_particle_pair(pair)
+                    logger.info(f"Pair name set for isotope UNK-000: {pair.name}")
+            fit_config.nuclear_params.isotopes.append(unk_isotope)
+        else:
+            for pair in particle_pairs:
+                for isotope in fit_config.nuclear_params.isotopes:
+                    if not hasattr(isotope, "particle_pairs"):
+                        continue
+                    iso_mass = (
+                        isotope.isotope_information.mass_data.atomic_mass
+                        if isotope.isotope_information.mass_data
+                        else None
+                    )
+                    if iso_mass is None:
+                        continue
+                    ma_diff = abs(iso_mass - pair.mass_a)
+                    mb_diff = abs(iso_mass - pair.mass_b)
+                    # Only add if either matches within tolerance
+                    if ma_diff < 0.01 or mb_diff < 0.01:
+                        # Prevent duplicate particle pairs by name
+                        if not any(existing_pair.name == pair.name for existing_pair in isotope.particle_pairs):
+                            isotope.append_particle_pair(pair)
+                            logger.info(f"Pair name set for isotope {isotope.isotope_information.name}: {pair.name}")
 
     @staticmethod
     def _build_particle_pair(kv: Dict[str, str]) -> ParticlePair:
@@ -249,14 +261,14 @@ class Card04(BaseModel):
         for isotope in fit_config.nuclear_params.isotopes:
             for pair in isotope.particle_pairs:
                 # Always write the first line
-                lines.append(f"Name={pair.name:<12} Particle a={pair.name_a:<12} Particle b={pair.name_b:<12}")
+                lines.append(f"Name={pair.name:<12} PA={pair.name_a:<12} PB={pair.name_b:<12}")
                 # Second line: charges, pent, shift
                 lines.append(
-                    f"     Za={pair.charge_a:<3}        Zb={pair.charge_b:<3}         Pent={int(pair.calculate_penetrabilities):<1}     Shift={int(pair.calculate_shifts):<1}"
+                    f"\tZA={int(pair.charge_a):6d}\tZB={int(pair.charge_b):6d}\tPent={int(pair.calculate_penetrabilities):<1}\tShift={int(pair.calculate_shifts):<1}"
                 )
                 # Third line: spins, masses
                 lines.append(
-                    f"     Sa={pair.spin_a:6.1f}     Sb={pair.spin_b:7.1f}     Ma={pair.mass_a:15.12f}     Mb={pair.mass_b:15.12f}"
+                    f"\tSA={pair.spin_a:6.1f}\tSB={pair.spin_b:6.1f}\tMA={pair.mass_a:15.12f}\tMB={pair.mass_b:15.12f}"
                 )
                 # Fourth line: Q and Threshold, only if present and nonzero
                 qval = pair.q_value if pair.q_value is not None and abs(pair.q_value) > 1e-12 else None
@@ -265,6 +277,6 @@ class Card04(BaseModel):
                     qstr = f"Q={qval:.8f}" if qval is not None else ""
                     tstr = f"Threshold={thresh:.8f}" if thresh is not None else ""
                     # Write both if both present, else just one
-                    lines.append(f"     {qstr} {tstr}".strip())
+                    lines.append(f"\t{qstr}{tstr}")
         lines.append("")
         return lines
