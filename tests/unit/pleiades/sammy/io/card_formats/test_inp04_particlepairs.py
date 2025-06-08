@@ -1,6 +1,7 @@
 # Copyright 2024, PLEIADES Project
 import pytest
 
+from pleiades.sammy.fitting.config import FitConfig
 from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
 
 
@@ -129,31 +130,40 @@ def particle_pair_block4():
 
 @pytest.fixture
 def fit_config():
-    # Minimal FitConfig mock with required structure
-    class DummyIsotope:
-        def __init__(self, mass):
-            class MassData:
-                atomic_mass = mass
+    # Create a minimal FitConfig instance
+    return FitConfig()
 
-            class IsoInfo:
-                mass_data = MassData()
-                name = f"iso{mass}"
 
-            self.isotope_information = IsoInfo()
-            self.particle_pairs = []
-
-        def append_particle_pair(self, pair):
-            self.particle_pairs.append(pair)
-
-    class DummyNuclearParams:
-        def __init__(self):
-            self.isotopes = [DummyIsotope(57.935), DummyIsotope(18.0)]
-
-    class DummyFitConfig:
-        def __init__(self):
-            self.nuclear_params = DummyNuclearParams()
-
-    return DummyFitConfig()
+# Simple parametrized test to run keyword parsing and multiline field tests on all fixtures
+@pytest.mark.parametrize(
+    "block_fixture",
+    [
+        "particle_pair_block1",
+        "particle_pair_block2",
+        "particle_pair_block3",
+        "particle_pair_block4",
+    ],
+)
+def test_keyword_and_multiline_on_all_blocks(block_fixture, fit_config, request):
+    lines = request.getfixturevalue(block_fixture)
+    Card04.from_lines(lines, fit_config)
+    # Access particle pairs through isotopes (FitConfig.nuclear_params.isotopes is a list of IsotopeParameters)
+    found = []
+    for iso in fit_config.nuclear_params.isotopes:
+        if hasattr(iso, "particle_pairs") and iso.particle_pairs:
+            found.extend(iso.particle_pairs)
+    assert found, f"No particle pairs parsed for {block_fixture}"
+    # Check that all pairs have required fields
+    for pair in found:
+        assert pair.name
+        assert pair.name_a
+        assert pair.name_b
+        assert pair.mass_a is not None
+        assert pair.mass_b is not None
+        assert pair.charge_a is not None
+        assert pair.charge_b is not None
+        assert pair.spin_a is not None
+        assert pair.spin_b is not None
 
 
 def test_keyword_parsing_simple(fit_config):
@@ -272,3 +282,18 @@ def test_to_lines_roundtrip(fit_config):
     Card04.from_lines(out_lines, fit_config2)
     found = [p for iso in fit_config2.nuclear_params.isotopes for p in iso.particle_pairs]
     assert found[-1].q_value == pytest.approx(123.456)
+
+
+def test_particle_pair_blocks_all(block_fixture, expected_count, fit_config, request):
+    lines = request.getfixturevalue(block_fixture)
+    Card04.from_lines(lines, fit_config)
+    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
+    assert len(found) == expected_count
+    for pair in found:
+        assert pair.name
+        assert pair.mass_a is not None
+        assert pair.mass_b is not None
+        assert pair.charge_a is not None
+        assert pair.charge_b is not None
+        assert pair.spin_a is not None
+        assert pair.spin_b is not None
