@@ -468,4 +468,7 @@ class Card10(BaseModel):
                     line_three = "".join(f"{sg:5d}" for sg in spin_groups[i : i + line_three_format["fields_per_line"]])
                     lines.append(line_three)
 
+        # Add a blank line to terminate the card
+        lines.append("")
+
         return lines
