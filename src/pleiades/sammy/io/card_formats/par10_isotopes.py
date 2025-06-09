@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
-from pleiades.nuclear.models import IsotopeParameters
+from pleiades.nuclear.models import IsotopeParameters, SpinGroups
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.helper import check_pseudo_scientific
 from pleiades.utils.logger import loguru_logger
@@ -322,18 +322,21 @@ class Card10(BaseModel):
             mass = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["mass"]])
             abundance = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["abundance"]])
             uncertainty = check_pseudo_scientific(line_two[LINE_TWO_FRONT_MATTER["uncertainty"]])
-            flag, spin_groups = get_line_two_format_and_parse(line_two)
+            flag, spin_group_numbers = get_line_two_format_and_parse(line_two)
 
             # Check the rest of the lines to append to the spin groups
             # These are all the same format (LINE_THREE_MATTER_EXTENDED)
             for line in line_threes:
-                spin_groups.extend(parse_line_three(line))
+                spin_group_numbers.extend(parse_line_three(line))
+
+            # Create SpinGroups objects for each spin group number
+            spin_groups = [SpinGroups(spin_group_number=sgn) for sgn in spin_group_numbers if sgn > 0]
 
             # Update or create the isotope in the FitConfig object
             # if isotopes is None, create a new list
             if fit_config.nuclear_params.isotopes is None:
                 logger.info(f"Isotpe list is empty, creating new isotope with mass {mass}")
-                fit_config.nuclear_params.isotopes = {
+                fit_config.nuclear_params.isotopes = [
                     IsotopeParameters(
                         isotope_information=IsotopeInfo(
                             name=f"Isotope-{mass}",
@@ -344,7 +347,7 @@ class Card10(BaseModel):
                         vary_abundance=flag,
                         spin_groups=spin_groups,
                     )
-                }
+                ]
 
             else:
                 found = False
@@ -375,10 +378,94 @@ class Card10(BaseModel):
                         )
                     )
 
-    def to_lines(self, fit_config: FitConfig) -> List[str]:
+    @staticmethod
+    def to_lines(fit_config: FitConfig) -> List[str]:
         """Convert a fit_config object to a Card 10 list of lines.
+
+           Figures out the number of spin groups and formats the lines accordingly.
+        Args:
+            fit_config (FitConfig): FitConfig object containing isotope parameters.
 
         Returns:
             List[str]: List of lines representing the Card10 object.
         """
-        raise NotImplementedError("Card 10 does not have a to_lines method")
+
+        lines = []
+
+        # check if fit_config is an instance of FitConfig
+        if not isinstance(fit_config, FitConfig):
+            message = "fit_config must be an instance of FitConfig"
+            logger.error(message)
+            raise ValueError(message)
+
+        # Check if there are any isotopes in the fit_config
+        if not fit_config.nuclear_params.isotopes:
+            logger.warning("No isotopes found in fit_config, returning empty lines.")
+            return lines
+
+        #
+
+        # Get the total number of spin groups across all isotopes
+        total_spin_groups = sum(len(isotope.spin_groups) for isotope in fit_config.nuclear_params.isotopes)
+
+        # Add the header line
+        lines.append("ISOTOpic abundances and masses")
+        # Add the isotope lines
+        for isotope in fit_config.nuclear_params.isotopes:
+            # Create the line_two front matter string
+            line_two = (
+                f"{isotope.isotope_information.mass_data.atomic_mass:10.5f}"
+                f"{isotope.abundance:10.5f}"
+                f"{isotope.uncertainty:10.5f}"
+            )
+
+            # Add the vary flag
+            vary_flag = 1 if isotope.vary_abundance else 0
+            line_two += f"{vary_flag:2d}"
+
+            # Determine number of spin groups for this isotope
+            spin_groups = [sg.spin_group_number for sg in isotope.spin_groups]
+            total_spin_groups_in_isotope = len(spin_groups)
+
+            if total_spin_groups < 99 and total_spin_groups_in_isotope < 25:
+                # Use standard format
+                line_two += "".join(f"{sg:2d}" for sg in spin_groups)
+                lines.append(line_two)
+
+            elif total_spin_groups < 99 and total_spin_groups_in_isotope > 25:
+                # Use standard format for line two and extended format for line three
+                line_two += "".join(
+                    f"{sg:2d}" for sg in spin_groups[: LINE_TWO_BACK_MATTER_STANDARD["fields_per_line"]]
+                )
+                lines.append(line_two)
+                # Add continuation marker
+                lines.append("-1")
+                # Add remaining spin groups in line three format
+                for i in range(
+                    LINE_TWO_BACK_MATTER_STANDARD["fields_per_line"],
+                    total_spin_groups_in_isotope,
+                    LINE_THREE_MATTER_EXTENDED["fields_per_line"],
+                ):
+                    line_three = "".join(
+                        f"{sg:5d}" for sg in spin_groups[i : i + LINE_THREE_MATTER_EXTENDED["fields_per_line"]]
+                    )
+                    lines.append(line_three)
+
+            else:
+                # Use extended format for line two
+                line_two_format = LINE_TWO_BACK_MATTER_EXTENDED
+                line_three_format = LINE_THREE_MATTER_EXTENDED
+                line_two += "".join(f"{sg:5d}" for sg in spin_groups[: line_two_format["fields_per_line"]])
+                lines.append(line_two)
+
+                # add continuation marker
+                lines.append("-1")
+
+                # continue to add remaining spin groups in line three format
+                for i in range(
+                    line_two_format["fields_per_line"], len(spin_groups), line_three_format["fields_per_line"]
+                ):
+                    line_three = "".join(f"{sg:5d}" for sg in spin_groups[i : i + line_three_format["fields_per_line"]])
+                    lines.append(line_three)
+
+        return lines
