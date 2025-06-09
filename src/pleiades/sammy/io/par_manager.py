@@ -316,6 +316,36 @@ class ParManager:
 
         return False
 
+    def extract_spin_groups(self, lines) -> bool:
+        """
+        Extract spin group definitions from the lines of the SAMMY parameter file (Input Card 10.2).
+        Process the spin group data and update the FitConfig object.
+        Args:
+            lines (list): The lines of the SAMMY parameter file.
+        Returns:
+            bool: True if spin group data was successfully found and processed, False otherwise.
+        """
+        from pleiades.sammy.io.card_formats.inp10_spingroups import Card10p2
+
+        block = []
+        in_block = False
+
+        for line in lines:
+            if not in_block and line.upper().startswith("SPIN GROUPS"):
+                in_block = True
+                block.append(line.rstrip())
+                continue
+            if in_block:
+                # Stop at blank line or next section header
+                if not line.strip():
+                    break
+                block.append(line.rstrip())
+
+        if block:
+            Card10p2.from_lines(block, self.fit_config)
+            return True
+        return False
+
     def detect_par_cards(self, lines):
         """
         Scans a list of lines from a SAMMY parameter file to identify and collect parameter card headers.
