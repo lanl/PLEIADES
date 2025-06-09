@@ -154,6 +154,75 @@ class ParticlePair(BaseModel):
         return self
 
 
+class SpinGroupChannelInfo(BaseModel):
+    """Container for channel information within a given spin group.
+       Mainly used in SpinGroups to store information about each channel.
+
+    Attributes:
+        channel_number (int): Channel number associated with this spin group
+        particle_pair_name (str): Name of the particle pair (e.g., 'n+U235'). Should match ParticlePair.name
+        exclude_channel (int): Whether to exclude this channel from calculations (1: exclude, 0: include)
+        orbital_angular_momentum (Optional[int]): Orbital angular momentum of the channel (default is None)
+        channel_spin (Optional[float]): Spin of the channel (default is None)
+        boundary_condition (Optional[str]): Boundary condition for the channel (default is None)
+        effective_radius (Optional[float]): Effective radius for the channel (in fermi, default is None)
+        true_radius (Optional[float]): True radius for the channel (in fermi, default is None)
+
+    """
+
+    channel_number: int = Field(description="Channel number associated with this spin group")
+    particle_pair_name: str = Field(
+        description="Name of the particle pair (e.g., 'n+U235'). Should match ParticlePair.name"
+    )
+    exclude_channel: int = Field(
+        description="Whether to exclude this channel from calculations (1: exclude, 0: include)"
+    )
+    orbital_angular_momentum: Optional[int] = Field(
+        default=None, description="Orbital angular momentum of the channel (default is None)"
+    )
+    channel_spin: Optional[float] = Field(default=None, description="Spin of the channel (default is None)")
+    boundary_condition: Optional[str] = Field(
+        default=None, description="Boundary condition for the channel (default is None)"
+    )
+    effective_radius: Optional[float] = Field(
+        default=None, description="Effective radius for the channel (in fermi, default is None)"
+    )
+    true_radius: Optional[float] = Field(
+        default=None, description="True radius for the channel (in fermi, default is None)"
+    )
+
+
+class SpinGroups(BaseModel):
+    """Container for all the needed information on a given spin group.
+
+    Attributes:
+        spin_group_number (int): Spin group number
+        excluded (bool): Whether the spin group is excluded from calculations
+        number_of_entry_channels (int): Number of entry channels for this spin group
+        number_of_exit_channels (int): Number of exit channels for this spin group
+        spin (float): Spin of the spin group (integer or half-integer). Positive of even parity, negative of odd parity.
+        Abundance (float): Abundance of the spin group (dimensionless)
+        ground_state_spin (float): Ground state spin of the spin group (integer or half-integer)
+        channel_info (List[SpinGroupChannelInfo]): List of channel information for the spin group.
+
+    """
+
+    spin_group_number: int = Field(
+        default=0, description="Spin group number (positive for even parity, negative for odd parity)"
+    )
+    excluded: bool = Field(default=False, description="Whether the spin group is excluded from calculations")
+    number_of_entry_channels: int = Field(default=0, description="Number of entry channels for this spin group")
+    number_of_exit_channels: int = Field(default=0, description="Number of exit channels for this spin group")
+    spin: float = Field(default=0.0, description="Spin of the spin group (integer or half-integer)")
+    abundance: float = Field(default=0.0, description="Abundance of the spin group (dimensionless)")
+    ground_state_spin: float = Field(
+        default=0.0, description="Ground state spin of the spin group (integer or half-integer)"
+    )
+    channel_info: List[SpinGroupChannelInfo] = Field(
+        default_factory=list, description="List of channel information for the spin group"
+    )
+
+
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
 
@@ -455,7 +524,7 @@ class IsotopeParameters(BaseModel):
     endf_library: Optional[EndfLibrary] = Field(
         default=EndfLibrary.ENDF_B_VIII_0, description="ENDF library associated with the isotope"
     )
-    spin_groups: Optional[List[int]] = Field(default_factory=list, description="Spin group numbers")
+    spin_groups: Optional[List[SpinGroups]] = Field(default_factory=list, description="List of spin group objects")
     resonances: Optional[List[ResonanceEntry]] = Field(default_factory=list, description="List of resonance entries")
     radius_parameters: Optional[List[RadiusParameters]] = Field(
         default_factory=list, description="List of radius parameters"
@@ -585,7 +654,7 @@ class IsotopeParameters(BaseModel):
             ["Uncertainty", self.uncertainty],
             ["Vary Abundance", self.vary_abundance],
             ["ENDF Library", self.endf_library],
-            ["Spin Groups", self.spin_groups],
+            ["Num of Spin Groups", len(self.spin_groups)],
             ["Num of Particle Pairs", len(self.particle_pairs)],
             ["Num of Resonances", len(self.resonances)],
             ["Num of Radius Parameters", len(self.radius_parameters)],
