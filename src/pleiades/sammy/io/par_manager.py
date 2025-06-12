@@ -416,7 +416,11 @@ class ParManager:
 
             # Already processed Card 10 so skip it here.
             if cards == Cards.PAR_CARD_10:
-                continue
+                found_spin_groups = self.extract_spin_groups(lines)
+                if not found_spin_groups:
+                    logger.error(f"Could not find spin group data in {par_file}.")
+                else:
+                    logger.info(f"Updated spin group data from {par_file}.")
 
             # Read Card 1 to get resonance data
             if cards == Cards.PAR_CARD_1:
@@ -461,7 +465,7 @@ class ParManager:
         # Replace with actual formatting logic
         from pleiades.sammy.io.card_formats.par01_resonances import Card01
 
-        return Card01.to_string(self.fit_config)
+        return "\n".join(Card01.to_lines(self.fit_config))
 
     def generate_par_card4_section(self) -> str:
         """
@@ -471,7 +475,7 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.par04_broadening import Card04
 
-        return Card04.to_lines(self.fit_config)
+        return "\n".join(Card04.to_lines(self.fit_config))
 
     def generate_par_card6_section(self) -> str:
         """
@@ -481,7 +485,7 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.par06_normalization import Card06
 
-        return Card06.to_lines(self.fit_config)
+        return "\n".join(Card06.to_lines(self.fit_config))
 
     def generate_par_card7_section(self) -> str:
         """
@@ -491,7 +495,7 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.par07_radii import Card07
 
-        return Card07.to_lines(self.fit_config)
+        return "\n".join(Card07.to_lines(self.fit_config))
 
     def generate_par_card10_section(self) -> str:
         """
@@ -501,7 +505,7 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.par10_isotopes import Card10
 
-        return Card10.to_lines(self.fit_config)
+        return "\n".join(Card10.to_lines(self.fit_config))
 
     def generate_inp_card4_section(self) -> str:
         """
@@ -511,7 +515,7 @@ class ParManager:
         """
         from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
 
-        return Card04.to_lines(self.fit_config)
+        return "\n".join(Card04.to_lines(self.fit_config))
 
     def generate_par_content(self) -> str:
         """
@@ -520,11 +524,13 @@ class ParManager:
             str: Complete parameter file content.
         """
         sections = [
-            self.generate_par_card10_section(),
+            self.generate_inp_card4_section(),
+            #self.generate_inp_card10_section(),
             self.generate_par_card1_section(),
-            self.generate_par_card7_section(),
-            self.generate_par_card6_section(),
-            self.generate_par_card4_section(),
+            self.generate_par_card10_section(),
+            #self.generate_par_card7_section(),
+            #self.generate_par_card6_section(),
+            #self.generate_par_card4_section(),
             # Need to add other cards as they are implemented
         ]
 
