@@ -191,6 +191,16 @@ class SpinGroupChannelInfo(BaseModel):
         default=None, description="True radius for the channel (in fermi, default is None)"
     )
 
+    # Define a print method for debugging
+    def __str__(self) -> str:
+        return (f"Channel Number: {self.channel_number}\n"
+                f"Particle Pair Name: {self.particle_pair_name}\n"
+                f"Exclude Channel: {self.exclude_channel}\n"
+                f"Orbital Angular Momentum: {self.orbital_angular_momentum}\n"
+                f"Channel Spin: {self.channel_spin}\n"
+                f"Boundary Condition: {self.boundary_condition}\n"
+                f"Effective Radius: {self.effective_radius}\n"
+                f"True Radius: {self.true_radius}\n")
 
 class SpinGroups(BaseModel):
     """Container for all the needed information on a given spin group.
@@ -222,6 +232,56 @@ class SpinGroups(BaseModel):
         default_factory=list, description="List of channel information for the spin group"
     )
 
+    def __str__(self) -> str:
+        headers = [
+            "Spin Group", "Excluded", "Entry Channels", "Exit Channels",
+            "Spin", "Abundance", "Ground State Spin"
+        ]
+        # Define column widths
+        col_widths = [10, 8, 14, 13, 6, 9, 17]
+        header_fmt = " | ".join(f"{{:<{w}}}" for w in col_widths)
+        row_fmt = " | ".join(f"{{:<{w}}}" for w in col_widths)
+
+        table = []
+        table.append(header_fmt.format(*headers))
+        table.append("=+=".join("=" * w for w in col_widths))
+
+        # Spin group info row
+        row = [
+            str(self.spin_group_number),
+            str(self.excluded),
+            str(self.number_of_entry_channels),
+            str(self.number_of_exit_channels),
+            f"{self.spin:.2f}",
+            f"{self.abundance:.2f}",
+            f"{self.ground_state_spin:.2f}"
+        ]
+        table.append(row_fmt.format(*row))
+
+        # Channel info rows
+        if self.channel_info:
+            channel_headers = [
+                "Channel #", "Pair Name", "Exclude", "L", "Spin", "BC", "R_eff", "R_true"
+            ]
+            channel_col_widths = [10, 12, 8, 4, 6, 6, 8, 8]
+            channel_header_fmt = "    " + " | ".join(f"{{:<{w}}}" for w in channel_col_widths)
+            channel_row_fmt = "    " + " | ".join(f"{{:<{w}}}" for w in channel_col_widths)
+            table.append(channel_header_fmt.format(*channel_headers))
+            table.append("    " + "-+-".join("-" * w for w in channel_col_widths))
+            for ch in self.channel_info:
+                ch_row = [
+                    str(ch.channel_number),
+                    str(ch.particle_pair_name),
+                    str(ch.exclude_channel),
+                    str(ch.orbital_angular_momentum) if ch.orbital_angular_momentum is not None else "",
+                    str(ch.channel_spin) if ch.channel_spin is not None else "",
+                    str(ch.boundary_condition) if ch.boundary_condition is not None else "",
+                    str(ch.effective_radius) if ch.effective_radius is not None else "",
+                    str(ch.true_radius) if ch.true_radius is not None else "",
+                ]
+                table.append(channel_row_fmt.format(*ch_row))
+
+        return "\n".join(table)
 
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
