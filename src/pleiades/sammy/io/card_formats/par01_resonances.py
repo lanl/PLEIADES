@@ -144,10 +144,38 @@ class Card01(BaseModel):
                 # and that it has a single spin group.
                 fit_config.nuclear_params.isotopes[0].resonances.append(resonance)
 
-    def to_lines(self, fit_config: FitConfig) -> List[str]:
+    @classmethod
+    def to_lines(cls, fit_config: FitConfig) -> List[str]:
         """Convert a fit_config object to Card 1 list of lines.
 
         Returns:
             List[str]: List of lines representing the Card 1 object.
         """
-        raise NotImplementedError("Card 01 does not have a to_lines method")
+        
+        # if fit_config is none or not an instance of FitConfig, raise an error
+        if fit_config is None or not isinstance(fit_config, FitConfig):
+            message = "fit_config must be an instance of FitConfig"
+            logger.error(message)
+            raise ValueError(message)
+        
+        lines = []
+        # Header line
+        lines.append("RESONANCES")
+
+        # Iterate over isotopes and their resonances
+        for isotope in fit_config.nuclear_params.isotopes:
+            for resonance in isotope.resonances:
+                line = f"{resonance.resonance_energy:11.5E} " \
+                       f"{resonance.capture_width:11.5E} " \
+                       f"{resonance.channel1_width:11.5E} " \
+                       f"{resonance.channel2_width:11.5E} " \
+                       f"{resonance.channel3_width:11.5E} " \
+                       f"{int(resonance.vary_energy):2d} " \
+                       f"{int(resonance.vary_capture_width):2d} " \
+                       f"{int(resonance.vary_channel1):2d} " \
+                       f"{int(resonance.vary_channel2):2d} " \
+                       f"{int(resonance.vary_channel3):2d} " \
+                       f"{resonance.igroup:2d}"
+                lines.append(line)
+
+        return lines
