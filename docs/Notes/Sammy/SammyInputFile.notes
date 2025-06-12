@@ -454,7 +454,7 @@ Card 10.1 -
 
 ///////////////////////////////////////////////////////////////////////////////
  Card Set 9 – Obsolete Target Spin/Parity Specification (Ignored)
-\
+
     Purpose:
         Historically used to specify the spin and parity of the target nucleus.
         This card set is now obsolete and should not be used in new INPut files.
