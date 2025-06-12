@@ -525,12 +525,12 @@ class ParManager:
         """
         sections = [
             self.generate_inp_card4_section(),
-            #self.generate_inp_card10_section(),
+            # self.generate_inp_card10_section(),
             self.generate_par_card1_section(),
             self.generate_par_card10_section(),
-            #self.generate_par_card7_section(),
-            #self.generate_par_card6_section(),
-            #self.generate_par_card4_section(),
+            # self.generate_par_card7_section(),
+            # self.generate_par_card6_section(),
+            # self.generate_par_card4_section(),
             # Need to add other cards as they are implemented
         ]
 

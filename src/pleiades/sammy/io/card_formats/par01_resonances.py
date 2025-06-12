@@ -151,13 +151,13 @@ class Card01(BaseModel):
         Returns:
             List[str]: List of lines representing the Card 1 object.
         """
-        
+
         # if fit_config is none or not an instance of FitConfig, raise an error
         if fit_config is None or not isinstance(fit_config, FitConfig):
             message = "fit_config must be an instance of FitConfig"
             logger.error(message)
             raise ValueError(message)
-        
+
         lines = []
         # Header line
         lines.append("RESONANCES")
@@ -165,17 +165,19 @@ class Card01(BaseModel):
         # Iterate over isotopes and their resonances
         for isotope in fit_config.nuclear_params.isotopes:
             for resonance in isotope.resonances:
-                line = f"{resonance.resonance_energy:11.5E} " \
-                       f"{resonance.capture_width:11.5E} " \
-                       f"{resonance.channel1_width:11.5E} " \
-                       f"{resonance.channel2_width:11.5E} " \
-                       f"{resonance.channel3_width:11.5E} " \
-                       f"{int(resonance.vary_energy):2d} " \
-                       f"{int(resonance.vary_capture_width):2d} " \
-                       f"{int(resonance.vary_channel1):2d} " \
-                       f"{int(resonance.vary_channel2):2d} " \
-                       f"{int(resonance.vary_channel3):2d} " \
-                       f"{resonance.igroup:2d}"
+                line = (
+                    f"{resonance.resonance_energy:11.5E} "
+                    f"{resonance.capture_width:11.5E} "
+                    f"{resonance.channel1_width:11.5E} "
+                    f"{resonance.channel2_width:11.5E} "
+                    f"{resonance.channel3_width:11.5E} "
+                    f"{int(resonance.vary_energy):2d} "
+                    f"{int(resonance.vary_capture_width):2d} "
+                    f"{int(resonance.vary_channel1):2d} "
+                    f"{int(resonance.vary_channel2):2d} "
+                    f"{int(resonance.vary_channel3):2d} "
+                    f"{resonance.igroup:2d}"
+                )
                 lines.append(line)
 
         return lines

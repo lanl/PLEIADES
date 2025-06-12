@@ -3,8 +3,8 @@ from typing import List
 
 from pydantic import BaseModel
 
+from pleiades.nuclear.models import SpinGroupChannelInfo, SpinGroups
 from pleiades.sammy.fitting.config import FitConfig
-from pleiades.nuclear.models import SpinGroups, SpinGroupChannelInfo
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -26,19 +26,9 @@ class Card10p2(BaseModel):
             None otherwise.
         """
         s = line[:8]
-        if (
-            len(s) >= 8
-            and s[0:3].strip().isdigit()
-            and (s[3] == " " or s[3].upper() == "X")
-            and s[4:6] == "  "
-        ):
+        if len(s) >= 8 and s[0:3].strip().isdigit() and (s[3] == " " or s[3].upper() == "X") and s[4:6] == "  ":
             return "SPIN_GROUP"
-        if (
-            len(s) >= 8
-            and s[0:2] == "  "
-            and s[2:5].strip().isdigit()
-            and s[5:7] == "  "
-        ):
+        if len(s) >= 8 and s[0:2] == "  " and s[2:5].strip().isdigit() and s[5:7] == "  ":
             return "CHANNEL"
         return None
 
@@ -61,15 +51,14 @@ class Card10p2(BaseModel):
         idx = 0
 
         while idx < len(lines):
-
             line = lines[idx]
-            
+
             if not line.strip():
                 idx += 1
                 continue
 
             line_type = cls.get_line_type(line)
-            
+
             if line_type is None:
                 idx += 1
                 continue
@@ -115,7 +104,9 @@ class Card10p2(BaseModel):
                             exclude_channel = 0
                         else:
                             exclude_channel = 0
-                        orbital_angular_momentum = int(ch_line[18:20].strip()) if ch_line[18:20].strip().isdigit() else None
+                        orbital_angular_momentum = (
+                            int(ch_line[18:20].strip()) if ch_line[18:20].strip().isdigit() else None
+                        )
                         channel_spin = float(ch_line[20:30].strip()) if ch_line[20:30].strip() != "" else None
                         en_boundary = float(ch_line[30:40].strip()) if ch_line[30:40].strip() != "" else None
                         effective_radius = float(ch_line[40:50].strip()) if ch_line[40:50].strip() != "" else None
@@ -143,10 +134,10 @@ class Card10p2(BaseModel):
                     channel_info=channel_info,
                 )
                 spin_groups.append(spin_group)
-            
+
             # Check to see if the spin group already exists
-            
-            #TODO Loop through isotopes to match spin group to correct isotope
+
+            # TODO Loop through isotopes to match spin group to correct isotope
             if fit_config.nuclear_params.isotopes:
                 iso = fit_config.nuclear_params.isotopes[0]
                 if not hasattr(iso, "spin_groups") or iso.spin_groups is None:
@@ -160,6 +151,6 @@ class Card10p2(BaseModel):
                             iso.spin_groups[i] = new_sg
                             found = True
                             break
-                    
+
             else:
                 logger.warning("No isotopes found in fit_config to attach spin groups")

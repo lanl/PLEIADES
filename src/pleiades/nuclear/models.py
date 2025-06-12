@@ -193,14 +193,17 @@ class SpinGroupChannelInfo(BaseModel):
 
     # Define a print method for debugging
     def __str__(self) -> str:
-        return (f"Channel Number: {self.channel_number}\n"
-                f"Particle Pair Name: {self.particle_pair_name}\n"
-                f"Exclude Channel: {self.exclude_channel}\n"
-                f"Orbital Angular Momentum: {self.orbital_angular_momentum}\n"
-                f"Channel Spin: {self.channel_spin}\n"
-                f"Boundary Condition: {self.boundary_condition}\n"
-                f"Effective Radius: {self.effective_radius}\n"
-                f"True Radius: {self.true_radius}\n")
+        return (
+            f"Channel Number: {self.channel_number}\n"
+            f"Particle Pair Name: {self.particle_pair_name}\n"
+            f"Exclude Channel: {self.exclude_channel}\n"
+            f"Orbital Angular Momentum: {self.orbital_angular_momentum}\n"
+            f"Channel Spin: {self.channel_spin}\n"
+            f"Boundary Condition: {self.boundary_condition}\n"
+            f"Effective Radius: {self.effective_radius}\n"
+            f"True Radius: {self.true_radius}\n"
+        )
+
 
 class SpinGroups(BaseModel):
     """Container for all the needed information on a given spin group.
@@ -234,8 +237,13 @@ class SpinGroups(BaseModel):
 
     def __str__(self) -> str:
         headers = [
-            "Spin Group", "Excluded", "Entry Channels", "Exit Channels",
-            "Spin", "Abundance", "Ground State Spin"
+            "Spin Group",
+            "Excluded",
+            "Entry Channels",
+            "Exit Channels",
+            "Spin",
+            "Abundance",
+            "Ground State Spin",
         ]
         # Define column widths
         col_widths = [10, 8, 14, 13, 6, 9, 17]
@@ -254,15 +262,13 @@ class SpinGroups(BaseModel):
             str(self.number_of_exit_channels),
             f"{self.spin:.2f}",
             f"{self.abundance:.2f}",
-            f"{self.ground_state_spin:.2f}"
+            f"{self.ground_state_spin:.2f}",
         ]
         table.append(row_fmt.format(*row))
 
         # Channel info rows
         if self.channel_info:
-            channel_headers = [
-                "Channel #", "Pair Name", "Exclude", "L", "Spin", "BC", "R_eff", "R_true"
-            ]
+            channel_headers = ["Channel #", "Pair Name", "Exclude", "L", "Spin", "BC", "R_eff", "R_true"]
             channel_col_widths = [10, 12, 8, 4, 6, 6, 8, 8]
             channel_header_fmt = "    " + " | ".join(f"{{:<{w}}}" for w in channel_col_widths)
             channel_row_fmt = "    " + " | ".join(f"{{:<{w}}}" for w in channel_col_widths)
@@ -282,6 +288,7 @@ class SpinGroups(BaseModel):
                 table.append(channel_row_fmt.format(*ch_row))
 
         return "\n".join(table)
+
 
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
