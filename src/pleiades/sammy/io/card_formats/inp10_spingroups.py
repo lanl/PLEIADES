@@ -108,7 +108,7 @@ class Card10p2(BaseModel):
                             int(ch_line[18:20].strip()) if ch_line[18:20].strip().isdigit() else None
                         )
                         channel_spin = float(ch_line[20:30].strip()) if ch_line[20:30].strip() != "" else None
-                        en_boundary = float(ch_line[30:40].strip()) if ch_line[30:40].strip() != "" else None
+                        boundary_condition = float(ch_line[30:40].strip()) if ch_line[30:40].strip() != "" else None
                         effective_radius = float(ch_line[40:50].strip()) if ch_line[40:50].strip() != "" else None
                         true_radius = float(ch_line[50:60].strip()) if ch_line[50:60].strip() != "" else None
                     except Exception as e:
@@ -138,19 +138,65 @@ class Card10p2(BaseModel):
             # Check to see if the spin group already exists
 
             # TODO Loop through isotopes to match spin group to correct isotope
+
+            # if isotopes exist, loop through the isotopes, then the existing spin groups to find a match
             if fit_config.nuclear_params.isotopes:
-                iso = fit_config.nuclear_params.isotopes[0]
-                if not hasattr(iso, "spin_groups") or iso.spin_groups is None:
-                    iso.spin_groups = []
-                for new_sg in spin_groups:
-                    # Try to find an existing spin group with the same number
-                    found = False
-                    for i, existing_sg in enumerate(iso.spin_groups):
-                        if existing_sg.spin_group_number == new_sg.spin_group_number:
+                for isotope in fit_config.nuclear_params.isotopes:
+                    if not hasattr(isotope, "spin_groups") or isotope.spin_groups is None:
+                        isotope.spin_groups = []
+                    # Check if the spin group already exists
+                    for existing_sg in isotope.spin_groups:
+                        if existing_sg.spin_group_number == spin_group.spin_group_number:
                             # Update the existing spin group
-                            iso.spin_groups[i] = new_sg
-                            found = True
+                            existing_sg.excluded = spin_group.excluded
+                            existing_sg.number_of_entry_channels = spin_group.number_of_entry_channels
+                            existing_sg.number_of_exit_channels = spin_group.number_of_exit_channels
+                            existing_sg.spin = spin_group.spin
+                            existing_sg.abundance = spin_group.abundance
+                            existing_sg.channel_info.extend(spin_group.channel_info)
                             break
 
             else:
                 logger.warning("No isotopes found in fit_config to attach spin groups")
+
+    @classmethod
+    def to_lines(cls, fit_config: FitConfig) -> List[str]:
+        # create header line
+        lines = ["SPIN GROUPS"]
+
+        # if fit_config is none or not an instance of FitConfig, raise an error
+        if fit_config is None or not isinstance(fit_config, FitConfig):
+            message = "fit_config must be an instance of FitConfig"
+            logger.error(message)
+            raise ValueError(message)
+
+        # if no isotopes are present, return empty lines
+        if not fit_config.nuclear_params.isotopes:
+            logger.warning("No isotopes found in fit_config, returning empty lines")
+            return lines
+
+        # Iterate over isotopes and their spin groups
+        for isotope in fit_config.nuclear_params.isotopes:
+            for spin_group in isotope.spin_groups:
+                line = f"{spin_group.spin_group_number:3d} {'X' if spin_group.excluded else ' '}"
+                line += f"{spin_group.number_of_entry_channels:3d} {spin_group.number_of_exit_channels:3d} "
+                line += f"{spin_group.spin:5.2f} {spin_group.abundance:10.4f}"
+                lines.append(line)
+                for channel in spin_group.channel_info:
+                    channel_line = f"  {channel.channel_number:3d} {channel.particle_pair_name:<8} "
+                    channel_line += "X" if channel.exclude_channel else " "
+                    channel_line += (
+                        f"{channel.orbital_angular_momentum:2d} "
+                        if channel.orbital_angular_momentum is not None
+                        else "   "
+                    )
+                    channel_line += f"{channel.channel_spin:5.2f} " if channel.channel_spin is not None else "      "
+                    channel_line += (
+                        f"{channel.boundary_condition:10.4f} " if channel.boundary_condition is not None else " " * 11
+                    )
+                    channel_line += (
+                        f"{channel.effective_radius:10.4f} " if channel.effective_radius is not None else " " * 11
+                    )
+                    channel_line += f"{channel.true_radius:10.4f}" if channel.true_radius is not None else " " * 10
+                    lines.append(channel_line)
+        return lines
