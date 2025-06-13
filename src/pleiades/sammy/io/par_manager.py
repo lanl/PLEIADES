@@ -517,6 +517,16 @@ class ParManager:
 
         return "\n".join(Card04.to_lines(self.fit_config))
 
+    def generate_inp_card10_section(self) -> str:
+        """
+        Generate Input Card 10.2 (spin groups) section.
+        Returns:
+            str: Input Card 10.2 section as a string.
+        """
+        from pleiades.sammy.io.card_formats.inp10_spingroups import Card10p2
+
+        return "\n".join(Card10p2.to_lines(self.fit_config))
+
     def generate_par_content(self) -> str:
         """
         Generate the full content for the SAMMY parameter file.
@@ -525,7 +535,7 @@ class ParManager:
         """
         sections = [
             self.generate_inp_card4_section(),
-            # self.generate_inp_card10_section(),
+            self.generate_inp_card10_section(),
             self.generate_par_card1_section(),
             self.generate_par_card10_section(),
             # self.generate_par_card7_section(),
