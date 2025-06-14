@@ -536,32 +536,36 @@ class ResonanceEntry(BaseModel):
 
     # Define print method for debugging
     def __str__(self) -> str:
-        """Return a text table representation of the ResonanceEntry object."""
-        headers = ["Parameter", "Value"]
-        rows = [
-            ["Resonance Energy (eV)", self.resonance_energy],
-            ["Capture Width (meV)", self.capture_width],
-            ["Channel 1 Width (meV)", self.channel1_width],
-            ["Channel 2 Width (meV)", self.channel2_width],
-            ["Channel 3 Width (meV)", self.channel3_width],
-            ["Vary Energy", self.vary_energy],
-            ["Vary Capture Width", self.vary_capture_width],
-            ["Vary Channel 1", self.vary_channel1],
-            ["Vary Channel 2", self.vary_channel2],
-            ["Vary Channel 3", self.vary_channel3],
-            ["Igroup", self.igroup],
+        # Print as a horizontal table (one row, no headers), aligned columns
+        def flag_to_str(flag):
+            # Print 'yes' for VaryFlag.YES, 'no' otherwise
+            try:
+                return "yes" if str(flag).endswith("YES") else "no"
+            except Exception:
+                return str(flag)
+
+        values = [
+            self.resonance_energy,
+            self.capture_width,
+            self.channel1_width,
+            self.channel2_width,
+            self.channel3_width,
+            flag_to_str(self.vary_energy),
+            flag_to_str(self.vary_capture_width),
+            flag_to_str(self.vary_channel1),
+            flag_to_str(self.vary_channel2),
+            flag_to_str(self.vary_channel3),
+            self.igroup,
         ]
-        # Calculate column widths
-        col_widths = [
-            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
-        ]
-        # Build table
-        lines = []
-        sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
-        lines.append(sep_line)
-        for row in rows:
-            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
-        return "\n".join(lines)
+        # Define column widths for alignment (wider for large numbers and flags)
+        col_widths = [12, 12, 14, 8, 8, 4, 4, 4, 4, 4, 3]
+        formatted = []
+        for v, w in zip(values, col_widths):
+            if isinstance(v, float):
+                formatted.append(f"{v:>{w}.4f}" if v is not None else f"{'None':>{w}}")
+            else:
+                formatted.append(f"{str(v):>{w}}")
+        return "|".join(formatted)
 
 
 class IsotopeParameters(BaseModel):
