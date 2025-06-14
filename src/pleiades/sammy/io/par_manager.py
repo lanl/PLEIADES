@@ -415,7 +415,7 @@ class ParManager:
                     logger.info(f"Updated particle pair data from {par_file}.")
 
             # Already processed Card 10 so skip it here.
-            if cards == Cards.PAR_CARD_10:
+            if cards == Cards.INP_CARD_10_2:
                 found_spin_groups = self.extract_spin_groups(lines)
                 if not found_spin_groups:
                     logger.error(f"Could not find spin group data in {par_file}.")
@@ -545,7 +545,7 @@ class ParManager:
         ]
 
         # Filter out empty sections
-        return "\n\n".join([s for s in sections if s])
+        return "\n".join([s for s in sections if s])
 
     def write_par_file(self, file_path: Path) -> Path:
         """
