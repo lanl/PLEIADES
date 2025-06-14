@@ -199,4 +199,6 @@ class Card10p2(BaseModel):
                     )
                     channel_line += f"{channel.true_radius:10.4f}" if channel.true_radius is not None else " " * 10
                     lines.append(channel_line)
+
+        lines.append("")
         return lines
