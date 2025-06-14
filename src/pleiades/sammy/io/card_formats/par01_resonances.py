@@ -6,11 +6,13 @@ from pydantic import BaseModel
 from pleiades.nuclear.isotopes.manager import (
     IsotopeManager,  # Needed to create isotopes if no isotopes are found in fit_config
 )
-from pleiades.nuclear.models import ResonanceEntry  # Needed to store resonance data
+from pleiades.nuclear.models import ResonanceEntry, SpinGroups  # Needed to store resonance data
 from pleiades.sammy.fitting.config import FitConfig  # FitConfig object to contain list of resonance entries
 from pleiades.utils.helper import (  # VaryFlag and check_pseudo_scientific for parameter parsing
     VaryFlag,
     check_pseudo_scientific,
+    format_float,
+    format_vary,
 )
 from pleiades.utils.logger import loguru_logger  # Logger for debugging
 
@@ -79,13 +81,12 @@ class Card01(BaseModel):
             logger.error(message)
             raise ValueError(message)
 
+        # Set flag based on assuming there is only one isotope in the fit_config
         multiple_isotopes = False
+
         # Check if there are multiple isotopes in the fit_config object
-        if fit_config.nuclear_params.isotopes:
-            for isotope in fit_config.nuclear_params.isotopes:
-                if len(isotope.spin_groups) > 1:
-                    multiple_isotopes = True
-                    break
+        if fit_config.nuclear_params.isotopes and len(fit_config.nuclear_params.isotopes) > 1:
+            multiple_isotopes = True
 
         # If there are no isotopes in the fit_config, create a "unknown" [UNKN] isotope
         if not fit_config.nuclear_params.isotopes:
@@ -112,7 +113,6 @@ class Card01(BaseModel):
                 igroup = int(line[65:67].strip()) if line[65:67].strip() else 0
             except Exception as e:
                 logger.warning(f"Failed to parse resonance line: {line.strip()} ({e})")
-                print(line)
                 continue
 
             resonance = ResonanceEntry(
@@ -134,7 +134,21 @@ class Card01(BaseModel):
             if multiple_isotopes:
                 # Check if igroup is in the spin groups of any isotope
                 for isotope in fit_config.nuclear_params.isotopes:
-                    if igroup in isotope.spin_groups:
+                    # Check if the igroup is one of the spin group numbers in  the isotope's spin groups
+                    if not hasattr(isotope, "spin_groups"):
+                        logger.warning(f"Isotope {isotope.isotope_information.name} has no spin groups defined.")
+                        continue
+
+                    if not isinstance(isotope.spin_groups, list) or not all(
+                        isinstance(sg, SpinGroups) for sg in isotope.spin_groups
+                    ):
+                        logger.warning(f"Isotope {isotope.isotope_information.name} has no valid spin groups defined.")
+                        continue
+                    if not isotope.spin_groups:
+                        logger.warning(f"Isotope {isotope.isotope_information.name} has an empty spin group list.")
+                        continue
+
+                    if igroup in [sg.spin_group_number for sg in isotope.spin_groups]:
                         # Add the resonance entry to the isotope's resonance list
                         isotope.resonances.append(resonance)
                         break
@@ -164,20 +178,25 @@ class Card01(BaseModel):
 
         # Iterate over isotopes and their resonances
         for isotope in fit_config.nuclear_params.isotopes:
+            if not hasattr(isotope, "resonances") or not isotope.resonances:
+                logger.warning(f"No resonances found for isotope {isotope.isotope_information.name}, skipping.")
+                continue
+
             for resonance in isotope.resonances:
                 line = (
-                    f"{resonance.resonance_energy:11.5E} "
-                    f"{resonance.capture_width:11.5E} "
-                    f"{resonance.channel1_width:11.5E} "
-                    f"{resonance.channel2_width:11.5E} "
-                    f"{resonance.channel3_width:11.5E} "
-                    f"{int(resonance.vary_energy):2d} "
-                    f"{int(resonance.vary_capture_width):2d} "
-                    f"{int(resonance.vary_channel1):2d} "
-                    f"{int(resonance.vary_channel2):2d} "
-                    f"{int(resonance.vary_channel3):2d} "
+                    f"{format_float(resonance.resonance_energy, 11)}"
+                    f"{format_float(resonance.capture_width, 11)}"
+                    f"{format_float(resonance.channel1_width, 11)}"
+                    f"{format_float(resonance.channel2_width, 11)}"
+                    f"{format_float(resonance.channel3_width, 11)}"
+                    f"{format_vary(resonance.vary_energy):>2} "
+                    f"{format_vary(resonance.vary_capture_width):>2} "
+                    f"{format_vary(resonance.vary_channel1):>2} "
+                    f"{format_vary(resonance.vary_channel2):>2} "
+                    f"{format_vary(resonance.vary_channel3):>2} "
                     f"{resonance.igroup:2d}"
                 )
                 lines.append(line)
 
+        lines.append("")  # Blank line to terminate the card
         return lines
