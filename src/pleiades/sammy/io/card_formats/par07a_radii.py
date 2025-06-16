@@ -227,3 +227,20 @@ class Card07a(BaseModel):
             logger.debug(
                 f"Assigned {len(radius_params_list)} RadiusParameters to Default Isotope: {default_isotope.isotope_information.name}"
             )
+
+    @classmethod
+    def to_lines(cls, fit_config: FitConfig = None) -> List[str]:
+        """Convert the radius parameters to lines for output.
+
+        Args:
+            fit_config: FitConfig object containing isotopes and their radius parameters.
+
+        Returns:
+            List[str]: Lines representing the radius parameters.
+        """
+        if fit_config is None or not fit_config.nuclear_params.isotopes:
+            message = "fit_config must contain at least one isotope with radius parameters"
+            logger.error(message)
+            raise ValueError(message)
+
+        lines = ["RADII PARAMETERS", ""]
