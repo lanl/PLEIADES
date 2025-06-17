@@ -496,7 +496,7 @@ class ParManager:
         from pleiades.sammy.io.card_formats.par07_radii import Card07
 
         return "\n".join(Card07.to_lines(self.fit_config))
-    
+
     def generate_par_card7a_section(self) -> str:
         """
         Generate Card 7a (radius parameters in key-word format) section.
