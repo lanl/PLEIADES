@@ -178,7 +178,7 @@ class Card07a(BaseModel):
                     channels = None
                     channel_mode = 0
 
-                rp = RadiusParameters(
+                radius_parameters = RadiusParameters(
                     effective_radius=eff,
                     true_radius=true,
                     channel_mode=channel_mode,
@@ -187,7 +187,7 @@ class Card07a(BaseModel):
                     spin_groups=spin_groups,
                     channels=channels if channel_mode == 1 else None,
                 )
-                radius_params_list.append(rp)
+                radius_params_list.append(radius_parameters)
                 line_index = j
             else:
                 line_index += 1
@@ -201,15 +201,22 @@ class Card07a(BaseModel):
 
         # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
         if multiple_isotopes:
+            
+            logger.warning(
+                f"Multiple isotopes found in FitConfig: {len(fit_config.nuclear_params.isotopes)}"
+            )
             for isotope in fit_config.nuclear_params.isotopes:
-                # logger.info(f"Isotope: {isotope.isotope_information.name}, Spin Groups: {isotope.spin_groups}")
+                # Get all spin group numbers from SpinGroups objects
+                spin_groups_in_isotope = (
+                    [sg.spin_group_number for sg in isotope.spin_groups] if isotope.spin_groups else None
+                )
 
                 # Assign matching radius parameters to each isotope
                 matching_radii = []
                 for radius_param in radius_params_list:
                     if radius_param.spin_groups:
                         # If any spin group in radius_param matches any in isotope
-                        if any(sg in isotope.spin_groups for sg in radius_param.spin_groups):
+                        if any(spin in spin_groups_in_isotope for spin in radius_param.spin_groups):
                             matching_radii.append(radius_param)
                     else:
                         # If spin_groups is None, treat as global (assign to all)
@@ -243,4 +250,60 @@ class Card07a(BaseModel):
             logger.error(message)
             raise ValueError(message)
 
-        lines = ["RADII PARAMETERS", ""]
+        lines = ["Channel radii in key-word format"]
+
+        def flag_to_01(flag):
+            # Convert VaryFlag to 1 (YES) or 0 (all others, including None)
+            if flag is None:
+                return "0"
+            if hasattr(flag, "value"):
+                return "1" if flag.value == 1 else "0"
+            try:
+                return "1" if int(flag) == 1 else "0"
+            except Exception:
+                return "0"
+        
+        for isotope in fit_config.nuclear_params.isotopes:
+            for radius_parameter in getattr(isotope, "radius_parameters", []) or []:
+                # Format radii and flags
+                effective_radius_str = (
+                    "" if radius_parameter.effective_radius is None else f"{radius_parameter.effective_radius:10.6f}"
+                )
+                true_radius_str = (
+                    "" if radius_parameter.true_radius is None else f"{radius_parameter.true_radius:10.6f}"
+                )
+                vary_effective_flag_str = flag_to_01(radius_parameter.vary_effective)
+                vary_true_flag_str = flag_to_01(radius_parameter.vary_true)
+                # Use "Radii=" and "Flags=" with comma separation and spacing
+                lines.append(
+                    f"Radii= {effective_radius_str}, {true_radius_str}    Flags={vary_effective_flag_str}, {vary_true_flag_str}"
+                )
+
+                # Group and channel formatting
+                spin_groups = radius_parameter.spin_groups if radius_parameter.spin_groups else []
+                channels = radius_parameter.channels if radius_parameter.channels else []
+                # If channels are present, try to pair them with groups, else just print group
+                if spin_groups and channels and len(spin_groups) == len(channels):
+                    for spin_group, channel in zip(spin_groups, channels):
+                        lines.append(f"   Group= {spin_group:2d}   Chan= {channel:2d},")
+                elif spin_groups and channels and (len(channels) == 1):
+                    # One channel, multiple groups
+                    for spin_group in spin_groups:
+                        lines.append(f"   Group= {spin_group:2d}   Chan= {channels[0]:2d},")
+                elif spin_groups and channels:
+                    # Fallback: print all groups and all channels (comma separated)
+                    for spin_group in spin_groups:
+                        for channel in channels:
+                            lines.append(f"   Group= {spin_group:2d}   Chan= {channel:2d},")
+                elif spin_groups:
+                    for spin_group in spin_groups:
+                        lines.append(f"   Group= {spin_group:2d}")
+                elif channels:
+                    for channel in channels:
+                        lines.append(f"   Chan= {channel:2d},")
+            
+        # Remove trailing blank lines (but keep one at end)
+        while lines and lines[-1] == "":
+            lines.pop()
+        lines.append("")
+        return lines
