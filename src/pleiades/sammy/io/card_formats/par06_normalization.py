@@ -126,3 +126,66 @@ class Card06(BaseModel):
         norm_params = NormalizationParameters(**main_kwargs)
         fit_config.physics_params.normalization_parameters = norm_params
         logger.info("Assigned normalization parameters to fit_config.physics_params.normalization_parameters")
+
+    @classmethod
+    def to_lines(cls, fit_config: FitConfig) -> List[str]:
+        # create header line
+        lines = ["NORMAlization and background are next"]
+
+        # if fit_config is none or not an instance of FitConfig, raise an error
+        if fit_config is None or not isinstance(fit_config, FitConfig):
+            message = "fit_config must be an instance of FitConfig"
+            logger.error(message)
+            raise ValueError(message)
+
+        norm = fit_config.physics_params.normalization_parameters
+
+        # Helper for floats (10 chars, right-aligned, scientific if needed)
+        def fmtf(val):
+            if val is None:
+                return " " * 10
+            return f"{val:10.6f}"
+
+        # Helper for flags (2 chars, right-aligned)
+        def fmtflag(flag):
+            if flag is None:
+                return " 0"
+            if hasattr(flag, "value"):
+                return f"{flag.value:2d}"
+            try:
+                return f"{int(flag):2d}"
+            except Exception:
+                return " 0"
+
+        # Line 2: main values and flags
+        main = (
+            f"{fmtf(norm.anorm)}"
+            f"{fmtf(norm.backa)}"
+            f"{fmtf(norm.backb)}"
+            f"{fmtf(norm.backc)}"
+            f"{fmtf(norm.backd)}"
+            f"{fmtf(norm.backf)}"
+            f"{fmtflag(norm.flag_anorm)}"
+            f"{fmtflag(norm.flag_backa)}"
+            f"{fmtflag(norm.flag_backb)}"
+            f"{fmtflag(norm.flag_backc)}"
+            f"{fmtflag(norm.flag_backd)}"
+            f"{fmtflag(norm.flag_backf)}"
+        )
+        lines.append(main)
+
+        # Line 3: uncertainties (optional, but always written here)
+        unc = (
+            f"{fmtf(norm.d_anorm)}"
+            f"{fmtf(norm.d_backa)}"
+            f"{fmtf(norm.d_backb)}"
+            f"{fmtf(norm.d_backc)}"
+            f"{fmtf(norm.d_backd)}"
+            f"{fmtf(norm.d_backf)}"
+        )
+        lines.append(unc)
+
+        # Blank line at end of card set
+        lines.append("")
+        return lines
+
