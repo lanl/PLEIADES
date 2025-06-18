@@ -201,10 +201,7 @@ class Card07a(BaseModel):
 
         # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
         if multiple_isotopes:
-            
-            logger.warning(
-                f"Multiple isotopes found in FitConfig: {len(fit_config.nuclear_params.isotopes)}"
-            )
+            logger.warning(f"Multiple isotopes found in FitConfig: {len(fit_config.nuclear_params.isotopes)}")
             for isotope in fit_config.nuclear_params.isotopes:
                 # Get all spin group numbers from SpinGroups objects
                 spin_groups_in_isotope = (
@@ -262,7 +259,7 @@ class Card07a(BaseModel):
                 return "1" if int(flag) == 1 else "0"
             except Exception:
                 return "0"
-        
+
         for isotope in fit_config.nuclear_params.isotopes:
             for radius_parameter in getattr(isotope, "radius_parameters", []) or []:
                 # Format radii and flags
@@ -301,7 +298,7 @@ class Card07a(BaseModel):
                 elif channels:
                     for channel in channels:
                         lines.append(f"   Chan= {channel:2d},")
-            
+
         # Remove trailing blank lines (but keep one at end)
         while lines and lines[-1] == "":
             lines.pop()
