@@ -549,7 +549,7 @@ class ParManager:
             self.generate_par_card1_section(),
             self.generate_par_card10_section(),
             self.generate_par_card7a_section(),
-            # self.generate_par_card6_section(),
+            self.generate_par_card6_section(),
             # self.generate_par_card4_section(),
             # Need to add other cards as they are implemented
         ]
