@@ -188,4 +188,3 @@ class Card06(BaseModel):
         # Blank line at end of card set
         lines.append("")
         return lines
-
