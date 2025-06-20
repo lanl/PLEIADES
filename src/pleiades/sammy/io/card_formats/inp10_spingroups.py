@@ -49,8 +49,9 @@ class Card10p2(BaseModel):
 
         spin_groups = []
         idx = 0
-
+        
         while idx < len(lines):
+            
             line = lines[idx]
 
             if not line.strip():
@@ -58,11 +59,14 @@ class Card10p2(BaseModel):
                 continue
 
             line_type = cls.get_line_type(line)
+            print(f"Processing line {idx}/{len(lines)}: {line.strip()}")
 
             if line_type is None:
                 idx += 1
                 continue
 
+            print(f"Spingroup: \t{line_type}:{idx}/{len(lines)}\t {line.strip()}")
+            
             if line_type == "SPIN_GROUP":
                 # Parse spin group line
                 try:
@@ -72,15 +76,19 @@ class Card10p2(BaseModel):
                     elif line[4:5].strip() == "":
                         excluded = 0
                     else:
-                        raise ValueError(f"Invalid exclusion flag in line: {line.strip()}")
+                        excluded = 0
                     number_of_entry_channels = int(line[7:10].strip())
                     number_of_exit_channels = int(line[12:15].strip())
                     spin = float(line[15:20].strip())
                     abundance = float(line[20:30].strip())
+
+                    #print(f"{spin_group_number} {excluded} {number_of_entry_channels} {number_of_exit_channels} {spin} {abundance}")
+
                 except Exception as e:
                     logger.error(
                         f"Failed to parse spin group line: |{line}| ("
                         f"spin_group_number='{line[0:3].strip()}', "
+                        f"excluded='{line[4:5].strip()}', "
                         f"number_of_entry_channels='{line[7:10].strip()}', "
                         f"number_of_exit_channels='{line[12:15].strip()}', "
                         f"spin='{line[15:20].strip()}', "
@@ -89,15 +97,22 @@ class Card10p2(BaseModel):
                     raise ValueError(f"Failed to parse spin group line: {line.strip()} ({e})")
 
                 # Parse all channel info lines for this spin group
-                channel_info = []
+                channel_info_list = []
                 idx += 1
-                while idx < len(lines):
+                
+                while idx < len(lines):                    
                     ch_line = lines[idx]
-                    if cls.get_line_type(ch_line) != "CHANNEL":
+                    
+                    line_type = cls.get_line_type(ch_line)
+                    
+                    if line_type != "CHANNEL":
                         break
+
+                    print(f"Channel: \t{line_type}:{idx}/{len(lines)}\t {ch_line.strip()}")
+
                     try:
                         channel_number = int(ch_line[2:5].strip()) if ch_line[2:5].strip() != "" else None
-                        particle_pair_name = ch_line[7:15].strip() if ch_line[7:15].strip() != "" else "UNKNOWN"
+                        particle_pair_name = ch_line[7:15].strip() if ch_line[7:15].strip() != "" else "IDK"
                         if ch_line[17:18].strip().upper() == "X":
                             exclude_channel = 1
                         elif ch_line[17:18].strip() == "":
@@ -111,17 +126,26 @@ class Card10p2(BaseModel):
                         boundary_condition = float(ch_line[30:40].strip()) if ch_line[30:40].strip() != "" else None
                         effective_radius = float(ch_line[40:50].strip()) if ch_line[40:50].strip() != "" else None
                         true_radius = float(ch_line[50:60].strip()) if ch_line[50:60].strip() != "" else None
+                    
                     except Exception as e:
                         logger.error(f"Failed to parse channel line: {ch_line.strip()} ({e})")
                         raise ValueError(f"Failed to parse channel line: {ch_line.strip()} ({e})")
-                    channel_info.append(
+                    
+                    
+                    channel_info_list.append(
                         SpinGroupChannelInfo(
                             channel_number=channel_number,
                             particle_pair_name=particle_pair_name,
                             exclude_channel=exclude_channel,
                             channel_spin=channel_spin,
+                            orbital_angular_momentum=orbital_angular_momentum,
+                            boundary_condition=boundary_condition,
+                            effective_radius=effective_radius,
+                            true_radius=true_radius,
                         )
                     )
+                    
+                    # move to the next channel line
                     idx += 1
 
                 spin_group = SpinGroups(
@@ -131,13 +155,11 @@ class Card10p2(BaseModel):
                     number_of_exit_channels=number_of_exit_channels,
                     spin=spin,
                     abundance=abundance,
-                    channel_info=channel_info,
+                    channel_info=channel_info_list,
                 )
+                
+                #print(f"\033[92m{spin_group}\033[0m")
                 spin_groups.append(spin_group)
-
-            # Check to see if the spin group already exists
-
-            # TODO Loop through isotopes to match spin group to correct isotope
 
             # if isotopes exist, loop through the isotopes, then the existing spin groups to find a match
             if fit_config.nuclear_params.isotopes:
