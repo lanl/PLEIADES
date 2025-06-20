@@ -107,9 +107,7 @@ class Card10p2(BaseModel):
                     line_type = cls.get_line_type(ch_line)
 
                     if line_type != "CHANNEL":
-                        logger.warning(
-                            f"Expected CHANNEL line but found {line_type} at index {idx}: {ch_line.strip()}"
-                        )
+                        logger.warning(f"Expected CHANNEL line but found {line_type} at index {idx}: {ch_line.strip()}")
                         break
 
                     print(f"Channel: \t{line_type}:{idx}/{len(lines)}\t {ch_line.strip()}")
