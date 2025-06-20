@@ -619,13 +619,13 @@ class IsotopeParameters(BaseModel):
         max_standard = 99  # Maximum group number for standard format
 
         for group in self.spin_groups:
-            if group == 0:
+            if group.spin_group_number == 0:
                 logger.error("Spin group number cannot be 0")
                 raise ValueError("Spin group number cannot be 0")
 
             # Check if we need extended format
-            if abs(group) > max_standard:
-                logger.error(f"Group number {group} requires extended format")
+            if abs(group.spin_group_number) > max_standard:
+                logger.error(f"Group number {group.spin_group_number} requires extended format")
 
         return self
 
