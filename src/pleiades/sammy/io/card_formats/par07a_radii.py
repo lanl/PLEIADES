@@ -201,7 +201,6 @@ class Card07a(BaseModel):
 
         # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
         if multiple_isotopes:
-            logger.warning(f"Multiple isotopes found in FitConfig: {len(fit_config.nuclear_params.isotopes)}")
             for isotope in fit_config.nuclear_params.isotopes:
                 # Get all spin group numbers from SpinGroups objects
                 spin_groups_in_isotope = (
