@@ -132,6 +132,7 @@ def fit_config():
     # Create a minimal FitConfig instance
     return FitConfig()
 
+
 def test_particle_pair_block1(fit_config, particle_pair_block1):
     # Parse the lines from particle_pair_block1 into the FitConfig
     Card04.from_lines(particle_pair_block1, fit_config)
@@ -148,6 +149,7 @@ def test_particle_pair_block1(fit_config, particle_pair_block1):
     assert pair.spin_a is not None, "Spin A is missing"
     assert pair.spin_b is not None, "Spin B is missing"
 
+
 def test_each_particle_pair_block_2(fit_config, particle_pair_block2):
     # Parse the lines from particle_pair_block2 into the FitConfig
     Card04.from_lines(particle_pair_block2, fit_config)
@@ -163,7 +165,8 @@ def test_each_particle_pair_block_2(fit_config, particle_pair_block2):
         assert pair.charge_b is not None, "Charge B is missing"
         assert pair.spin_a is not None, "Spin A is missing"
         assert pair.spin_b is not None, "Spin B is missing"
-        
+
+
 def test_particle_pair_block3(fit_config, particle_pair_block3):
     # Parse the lines from particle_pair_block3 into the FitConfig
     Card04.from_lines(particle_pair_block3, fit_config)
@@ -180,6 +183,7 @@ def test_particle_pair_block3(fit_config, particle_pair_block3):
         assert pair.spin_a is not None, "Spin A is missing"
         assert pair.spin_b is not None, "Spin B is missing"
 
+
 def test_particle_pair_block4(fit_config, particle_pair_block4):
     # Parse the lines from particle_pair_block4 into the FitConfig
     Card04.from_lines(particle_pair_block4, fit_config)
@@ -195,6 +199,7 @@ def test_particle_pair_block4(fit_config, particle_pair_block4):
         assert pair.charge_b is not None, "Charge B is missing"
         assert pair.spin_a is not None, "Spin A is missing"
         assert pair.spin_b is not None, "Spin B is missing"
+
 
 def test_keyword_parsing_simple(fit_config):
     lines = [
@@ -308,7 +313,7 @@ def test_from_lines_to_lines_roundtrip(fit_config):
     out_lines = Card04.to_lines(fit_config)
 
     # Parse again
-    fit_config2 = fit_config.__class__()    
+    fit_config2 = fit_config.__class__()
     Card04.from_lines(out_lines, fit_config2)
 
     # assert that configs are equal
