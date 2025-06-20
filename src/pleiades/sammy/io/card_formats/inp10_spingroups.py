@@ -26,7 +26,8 @@ class Card10p2(BaseModel):
             None otherwise.
         """
         s = line[:8]
-        if len(s) >= 8 and s[0:3].strip().isdigit() and (s[3] == " " or s[3].upper() == "X") and s[4:6] == "  ":
+
+        if len(s) >= 8 and s[0:3].strip().isdigit() and (s[4] == " " or s[4].upper() == "X") and s[5:6] == "  ":
             return "SPIN_GROUP"
         if len(s) >= 8 and s[0:2] == "  " and s[2:5].strip().isdigit() and s[5:7] == "  ":
             return "CHANNEL"
@@ -61,6 +62,7 @@ class Card10p2(BaseModel):
             print(f"Processing line {idx}/{len(lines)}: {line.strip()}")
 
             if line_type is None:
+                logger.warning(f"Line {idx} does not match expected format: {line.strip()}")
                 idx += 1
                 continue
 
@@ -105,6 +107,9 @@ class Card10p2(BaseModel):
                     line_type = cls.get_line_type(ch_line)
 
                     if line_type != "CHANNEL":
+                        logger.warning(
+                            f"Expected CHANNEL line but found {line_type} at index {idx}: {ch_line.strip()}"
+                        )
                         break
 
                     print(f"Channel: \t{line_type}:{idx}/{len(lines)}\t {ch_line.strip()}")
