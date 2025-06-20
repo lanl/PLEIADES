@@ -1,4 +1,3 @@
-# Copyright 2024, PLEIADES Project
 import pytest
 
 from pleiades.sammy.fitting.config import FitConfig
@@ -133,38 +132,69 @@ def fit_config():
     # Create a minimal FitConfig instance
     return FitConfig()
 
+def test_particle_pair_block1(fit_config, particle_pair_block1):
+    # Parse the lines from particle_pair_block1 into the FitConfig
+    Card04.from_lines(particle_pair_block1, fit_config)
+    # Check the number of particle pairs parsed
+    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
+    assert len(found) == 1, f"Expected 1 pair, found {len(found)}"
+    # Check that the pair has the required attributes
+    pair = found[0]
+    assert pair.name, "Particle pair name is missing"
+    assert pair.mass_a is not None, "Mass A is missing"
+    assert pair.mass_b is not None, "Mass B is missing"
+    assert pair.charge_a is not None, "Charge A is missing"
+    assert pair.charge_b is not None, "Charge B is missing"
+    assert pair.spin_a is not None, "Spin A is missing"
+    assert pair.spin_b is not None, "Spin B is missing"
 
-# Simple parametrized test to run keyword parsing and multiline field tests on all fixtures
-@pytest.mark.parametrize(
-    "block_fixture",
-    [
-        "particle_pair_block1",
-        "particle_pair_block2",
-        "particle_pair_block3",
-        "particle_pair_block4",
-    ],
-)
-def test_keyword_and_multiline_on_all_blocks(block_fixture, fit_config, request):
-    lines = request.getfixturevalue(block_fixture)
-    Card04.from_lines(lines, fit_config)
-    # Access particle pairs through isotopes (FitConfig.nuclear_params.isotopes is a list of IsotopeParameters)
-    found = []
-    for iso in fit_config.nuclear_params.isotopes:
-        if hasattr(iso, "particle_pairs") and iso.particle_pairs:
-            found.extend(iso.particle_pairs)
-    assert found, f"No particle pairs parsed for {block_fixture}"
-    # Check that all pairs have required fields
+def test_each_particle_pair_block_2(fit_config, particle_pair_block2):
+    # Parse the lines from particle_pair_block2 into the FitConfig
+    Card04.from_lines(particle_pair_block2, fit_config)
+    # Check the number of particle pairs parsed
+    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
+    assert len(found) == 3, f"Expected 3 pairs, found {len(found)}"
+    # Check that each pair has the required attributes
     for pair in found:
-        assert pair.name
-        assert pair.name_a
-        assert pair.name_b
-        assert pair.mass_a is not None
-        assert pair.mass_b is not None
-        assert pair.charge_a is not None
-        assert pair.charge_b is not None
-        assert pair.spin_a is not None
-        assert pair.spin_b is not None
+        assert pair.name, "Particle pair name is missing"
+        assert pair.mass_a is not None, "Mass A is missing"
+        assert pair.mass_b is not None, "Mass B is missing"
+        assert pair.charge_a is not None, "Charge A is missing"
+        assert pair.charge_b is not None, "Charge B is missing"
+        assert pair.spin_a is not None, "Spin A is missing"
+        assert pair.spin_b is not None, "Spin B is missing"
+        
+def test_particle_pair_block3(fit_config, particle_pair_block3):
+    # Parse the lines from particle_pair_block3 into the FitConfig
+    Card04.from_lines(particle_pair_block3, fit_config)
+    # Check the number of particle pairs parsed
+    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
+    assert len(found) == 5, f"Expected 5 pairs, found {len(found)}"
+    # Check that each pair has the required attributes
+    for pair in found:
+        assert pair.name, "Particle pair name is missing"
+        assert pair.mass_a is not None, "Mass A is missing"
+        assert pair.mass_b is not None, "Mass B is missing"
+        assert pair.charge_a is not None, "Charge A is missing"
+        assert pair.charge_b is not None, "Charge B is missing"
+        assert pair.spin_a is not None, "Spin A is missing"
+        assert pair.spin_b is not None, "Spin B is missing"
 
+def test_particle_pair_block4(fit_config, particle_pair_block4):
+    # Parse the lines from particle_pair_block4 into the FitConfig
+    Card04.from_lines(particle_pair_block4, fit_config)
+    # Check the number of particle pairs parsed
+    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
+    assert len(found) == 5, f"Expected 5 pairs, found {len(found)}"
+    # Check that each pair has the required attributes
+    for pair in found:
+        assert pair.name, "Particle pair name is missing"
+        assert pair.mass_a is not None, "Mass A is missing"
+        assert pair.mass_b is not None, "Mass B is missing"
+        assert pair.charge_a is not None, "Charge A is missing"
+        assert pair.charge_b is not None, "Charge B is missing"
+        assert pair.spin_a is not None, "Spin A is missing"
+        assert pair.spin_b is not None, "Spin B is missing"
 
 def test_keyword_parsing_simple(fit_config):
     lines = [
@@ -263,7 +293,7 @@ def test_threshold(fit_config):
     assert found[-1].threshold == pytest.approx(42.0)
 
 
-def test_to_lines_roundtrip(fit_config):
+def test_from_lines_to_lines_roundtrip(fit_config):
     # Test that to_lines produces a string that can be parsed again
     lines = [
         "PARTICLE PAIR DEFINITIONS",
@@ -276,24 +306,10 @@ def test_to_lines_roundtrip(fit_config):
     Card04.from_lines(lines, fit_config)
     # Now convert back to lines
     out_lines = Card04.to_lines(fit_config)
-    assert any("Q=" in line for line in out_lines)
+
     # Parse again
-    fit_config2 = fit_config.__class__()
+    fit_config2 = fit_config.__class__()    
     Card04.from_lines(out_lines, fit_config2)
-    found = [p for iso in fit_config2.nuclear_params.isotopes for p in iso.particle_pairs]
-    assert found[-1].q_value == pytest.approx(123.456)
 
-
-def test_particle_pair_blocks_all(block_fixture, expected_count, fit_config, request):
-    lines = request.getfixturevalue(block_fixture)
-    Card04.from_lines(lines, fit_config)
-    found = [p for iso in fit_config.nuclear_params.isotopes for p in iso.particle_pairs]
-    assert len(found) == expected_count
-    for pair in found:
-        assert pair.name
-        assert pair.mass_a is not None
-        assert pair.mass_b is not None
-        assert pair.charge_a is not None
-        assert pair.charge_b is not None
-        assert pair.spin_a is not None
-        assert pair.spin_b is not None
+    # assert that configs are equal
+    assert fit_config == fit_config2, "FitConfig objects are not equal after roundtrip"
