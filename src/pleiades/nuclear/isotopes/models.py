@@ -82,9 +82,9 @@ class IsotopeInfo(BaseModel):
     """
 
     name: Optional[str] = Field(default=None, description="Isotope name")
-    mass_number: Optional[int] = Field(default=None, gt=0)
+    mass_number: Optional[int] = Field(default=None, ge=0)
     element: Optional[str] = Field(default=None, description="Element symbol")
-    atomic_number: Optional[int] = Field(default=None, gt=0)
+    atomic_number: Optional[int] = Field(default=None, ge=0)
     mass_data: Optional[IsotopeMassData] = Field(default=None, description="Isotope mass data")
     abundance: Optional[float] = Field(default=None, ge=0)
     spin: Optional[float] = Field(default=None)
