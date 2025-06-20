@@ -49,9 +49,8 @@ class Card10p2(BaseModel):
 
         spin_groups = []
         idx = 0
-        
+
         while idx < len(lines):
-            
             line = lines[idx]
 
             if not line.strip():
@@ -66,7 +65,7 @@ class Card10p2(BaseModel):
                 continue
 
             print(f"Spingroup: \t{line_type}:{idx}/{len(lines)}\t {line.strip()}")
-            
+
             if line_type == "SPIN_GROUP":
                 # Parse spin group line
                 try:
@@ -82,7 +81,7 @@ class Card10p2(BaseModel):
                     spin = float(line[15:20].strip())
                     abundance = float(line[20:30].strip())
 
-                    #print(f"{spin_group_number} {excluded} {number_of_entry_channels} {number_of_exit_channels} {spin} {abundance}")
+                    # print(f"{spin_group_number} {excluded} {number_of_entry_channels} {number_of_exit_channels} {spin} {abundance}")
 
                 except Exception as e:
                     logger.error(
@@ -99,12 +98,12 @@ class Card10p2(BaseModel):
                 # Parse all channel info lines for this spin group
                 channel_info_list = []
                 idx += 1
-                
-                while idx < len(lines):                    
+
+                while idx < len(lines):
                     ch_line = lines[idx]
-                    
+
                     line_type = cls.get_line_type(ch_line)
-                    
+
                     if line_type != "CHANNEL":
                         break
 
@@ -126,12 +125,11 @@ class Card10p2(BaseModel):
                         boundary_condition = float(ch_line[30:40].strip()) if ch_line[30:40].strip() != "" else None
                         effective_radius = float(ch_line[40:50].strip()) if ch_line[40:50].strip() != "" else None
                         true_radius = float(ch_line[50:60].strip()) if ch_line[50:60].strip() != "" else None
-                    
+
                     except Exception as e:
                         logger.error(f"Failed to parse channel line: {ch_line.strip()} ({e})")
                         raise ValueError(f"Failed to parse channel line: {ch_line.strip()} ({e})")
-                    
-                    
+
                     channel_info_list.append(
                         SpinGroupChannelInfo(
                             channel_number=channel_number,
@@ -144,7 +142,7 @@ class Card10p2(BaseModel):
                             true_radius=true_radius,
                         )
                     )
-                    
+
                     # move to the next channel line
                     idx += 1
 
@@ -157,8 +155,8 @@ class Card10p2(BaseModel):
                     abundance=abundance,
                     channel_info=channel_info_list,
                 )
-                
-                #print(f"\033[92m{spin_group}\033[0m")
+
+                # print(f"\033[92m{spin_group}\033[0m")
                 spin_groups.append(spin_group)
 
             # if isotopes exist, loop through the isotopes, then the existing spin groups to find a match
