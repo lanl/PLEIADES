@@ -27,9 +27,11 @@ class Card10p2(BaseModel):
         """
         s = line[:8]
 
-        if len(s) >= 8 and s[0:3].strip().isdigit() and (s[4] == " " or s[4].upper() == "X") and s[5:6] == "  ":
+        # SPIN_GROUP: first 3 are digits, 4th is blank, 5th is blank or X
+        if len(s) >= 5 and s[0:3].strip().isdigit() and s[3] == " " and (s[4] == " " or s[4].upper() == "X"):
             return "SPIN_GROUP"
-        if len(s) >= 8 and s[0:2] == "  " and s[2:5].strip().isdigit() and s[5:7] == "  ":  # TODO: <<< CHECK THIS!!!!
+        # CHANNEL: first 2 blank, next 3 digits, next 2 blank
+        if len(s) >= 7 and s[0:2] == "  " and s[2:5].strip().isdigit() and s[5:7] == "  ":
             return "CHANNEL"
         return None
 
