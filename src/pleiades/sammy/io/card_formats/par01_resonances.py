@@ -3,10 +3,8 @@ from typing import List
 
 from pydantic import BaseModel
 
-from pleiades.nuclear.isotopes.manager import (
-    IsotopeManager,  # Needed to create isotopes if no isotopes are found in fit_config
-)
-from pleiades.nuclear.models import ResonanceEntry, SpinGroups  # Needed to store resonance data
+from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import IsotopeParameters, ResonanceEntry, SpinGroups  # Needed to store resonance data
 from pleiades.sammy.fitting.config import FitConfig  # FitConfig object to contain list of resonance entries
 from pleiades.utils.helper import (  # VaryFlag and check_pseudo_scientific for parameter parsing
     VaryFlag,
@@ -57,14 +55,10 @@ class Card01(BaseModel):
             logger.error(message)
             raise ValueError(message)
 
-        # if fit_config is not an instance of FitConfig, raise an error
-        if fit_config is not None and not isinstance(fit_config, FitConfig):
+        if fit_config is None or not isinstance(fit_config, FitConfig):
             message = "fit_config must be an instance of FitConfig"
             logger.error(message)
             raise ValueError(message)
-
-        elif fit_config is None:
-            fit_config = FitConfig()
 
         # Check to see if the the first line is a header line, if so skip it
         if cls.is_header_line(lines[0]):
@@ -91,7 +85,14 @@ class Card01(BaseModel):
         # If there are no isotopes in the fit_config, create a "unknown" [UNKN] isotope
         if not fit_config.nuclear_params.isotopes:
             logger.warning("No isotopes found in fit_config, creating a default UNKN isotope")
-            fit_config.nuclear_params.isotopes.append(IsotopeManager.create_isotope_from_string("UNKN-01"))
+            fit_config.nuclear_params.isotopes.append(
+                IsotopeParameters(
+                    isotope_information=IsotopeInfo(
+                        name="UNKN",
+                        mass_data=IsotopeMassData(atomic_mass=0),
+                    )
+                )
+            )
 
         for line in lines:
             if not line.strip():
