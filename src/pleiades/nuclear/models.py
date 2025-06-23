@@ -712,6 +712,18 @@ class IsotopeParameters(BaseModel):
         self.particle_pairs.append(particle_pair)
         logger.info(f"Particle pair {particle_pair.name} appended to isotope {self.isotope_information.name}")
 
+    def append_spin_group(self, spin_group: SpinGroups):
+        """Append a spin group to the list of spin groups, if no spin groups exist then create a new list.
+        This method is used to add a new spin group to the isotope parameters.
+
+        Args:
+            spin_group (SpinGroups): The spin group to append
+        """
+        if not self.spin_groups:
+            self.spin_groups = []
+        self.spin_groups.append(spin_group)
+        logger.info(f"Spin group {spin_group.spin_group_number} appended to isotope {self.isotope_information.name}")
+
     def __str__(self) -> str:
         """
         Return a text table representation of the IsotopeParameters object.
