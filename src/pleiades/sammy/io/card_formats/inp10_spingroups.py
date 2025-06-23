@@ -3,7 +3,8 @@ from typing import List
 
 from pydantic import BaseModel
 
-from pleiades.nuclear.models import SpinGroupChannelInfo, SpinGroups
+from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import IsotopeParameters, SpinGroupChannelInfo, SpinGroups
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.logger import loguru_logger
 
@@ -61,14 +62,11 @@ class Card10p2(BaseModel):
                 continue
 
             line_type = cls.get_line_type(line)
-            print(f"Processing line {idx}/{len(lines)}: {line.strip()}")
 
             if line_type is None:
                 logger.warning(f"Line {idx} does not match expected format: {line.strip()}")
                 idx += 1
                 continue
-
-            print(f"Spingroup: \t{line_type}:{idx}/{len(lines)}\t {line.strip()}")
 
             if line_type == "SPIN_GROUP":
                 # Parse spin group line
@@ -84,8 +82,6 @@ class Card10p2(BaseModel):
                     number_of_exit_channels = int(line[12:15].strip())
                     spin = float(line[15:20].strip())
                     abundance = float(line[20:30].strip())
-
-                    # print(f"{spin_group_number} {excluded} {number_of_entry_channels} {number_of_exit_channels} {spin} {abundance}")
 
                 except Exception as e:
                     logger.error(
@@ -109,10 +105,7 @@ class Card10p2(BaseModel):
                     line_type = cls.get_line_type(ch_line)
 
                     if line_type != "CHANNEL":
-                        logger.warning(f"Expected CHANNEL line but found {line_type} at index {idx}: {ch_line.strip()}")
                         break
-
-                    print(f"Channel: \t{line_type}:{idx}/{len(lines)}\t {ch_line.strip()}")
 
                     try:
                         channel_number = int(ch_line[2:5].strip()) if ch_line[2:5].strip() != "" else None
@@ -161,14 +154,14 @@ class Card10p2(BaseModel):
                     channel_info=channel_info_list,
                 )
 
-                # print(f"\033[92m{spin_group}\033[0m")
-                spin_groups.append(spin_group)
-
             # if isotopes exist, loop through the isotopes, then the existing spin groups to find a match
             if fit_config.nuclear_params.isotopes:
+                isotope_spin_group_match = False
+
                 for isotope in fit_config.nuclear_params.isotopes:
                     if not hasattr(isotope, "spin_groups") or isotope.spin_groups is None:
                         isotope.spin_groups = []
+
                     # Check if the spin group already exists
                     for existing_sg in isotope.spin_groups:
                         if existing_sg.spin_group_number == spin_group.spin_group_number:
@@ -179,10 +172,35 @@ class Card10p2(BaseModel):
                             existing_sg.spin = spin_group.spin
                             existing_sg.abundance = spin_group.abundance
                             existing_sg.channel_info.extend(spin_group.channel_info)
+                            isotope_spin_group_match = True
                             break
 
+                    # found matching spin group so break out of isotope for loop
+                    if isotope_spin_group_match:
+                        break
+
+                    # If no matching spin group is found, create a new one
+                    if not isotope_spin_group_match:
+                        isotope.spin_groups.append(spin_group)
+                        logger.warning(
+                            f"Attaching spin group {spin_group.spin_group_number} to isotope {isotope.isotope_information.name}"
+                        )
+
             else:
-                logger.warning("No isotopes found in fit_config to attach spin groups")
+                logger.warning("No isotopes found in fit_config to attach spin groups. Creating UNKN isotope")
+
+                fit_config.nuclear_params.isotopes.append(
+                    IsotopeParameters(
+                        isotope_information=IsotopeInfo(
+                            name="UNKN",
+                            mass_data=IsotopeMassData(atomic_mass=0),
+                        )
+                    )
+                )
+                logger.warning(
+                    f"Attaching spin group {spin_group.spin_group_number} to isotope {fit_config.nuclear_params.isotopes[0].isotope_information.name}"
+                )
+                fit_config.nuclear_params.isotopes[0].append_spin_group(spin_group)
 
     @classmethod
     def to_lines(cls, fit_config: FitConfig) -> List[str]:
