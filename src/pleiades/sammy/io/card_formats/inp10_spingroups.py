@@ -42,6 +42,7 @@ class Card10p2(BaseModel):
             message = "No lines provided"
             logger.error(message)
             raise ValueError(message)
+
         if fit_config is None or not isinstance(fit_config, FitConfig):
             message = "fit_config must be an instance of FitConfig"
             logger.error(message)
