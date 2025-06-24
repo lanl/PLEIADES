@@ -155,4 +155,50 @@ class Card04(BaseModel):
         broad_params = BroadeningParameters(**main_kwargs)
         fit_config.physics_params.broadening_parameters = broad_params
         logger.info("Assigned broadening parameters to fit_config.physics_params.broadening_parameters")
+
         return True
+
+    @classmethod
+    def to_lines(cls, fit_config: FitConfig):
+        broadening_params = fit_config.physics_params.broadening_parameters
+
+        # Helper to format floats or blank if None or zero
+        def fmt(val, width=10, prec=6):
+            if val is None or (isinstance(val, (int, float)) and float(val) == 0.0):
+                return " " * width
+            return f"{val:>{width}.{prec}f}"
+
+        # Helper to format flags or blank if None or zero
+        def flag_val(flag, width=2):
+            if flag is None or flag.value == 0:
+                return " " * width
+            return f"{flag.value:{width}d}"
+
+        line2 = (
+            fmt(broadening_params.crfn)
+            + fmt(broadening_params.temp)
+            + fmt(broadening_params.thick)
+            + fmt(broadening_params.deltal)
+            + fmt(broadening_params.deltag)
+            + fmt(broadening_params.deltae)
+            + flag_val(broadening_params.flag_crfn)
+            + flag_val(broadening_params.flag_temp)
+            + flag_val(broadening_params.flag_thick)
+            + flag_val(broadening_params.flag_deltal)
+            + flag_val(broadening_params.flag_deltag)
+        )
+        line3 = (
+            fmt(broadening_params.d_crfn)
+            + fmt(broadening_params.d_temp)
+            + fmt(broadening_params.d_thick)
+            + fmt(broadening_params.d_deltal)
+            + fmt(broadening_params.d_deltag)
+            + fmt(broadening_params.d_deltae)
+        )
+        lines = ["BROADENING PARAMETERS FOLLOW", line2]
+        # Only append line3 if it is not all spaces
+        if line3.strip():
+            lines.append(line3)
+
+        lines.append("")
+        return lines
