@@ -4,7 +4,8 @@ from typing import List
 
 from pydantic import BaseModel
 
-from pleiades.nuclear.models import RadiusParameters
+from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+from pleiades.nuclear.models import IsotopeParameters, RadiusParameters
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.logger import loguru_logger
 
@@ -195,36 +196,54 @@ class Card07a(BaseModel):
         # --- Check if there are multiple isotopes in the fit_config object ---
         multiple_isotopes = False
 
-        # if there are multiple isotopes then check if spin groups of the isotopes match the spin groups of the radius parameters
-        if len(fit_config.nuclear_params.isotopes) > 1:
-            multiple_isotopes = True
+        if fit_config.nuclear_params.isotopes:
+            # if there are multiple isotopes then check if spin groups of the isotopes match the spin groups of the radius parameters
+            if len(fit_config.nuclear_params.isotopes) > 1:
+                multiple_isotopes = True
 
-        # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
-        if multiple_isotopes:
-            for isotope in fit_config.nuclear_params.isotopes:
-                # Get all spin group numbers from SpinGroups objects
-                spin_groups_in_isotope = (
-                    [sg.spin_group_number for sg in isotope.spin_groups] if isotope.spin_groups else None
-                )
-
-                # Assign matching radius parameters to each isotope
-                matching_radii = []
-                for radius_param in radius_params_list:
-                    if radius_param.spin_groups:
-                        # If any spin group in radius_param matches any in isotope
-                        if any(spin in spin_groups_in_isotope for spin in radius_param.spin_groups):
-                            matching_radii.append(radius_param)
-                    else:
-                        # If spin_groups is None, treat as global (assign to all)
-                        matching_radii.append(radius_param)
-                if matching_radii:
-                    isotope.radius_parameters = matching_radii
-                    logger.info(
-                        f"Assigned {len(matching_radii)} RadiusParameters to Isotope: {isotope.isotope_information.name}"
+            # Loop through the isotopes to assign or append the radius parameters based on matching spin groups
+            if multiple_isotopes:
+                for isotope in fit_config.nuclear_params.isotopes:
+                    # Get all spin group numbers from SpinGroups objects
+                    spin_groups_in_isotope = (
+                        [sg.spin_group_number for sg in isotope.spin_groups] if isotope.spin_groups else None
                     )
 
-        # If no isotopes in fit_config, assign to a default isotope
-        if not multiple_isotopes:
+                    # Assign matching radius parameters to each isotope
+                    matching_radii = []
+                    for radius_param in radius_params_list:
+                        if radius_param.spin_groups:
+                            # If any spin group in radius_param matches any in isotope
+                            if any(spin in spin_groups_in_isotope for spin in radius_param.spin_groups):
+                                matching_radii.append(radius_param)
+                        else:
+                            # If spin_groups is None, treat as global (assign to all)
+                            matching_radii.append(radius_param)
+                    if matching_radii:
+                        isotope.radius_parameters = matching_radii
+                        logger.info(
+                            f"Assigned {len(matching_radii)} RadiusParameters to Isotope: {isotope.isotope_information.name}"
+                        )
+
+            # If no isotopes in fit_config, assign to a default isotope
+            if not multiple_isotopes:
+                default_isotope = fit_config.nuclear_params.isotopes[0]
+                default_isotope.radius_parameters = radius_params_list
+                logger.debug(
+                    f"Assigned {len(radius_params_list)} RadiusParameters to Default Isotope: {default_isotope.isotope_information.name}"
+                )
+
+        else:
+            logger.warning("No isotopes found in fit_config to attach radii. Creating UNKN isotope")
+
+            fit_config.nuclear_params.isotopes.append(
+                IsotopeParameters(
+                    isotope_information=IsotopeInfo(
+                        name="UNKN",
+                        mass_data=IsotopeMassData(atomic_mass=0),
+                    )
+                )
+            )
             default_isotope = fit_config.nuclear_params.isotopes[0]
             default_isotope.radius_parameters = radius_params_list
             logger.debug(
