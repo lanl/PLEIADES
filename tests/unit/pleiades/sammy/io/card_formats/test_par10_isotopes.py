@@ -119,3 +119,36 @@ def test_invalid_header_raises():
     fit_config = FitConfig()
     with pytest.raises(ValueError):
         Card10.from_lines(lines, fit_config)
+
+
+def test_to_lines_round_trip_standard_format(standard_format_lines_silicon):
+    """Test that parsing and then serializing returns the same number of isotopes and similar lines."""
+    fit_config = FitConfig()
+    Card10.from_lines(standard_format_lines_silicon, fit_config)
+    lines = Card10.to_lines(fit_config)
+
+    # Check that the header is present
+    assert any("isotopic" in line.lower() for line in lines)
+    # Check that the number of isotopes is preserved
+    assert len(fit_config.nuclear_params.isotopes) == 4
+
+    # Check that at least one mass value appears in the output
+    assert any("27.9769" in line for line in lines)
+
+
+def test_to_lines_round_trip_extended_format(extended_format_lines_ta181_U235_u238):
+    """Test round-trip for extended format."""
+    fit_config = FitConfig()
+    Card10.from_lines(extended_format_lines_ta181_U235_u238, fit_config)
+    lines = Card10.to_lines(fit_config)
+    assert any("isotopic" in line.lower() or "abundances" in line.lower() for line in lines)
+    assert len(fit_config.nuclear_params.isotopes) == 3
+    assert any("180.948" in line for line in lines)
+    assert any("235.044" in line for line in lines)
+    assert any("238.051" in line for line in lines)
+
+
+def test_empty_lines_raises():
+    fit_config = FitConfig()
+    with pytest.raises(ValueError):
+        Card10.from_lines([], fit_config)
