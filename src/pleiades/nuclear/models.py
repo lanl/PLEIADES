@@ -290,6 +290,44 @@ class SpinGroups(BaseModel):
         return "\n".join(table)
 
 
+class SpinGroupChannels(BaseModel):
+    """Container for a spin group and its associated channels.
+
+    This class represents the mapping between a spin group number and the
+    list of channels that belong to that group.
+
+    Attributes:
+        group_number (int): The spin group number (must be positive)
+        channels (List[int]): List of channel numbers for this spin group
+    """
+
+    group_number: int = Field(description="Spin group number", gt=0)
+    channels: List[int] = Field(description="List of channel numbers for this spin group")
+
+    @field_validator("channels")
+    def validate_channels(cls, v: List[int]) -> List[int]:
+        """Validate channel numbers.
+
+        Args:
+            v: List of channel numbers
+
+        Returns:
+            List[int]: Validated channel numbers
+
+        Raises:
+            ValueError: If any channel number is invalid
+        """
+        for channel in v:
+            if channel <= 0:
+                raise ValueError(f"Channel numbers must be positive, got {channel}")
+        return v
+
+    def __str__(self) -> str:
+        """Return a string representation of the spin group and channels."""
+        channels_str = ", ".join(map(str, self.channels))
+        return f"Group= {self.group_number:2d}   Chan= {channels_str}"
+
+
 class RadiusParameters(BaseModel):
     """Container for nuclear radius parameters of isotopes used in SAMMY calculations.
 
@@ -326,9 +364,10 @@ class RadiusParameters(BaseModel):
             - YES (1): Parameter is varied independently
             - PUP (3): Parameter is treated as a propagated uncertainty parameter
 
-        spin_groups (List[int]):
-            List of spin group numbers that use these radius parameters.
-            Values > 500 indicate omitted resonances.
+        spin_groups (List[SpinGroupChannels]):
+            List of spin group and channel mappings that use these radius parameters.
+            Each entry contains a group number and its associated channels.
+            Group numbers > 500 indicate omitted resonances.
 
         channels (Optional[List[int]]):
             List of channel numbers when channel_mode=1.
@@ -353,35 +392,35 @@ class RadiusParameters(BaseModel):
     )
     vary_effective: Optional[VaryFlag] = Field(default=None, description="Flag for varying effective radius")
     vary_true: Optional[VaryFlag] = Field(default=None, description="Flag for varying true radius")
-    spin_groups: Optional[List[int]] = Field(
+    spin_groups: Optional[List[SpinGroupChannels]] = Field(
         default=None,
-        description="List of spin group numbers",
+        description="List of spin group and channel mappings",
     )
     channels: Optional[List[int]] = Field(
         default=None, description="List of channel numbers (required when channel_mode=1)"
     )
 
     @field_validator("spin_groups")
-    def validate_spin_groups(cls, v: List[int]) -> List[int]:
-        """Validate spin group numbers.
+    def validate_spin_groups(cls, v: Optional[List[SpinGroupChannels]]) -> Optional[List[SpinGroupChannels]]:
+        """Validate spin groups and their channels.
 
         Args:
-            v: List of spin group numbers
+            v: List of SpinGroupChannels objects
 
         Returns:
-            List[int]: Validated spin group numbers
+            Optional[List[SpinGroupChannels]]: Validated spin groups
 
         Raises:
-            ValueError: If any spin group number is invalid
+            ValueError: If any spin group or channel data is invalid
         """
-        for group in v:
-            if group <= 0:
-                raise ValueError(f"Spin group numbers must be positive, got {group}")
+        if v is None:
+            return v
 
+        for spin_group in v:
             # Values > 500 are valid but indicate omitted resonances
             # We allow them but might want to warn the user
-            if group > 500:
-                print(f"Warning: Spin group {group} > 500 indicates omitted resonances")
+            if spin_group.group_number > 500:
+                print(f"Warning: Spin group {spin_group.group_number} > 500 indicates omitted resonances")
 
         return v
 
