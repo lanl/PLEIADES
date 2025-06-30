@@ -681,11 +681,13 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If resonance igroup validation fails
         """
+        # Extract spin group numbers from SpinGroups objects
+        spin_group_numbers = [group.spin_group_number for group in self.spin_groups]
 
         for resonance in self.resonances:
-            if resonance.igroup not in self.spin_groups:
-                logger.error(f"Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
-                raise ValueError(f"Resonance igroup {resonance.igroup} not in spin groups {self.spin_groups}")
+            if resonance.igroup not in spin_group_numbers:
+                logger.error(f"Resonance igroup {resonance.igroup} not in spin groups {spin_group_numbers}")
+                raise ValueError(f"Resonance igroup {resonance.igroup} not in spin groups {spin_group_numbers}")
 
         return self
 
@@ -702,14 +704,19 @@ class IsotopeParameters(BaseModel):
         Raises:
             ValueError: If radius parameter spin group validation fails
         """
+        # Extract spin group numbers from SpinGroups objects
+        isotope_spin_group_numbers = [group.spin_group_number for group in self.spin_groups]
 
         for radius in self.radius_parameters:
-            for group in radius.spin_groups:
-                if group not in self.spin_groups:
-                    logger.error(f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}")
-                    raise ValueError(
-                        f"Radius parameter spin group {group} not in isotope spin groups {self.spin_groups}"
-                    )
+            if radius.spin_groups:  # Check if spin_groups is not None
+                for spin_group_channel in radius.spin_groups:
+                    if spin_group_channel.group_number not in isotope_spin_group_numbers:
+                        logger.error(
+                            f"Radius parameter spin group {spin_group_channel.group_number} not in isotope spin groups {isotope_spin_group_numbers}"
+                        )
+                        raise ValueError(
+                            f"Radius parameter spin group {spin_group_channel.group_number} not in isotope spin groups {isotope_spin_group_numbers}"
+                        )
 
         return self
 
