@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
-from pleiades.nuclear.models import IsotopeParameters, RadiusParameters
+from pleiades.nuclear.models import IsotopeParameters, RadiusParameters, SpinGroupChannels
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.logger import loguru_logger
 
@@ -157,7 +157,7 @@ class Card07a(BaseModel):
                     else:
                         break
 
-                spin_groups = []  # List to hold spin groups
+                spin_groups = []  # List to hold SpinGroupChannels objects
                 channels = []  # List to hold channels
                 channel_mode = 0  # Default channel mode
                 if groups_and_channels:
@@ -167,7 +167,9 @@ class Card07a(BaseModel):
                             channels = None
                             channel_mode = 0
                             break
-                        spin_groups.append(group)
+                        # Create SpinGroupChannels object
+                        spin_group_channels = SpinGroupChannels(group_number=group, channels=chans)
+                        spin_groups.append(spin_group_channels)
                         if chans and len(chans) > 0:
                             channels.extend(chans)
                     if channels:
@@ -213,8 +215,10 @@ class Card07a(BaseModel):
                     matching_radii = []
                     for radius_param in radius_params_list:
                         if radius_param.spin_groups:
+                            # Extract group numbers from SpinGroupChannels objects
+                            radius_param_groups = [sg.group_number for sg in radius_param.spin_groups]
                             # If any spin group in radius_param matches any in isotope
-                            if any(spin in spin_groups_in_isotope for spin in radius_param.spin_groups):
+                            if any(spin in spin_groups_in_isotope for spin in radius_param_groups):
                                 matching_radii.append(radius_param)
                         else:
                             # If spin_groups is None, treat as global (assign to all)
@@ -297,23 +301,14 @@ class Card07a(BaseModel):
                 # Group and channel formatting
                 spin_groups = radius_parameter.spin_groups if radius_parameter.spin_groups else []
                 channels = radius_parameter.channels if radius_parameter.channels else []
-                # If channels are present, try to pair them with groups, else just print group
-                if spin_groups and channels and len(spin_groups) == len(channels):
-                    for spin_group, channel in zip(spin_groups, channels):
-                        lines.append(f"   Group= {spin_group:2d}   Chan= {channel:2d},")
-                elif spin_groups and channels and (len(channels) == 1):
-                    # One channel, multiple groups
-                    for spin_group in spin_groups:
-                        lines.append(f"   Group= {spin_group:2d}   Chan= {channels[0]:2d},")
-                elif spin_groups and channels:
-                    # Fallback: print all groups and all channels (comma separated)
-                    for spin_group in spin_groups:
-                        for channel in channels:
-                            lines.append(f"   Group= {spin_group:2d}   Chan= {channel:2d},")
-                elif spin_groups:
-                    for spin_group in spin_groups:
-                        lines.append(f"   Group= {spin_group:2d}")
+
+                # Use the SpinGroupChannels objects to format output
+                if spin_groups:
+                    for spin_group_channels in spin_groups:
+                        # Use the __str__ method of SpinGroupChannels which formats as "Group=  1   Chan=  1,  2,"
+                        lines.append(f"   {spin_group_channels}")
                 elif channels:
+                    # If no spin groups but channels exist, just print channels
                     for channel in channels:
                         lines.append(f"   Chan= {channel:2d},")
 
