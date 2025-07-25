@@ -1,3 +1,6 @@
+PROTON_CHARGE_UNCERTAINTY = 0.005
+
+
 class Roi:
     def __init__(self, x1, y1, x2, y2):
         if x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0:
@@ -39,6 +42,8 @@ class MasterDictKeys:
 
     obs_data_combined = "obs_data_combined"
     sample_data = "sample_data"
+    uncertainties_obs_data_combined = "uncertainties_obs_data_combined"
+    uncertainties_sample_data = "uncertainties_sample_data"
 
     frame_number = "frame_number"
     proton_charge = "proton_charge"

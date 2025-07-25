@@ -78,6 +78,8 @@ def init_normalization_dict(list_folders: list) -> dict:
     """
     normalization_dict = {MasterDictKeys.obs_data_combined: None,
                           MasterDictKeys.sample_data: {},
+                          MasterDictKeys.uncertainties_obs_data_combined: None,
+                          MasterDictKeys.uncertainties_sample_data: None,
                           }
     for folder in list_folders:
         normalization_dict[MasterDictKeys.sample_data][folder] = None
@@ -101,7 +103,7 @@ def normalization(list_sample_folders: list,
                   facility=Facility.ornl,
                   num_threads: int = 1):
     """
-    Normalize the data from the sample and observation folders.
+    Normalize the data from the sample and open beam folders.
 
     if more than 1 ob folder is provided, the data will be combined using the mean
     if more than 1 sample folder is provided, each folder will be processed separately
@@ -162,7 +164,7 @@ def normalization(list_sample_folders: list,
     
     # Check if the input folders are valid
     if not list_sample_folders or not list_obs_folders:
-        raise ValueError("Sample and observation folders must be provided.")
+        raise ValueError("Sample and open beam folders must be provided.")
     
     if isinstance(list_sample_folders, str):
         list_sample_folders = [list_sample_folders]
@@ -249,9 +251,9 @@ def normalization(list_sample_folders: list,
 if __name__ == "__main__":
     # Example usage
     normalization(
-        list_sample_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7820"],
-        list_obs_folders=["/Users/j35/SNS/VENUS/IPTS-35945/autoreduce/Run_7816"],
-        nexus_path="/Users/j35/SNS/VENUS/IPTS-35945/nexus",
+        list_sample_folders=["/Users/j35/SNS/VENUS_local/IPTS-35945/autoreduce/Run_7820"],
+        list_obs_folders=["/Users/j35/SNS/VENUS_local/IPTS-35945/autoreduce/Run_7816"],
+        nexus_path="/Users/j35/SNS/VENUS_local/IPTS-35945/nexus",
         background_roi=Roi(0, 0, 10, 10),
         crop_roi=Roi(10, 10, 200, 200),
         timepix=True,
@@ -260,7 +262,14 @@ if __name__ == "__main__":
         rolling_average=False,
         distance_source_detector_m=25,
         detector_offset_micros=0,
-        output_folder="/Users/j35/SNS/IPTS-35945/processed",
+        output_folder="/Users/j35/SNS/VENUS_local/IPTS-35945/processed",
         output_numpy=True,
+        facility=Facility.ornl,
         num_threads=4,
     )
+
+    
+
+
+# how to run it
+# pixi run python /src/pleiades/processing/normalization.py

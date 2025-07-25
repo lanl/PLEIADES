@@ -5,6 +5,8 @@ import numpy as np
 
 from pleiades.processing import MasterDictKeys, Facility, NormalizationStatus
 from pleiades.utils.nexus import get_proton_charge
+from pleiades.utils.files import retrieve_number_of_frames_from_file_name
+from pleiades.utils.units import retrieve_time_bin_size_from_file_name
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="timepix")
@@ -87,9 +89,11 @@ def update_with_proton_charge(master_dict: dict,
 
     if facility == Facility.ornl:
         update_with_proton_charge_at_ornl(master_dict, normalization_status)
-    else:
+    elif facility == Facility.lanl:
         # Implement the logic for other facilities if needed
         pass
+    else:
+        raise ValueError(f"Unknown facility: {facility}. Supported facilities are: {Facility.ornl}, {Facility.lanl}.")
 
 
 def update_with_proton_charge_at_ornl(master_dict: dict, 
@@ -117,10 +121,11 @@ def update_with_shutter_counts(master_dict: dict,
 
     if facility == Facility.ornl:
         update_with_shutter_counts_at_ornl(master_dict, normalization_status)
-    else:
-        # Implement the logic for other facilities if needed
+    elif facility == Facility.lanl:
         pass
-
+    else:
+        raise ValueError(f"Unknown facility: {facility}. Supported facilities are: {Facility.ornl}, {Facility.lanl}.")
+    
 
 def update_with_shutter_counts_at_ornl(master_dict: dict, normalization_status: NormalizationStatus) -> None:
     """
@@ -164,6 +169,8 @@ def update_with_spectra_files(master_dict: dict,
 
     if facility == Facility.ornl:
         update_with_spectra_files_at_ornl(master_dict, normalization_status)
+    elif facility == Facility.lanl:
+        update_with_spectra_files_at_lanl(master_dict, normalization_status)
     else:
         # Implement the logic for other facilities if needed
         pass
@@ -188,6 +195,33 @@ def update_with_spectra_files_at_ornl(master_dict: dict, normalization_status: N
     normalization_status.all_spectra_file_found = True
 
 
+def update_with_spectra_files_at_lanl(master_dict: dict, normalization_status: NormalizationStatus) -> None:
+    """
+    Update the master dictionary with the spectra files for LANL.
+    for LANL, the time spectra can be build up using the metadata contained in the files name.
+
+    for example:
+    file_name = image_m2M9997Ex512y512t1e6T2000p1e6P100.tiff
+    where T2000 is the number of time bins
+          t1e6 is the time bin size in microseconds (1e6 -> 1e-6)
+    """
+    for folder in master_dict[MasterDictKeys.list_folders].keys():
+        list_files = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_images]
+
+        # extract number of time bins and time bin size from the first file name
+        if len(list_files) == 0:
+            logger.info(f"\tNo spectra file found for {folder}")
+            return
+        
+        first_file_name = os.path.basename(list_files[0])
+        number_of_frames = retrieve_number_of_frames_from_file_name(first_file_name)
+        bin_size = retrieve_time_bin_size_from_file_name(first_file_name)
+
+        # create the time spectra
+        time_spectra = np.arange(0, number_of_frames * bin_size, bin_size)
+        master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra] = time_spectra
+     
+    
 def update_with_shutter_values(master_dict: dict,
                                normalization_status: NormalizationStatus, 
                                facility=Facility.ornl) -> None:

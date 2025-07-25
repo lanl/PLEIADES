@@ -4,7 +4,7 @@ import numpy as np
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization_handler")
 
-from pleiades.processing import NormalizationStatus, MasterDictKeys, Roi
+from pleiades.processing import NormalizationStatus, MasterDictKeys, Roi, PROTON_CHARGE_UNCERTAINTY
 from pleiades.utils.load import load
 from pleiades.utils.image_processing import crop, rebin
 from pleiades.utils.image_processing import  remove_outliers as image_processing_remove_outliers 
@@ -95,30 +95,42 @@ def combine_data(master_dict: dict,
     logger.info(f"\tis_normalization_by_shutter_counts: {is_normalization_by_shutter_counts}")
 
     full_ob_data_corrected = []
+   
+
     for _ob_folder in master_dict[MasterDictKeys.list_folders].keys():
         ob_data = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.data]
         
+        _uncertainty = np.zeros_like(ob_data, dtype=np.float32)
         if is_normalization_by_proton_charge:
             proton_charge = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.proton_charge]
             ob_data /= proton_charge
+            # _uncertainty += (PROTON_CHARGE_UNCERTAINTY ** 2)
+
+        logger.debug(f"1. {np.shape(_uncertainty) = }")
 
         if is_normalization_by_shutter_counts:
             list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.list_shutters]
             temp_ob_data = np.empty_like(ob_data, dtype=np.float32)
             for _index in range(len(list_shutters_values_for_each_image)):
                 temp_ob_data[_index] = ob_data[_index] / list_shutters_values_for_each_image[_index]
+                # _uncertainty[_index] += 1 / list_shutters_values_for_each_image
             ob_data = temp_ob_data[:]
             del temp_ob_data
 
+        logger.debug(f"2. {np.shape(_uncertainty) = }")
+
+        _uncertainty += 1 / ob_data
         full_ob_data_corrected.append(ob_data)
+        # uncertainties_ob_data_corrected.append(ob_data * np.sqrt(_uncertainty))
 
     obs_data_combined = np.median(full_ob_data_corrected, axis=0)
+    # uncertainties_ob_data_combined = np.sqrt(np.sum(np.array(uncertainties_ob_data_corrected) ** 2, axis=0))
 
     # remove zero values
     obs_data_combined[obs_data_combined == 0] = np.nan
 
     normalization_dict[MasterDictKeys.obs_data_combined] = obs_data_combined
-    
+    # normalization_dict[MasterDictKeys.uncertainties_ob_data_combined] = uncertainties_ob_data_combined
 
 def correct_data_for_proton_charge(master_dict: dict, is_normalization_by_proton_charge: bool) -> None:
     """
