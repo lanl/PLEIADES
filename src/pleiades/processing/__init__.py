@@ -2,10 +2,50 @@ PROTON_CHARGE_UNCERTAINTY = 0.005
 
 
 class Roi:
-    def __init__(self, x1, y1, x2, y2):
-        if x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0:
-            raise ValueError("ROI coordinates must be non-negative")
-         
+    def __init__(self, x1=0, y1=0, x2=None, y2=None, width=None, height=None):
+        """x1 and x2 are mandatory
+        y2 or height are mandatory
+        x2 or width are mandatory"""
+
+        if x1 < 0 or y1 < 0:
+            raise ValueError("ROI top left corner coordinates must be non-negative")
+
+        if x2 is not None and width is not None:
+            raise ValueError("ROI cannot have both x2 and width defined")
+
+        if y2 is not None and height is not None:
+            raise ValueError("ROI cannot have both y2 and height defined")
+
+        if x2 is not None:
+            if x2 < 0:
+                raise ValueError("ROI x2 must be non-negative")
+            
+            if x2 < x1:
+                raise ValueError("ROI x2 must be greater than or equal to x1")
+            
+            if width is not None:
+                raise ValueError("ROI cannot have both x2 and width defined")
+            
+        else:
+            if width is None or width <= 0:
+                raise ValueError("ROI width must be positive when x2 is not defined")
+            x2 = x1 + width
+
+        if y2 is not None:
+            if y2 < 0:
+                raise ValueError("ROI y2 must be non-negative")
+
+            if y2 < y1:
+                raise ValueError("ROI y2 must be greater than or equal to y1")
+
+            if height is not None:
+                raise ValueError("ROI cannot have both y2 and height defined")
+
+        else:
+            if height is None or height <= 0:
+                raise ValueError("ROI height must be positive when y2 is not defined")
+            y2 = y1 + height
+
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
