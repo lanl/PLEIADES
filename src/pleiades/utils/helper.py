@@ -48,8 +48,8 @@ def check_pseudo_scientific(val):
     # Case 3: already valid scientific notation or normal float
     try:
         return float(s)
-    except Exception:
-        raise ValueError(f"Cannot convert string '{val}' to float.")
+    except Exception as e:
+        raise ValueError(f"Cannot convert string '{val}' to float. Original error: {e}")
 
 
 def safe_parse(s: str, as_int: bool = False) -> Optional[float]:
