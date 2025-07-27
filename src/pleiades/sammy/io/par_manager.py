@@ -4,6 +4,14 @@ from enum import Enum
 from pathlib import Path
 
 from pleiades.sammy.fitting.config import FitConfig
+from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04 as InpCard04
+from pleiades.sammy.io.card_formats.inp10_spingroups import Card10p2 as InpCard10p2
+from pleiades.sammy.io.card_formats.par01_resonances import Card01 as ParCard01
+from pleiades.sammy.io.card_formats.par04_broadening import Card04 as ParCard04
+from pleiades.sammy.io.card_formats.par06_normalization import Card06 as ParCard06
+from pleiades.sammy.io.card_formats.par07_radii import Card07 as ParCard07
+from pleiades.sammy.io.card_formats.par07a_radii import Card07a as ParCard07a
+from pleiades.sammy.io.card_formats.par10_isotopes import Card10 as ParCard10
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -101,7 +109,6 @@ class ParManager:
         Returns:
             bool: True if particle pair data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
 
         block = []
         in_block = False
@@ -118,7 +125,7 @@ class ParManager:
                 block.append(line.rstrip())
 
         if block:
-            Card04.from_lines(block, self.fit_config)
+            InpCard04.from_lines(block, self.fit_config)
             return True
         return False
 
@@ -131,7 +138,6 @@ class ParManager:
         Returns:
             bool: True if broadening data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.par04_broadening import Card04
 
         block = []
         in_block = False
@@ -148,7 +154,7 @@ class ParManager:
                 block.append(line.rstrip())
 
         if block:
-            Card04.from_lines(block, self.fit_config)
+            ParCard04.from_lines(block, self.fit_config)
             return True
         return False
 
@@ -161,7 +167,6 @@ class ParManager:
         Returns:
             bool: True if normalization data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.par06_normalization import Card06
 
         block = []
         in_block = False
@@ -178,7 +183,7 @@ class ParManager:
                 block.append(line.rstrip())
 
         if block:
-            Card06.from_lines(block, self.fit_config)
+            ParCard06.from_lines(block, self.fit_config)
             return True
         return False
 
@@ -197,8 +202,6 @@ class ParManager:
         Returns:
             bool: True if radius data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.par07_radii import Card07
-        from pleiades.sammy.io.card_formats.par07a_radii import Card07a
 
         block = []
         in_block = False
@@ -221,10 +224,10 @@ class ParManager:
         if block:
             header = block[0].upper()
             if header.startswith("RADIU"):
-                Card07.from_lines(block, self.fit_config)
+                ParCard07.from_lines(block, self.fit_config)
                 return True
             elif header.startswith("RADII") or header.startswith("CHANN") or "KEY-WORD" in header:
-                Card07a.from_lines(block, self.fit_config)
+                ParCard07a.from_lines(block, self.fit_config)
                 return True
         return False
 
@@ -236,7 +239,6 @@ class ParManager:
         Returns:
             bool: True if isotope data was found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
 
         block = []
         in_block = False
@@ -253,7 +255,7 @@ class ParManager:
                 block.append(line.rstrip())
 
         if block:
-            Card10.from_lines(block, self.fit_config)
+            ParCard10.from_lines(block, self.fit_config)
             return True
         return False
 
@@ -270,7 +272,6 @@ class ParManager:
         Returns:
             bool: True if resonance data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.par01_resonances import Card01
 
         # Create a block to hold the lines of the resonance data
         # and a flag to indicate if we are in the resonance block
@@ -311,7 +312,7 @@ class ParManager:
                     block.append(line.rstrip())
 
         if block:
-            Card01.from_lines(block, self.fit_config)
+            ParCard01.from_lines(block, self.fit_config)
             return True
 
         return False
@@ -325,7 +326,6 @@ class ParManager:
         Returns:
             bool: True if spin group data was successfully found and processed, False otherwise.
         """
-        from pleiades.sammy.io.card_formats.inp10_spingroups import Card10p2
 
         block = []
         in_block = False
@@ -342,7 +342,7 @@ class ParManager:
                 block.append(line.rstrip())
 
         if block:
-            Card10p2.from_lines(block, self.fit_config)
+            InpCard10p2.from_lines(block, self.fit_config)
             return True
         return False
 
@@ -463,9 +463,8 @@ class ParManager:
         """
         # Example: Use FitConfig or a Card01 class to format resonance data
         # Replace with actual formatting logic
-        from pleiades.sammy.io.card_formats.par01_resonances import Card01
 
-        return "\n".join(Card01.to_lines(self.fit_config))
+        return "\n".join(ParCard01.to_lines(self.fit_config))
 
     def generate_par_card4_section(self) -> str:
         """
@@ -473,9 +472,8 @@ class ParManager:
         Returns:
             str: Card 4 section as a string.
         """
-        from pleiades.sammy.io.card_formats.par04_broadening import Card04
 
-        return "\n".join(Card04.to_lines(self.fit_config))
+        return "\n".join(ParCard04.to_lines(self.fit_config))
 
     def generate_par_card6_section(self) -> str:
         """
@@ -483,9 +481,8 @@ class ParManager:
         Returns:
             str: Card 6 section as a string.
         """
-        from pleiades.sammy.io.card_formats.par06_normalization import Card06
 
-        return "\n".join(Card06.to_lines(self.fit_config))
+        return "\n".join(ParCard06.to_lines(self.fit_config))
 
     def generate_par_card7_section(self) -> str:
         """
@@ -493,9 +490,8 @@ class ParManager:
         Returns:
             str: Card 7 section as a string.
         """
-        from pleiades.sammy.io.card_formats.par07_radii import Card07
 
-        return "\n".join(Card07.to_lines(self.fit_config))
+        return "\n".join(ParCard07.to_lines(self.fit_config))
 
     def generate_par_card7a_section(self) -> str:
         """
@@ -503,9 +499,8 @@ class ParManager:
         Returns:
             str: Card 7a section as a string.
         """
-        from pleiades.sammy.io.card_formats.par07a_radii import Card07a
 
-        return "\n".join(Card07a.to_lines(self.fit_config))
+        return "\n".join(ParCard07a.to_lines(self.fit_config))
 
     def generate_par_card10_section(self) -> str:
         """
@@ -513,9 +508,8 @@ class ParManager:
         Returns:
             str: Card 10 section as a string.
         """
-        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
 
-        return "\n".join(Card10.to_lines(self.fit_config))
+        return "\n".join(ParCard10.to_lines(self.fit_config))
 
     def generate_inp_card4_section(self) -> str:
         """
@@ -523,9 +517,8 @@ class ParManager:
         Returns:
             str: Input Card 4 section as a string.
         """
-        from pleiades.sammy.io.card_formats.inp04_particlepairs import Card04
 
-        return "\n".join(Card04.to_lines(self.fit_config))
+        return "\n".join(InpCard04.to_lines(self.fit_config))
 
     def generate_inp_card10_section(self) -> str:
         """
@@ -533,9 +526,8 @@ class ParManager:
         Returns:
             str: Input Card 10.2 section as a string.
         """
-        from pleiades.sammy.io.card_formats.inp10_spingroups import Card10p2
 
-        return "\n".join(Card10p2.to_lines(self.fit_config))
+        return "\n".join(InpCard10p2.to_lines(self.fit_config))
 
     def generate_par_content(self) -> str:
         """
