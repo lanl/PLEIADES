@@ -335,7 +335,7 @@ class Card10(BaseModel):
             # Update or create the isotope in the FitConfig object
             # if isotopes is None, create a new list
             if fit_config.nuclear_params.isotopes is None:
-                logger.info(f"Isotpe list is empty, creating new isotope with mass {mass}")
+                logger.info(f"Isotope list is empty, creating new isotope with mass {mass}")
                 fit_config.nuclear_params.isotopes = [
                     IsotopeParameters(
                         isotope_information=IsotopeInfo(
