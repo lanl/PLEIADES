@@ -1,7 +1,10 @@
 import glob
 import os
 from collections import Counter
+import pandas as pd
 
+from pleiades.utils.logger import loguru_logger
+logger = loguru_logger.bind(name="files")
 
 def retrieve_list_of_most_dominant_extension_from_folder(folder='', files=[]):
     '''
@@ -75,3 +78,17 @@ def retrieve_time_bin_size_from_file_name(file_name: str) -> float:
             raise ValueError(f"Could not extract time bin size from file name: {file_name}")
     else:
         raise ValueError(f"File name does not contain 't' or 'T': {file_name}")
+    
+
+def export_ascii(data_dict: dict, file_path: str) -> None:
+    """
+    Export the given data to an ASCII file.
+
+    Parameters:
+    - data: The data to export
+    - file_path: The path to the output ASCII file.
+    """
+    df = pd.DataFrame(data_dict)
+    df.to_csv(file_path, sep='\t', index=False, header=True)
+    print(f"Data exported to {file_path}")
+    logger.info(f"Data exported to {file_path}")

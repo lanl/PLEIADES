@@ -43,15 +43,15 @@ def update_with_crop(master_dict: dict, roi=Roi) -> None:
     """
     Update the master dictionary with the crop values.
     """
-    logger.info(f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with crop values {roi}")
+    logger.info(f"Updating master normalization dictionary with crop values {roi}")
 
     if roi is None:
         logger.info(f"Crop values are None, skipping crop update")
         return
 
-    for folder in master_dict[MasterDictKeys.list_folders].keys():
-            cropped_data = crop(master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data], roi) 
-            master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = cropped_data
+    for folder in master_dict[MasterDictKeys.sample_data].keys():
+            cropped_data = crop(master_dict[MasterDictKeys.sample_data][folder], roi)
+            master_dict[MasterDictKeys.sample_data][folder] = cropped_data
 
 
 def update_with_rebin(master_dict: dict, binning_factor: int) -> None:
@@ -187,3 +187,16 @@ def performing_normalization(sample_master_dict, normalization_dict, background_
             normalized_sample[_index] = (_sample / _ob) * coeff
 
         normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample
+
+
+def get_counts_from_normalized_data(normalized_data: np.ndarray) -> np.ndarray:
+    """
+    Get counts for each image from the normalized data.
+    """
+    if not isinstance(normalized_data, np.ndarray):
+        raise TypeError("Normalized data must be a numpy array")
+    
+    # Assuming normalized_data is a 3D array with shape (num_images, height, width)
+    counts_array = np.sum(normalized_data, axis=(1, 2))
+    
+    return counts_array

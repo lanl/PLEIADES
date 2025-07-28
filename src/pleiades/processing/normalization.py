@@ -17,7 +17,9 @@ from pleiades.processing.normalization_handler import remove_outliers
 from pleiades.processing.normalization_handler import correct_data_for_proton_charge
 from pleiades.processing.normalization_handler import correct_data_for_shutter_counts
 from pleiades.processing.normalization_handler import performing_normalization
+from pleiades.processing.normalization_handler import get_counts_from_normalized_data
 from pleiades.utils.units import convert_array_from_time_to_energy, TimeUnitOptions, EnergyUnitOptions, DistanceUnitOptions
+from pleiades.utils.files import export_ascii
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization")
@@ -203,10 +205,6 @@ def normalization(list_sample_folders: list,
     # load data
     update_with_data(sample_master_dict)
     update_with_data(ob_master_dict)
-
-    # crop the data if requested
-    update_with_crop(sample_master_dict, roi=crop_roi)
-    update_with_crop(ob_master_dict, roi=crop_roi)
         
     # rebin if requested
     update_with_rebin(sample_master_dict, binning_factor=pixel_binning)
@@ -232,6 +230,9 @@ def normalization(list_sample_folders: list,
     performing_normalization(sample_master_dict, normalization_dict, background_roi=background_roi)
     logger.info(f"Normalization completed successfully!")
 
+    # crop the data if requested to focus only on the region of interest
+    update_with_crop(normalization_dict, roi=crop_roi)
+    
     # format the data for export
     for folder in normalization_dict[MasterDictKeys.sample_data].keys():
         logger.info(f"Exporting data for folder: {folder}")
@@ -243,9 +244,16 @@ def normalization(list_sample_folders: list,
                                                          detector_offset=detector_offset_micros,
                                                          detector_offset_unit=TimeUnitOptions.us,
                                                          energy_unit=EnergyUnitOptions.eV)
+        # get counts for each image
+        counts_array = get_counts_from_normalized_data(normalization_dict[MasterDictKeys.sample_data][folder])
+        
+        # export the data
+        data_dict = {'energy_eV': energy_array[::-1],
+                     'transmission': counts_array[::-1]}
 
-
-        logger.info(f"\tSpectra file: {energy_array}")
+        # make output file name
+        output_file_name = os.path.join(output_folder, f"{os.path.basename(folder)}_transmission.txt")
+        export_ascii(data_dict, output_file_name)
 
 
 if __name__ == "__main__":

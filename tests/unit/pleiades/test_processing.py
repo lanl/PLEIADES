@@ -38,5 +38,3 @@ def test_roi():
         Roi(x1=10, y1=20, width=-5)
     except ValueError as e:
         assert str(e) == "ROI width must be positive when x2 is not defined"
-
-    

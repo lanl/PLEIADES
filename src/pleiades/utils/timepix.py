@@ -6,7 +6,7 @@ import numpy as np
 from pleiades.processing import MasterDictKeys, Facility, NormalizationStatus
 from pleiades.utils.nexus import get_proton_charge
 from pleiades.utils.files import retrieve_number_of_frames_from_file_name
-from pleiades.utils.units import retrieve_time_bin_size_from_file_name
+from pleiades.utils.files import retrieve_time_bin_size_from_file_name
 
 from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="timepix")
