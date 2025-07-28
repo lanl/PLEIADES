@@ -16,6 +16,19 @@ from pleiades.utils.logger import loguru_logger  # Logger for debugging
 
 logger = loguru_logger.bind(name=__name__)
 
+# Column ranges for parsing resonance data from fixed-width format
+RESONANCE_ENERGY_RANGE = slice(0, 11)
+CAPTURE_WIDTH_RANGE = slice(11, 22)
+CHANNEL1_WIDTH_RANGE = slice(22, 33)
+CHANNEL2_WIDTH_RANGE = slice(33, 44)
+CHANNEL3_WIDTH_RANGE = slice(44, 55)
+VARY_ENERGY_RANGE = slice(55, 57)
+VARY_CAPTURE_WIDTH_RANGE = slice(57, 59)
+VARY_CHANNEL1_RANGE = slice(59, 61)
+VARY_CHANNEL2_RANGE = slice(61, 63)
+VARY_CHANNEL3_RANGE = slice(63, 65)
+IGROUP_RANGE = slice(65, 67)
+
 
 class Card01(BaseModel):
     """
