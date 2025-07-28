@@ -121,7 +121,7 @@ def parse_keyword_pairs_to_dict(text: str) -> dict:
     """
     Parse an ASCII text into a dictionary of keyword-value pairs.
 
-    Parameters:
+    Args:
         text (str): The input text with keyword-value pairs.
 
     Returns:
