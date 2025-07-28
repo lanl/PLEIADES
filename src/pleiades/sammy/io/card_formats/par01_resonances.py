@@ -102,15 +102,49 @@ class Card01(BaseModel):
 
             try:
                 resonance_energy = check_pseudo_scientific(line[RESONANCE_ENERGY_RANGE].strip())
-                capture_width = check_pseudo_scientific(line[CAPTURE_WIDTH_RANGE].strip()) if line[CAPTURE_WIDTH_RANGE].strip() else None
-                channel1_width = check_pseudo_scientific(line[CHANNEL1_WIDTH_RANGE].strip()) if line[CHANNEL1_WIDTH_RANGE].strip() else None
-                channel2_width = check_pseudo_scientific(line[CHANNEL2_WIDTH_RANGE].strip()) if line[CHANNEL2_WIDTH_RANGE].strip() else None
-                channel3_width = check_pseudo_scientific(line[CHANNEL3_WIDTH_RANGE].strip()) if line[CHANNEL3_WIDTH_RANGE].strip() else None
-                vary_energy = VaryFlag(int(line[VARY_ENERGY_RANGE].strip())) if line[VARY_ENERGY_RANGE].strip() else VaryFlag.NO
-                vary_capture_width = VaryFlag(int(line[VARY_CAPTURE_WIDTH_RANGE].strip())) if line[VARY_CAPTURE_WIDTH_RANGE].strip() else VaryFlag.NO
-                vary_channel1 = VaryFlag(int(line[VARY_CHANNEL1_RANGE].strip())) if line[VARY_CHANNEL1_RANGE].strip() else VaryFlag.NO
-                vary_channel2 = VaryFlag(int(line[VARY_CHANNEL2_RANGE].strip())) if line[VARY_CHANNEL2_RANGE].strip() else VaryFlag.NO
-                vary_channel3 = VaryFlag(int(line[VARY_CHANNEL3_RANGE].strip())) if line[VARY_CHANNEL3_RANGE].strip() else VaryFlag.NO
+                capture_width = (
+                    check_pseudo_scientific(line[CAPTURE_WIDTH_RANGE].strip())
+                    if line[CAPTURE_WIDTH_RANGE].strip()
+                    else None
+                )
+                channel1_width = (
+                    check_pseudo_scientific(line[CHANNEL1_WIDTH_RANGE].strip())
+                    if line[CHANNEL1_WIDTH_RANGE].strip()
+                    else None
+                )
+                channel2_width = (
+                    check_pseudo_scientific(line[CHANNEL2_WIDTH_RANGE].strip())
+                    if line[CHANNEL2_WIDTH_RANGE].strip()
+                    else None
+                )
+                channel3_width = (
+                    check_pseudo_scientific(line[CHANNEL3_WIDTH_RANGE].strip())
+                    if line[CHANNEL3_WIDTH_RANGE].strip()
+                    else None
+                )
+                vary_energy = (
+                    VaryFlag(int(line[VARY_ENERGY_RANGE].strip())) if line[VARY_ENERGY_RANGE].strip() else VaryFlag.NO
+                )
+                vary_capture_width = (
+                    VaryFlag(int(line[VARY_CAPTURE_WIDTH_RANGE].strip()))
+                    if line[VARY_CAPTURE_WIDTH_RANGE].strip()
+                    else VaryFlag.NO
+                )
+                vary_channel1 = (
+                    VaryFlag(int(line[VARY_CHANNEL1_RANGE].strip()))
+                    if line[VARY_CHANNEL1_RANGE].strip()
+                    else VaryFlag.NO
+                )
+                vary_channel2 = (
+                    VaryFlag(int(line[VARY_CHANNEL2_RANGE].strip()))
+                    if line[VARY_CHANNEL2_RANGE].strip()
+                    else VaryFlag.NO
+                )
+                vary_channel3 = (
+                    VaryFlag(int(line[VARY_CHANNEL3_RANGE].strip()))
+                    if line[VARY_CHANNEL3_RANGE].strip()
+                    else VaryFlag.NO
+                )
                 igroup = int(line[IGROUP_RANGE].strip()) if line[IGROUP_RANGE].strip() else 0
             except Exception as e:
                 logger.warning(f"Failed to parse resonance line: {line.strip()} ({e})")
