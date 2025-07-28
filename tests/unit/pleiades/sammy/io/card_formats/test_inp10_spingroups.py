@@ -1,3 +1,5 @@
+"""Unit tests for SAMMY input file - Card 10 (spin groups) classes."""
+
 import pytest
 
 from pleiades.sammy.fitting.config import FitConfig

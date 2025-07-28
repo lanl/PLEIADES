@@ -1,3 +1,5 @@
+"""Unit tests for SAMMY input file - Card 04 (particle pairs) classes."""
+
 import pytest
 
 from pleiades.sammy.fitting.config import FitConfig

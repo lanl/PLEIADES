@@ -1,3 +1,5 @@
+"""Unit tests for SAMMY input file - Card 07a (radii) classes."""
+
 import pytest
 
 from pleiades.sammy.fitting.config import FitConfig

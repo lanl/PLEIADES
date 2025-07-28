@@ -1,4 +1,4 @@
-"""Unit tests for SAMMY parameter file - Card 10 (isotopes and abundances) classes."""
+"""Unit tests for SAMMY parameter file - Card 1 (resonances) classes."""
 
 import pytest
 
