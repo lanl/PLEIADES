@@ -364,7 +364,11 @@ class Card10(BaseModel):
                         break
 
                 if not found:
-                    logger.info(f"Isotope with mass {mass} not found, creating new isotope")
+                    logger.info(
+                        f"Isotope with mass {mass} not found. "
+                        f"Creating new isotope. Total isotopes: {len(fit_config.nuclear_params.isotopes)}. "
+                        f"Existing masses: {[iso.isotope_information.mass_data.atomic_mass for iso in fit_config.nuclear_params.isotopes]}"
+                    )
                     fit_config.nuclear_params.isotopes.append(
                         IsotopeParameters(
                             isotope_information=IsotopeInfo(
