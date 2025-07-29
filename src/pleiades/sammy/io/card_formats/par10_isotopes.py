@@ -407,8 +407,6 @@ class Card10(BaseModel):
             logger.warning("No isotopes found in fit_config, returning empty lines.")
             return lines
 
-        #
-
         # Get the total number of spin groups across all isotopes
         total_spin_groups = sum(len(isotope.spin_groups) for isotope in fit_config.nuclear_params.isotopes)
 
