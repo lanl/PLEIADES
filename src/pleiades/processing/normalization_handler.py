@@ -189,7 +189,7 @@ def performing_normalization(sample_master_dict, normalization_dict, background_
         normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample
 
 
-def get_counts_from_normalized_data(normalized_data: np.ndarray) -> np.ndarray:
+def get_counts_from_normalized_data(normalized_data: np.ndarray) -> tuple:
     """
     Get counts for each image from the normalized data.
     """
@@ -199,4 +199,6 @@ def get_counts_from_normalized_data(normalized_data: np.ndarray) -> np.ndarray:
     # Assuming normalized_data is a 3D array with shape (num_images, height, width)
     counts_array = np.sum(normalized_data, axis=(1, 2))
     
-    return counts_array
+    uncertainties = np.sqrt(counts_array)  # Assuming Poisson statistics for counts
+
+    return (counts_array, uncertainties)

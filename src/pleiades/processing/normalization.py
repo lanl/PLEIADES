@@ -245,11 +245,12 @@ def normalization(list_sample_folders: list,
                                                          detector_offset_unit=TimeUnitOptions.us,
                                                          energy_unit=EnergyUnitOptions.eV)
         # get counts for each image
-        counts_array = get_counts_from_normalized_data(normalization_dict[MasterDictKeys.sample_data][folder])
+        counts_array, uncertainties = get_counts_from_normalized_data(normalization_dict[MasterDictKeys.sample_data][folder])
         
         # export the data
         data_dict = {'energy_eV': energy_array[::-1],
-                     'transmission': counts_array[::-1]}
+                     'transmission': counts_array[::-1],
+                     'uncertainties': uncertainties[::-1]}  
 
         # make output file name
         output_file_name = os.path.join(output_folder, f"{os.path.basename(folder)}_transmission.txt")
