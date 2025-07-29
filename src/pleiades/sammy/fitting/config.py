@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from pleiades.experimental.models import PhysicsParameters
 from pleiades.nuclear.models import nuclearParameters
-from pleiades.sammy.data.options import dataParameters
+from pleiades.sammy.data.options import SammyData
 from pleiades.sammy.fitting.options import FitOptions
 
 
@@ -31,9 +31,7 @@ class FitConfig(BaseModel):
     physics_params: PhysicsParameters = Field(
         default_factory=PhysicsParameters, description="Physics parameters used in SAMMY calculations"
     )
-    data_params: dataParameters = Field(
-        default_factory=dataParameters, description="Data parameters used in SAMMY calculations"
-    )
+    data_params: SammyData = Field(default_factory=SammyData, description="Data parameters used in SAMMY calculations")
     options_and_routines: FitOptions = Field(
         default_factory=FitOptions, description="Fit options used in SAMMY calculations"
     )
@@ -52,7 +50,7 @@ if __name__ == "__main__":
         max_disk=100.0,
         nuclear_params=nuclearParameters(),
         physics_params=PhysicsParameters(),
-        data_params=dataParameters(),
+        data_params=SammyData(),
         options_and_routines=FitOptions(),
     )
 

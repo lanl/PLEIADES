@@ -1,133 +1,238 @@
-from enum import Enum
+"""
+This module defines the FitOptions class for configuring SAMMY fits.
+
+SAMMY is a nuclear physics code that requires different configuration options.
+The FitOptions class encapsulates these options and provides factory methods
+for different modes of operation.
+"""
+
+from typing import List
 
 from pydantic import BaseModel, Field
 
-"""
-This module defines various enumerations and a data model for configuring fit options in the SAMMY code.
-SAMMY is a software tool used for the analysis of neutron-induced reactions, particularly in the context of
-resonance parameter evaluation. The enumerations represent different configuration options available in SAMMY,
-while the `FitOptions` class serves as a container for these options, providing a structured way to manage
-and validate the configuration settings.
-
-Enumerations:
-- `RMatrixOptions`: Options for the R-matrix formalism used in the calculations.
-- `SpinGroupOptions`: Options for parameter input related to spin groups.
-- `QuantumNumbersOptions`: Options for handling quantum numbers in parameter files.
-- `DataFormatOptions`: Options for the format of the input data.
-- `BroadeningTypeOptions`: Options for the type of broadening model to be used.
-- `PrintInputOptions`: Options for printing input data and parameters.
-
-Classes:
-- `FitOptions`: A Pydantic data model that encapsulates all the fit options for SAMMY, ensuring that the
-    configuration is well-defined and validated.
-
-Usage:
-This module is intended to be used as part of the SAMMY codebase, where it provides a clear and structured
-way to manage the various configuration options required for running SAMMY simulations.
-"""
+# Import all alphanumerics classes from the central module
+from pleiades.sammy.alphanumerics import (
+    AngularDistributionOptions,
+    AveragesOptions,
+    BayesSolutionOptions,
+    BroadeningOptions,
+    CovarianceMatrixOptions,
+    CovarianceMatrixOutputOptions,
+    CrossSectionOptions,
+    ENDFOptions,
+    ExperimentalDataInputOptions,
+    LPTOutputOptions,
+    MultipleScatteringCorrectionsOptions,
+    PCovarianceMatrixInOptions,
+    PhysicalConstantsOptions,
+    PlotFileOptions,
+    QuantumNumbersOptions,
+    RMatrixOptions,
+    SpecialAnalysisOptions,
+    URROptions,
+)
 
 
-""" Fit options for SAMMY """
-
-
-class RMatrixOptions(str, Enum):
-    REICH_MOORE_FORMALISM = "REICH-MOORE FORMALISM"
-    ORIGINAL_REICH_MOORE = "ORIGINAL REICH-MOORE"
-    MULTILEVEL_BREITWIGNER = "MULTILEVEL BREITWIGNER"
-    SINGLE_LEVEL_BREITWIGNER = "SINGLE LEVEL BREITWIGNER"
-    REDUCED_WIDTH_AMPLITUDES = "REDUCED WIDTH AMPLITUDES"
-
-
-class SpinGroupOptions(str, Enum):
-    """Parameter input options."""
-
-    USE_NEW_SPIN_GROUP = "USE NEW SPIN GROUP"
-    PARTICLE_PAIR_DEFINITION = "PARTICLE PAIR DEFINITION"
-    KEY_WORD_PARTICLE_PAIR = "KEY WORD PARTICLE PAIR"
-
-
-class QuantumNumbersOptions(str, Enum):
-    """Quantum numbers options."""
-
-    Q_NUMBERS_IN_PARAM_FILE = "QUANTUM NUMBERS ARE IN PARAMETER FILE"
-    PUT_Q_NUMBERS_IN_PARAM_FILE = "PUT QUANTUM NUMBERS INTO PARAMETER FILE"
-
-
-class DataFormatOptions(str, Enum):
-    """Data format options"""
-
-    DATA_IN_ORIGINAL_MULTI_FORMAT = "DATA IN ORIGINAL MULTI-FORMAT"
-    DATA_IN_CSISRS_FORMAT = "DATA IN CSISRS FORMAT"
-    DATA_IN_TWENTY_FORMAT = "DATA IN TWENTY FORMAT"
-    DATA_IN_STANDARD_FORMAT = "DATA IN STANDARD FORMAT"
-    DATA_IN_ODF_FORMAT = "DATA IN ODF FORMAT"
-    DATA_IN_ENDF_FORMAT = "DATA IN ENDF FORMAT"
-
-
-class BroadeningTypeOptions(str, Enum):
-    FREE_GAS_MODEL = "FREE GAS MODEL"
-    LEAL_HWANG_DOPPLER_MODEL = "LEAL-HWANG DOPPLER MODEL"
-    HIGH_ENERGY_GAUSSIAN = "HIGH ENERGY GAUSSIAN"
-    CRYSTAL_LATTICE_MODEL = "CRYSTAL LATTICE MODEL"
-
-
-class PrintInputOptions(str, Enum):
-    DO_NOT_PRINT_ANY_INPUT = "DO NOT PRINT ANY INPUT"
-    PRINT_ALL_INPUT = "PRINT ALL INPUT"
-    PRINT_VARIED_INPUT = "PRINT VARIED INPUT"
-
-
-# a class to hold all the fit options
 class FitOptions(BaseModel):
-    """Container for fit options with SAMMY"""
+    """Container for all fit options with SAMMY based on alphanumerics modules.
 
-    RMatrix: RMatrixOptions = Field(
-        description="R-matrix option for the calculation", default=RMatrixOptions.REICH_MOORE_FORMALISM
-    )
-    SpinGroupFormat: SpinGroupOptions = Field(
-        description="Parameter input options", default=SpinGroupOptions.USE_NEW_SPIN_GROUP
-    )
-    QuantumNumbers: QuantumNumbersOptions = Field(
-        description="Quantum numbers options", default=QuantumNumbersOptions.Q_NUMBERS_IN_PARAM_FILE
-    )
-    input_is_endf_b_file_2: bool = Field(description="Indicates if the input is ENDF/B FILE 2", default=False)
-    DataFormat: DataFormatOptions = Field(
-        description="Data format options", default=DataFormatOptions.DATA_IN_ORIGINAL_MULTI_FORMAT
-    )
-    ImplementBroadeningOption: bool = Field(description="option to implement Broadening", default=False)
-    BroadeningType: BroadeningTypeOptions = Field(
-        description="Broadening type options", default=BroadeningTypeOptions.FREE_GAS_MODEL
-    )
-    SolveBayesEquation: bool = Field(description="option to solve Bayes equation", default=False)
-    PrintInputDataInLPT: bool = Field(description="option to print input data in LPT", default=False)
-    PrintInputParamsInLPT: PrintInputOptions = Field(
-        description="option to print input parameters in LPT", default=PrintInputOptions.DO_NOT_PRINT_ANY_INPUT
+    This class uses the actual alphanumerics classes that implement validation,
+    mutual exclusivity enforcement, and command generation.
+
+    Attributes:
+        r_matrix: Options for the R-matrix formalism
+        quantum_numbers: Options for spin group and quantum numbers
+        experimental_data: Options for data format
+        broadening: Options for broadening calculations
+        endf: Options for ENDF file usage
+        bayes_solution: Options for Bayes fitting
+        lpt_output: Options for LPT file output
+        angular_distribution: Options for angular distributions
+        averages: Options for energy averages
+        data_covariance: Options for data covariance
+        p_covariance_in: Options for parameter covariance input
+        p_covariance_out: Options for parameter covariance output
+        multiple_scattering: Options for multiple scattering corrections
+        cross_section: Options for cross section calculations
+        physical_constants: Options for physical constants
+        plot_file: Options for plot file generation
+        special_analysis: Options for special analysis
+        urr: Options for unresolved resonance region
+    """
+
+    r_matrix: RMatrixOptions = Field(
+        default_factory=RMatrixOptions, description="Options for R-matrix approximation and general calculations"
     )
 
-
-# Example usage of FitOptions
-def main():
-    # Create an instance of FitOptions with default values
-    default_fit_options = FitOptions()
-    print("Default FitOptions:")
-    print(default_fit_options.json(indent=4))
-
-    # Create an instance of FitOptions with custom values
-    custom_fit_options = FitOptions(
-        RMatrix=RMatrixOptions.MULTILEVEL_BREITWIGNER,
-        SpinGroupFormat=SpinGroupOptions.PARTICLE_PAIR_DEFINITION,
-        QuantumNumbers=QuantumNumbersOptions.PUT_Q_NUMBERS_IN_PARAM_FILE,
-        input_is_endf_b_file_2=True,
-        DataFormat=DataFormatOptions.DATA_IN_ENDF_FORMAT,
-        ImplementBroadeningOption=True,
-        BroadeningType=BroadeningTypeOptions.LEAL_HWANG_DOPPLER_MODEL,
-        SolveBayesEquation=True,
-        PrintInputDataInLPT=True,
-        PrintInputParamsInLPT=PrintInputOptions.PRINT_ALL_INPUT,
+    quantum_numbers: QuantumNumbersOptions = Field(
+        default_factory=QuantumNumbersOptions, description="Options for spin group and quantum numbers parameters"
     )
-    print("\nCustom FitOptions:")
-    print(custom_fit_options.json(indent=4))
 
+    experimental_data: ExperimentalDataInputOptions = Field(
+        default_factory=ExperimentalDataInputOptions, description="Options for experimental data format"
+    )
 
-if __name__ == "__main__":
-    main()
+    broadening: BroadeningOptions = Field(
+        default_factory=BroadeningOptions, description="Options for broadening calculations"
+    )
+
+    endf: ENDFOptions = Field(default_factory=ENDFOptions, description="Options for ENDF file usage")
+
+    bayes_solution: BayesSolutionOptions = Field(
+        default_factory=BayesSolutionOptions, description="Options for Bayes fitting"
+    )
+
+    lpt_output: LPTOutputOptions = Field(default_factory=LPTOutputOptions, description="Options for LPT file output")
+
+    angular_distribution: AngularDistributionOptions = Field(
+        default_factory=AngularDistributionOptions, description="Options for angular distributions"
+    )
+
+    averages: AveragesOptions = Field(default_factory=AveragesOptions, description="Options for energy averages")
+
+    data_covariance: CovarianceMatrixOptions = Field(
+        default_factory=CovarianceMatrixOptions, description="Options for data covariance matrix"
+    )
+
+    p_covariance_in: PCovarianceMatrixInOptions = Field(
+        default_factory=PCovarianceMatrixInOptions, description="Options for parameter covariance matrix input"
+    )
+
+    p_covariance_out: CovarianceMatrixOutputOptions = Field(
+        default_factory=CovarianceMatrixOutputOptions, description="Options for parameter covariance matrix output"
+    )
+
+    multiple_scattering: MultipleScatteringCorrectionsOptions = Field(
+        default_factory=MultipleScatteringCorrectionsOptions, description="Options for multiple scattering corrections"
+    )
+
+    cross_section: CrossSectionOptions = Field(
+        default_factory=CrossSectionOptions, description="Options for cross section calculations"
+    )
+
+    physical_constants: PhysicalConstantsOptions = Field(
+        default_factory=PhysicalConstantsOptions, description="Options for physical constants"
+    )
+
+    plot_file: PlotFileOptions = Field(default_factory=PlotFileOptions, description="Options for plot file generation")
+
+    special_analysis: SpecialAnalysisOptions = Field(
+        default_factory=SpecialAnalysisOptions, description="Options for special analysis"
+    )
+
+    urr: URROptions = Field(default_factory=URROptions, description="Options for unresolved resonance region")
+
+    def get_alphanumeric_commands(self) -> List[str]:
+        """Generate all SAMMY alphanumeric commands from constituent options.
+
+        Returns:
+            List[str]: List of all alphanumeric commands for SAMMY INP file
+        """
+        commands = []
+
+        # Collect commands from each alphanumerics component
+        commands.extend(self.r_matrix.get_alphanumeric_commands())
+        commands.extend(self.quantum_numbers.get_alphanumeric_commands())
+        commands.extend(self.experimental_data.get_alphanumeric_commands())
+        commands.extend(self.broadening.get_alphanumeric_commands())
+        commands.extend(self.endf.get_alphanumeric_commands())
+        commands.extend(self.bayes_solution.get_alphanumeric_commands())
+        commands.extend(self.lpt_output.get_alphanumeric_commands())
+        commands.extend(self.angular_distribution.get_alphanumeric_commands())
+        commands.extend(self.averages.get_alphanumeric_commands())
+        commands.extend(self.data_covariance.get_alphanumeric_commands())
+        commands.extend(self.p_covariance_in.get_alphanumeric_commands())
+        commands.extend(self.p_covariance_out.get_alphanumeric_commands())
+        commands.extend(self.multiple_scattering.get_alphanumeric_commands())
+        commands.extend(self.cross_section.get_alphanumeric_commands())
+        commands.extend(self.physical_constants.get_alphanumeric_commands())
+        commands.extend(self.plot_file.get_alphanumeric_commands())
+        commands.extend(self.special_analysis.get_alphanumeric_commands())
+        commands.extend(self.urr.get_alphanumeric_commands())
+
+        return commands
+
+    @classmethod
+    def from_endf_config(cls) -> "FitOptions":
+        """Create a FitOptions instance configured for ENDF extraction.
+
+        ENDF mode is used for extracting resonance information from ENDF files
+        without Bayesian fitting.
+
+        Mandatory fields:
+        - UID 12: PUT QUANTUM NUMBERS into parameter file
+        - UID 15: INPUT IS ENDF/B FILE 2
+        - UID 37: DATA ARE ENDF/B FILE
+        - UID 103: DO NOT SOLVE BAYES Equations
+
+        Optional field:
+        - UID 16: USE ENERGY RANGE FROm endf/b file 2
+
+        Returns:
+            FitOptions: Instance configured for ENDF extraction
+        """
+        # Create with default options
+        options = cls()
+
+        # Configure for ENDF mode with mandatory fields
+        options.quantum_numbers = QuantumNumbersOptions(put_quantum_numbers_into_parameter_file=True)
+        options.endf = ENDFOptions(
+            input_is_endf_file_2=True,
+            use_energy_range_from_endf_file_2=True,  # Optional field
+        )
+        options.experimental_data = ExperimentalDataInputOptions(data_are_endf_b_file=True)
+        options.bayes_solution = BayesSolutionOptions(
+            solve_bayes_equations=False,  # Set solve_bayes_equations to False
+            do_not_solve_bayes_equations=True,  # Explicitly set the opposite flag to generate the command
+        )
+
+        return options
+
+    @classmethod
+    def from_fitting_config(cls) -> "FitOptions":
+        """Create a FitOptions instance configured for Bayesian fitting.
+
+        Fitting mode is used for customized Bayesian fitting of nuclear data.
+
+        Mandatory fields:
+        - UID 2: REICH-MOORE FORMALISm is wanted
+        - UID 10: KEY-WORD PARTICLE-PAir definitions are given
+        - UID 11: QUANTUM NUMBERS ARE in parameter file
+        - UID 34: USE TWENTY SIGNIFICAnt digits
+        - UID 61: BROADENING IS NOT WAnted (or 60 is wanted)
+        - UID 102: SOLVE BAYES EQUATIONs
+        - UID 133: CHI SQUARED IS WANTEd
+
+        Optional fields depend on specific use case.
+
+        Returns:
+            FitOptions: Instance configured for Bayesian fitting
+        """
+        # Create with default options
+        options = cls()
+
+        # Configure for Fitting mode with mandatory fields
+        options.r_matrix = RMatrixOptions(reich_moore=True)
+        options.quantum_numbers = QuantumNumbersOptions(
+            keyword_particle_pair_definitions=True, quantum_numbers_in_parameter_file=True
+        )
+        options.experimental_data = ExperimentalDataInputOptions(use_twenty_significant_digits=True)
+        options.broadening = BroadeningOptions(broadening_is_wanted=True)
+        options.bayes_solution = BayesSolutionOptions(solve_bayes_equations=True)
+        options.lpt_output = LPTOutputOptions(chi_squared_is_wanted=True)
+
+        return options
+
+    @classmethod
+    def from_custom_config(cls, **kwargs) -> "FitOptions":
+        """Create a FitOptions instance with custom settings.
+
+        Custom mode is for advanced users who need granular control over all options.
+
+        Args:
+            **kwargs: Keyword arguments for specific alphanumerics options
+
+        Returns:
+            FitOptions: Instance with custom configuration
+        """
+        return cls(**kwargs)

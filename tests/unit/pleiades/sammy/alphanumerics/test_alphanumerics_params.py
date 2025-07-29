@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.params import QuantumNumbersOptions
+from pleiades.sammy.alphanumerics.input_quantum_numbers import QuantumNumbersOptions
 
 
 def test_default_option():

@@ -1,6 +1,6 @@
 import pytest
 
-from pleiades.sammy.alphanumerics.broad import BroadeningOptions
+from pleiades.sammy.alphanumerics.broadening import BroadeningOptions
 
 
 def test_default_option():
