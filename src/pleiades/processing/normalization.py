@@ -277,8 +277,5 @@ if __name__ == "__main__":
         num_threads=4,
     )
 
-    
-
-
 # how to run it
 # pixi run python /src/pleiades/processing/normalization.py
