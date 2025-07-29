@@ -1,11 +1,10 @@
 import numpy as np
-import logging
+from skimage.measure import block_reduce
 from tomopy.misc.corr import remove_outlier as tomopy_remove_outlier
 
 from pleiades.processing import Roi
-from skimage.measure import block_reduce
-
 from pleiades.utils.logger import loguru_logger
+
 logger = loguru_logger.bind(name="image_processing")
 
 
@@ -24,7 +23,7 @@ def crop(data: np.ndarray, roi: Roi) -> np.ndarray:
     if y2 > y_dim or y1 >= y_dim or x2 > x_dim or x1 > x_dim:
         logger.error(f"ROI exceeds array bounds: {roi}")
         raise IndexError("ROI exceeds array bounds. Please check the ROI coordinates.")
-    
+
     cropped_data = data[:, y1:y2, x1:x2]
 
     logger.info(f"Cropped data shape: {cropped_data.shape}")
@@ -39,10 +38,7 @@ def rebin(data: np.ndarray, binning_factor: int) -> np.ndarray:
 
     block_size = (1, binning_factor, binning_factor)
 
-    rebinned_data = block_reduce(data,
-                                 block_size=block_size,
-                                 func=np.mean,
-                                 func_kwargs={'dtype': np.float16})
+    rebinned_data = block_reduce(data, block_size=block_size, func=np.mean, func_kwargs={"dtype": np.float16})
 
     logger.info(f"Rebinned data shape: {rebinned_data.shape}")
     return rebinned_data
@@ -57,7 +53,7 @@ def remove_outliers(data: np.ndarray, dif: float, num_threads: int) -> np.ndarra
 
     if data is None or len(data) == 0:
         raise ValueError("No data provided for outlier removal.")
-  
+
     _data = np.array(data, dtype=np.float32)
     cleaned_data = tomopy_remove_outlier(_data, dif=dif, ncore=num_threads)
 

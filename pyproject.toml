@@ -15,7 +15,7 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "astropy", 
+    "astropy",
     "matplotlib",
     "tifffile",
     "jupyterlab",

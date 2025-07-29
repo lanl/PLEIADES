@@ -2,7 +2,6 @@ from pleiades.processing import Roi
 
 
 def test_roi():
-
     roi = Roi(x1=10, y1=20, x2=30, y2=40)
     assert roi.get_roi() == (10, 20, 30, 40)
 

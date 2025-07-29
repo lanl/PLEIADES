@@ -1,6 +1,7 @@
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 
 from pleiades.utils.files import (
     retrieve_list_of_most_dominant_extension_from_folder,
@@ -10,7 +11,6 @@ from pleiades.utils.files import (
 
 
 def test_retrieve_list_of_most_dominant_extension_from_folder():
-
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create a temporary directory
         temp_dir = tmpdir + "/test_dir"

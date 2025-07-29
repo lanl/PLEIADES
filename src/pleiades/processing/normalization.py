@@ -1,30 +1,38 @@
 import os
-import numpy as np
 
-from pleiades.processing import Roi, MasterDictKeys, Facility, NormalizationStatus, DataType
-from pleiades.utils.image_processing import remove_outliers
-from pleiades.utils.timepix import update_with_nexus_files
-from pleiades.utils.timepix import update_with_shutter_counts
-from pleiades.utils.timepix import update_with_proton_charge
-from pleiades.utils.timepix import update_with_spectra_files
-from pleiades.utils.timepix import update_with_shutter_values
-from pleiades.processing.normalization_handler import update_with_list_of_files
-from pleiades.processing.normalization_handler import update_with_data
-from pleiades.processing.normalization_handler import update_with_crop
-from pleiades.processing.normalization_handler import update_with_rebin
-from pleiades.processing.normalization_handler import combine_data
-from pleiades.processing.normalization_handler import remove_outliers
-from pleiades.processing.normalization_handler import correct_data_for_proton_charge
-from pleiades.processing.normalization_handler import correct_data_for_shutter_counts
-from pleiades.processing.normalization_handler import performing_normalization
-from pleiades.processing.normalization_handler import get_counts_from_normalized_data
-from pleiades.utils.units import convert_array_from_time_to_energy, TimeUnitOptions, EnergyUnitOptions, DistanceUnitOptions
+from pleiades.processing import DataType, Facility, MasterDictKeys, NormalizationStatus, Roi
+from pleiades.processing.normalization_handler import (
+    combine_data,
+    correct_data_for_proton_charge,
+    correct_data_for_shutter_counts,
+    get_counts_from_normalized_data,
+    performing_normalization,
+    remove_outliers,
+    update_with_crop,
+    update_with_data,
+    update_with_list_of_files,
+    update_with_rebin,
+)
 from pleiades.utils.files import export_ascii
-
+from pleiades.utils.image_processing import remove_outliers
 from pleiades.utils.logger import loguru_logger
+from pleiades.utils.timepix import (
+    update_with_nexus_files,
+    update_with_proton_charge,
+    update_with_shutter_counts,
+    update_with_shutter_values,
+    update_with_spectra_files,
+)
+from pleiades.utils.units import (
+    DistanceUnitOptions,
+    EnergyUnitOptions,
+    TimeUnitOptions,
+    convert_array_from_time_to_energy,
+)
+
 logger = loguru_logger.bind(name="normalization")
 
-# input: 
+# input:
 #  - list_of_sample folders (tiff, fits)
 #  - list_of_obs folders (tiff, fits)
 # ROI (optional)
@@ -55,22 +63,25 @@ def init_master_dict(list_folders: list, data_type: DataType = DataType.sample) 
     """
     Initialize a master dictionary to store the data from each sample and open beam folders.
     """
-    master_dict = {MasterDictKeys.data_type: data_type,
-                   MasterDictKeys.list_folders: {},
-                   }
+    master_dict = {
+        MasterDictKeys.data_type: data_type,
+        MasterDictKeys.list_folders: {},
+    }
     for folder in list_folders:
-        master_dict[MasterDictKeys.list_folders][folder] = {MasterDictKeys.nexus_path: None, 
-                                                            MasterDictKeys.data: None,
-                                                            MasterDictKeys.frame_number: None, 
-                                                            MasterDictKeys.data_path: None, 
-                                                            MasterDictKeys.proton_charge: None,
-                                                            MasterDictKeys.matching_ob: [],
-                                                            MasterDictKeys.list_images: [],
-                                                            MasterDictKeys.ext: None, 
-                                                            MasterDictKeys.shutter_counts: None,
-                                                            MasterDictKeys.list_spectra: [],
-                                                            MasterDictKeys.list_shutters: [],
-                                                            MasterDictKeys.data: None}
+        master_dict[MasterDictKeys.list_folders][folder] = {
+            MasterDictKeys.nexus_path: None,
+            MasterDictKeys.data: None,
+            MasterDictKeys.frame_number: None,
+            MasterDictKeys.data_path: None,
+            MasterDictKeys.proton_charge: None,
+            MasterDictKeys.matching_ob: [],
+            MasterDictKeys.list_images: [],
+            MasterDictKeys.ext: None,
+            MasterDictKeys.shutter_counts: None,
+            MasterDictKeys.list_spectra: [],
+            MasterDictKeys.list_shutters: [],
+            MasterDictKeys.data: None,
+        }
     return master_dict
 
 
@@ -78,32 +89,35 @@ def init_normalization_dict(list_folders: list) -> dict:
     """
     Initialize a normalization dictionary to store the normalized data.
     """
-    normalization_dict = {MasterDictKeys.obs_data_combined: None,
-                          MasterDictKeys.sample_data: {},
-                          MasterDictKeys.uncertainties_obs_data_combined: None,
-                          MasterDictKeys.uncertainties_sample_data: None,
-                          }
+    normalization_dict = {
+        MasterDictKeys.obs_data_combined: None,
+        MasterDictKeys.sample_data: {},
+        MasterDictKeys.uncertainties_obs_data_combined: None,
+        MasterDictKeys.uncertainties_sample_data: None,
+    }
     for folder in list_folders:
         normalization_dict[MasterDictKeys.sample_data][folder] = None
 
     return normalization_dict
 
 
-def normalization(list_sample_folders: list, 
-                  list_obs_folders: list, 
-                  nexus_path: str = None,
-                  background_roi: Roi = None, 
-                  crop_roi: Roi = None,
-                  timepix: bool = True, 
-                  pixel_binning: int = 1, 
-                  remove_outliers_flag: bool = False, 
-                  rolling_average: bool = False, 
-                  distance_source_detector_m: float = 25,
-                  detector_offset_micros: float = 0,
-                  output_folder: str = None, 
-                  output_numpy: bool = True,
-                  facility=Facility.ornl,
-                  num_threads: int = 1):
+def normalization(
+    list_sample_folders: list,
+    list_obs_folders: list,
+    nexus_path: str = None,
+    background_roi: Roi = None,
+    crop_roi: Roi = None,
+    timepix: bool = True,
+    pixel_binning: int = 1,
+    remove_outliers_flag: bool = False,
+    rolling_average: bool = False,
+    distance_source_detector_m: float = 25,
+    detector_offset_micros: float = 0,
+    output_folder: str = None,
+    output_numpy: bool = True,
+    facility=Facility.ornl,
+    num_threads: int = 1,
+):
     """
     Normalize the data from the sample and open beam folders.
 
@@ -119,7 +133,7 @@ def normalization(list_sample_folders: list,
     if the rolling_average flag is True, the data will be smoothed using the rolling average method
     if the output_folder is provided, the data will be saved in the folder
     if the output_numpy flag is True, the data will be saved as numpy arrays
-    
+
     Parameters:
     - list_sample_folders: List of sample folders containing tiff or fits files.
     - list_obs_folders: List of open beam folders containing tiff or fits files.
@@ -139,9 +153,9 @@ def normalization(list_sample_folders: list,
     Returns:
     - Normalized data.
     """
-    
+
     logger.info("Starting normalization process...")
-    logger.info(f"##############################")
+    logger.info("##############################")
     logger.info(f"\tSample folders: {list_sample_folders}")
     logger.info(f"\tOpen beam folders: {list_obs_folders}")
     logger.info(f"\tnexus path: {nexus_path}")
@@ -157,17 +171,17 @@ def normalization(list_sample_folders: list,
     logger.info(f"\tOutput numpy: {output_numpy}")
     logger.info(f"\tNumber of threads: {num_threads}")
     logger.info(f"\tFacility: {facility}")
-    logger.info(f"##############################")
+    logger.info("##############################")
 
     sample_normalization_status = NormalizationStatus()
     ob_normalization_status = NormalizationStatus()
 
-    #checking all the inputs
-    
+    # checking all the inputs
+
     # Check if the input folders are valid
     if not list_sample_folders or not list_obs_folders:
         raise ValueError("Sample and open beam folders must be provided.")
-    
+
     if isinstance(list_sample_folders, str):
         list_sample_folders = [list_sample_folders]
 
@@ -193,7 +207,7 @@ def normalization(list_sample_folders: list,
     # update with the shutter counts
     update_with_shutter_counts(sample_master_dict, sample_normalization_status, facility=facility)
     update_with_shutter_counts(ob_master_dict, ob_normalization_status, facility=facility)
-    
+
     # update with spectra files
     update_with_spectra_files(sample_master_dict, sample_normalization_status, facility=facility)
     update_with_spectra_files(ob_master_dict, ob_normalization_status, facility=facility)
@@ -205,7 +219,7 @@ def normalization(list_sample_folders: list,
     # load data
     update_with_data(sample_master_dict)
     update_with_data(ob_master_dict)
-        
+
     # rebin if requested
     update_with_rebin(sample_master_dict, binning_factor=pixel_binning)
     update_with_rebin(ob_master_dict, binning_factor=pixel_binning)
@@ -214,11 +228,19 @@ def normalization(list_sample_folders: list,
     remove_outliers(sample_master_dict, dif=20, num_threads=num_threads)
     remove_outliers(ob_master_dict, dif=20, num_threads=num_threads)
 
-    is_normalization_by_proton_charge = sample_normalization_status.all_proton_charge_value_found and ob_normalization_status.all_proton_charge_value_found
-    is_normalization_by_shutter_counts = sample_normalization_status.all_shutter_counts_file_found and ob_normalization_status.all_shutter_counts_file_found
+    is_normalization_by_proton_charge = (
+        sample_normalization_status.all_proton_charge_value_found
+        and ob_normalization_status.all_proton_charge_value_found
+    )
+    is_normalization_by_shutter_counts = (
+        sample_normalization_status.all_shutter_counts_file_found
+        and ob_normalization_status.all_shutter_counts_file_found
+    )
 
     # combine the obs
-    combine_data(ob_master_dict, is_normalization_by_proton_charge, is_normalization_by_shutter_counts, normalization_dict)
+    combine_data(
+        ob_master_dict, is_normalization_by_proton_charge, is_normalization_by_shutter_counts, normalization_dict
+    )
 
     # correct the sample by proton charge
     correct_data_for_proton_charge(sample_master_dict, is_normalization_by_proton_charge)
@@ -228,29 +250,35 @@ def normalization(list_sample_folders: list,
 
     # normalization
     performing_normalization(sample_master_dict, normalization_dict, background_roi=background_roi)
-    logger.info(f"Normalization completed successfully!")
+    logger.info("Normalization completed successfully!")
 
     # crop the data if requested to focus only on the region of interest
     update_with_crop(normalization_dict, roi=crop_roi)
-    
+
     # format the data for export
     for folder in normalization_dict[MasterDictKeys.sample_data].keys():
         logger.info(f"Exporting data for folder: {folder}")
         spectra_array = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
-        energy_array = convert_array_from_time_to_energy(spectra_array,
-                                                         time_unit=TimeUnitOptions.s,
-                                                         distance_source_detector=distance_source_detector_m,
-                                                         distance_source_detector_unit=DistanceUnitOptions.m,
-                                                         detector_offset=detector_offset_micros,
-                                                         detector_offset_unit=TimeUnitOptions.us,
-                                                         energy_unit=EnergyUnitOptions.eV)
+        energy_array = convert_array_from_time_to_energy(
+            spectra_array,
+            time_unit=TimeUnitOptions.s,
+            distance_source_detector=distance_source_detector_m,
+            distance_source_detector_unit=DistanceUnitOptions.m,
+            detector_offset=detector_offset_micros,
+            detector_offset_unit=TimeUnitOptions.us,
+            energy_unit=EnergyUnitOptions.eV,
+        )
         # get counts for each image
-        counts_array, uncertainties = get_counts_from_normalized_data(normalization_dict[MasterDictKeys.sample_data][folder])
-        
+        counts_array, uncertainties = get_counts_from_normalized_data(
+            normalization_dict[MasterDictKeys.sample_data][folder]
+        )
+
         # export the data
-        data_dict = {'energy_eV': energy_array[::-1],
-                     'transmission': counts_array[::-1],
-                     'uncertainties': uncertainties[::-1]}  
+        data_dict = {
+            "energy_eV": energy_array[::-1],
+            "transmission": counts_array[::-1],
+            "uncertainties": uncertainties[::-1],
+        }
 
         # make output file name
         output_file_name = os.path.join(output_folder, f"{os.path.basename(folder)}_transmission.txt")

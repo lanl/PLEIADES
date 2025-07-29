@@ -19,13 +19,13 @@ class Roi:
         if x2 is not None:
             if x2 < 0:
                 raise ValueError("ROI x2 must be non-negative")
-            
+
             if x2 < x1:
                 raise ValueError("ROI x2 must be greater than or equal to x1")
-            
+
             if width is not None:
                 raise ValueError("ROI cannot have both x2 and width defined")
-            
+
         else:
             if width is None or width <= 0:
                 raise ValueError("ROI width must be positive when x2 is not defined")
@@ -57,7 +57,7 @@ class Roi:
     def set_roi(self, x1, y1, x2, y2):
         if x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0:
             raise ValueError("ROI coordinates must be non-negative")
-                
+
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -96,12 +96,12 @@ class MasterDictKeys:
     list_spectra = "list_spectra"
     list_shutters = "list_shutters"
     ext = "ext"
-    
+
 
 class Facility:
     ornl = "ornl"
     lanl = "lanl"
-    
+
 
 class NormalizationStatus:
     all_nexus_file_found = False

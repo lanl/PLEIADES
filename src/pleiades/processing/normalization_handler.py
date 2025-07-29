@@ -1,15 +1,16 @@
 import os
+
 import numpy as np
 
 from pleiades.utils.logger import loguru_logger
+
 logger = loguru_logger.bind(name="normalization_handler")
 
-from pleiades.processing import NormalizationStatus, MasterDictKeys, Roi, PROTON_CHARGE_UNCERTAINTY
-from pleiades.utils.load import load
-from pleiades.utils.image_processing import crop, rebin
-from pleiades.utils.image_processing import  remove_outliers as image_processing_remove_outliers 
+from pleiades.processing import MasterDictKeys, Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
-from pleiades.utils.units import convert_array_from_time_to_energy
+from pleiades.utils.image_processing import crop, rebin
+from pleiades.utils.image_processing import remove_outliers as image_processing_remove_outliers
+from pleiades.utils.load import load
 
 
 def update_with_list_of_files(master_dict: dict) -> None:
@@ -18,7 +19,7 @@ def update_with_list_of_files(master_dict: dict) -> None:
     """
     data_type = master_dict[MasterDictKeys.data_type]
     logger.info(f"Updating {data_type} master dictionary with list of files")
-    
+
     for folder in master_dict[MasterDictKeys.list_folders].keys():
         if os.path.exists(folder):
             list_files, ext = retrieve_list_of_most_dominant_extension_from_folder(folder)
@@ -46,34 +47,38 @@ def update_with_crop(master_dict: dict, roi=Roi) -> None:
     logger.info(f"Updating master normalization dictionary with crop values {roi}")
 
     if roi is None:
-        logger.info(f"Crop values are None, skipping crop update")
+        logger.info("Crop values are None, skipping crop update")
         return
 
     for folder in master_dict[MasterDictKeys.sample_data].keys():
-            cropped_data = crop(master_dict[MasterDictKeys.sample_data][folder], roi)
-            master_dict[MasterDictKeys.sample_data][folder] = cropped_data
+        cropped_data = crop(master_dict[MasterDictKeys.sample_data][folder], roi)
+        master_dict[MasterDictKeys.sample_data][folder] = cropped_data
 
 
 def update_with_rebin(master_dict: dict, binning_factor: int) -> None:
     """
     Update the master dictionary with the rebin values.
     """
-    logger.info(f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with rebin values {binning_factor}")
+    logger.info(
+        f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with rebin values {binning_factor}"
+    )
 
     if binning_factor == 1:
-        logger.info(f"Binning factor is 1, skipping rebin update")
+        logger.info("Binning factor is 1, skipping rebin update")
         return
 
     for folder in master_dict[MasterDictKeys.list_folders].keys():
-            rebinned_data = rebin(master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data], binning_factor)
-            master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = rebinned_data
+        rebinned_data = rebin(master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data], binning_factor)
+        master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = rebinned_data
 
 
 def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
     """
     Remove outliers from the data in the master dictionary.
     """
-    logger.info(f"Removing outliers from {master_dict[MasterDictKeys.data_type]} master dictionary with threshold {dif}")
+    logger.info(
+        f"Removing outliers from {master_dict[MasterDictKeys.data_type]} master dictionary with threshold {dif}"
+    )
 
     for folder in master_dict[MasterDictKeys.list_folders].keys():
         data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
@@ -81,12 +86,12 @@ def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
-def combine_data(master_dict: dict, 
-                is_normalization_by_proton_charge: bool,
-                is_normalization_by_shutter_counts: bool,
-                normalization_dict: dict,
-                ) -> None :
-                
+def combine_data(
+    master_dict: dict,
+    is_normalization_by_proton_charge: bool,
+    is_normalization_by_shutter_counts: bool,
+    normalization_dict: dict,
+) -> None:
     """
     Combine the open beams data.
     """
@@ -95,11 +100,10 @@ def combine_data(master_dict: dict,
     logger.info(f"\tis_normalization_by_shutter_counts: {is_normalization_by_shutter_counts}")
 
     full_ob_data_corrected = []
-   
 
     for _ob_folder in master_dict[MasterDictKeys.list_folders].keys():
         ob_data = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.data]
-        
+
         _uncertainty = np.zeros_like(ob_data, dtype=np.float32)
         if is_normalization_by_proton_charge:
             proton_charge = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.proton_charge]
@@ -109,7 +113,9 @@ def combine_data(master_dict: dict,
         logger.debug(f"1. {np.shape(_uncertainty) = }")
 
         if is_normalization_by_shutter_counts:
-            list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][_ob_folder][MasterDictKeys.list_shutters]
+            list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][_ob_folder][
+                MasterDictKeys.list_shutters
+            ]
             temp_ob_data = np.empty_like(ob_data, dtype=np.float32)
             for _index in range(len(list_shutters_values_for_each_image)):
                 temp_ob_data[_index] = ob_data[_index] / list_shutters_values_for_each_image[_index]
@@ -132,15 +138,16 @@ def combine_data(master_dict: dict,
     normalization_dict[MasterDictKeys.obs_data_combined] = obs_data_combined
     # normalization_dict[MasterDictKeys.uncertainties_ob_data_combined] = uncertainties_ob_data_combined
 
+
 def correct_data_for_proton_charge(master_dict: dict, is_normalization_by_proton_charge: bool) -> None:
     """
     Correct the data for proton charge.
     """
     logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for proton charge")
     if not is_normalization_by_proton_charge:
-        logger.info(f"Normalization by proton charge is not enabled, skipping correction")
+        logger.info("Normalization by proton charge is not enabled, skipping correction")
         return
-        
+
     for folder in master_dict[MasterDictKeys.list_folders].keys():
         data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
         proton_charge = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.proton_charge]
@@ -154,31 +161,32 @@ def correct_data_for_shutter_counts(master_dict: dict, is_normalization_by_shutt
     """
     logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for shutter counts")
     if not is_normalization_by_shutter_counts:
-        logger.info(f"Normalization by shutter counts is not enabled, skipping correction")
+        logger.info("Normalization by shutter counts is not enabled, skipping correction")
         return
 
     for folder in master_dict[MasterDictKeys.list_folders].keys():
         data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
-        list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_shutters]
+        list_shutters_values_for_each_image = master_dict[MasterDictKeys.list_folders][folder][
+            MasterDictKeys.list_shutters
+        ]
         for i in range(len(data)):
             data[i] /= list_shutters_values_for_each_image[i]
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
 def performing_normalization(sample_master_dict, normalization_dict, background_roi=None):
-    logger.info(f"Performing normalization:")
+    logger.info("Performing normalization:")
     ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
 
     for sample_folder in sample_master_dict[MasterDictKeys.list_folders].keys():
         logger.info(f"Normalizing sample folder: {sample_folder}")
 
         sample_data = sample_master_dict[MasterDictKeys.list_folders][sample_folder][MasterDictKeys.data]
-    
-        normalized_sample = np.empty_like(sample_data, dtype=np.float32)
-        for _index, _sample, _ob in zip(np.arange(len(sample_data)), sample_data, ob_data_combined): 
 
+        normalized_sample = np.empty_like(sample_data, dtype=np.float32)
+        for _index, _sample, _ob in zip(np.arange(len(sample_data)), sample_data, ob_data_combined):
             coeff = 1
-            if not (background_roi is None):
+            if background_roi is not None:
                 x0, y0, x1, y1 = background_roi.get_roi()
                 median_roi_of_ob = np.median(_ob[y0:y1, x0:x1])
                 median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
@@ -195,10 +203,10 @@ def get_counts_from_normalized_data(normalized_data: np.ndarray) -> tuple:
     """
     if not isinstance(normalized_data, np.ndarray):
         raise TypeError("Normalized data must be a numpy array")
-    
+
     # Assuming normalized_data is a 3D array with shape (num_images, height, width)
     counts_array = np.sum(normalized_data, axis=(1, 2))
-    
+
     uncertainties = np.sqrt(counts_array)  # Assuming Poisson statistics for counts
 
     return (counts_array, uncertainties)
