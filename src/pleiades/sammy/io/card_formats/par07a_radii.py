@@ -312,7 +312,7 @@ class Card07a(BaseModel):
                     for channel in channels:
                         lines.append(f"   Chan= {channel:2d},")
 
-        # Remove trailing blank lines (but keep one at end)
+        # Remove all trailing blank lines and then add one to ensure exactly one blank line at the end
         while lines and lines[-1] == "":
             lines.pop()
         lines.append("")
