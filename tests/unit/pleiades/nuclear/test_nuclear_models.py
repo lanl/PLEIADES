@@ -238,8 +238,6 @@ class TestNuclearParameters(unittest.TestCase):
         self.assertEqual(params.isotopes[0].abundance, 1)
         self.assertEqual(params.isotopes[0].uncertainty, 0.001)
         self.assertEqual(params.isotopes[0].vary_abundance, VaryFlag.YES)
-        # self.assertEqual(params.isotopes[0].resonances, [resonance_entry])
-        # self.assertEqual(params.isotopes[0].radius_parameters, [radius_params])
 
 
 if __name__ == "__main__":
