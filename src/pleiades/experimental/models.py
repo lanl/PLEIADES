@@ -75,6 +75,32 @@ class NormalizationParameters(BaseModel):
     flag_backd: VaryFlag = Field(default=VaryFlag.NO)
     flag_backf: VaryFlag = Field(default=VaryFlag.NO)
 
+    # Define a print method for the class
+    def __str__(self) -> str:
+        """Return a text table representation of the NormalizationParameters object."""
+        headers = ["Parameter", "Value", "Uncertainty", "Vary"]
+        rows = [
+            ["Normalization", self.anorm, self.d_anorm, self.flag_anorm],
+            ["Const. Background", self.backa, self.d_backa, self.flag_backa],
+            ["1/E Background", self.backb, self.d_backb, self.flag_backb],
+            ["sqrt(E) Background", self.backc, self.d_backc, self.flag_backc],
+            ["Exp. Background", self.backd, self.d_backd, self.flag_backd],
+            ["Exp. Decay Const.", self.backf, self.d_backf, self.flag_backf],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = " | ".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
+
 
 class BroadeningParameters(BaseModel):
     """Container for a single set of broadening parameters.
@@ -135,6 +161,34 @@ class BroadeningParameters(BaseModel):
             if self.flag_deltc1 is None or self.flag_deltc2 is None:
                 raise ValueError("Flags must be specified for DELTC1 and DELTC2 if present")
         return self
+
+    # define a print method for the class that prints a table
+    def __str__(self) -> str:
+        """Return a text table representation of the BroadeningParameters object."""
+        headers = ["Parameter", "Value", "Uncertainty", "Vary"]
+        rows = [
+            ["CRFN", self.crfn, self.d_crfn, self.flag_crfn],
+            ["TEMP", self.temp, self.d_temp, self.flag_temp],
+            ["THICK", self.thick, self.d_thick, self.flag_thick],
+            ["DELTAL", self.deltal, self.d_deltal, self.flag_deltal],
+            ["DELTAG", self.deltag, self.d_deltag, self.flag_deltag],
+            ["DELTAE", self.deltae, self.d_deltae, self.flag_deltae],
+            ["DELT1", self.deltc1, self.d_deltc1, self.flag_deltc1],
+            ["DELT2", self.deltc2, self.d_deltc2, self.flag_deltc2],
+        ]
+        # Calculate column widths
+        col_widths = [
+            max(len(str(cell)) for cell in [header] + [row[i] for row in rows]) for i, header in enumerate(headers)
+        ]
+        # Build table
+        lines = []
+        header_line = " | ".join(header.ljust(col_widths[i]) for i, header in enumerate(headers))
+        sep_line = " | ".join("-" * col_widths[i] for i in range(len(headers)))
+        lines.append(header_line)
+        lines.append(sep_line)
+        for row in rows:
+            lines.append(" | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+        return "\n".join(lines)
 
 
 class UserResolutionParameters(BaseModel):

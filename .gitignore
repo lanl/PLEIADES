@@ -211,3 +211,6 @@ docs/project_management
 
 # ignore versioning git files
 _version.py
+
+# ignore any scratch spaces or temporary files
+.scratch/
