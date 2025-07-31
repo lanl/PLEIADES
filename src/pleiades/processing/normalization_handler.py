@@ -2,15 +2,14 @@ import os
 
 import numpy as np
 
-from pleiades.utils.logger import loguru_logger
-
-logger = loguru_logger.bind(name="normalization_handler")
-
 from pleiades.processing import MasterDictKeys, Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
 from pleiades.utils.image_processing import crop, rebin
 from pleiades.utils.image_processing import remove_outliers as image_processing_remove_outliers
 from pleiades.utils.load import load
+from pleiades.utils.logger import loguru_logger
+
+logger = loguru_logger.bind(name="normalization_handler")
 
 
 def update_with_list_of_files(master_dict: dict) -> None:
