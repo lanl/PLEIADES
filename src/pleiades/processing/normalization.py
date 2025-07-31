@@ -305,4 +305,3 @@ if __name__ == "__main__":
     )
 
 # how to run it
-# pixi run python /src/pleiades/processing/normalization.py
