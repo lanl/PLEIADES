@@ -3,7 +3,8 @@
 
 import pytest
 
-from pleiades.sammy.parameters.isotope import IsotopeCard, IsotopeParameters
+from pleiades.nuclear.models import IsotopeParameters
+from pleiades.sammy.io.card_formats.par10_isotopes import Card10
 from pleiades.utils.helper import VaryFlag
 
 
@@ -108,28 +109,28 @@ class TestIsotopeCard:
 
     def test_header_validation(self):
         """Test header line validation."""
-        assert IsotopeCard.is_header_line("ISOTOpic abundances and masses")
-        assert IsotopeCard.is_header_line("NUCLIde abundances and masses")
-        assert not IsotopeCard.is_header_line("Wrong header")
+        assert Card10.is_header_line("ISOTOpic abundances and masses")
+        assert Card10.is_header_line("NUCLIde abundances and masses")
+        assert not Card10.is_header_line("Wrong header")
 
     def test_single_isotope(self, single_isotope_lines):
         """Test parsing single isotope data."""
-        card = IsotopeCard.from_lines(single_isotope_lines)
+        card = Card10.from_lines(single_isotope_lines)
         assert len(card.isotopes) == 1
         assert card.isotopes[0].mass == 16.0
         assert card.isotopes[0].abundance == 0.99835
 
     def test_multiple_isotopes(self, multi_isotope_lines):
         """Test parsing multiple isotope data."""
-        card = IsotopeCard.from_lines(multi_isotope_lines)
+        card = Card10.from_lines(multi_isotope_lines)
         assert len(card.isotopes) == 2
         assert sum(iso.abundance for iso in card.isotopes) <= 1.0
 
     def test_roundtrip(self, single_isotope_lines):
         """Test parsing and re-generating gives equivalent results."""
-        card = IsotopeCard.from_lines(single_isotope_lines)
+        card = Card10.from_lines(single_isotope_lines)
         output_lines = card.to_lines()
-        card2 = IsotopeCard.from_lines(output_lines)
+        card2 = Card10.from_lines(output_lines)
 
         assert len(card.isotopes) == len(card2.isotopes)
         assert card.isotopes[0].mass == card2.isotopes[0].mass
@@ -146,7 +147,7 @@ class TestIsotopeCard:
     def test_error_handling(self, bad_lines, error_pattern):
         """Test error handling for various invalid inputs."""
         with pytest.raises(ValueError, match=error_pattern):
-            IsotopeCard.from_lines(bad_lines)
+            Card10.from_lines(bad_lines)
 
 
 if __name__ == "__main__":

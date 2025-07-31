@@ -4,6 +4,7 @@ csisrs
 chi squared is wanted
 do not suppress any intermediate results
 generate odf file automatically
+PUT QUANTUM NUMBERS into parameter file
 
       300.  200.0000  0.182233       0.0  0.002518
    4.20000  0.347162

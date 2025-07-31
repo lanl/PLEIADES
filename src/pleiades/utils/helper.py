@@ -14,6 +14,44 @@ class VaryFlag(Enum):
     USE_FROM_OTHERS = -2  # do not vary, use value from other sources (INP, COV, etc.)
 
 
+def check_pseudo_scientific(val):
+    """Check for pseudo scientific notation sometimes found in SAMMY files.
+
+    Args:
+        val (str): The input string potentially containing pseudo scientific notation.
+
+    Returns:
+        str: The fixed string with proper scientific notation.
+
+    Examples:
+
+    """
+    import re
+
+    s = str(val).strip()
+    # Case 1: 5.00000.-5 or -1.23.+4 (dot before sign)
+    m = re.match(r"^([+-]?\d*\.?\d+)\.(\+|\-)(\d+)$", s)
+    if m:
+        s_fixed = f"{m.group(1)}e{m.group(2)}{m.group(3)}"
+        try:
+            return float(s_fixed)
+        except Exception:
+            raise ValueError(f"Cannot convert pseudo-scientific string '{val}' to float (fixed: '{s_fixed}')")
+    # Case 2: 5.00000-5 or -1.23+4 (no dot before sign, no E)
+    m2 = re.match(r"^([+-]?\d*\.?\d+)([+-]\d+)$", s)
+    if m2:
+        s_fixed = f"{m2.group(1)}e{m2.group(2)}"
+        try:
+            return float(s_fixed)
+        except Exception:
+            raise ValueError(f"Cannot convert pseudo-scientific string '{val}' to float (fixed: '{s_fixed}')")
+    # Case 3: already valid scientific notation or normal float
+    try:
+        return float(s)
+    except Exception as e:
+        raise ValueError(f"Cannot convert string '{val}' to float. Original error: {e}")
+
+
 def safe_parse(s: str, as_int: bool = False) -> Optional[float]:
     """Helper function to safely parse numeric values
 
@@ -83,7 +121,7 @@ def parse_keyword_pairs_to_dict(text: str) -> dict:
     """
     Parse an ASCII text into a dictionary of keyword-value pairs.
 
-    Parameters:
+    Args:
         text (str): The input text with keyword-value pairs.
 
     Returns:

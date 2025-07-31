@@ -1,0 +1,1291 @@
+The PARameter file contains initial values for all those parameters that are to be varied, as well as others that may be held fixed or treated as propagated-uncertainty parameters
+
+Various types of data can be included in the PARameter file. These are organized into “cardsets,” with each card set consisting of one or more lines of information. Most card sets begin with a header line and end with a blank line.
+
+"Card set 1" contains resonance parameters, ending in a blank line.
+"Card set 2" contains a single number, called FUDGE, which is the “fudge factor” by which a parameter may multiplied to give the initial uncertainty for that parameter. This option is used only if the parameter’s uncertainty is not specified elsewhere.
+"Card set 3" gives values for parameters of the external R-function. Two alternate formats are available for this.
+"Card set 4" gives values for some broadening (and other) parameters.
+"Card set 5" gives values of “unused” parameters, that is, of those data-reduction parameters that are not directly affected by the data set to be analyzed but that are coupled via the covariance matrix to other parameters that are directly affected.
+"Card set 6" gives values for normalization and background parameters.
+"Card set 7" contains values for the two channel radii (as used for potential scattering and for penetrability and shift factor).
+"Card set 8" gives names and values for data reduction parameters
+"Card set 9" gives values of parameters for the Oak Ridge resolution function (ORR)
+"Card set 10" contains isotopic mass and abundance values, as described in Section III.E.2 of the SAMMY manual.
+"Card set 11" contains values for miscellaneous parameters, described in various locations
+throughout the SAMMY manual.
+"Card set 12" provides parameter values for paramagnetic cross sections; see Section III.E.4 of the SAMMY manual.
+"Card set 13" contains values for parameters of the background functions described in Section III.E.3.a of the SAMMY manual.
+"Card set 14" gives parameters of the RPI resolution function (Section III.C.3).
+"Card set 15" provides values for l- and isotope-dependent detector efficiencies (Section III.E.5).
+"Card set 16" gives input for the numerical user-defined resolution function. This is described in more detail in Section III.C.5.
+
+Note that each card set in the PAR file (except for card sets 1 and 2) begins with an alphanumeric description of what follows.
+
+For including Quantum numbers in PARameter file please see Table VI B.3. in the SAMMY manual.
+Which follows as the following lines:
+
+[1st line] PARTIcle pair definitions (first five characters required)
+[following lines] Card set 4 from the INPut file (Table VI.A.1),
+[blank line]
+[following line] SPIN GROUPs (first ten characters required)
+[following lines] Card set 10.2 from INPut file
+[blank line]
+[following line] RESONances are listed next (first five characters required)
+The remainder of the file is identical to original PARameter file (starting with card set 1)
+
+Here are the formats for each card:
+Note:   The two numbers in the first column (labeled “C:L”) represent the card set number (before the colon) and the line number within that card set (after the colon).
+Note:   Numbers in the second column (labeled “P, T”) indicate position number within the line. Letters indicate format type: integer format (“I”, which implies a number without a decimal point and requires that the number be in the right-most columns), real format (“F”, which requires a number with a decimal point), or alphanumeric (“A”, which can be numbers or letters or symbols).
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 1 – Resonance Parameters
+
+    Purpose:
+        Card 1 provides the initial resonance parameters for the evaluation: resonance energy and partial widths
+        for various channels. This is the only required card set in a SAMMY PAR file. Each resonance may span
+        multiple lines if there are more than three particle channels.
+
+    Structure:
+
+        Line 1 (First Resonance Entry)
+            Columns | Type | Name    | Description
+            --------|------|---------|-------------------------------------------------------
+            1–11    | F    | E       | Resonance energy (eV)
+            12–22   | F    | Capture | Capture width (Γγ) in milli-eV
+            23–33   | F    | c1      | Particle width for channel 1 (Γc1) in milli-eV
+            34–44   | F    | c2      | Particle width for channel 2 (Γc2) in milli-eV
+            45–55   | F    | c3      | Particle width for channel 3 (Γc3) in milli-eV
+
+            56–57   | I    | ISE     | Vary E? (0 = no, 1 = yes, 3 = PUP)
+            58–59   | I    | IS      | Vary Capture? (0 = no, 1 = yes, 3 = PUP)
+            60–61   | I    | ISc1    | Vary c1? (0 = no, 1 = yes, 3 = PUP)
+            62–63   | I    | ISc2    | Vary c2? (0 = no, 1 = yes, 3 = PUP)
+            64–65   | I    | ISc3    | Vary c3? (0 = no, 1 = yes, 3 = PUP)
+
+            66–67   | I    | IGROUP  | Spin group number (negative or >50 = omit resonance)
+            68–80   | F    | X       | Optional; see below
+
+        Column X Usage (columns 68–80):
+            - If X < 0: continuation line follows with widths for channels 4–8.
+            - If X > 0 and “ENERGY UNCERTAINTIES are at end of line” is in INPut file:
+                - X = prior absolute uncertainty on E (eV)
+            - If X > 0 and “ADD CONSTANT TERM TO data covariance” is in INPut file:
+                - X = d², where d is absolute uncertainty on data near this resonance
+
+        Line 2 (Optional, for Additional Channels)
+            Used only if X < 0 in previous line.
+
+            Columns | Type | Name    | Description
+            --------|------|---------|-------------------------------------------------------
+            1–11    | F    | c4      | Particle width for channel 4 (milli-eV)
+            12–22   | F    | c5      | Particle width for channel 5 (milli-eV)
+            23–33   | F    | c6      | Particle width for channel 6 (milli-eV)
+            34–44   | F    | c7      | Particle width for channel 7 (milli-eV)
+            45–55   | F    | c8      | Particle width for channel 8 (milli-eV)
+
+            56–57   | I    | ISc4    | Vary c4? (0, 1, or 3)
+            58–59   | I    | ISc5    | Vary c5? (0, 1, or 3)
+            60–61   | I    | ISc6    | Vary c6? (0, 1, or 3)
+            62–63   | I    | ISc7    | Vary c7? (0, 1, or 3)
+            64–65   | I    | ISc8    | Vary c8? (0, 1, or 3)
+
+            66–67   | I    | IGROUP  | Same spin group as Line 1
+            68–80   | F    | X       | Same meaning as above; if still X < 0, next continuation follows
+
+        Additional Continuation Lines
+            Repeat Line 2 as needed for all non-zero widths up to channel 8.
+
+        Repeat Lines 1–2
+            Repeat the full Line 1 (and continuation lines, if any) for each resonance.
+
+        End of Card 1
+            - Terminate with a blank line
+            - Only card set that must be present in the file
+
+    Notes:
+        - Units: eV for energy, milli-eV for widths
+        - If a width is negative, SAMMY uses its magnitude but sets amplitude negative
+        - If spin group > 50, must enable extended spin group support via INPut file
+        - Resonances are ignored if IGROUP < 0 or IGROUP > max allowed
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 2 – Fudge Factor for Default Uncertainties
+
+    Purpose:
+        Card 2 provides a single scalar value called the "fudge factor", used to assign initial uncertainties
+        for parameters that do not have explicit uncertainties specified elsewhere (e.g., in the PAR file or
+        a covariance file).
+
+    Structure:
+
+        Line 1 (Only Line in Card Set 2)
+            Columns | Type | Name   | Description
+            --------|------|--------|------------------------------------------------------------
+            1–11    | F    | FUDGE  | Fudge factor: relative uncertainty for varied parameters
+                                    | Default value if unspecified: 0.1
+
+    Behavior Notes:
+    - The fudge factor is applied only to those parameters that are marked to be varied (flag = 1) and that do
+        not have explicitly provided uncertainties.
+    - If an uncertainty is specified elsewhere in the PAR file (e.g., in line 3 of card set 6), then the fudge
+        factor is ignored for that parameter.
+    - The fudge factor **does not affect resonance energy (E)**. Instead, the default uncertainty for E is:
+        2 × (sum of all relevant widths, including Doppler and resolution widths)
+
+    End of Card 2:
+    - No header line is present.
+    - No blank line follows this card set.
+
+    Notes:
+    - This card must be included if any card sets 3 through "Last" are present.
+    - While simple, this parameter affects the confidence intervals and covariance propagation, and can
+        influence how SAMMY weights data when no other prior information is available.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 3 – External R-Function Parameters (Logarithmic Parameterization)
+
+    Purpose:
+        Card 3 provides parameters for modeling the external R-function using a logarithmic energy dependence.
+        This is used to describe non-resonant background contributions for specific spin groups and channels.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "EXTERnal R-function parameters follow"
+            Only the first five characters are read by SAMMY.
+
+        Line 2, 3, ...
+            Each line defines one set of R-function parameters for a given spin group and channel.
+
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–3     | I    | IGROUP    | Spin group number
+            4–5     | I    | ICHN      | Channel number (0 = default to channel 1)
+            6–16    | F    | E_down    | Logarithmic singularity below energy range (eV)
+            17–27   | F    | E_up      | Logarithmic singularity above energy range (eV)
+            28–38   | F    | Rcon      | Constant term in R-function
+            39–49   | F    | Rlin      | Linear term in R-function
+            50–60   | F    | s         | Coefficient of logarithmic term (must be ≥ 0)
+
+            Variation Flags:
+            Columns | Type | Name       | Description
+            --------|------|------------|------------------------------------------------------------
+            62      | I    | ISE_down   | Vary E_down? (0 = no, 1 = yes, 3 = PUP)
+            64      | I    | ISE_up     | Vary E_up? (0 = no, 1 = yes, 3 = PUP)
+            66      | I    | ISRcon     | Vary Rcon? (0 = no, 1 = yes, 3 = PUP)
+            68      | I    | ISRlin     | Vary Rlin? (0 = no, 1 = yes, 3 = PUP)
+            70      | I    | ISs        | Vary s? (0 = no, 1 = yes, 3 = PUP)
+
+        Repeat Line 2 as many times as needed:
+            - One line per combination of spin group and channel that uses external R-function parameterization.
+
+        End of Card 3:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - R-function is used for background contributions and non-resonant scattering.
+        - Only card set 3 OR card set 3a can be used in the same PAR file—not both.
+        - Equation reference for the R-function form: see Eq. (II.B.1.d.1) in the SAMMY manual.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 3a – Alternative External R-Function Parameters (Extended Format)
+
+    Purpose:
+        Card 3a provides an alternate, extended parameterization for the external R-function. This form allows for more
+        detailed modeling using additional polynomial terms. Like Card 3, it is used to describe non-resonant background
+        contributions for specific spin groups and channels.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "R-EXTernal parameters follow"
+            Only the first five characters are read by SAMMY.
+
+        Line 2, 3, ...
+            Each line defines a full set of R-function parameters for a given spin group and channel.
+
+            Columns | Type | Name      | Description
+            --------|------|-----------|-------------------------------------------------------------
+            1–2     | I    | IGROUP    | Spin group number
+            3       | I    | ICHN      | Channel number (0 = default to channel 1)
+
+            Variation Flags:
+            Columns | Type | Name        | Description
+            --------|------|-------------|-------------------------------------------------------------
+            4       | I    | ISE_down    | Vary E_down? (0 = no, 1 = yes, 3 = PUP)
+            5       | I    | ISE_up      | Vary E_up? (0 = no, 1 = yes, 3 = PUP)
+            6       | I    | ISRcon      | Vary Rcon? (0 = no, 1 = yes, 3 = PUP)
+            7       | I    | ISRlin      | Vary Rlin? (0 = no, 1 = yes, 3 = PUP)
+            8       | I    | ISscon      | Vary scon? (0 = no, 1 = yes, 3 = PUP)
+            9       | I    | ISs_lin     | Vary s_lin? (0 = no, 1 = yes, 3 = PUP)
+            10      | I    | ISRq        | Vary Rq? (0 = no, 1 = yes, 3 = PUP)
+
+            Parameters:
+            Columns | Type | Name        | Description
+            --------|------|-------------|-------------------------------------------------------------
+            11–20   | F    | E_down      | Logarithmic singularity below energy range (eV)
+            21–30   | F    | E_up        | Logarithmic singularity above energy range (eV)
+            31–40   | F    | Rcon        | Constant term
+            41–50   | F    | Rlin        | Linear term (1/eV)
+            51–60   | F    | scon        | Constant coefficient of logarithmic term (≥ 0)
+            61–70   | F    | s_lin       | Linear coefficient of logarithmic term
+            71–80   | F    | Rq          | Quadratic term
+
+        Repeat Line 2 as needed:
+            - One line per spin group/channel combination.
+
+        End of Card 3a:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - This format is more flexible than Card 3 and allows for higher-order modeling.
+        - Only Card 3 or Card 3a can be used in a single PAR file.
+        - Equation reference: See Eq. (II.B.1.d.1) in the SAMMY manual for mathematical context.
+
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 4 – Broadening (and Related) Parameters
+
+    Purpose:
+        Card 4 provides initial values for parameters affecting Doppler broadening and resolution effects in the data.
+        These can include temperature, thickness, pulse widths, and other instrumental or physical broadening parameters.
+
+    This card set is optional. Values not meant to be varied can instead be set in the INPut file. If this card is used, it must be followed by a blank line.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "BROADening parameters may be varied"
+
+        Line 2 (Main Parameters and Flags)
+            Columns | Type | Name     | Description
+            --------|------|----------|--------------------------------------------------------
+            1–10    | F    | CRFN     | Matching radius (may be overruled by other card sets)
+            11–20   | F    | TEMP     | Effective sample temperature (K)
+            21–30   | F    | THICK    | Sample thickness (atoms/barn)
+            31–40   | F    | DELTAL   | Spread in flight-path length (m)
+            41–50   | F    | DELTAG   | Full width at half max of a Gaussian resolution function (s)
+            51–60   | F    | DELTAE   | e-folding width of exponential resolution function (s)
+
+            61–62   | I    | Icrfn    | Variation flag for CRFN
+            63–64   | I    | Itemp    | Variation flag for TEMP
+            65–66   | I    | Ithick   | Variation flag for THICK
+            67–68   | I    | Ideltal  | Variation flag for DELTAL
+            69–70   | I    | Ideltag  | Variation flag for DELTAG
+            71–72   | I    | Ideltae  | Variation flag for DELTAE
+
+            Flag Values:
+            - -2 = Do not vary. Use value from INPut file card sets 5, 6, or 7.
+            - -1 = Do not vary. Use this PAR value, not COV file value.
+            -  0 = Do not vary. Use COV value if it exists; else use PAR value.
+            -  1 = Vary parameter. Use COV value as initial guess if available.
+            -  3 = PUP (Propagated Uncertainty Parameter). Use this value.
+
+        Line 3 (Optional Uncertainties)
+            Optional unless additional parameters follow.
+
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------
+            1–10    | F    | dCRFN    | Uncertainty on CRFN
+            11–20   | F    | dTEMP    | Uncertainty on TEMP
+            21–30   | F    | dTHICK   | Uncertainty on THICK
+            31–40   | F    | dDELTAL  | Uncertainty on DELTAL
+            41–50   | F    | dDELTAG  | Uncertainty on DELTAG
+            51–60   | F    | dDELTAE  | Uncertainty on DELTAE
+
+        Line 4 (Optional)
+            Optional line for Gaussian energy-dependent resolution terms.
+
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------
+            1–10    | F    | DELTC1   | Width of Gaussian, constant in energy (eV)
+            11–20   | F    | DELTC2   | Width of Gaussian, linear in energy (unitless)
+            61–62   | I    | Ideltc1  | Variation flag for DELTC1
+            63–64   | I    | Ideltc2  | Variation flag for DELTC2
+
+        Line 5 (Optional)
+            Uncertainty values for DELTC1 and DELTC2.
+
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------
+            1–10    | F    | dDC1     | Uncertainty on DELTC1
+            11–20   | F    | dDC2     | Uncertainty on DELTC2
+
+        End of Card 4:
+            - Must be followed by a blank line (except possibly at end-of-file).
+            - Can be placed in the INPut file instead if no parameters are to be varied.
+
+    Notes:
+    - DELTAG can be negative or positive, but only the absolute value is used.
+    - Broadening parameters significantly affect resolution modeling; ensure units and context match your data type.
+    - Some parameters may be superseded by values in Card Sets 6 or 7.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card 5 -
+
+    Note: Skipping for now.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 6 – Normalization and Background Parameters
+
+    Purpose:
+        Card 6 provides initial values for normalization and background terms used in fitting the experimental data.
+        These terms can be fixed, varied, or treated as propagated-uncertainty parameters (PUPs).
+
+        This card is optional and usually relevant when normalization and background corrections are part of the model.
+        If present, it must be followed by a blank line.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "NORMAlization and background are next"
+
+        Line 2 (Main Parameters and Flags)
+            Columns | Type | Name     | Description
+            --------|------|----------|----------------------------------------------------------
+            1–10    | F    | ANORM    | Normalization factor (dimensionless). Typical value ~1
+            11–20   | F    | BACKA    | Constant background term (dimensionless or barns)
+            21–30   | F    | BACKB    | Background ∝ 1/E or linear in time (eV or barns·eV)
+            31–40   | F    | BACKC    | Background ∝ E or inverse time (1/eV or barns·eV)
+            41–50   | F    | BACKD    | Exponential background coefficient (dimensionless or barns)
+            51–60   | F    | BACKF    | Exponential decay constant (eV)
+            61–62   | I    | Ianorm   | Variation flag for ANORM
+            63–64   | I    | Ibacka   | Variation flag for BACKA
+            65–66   | I    | Ibackb   | Variation flag for BACKB
+            67–68   | I    | Ibackc   | Variation flag for BACKC
+            69–70   | I    | Ibackd   | Variation flag for BACKD
+            71–72   | I    | Ibackf   | Variation flag for BACKF
+
+            Flag Values:
+            - -1 = Use PAR value over covariance file (if not previously varied)
+            -  0 = Use value from covariance file if exists; else use PAR value
+            -  1 = Vary parameter (initial from COV if available)
+            -  3 = PUP (Propagated Uncertainty Parameter)
+
+        Line 3 (Optional Uncertainties)
+            Note: Optional for angle-integrated data, required for angular distributions.
+            If omitted, uncertainties = FUDGE × value.
+
+            Columns | Type | Name     | Description
+            --------|------|----------|---------------------------------
+            1–10    | F    | Danorm   | Uncertainty on ANORM
+            11–20   | F    | Dbacka   | Uncertainty on BACKA
+            21–30   | F    | Dbackb   | Uncertainty on BACKB
+            31–40   | F    | Dbackc   | Uncertainty on BACKC
+            41–50   | F    | Dbackd   | Uncertainty on BACKD
+            51–60   | F    | Dbackf   | Uncertainty on BACKF
+
+        Line 4, 5, … (for Angular Distributions Only)
+            When the dataset represents angular distributions, lines 2 and 3 are repeated for each angle.
+            Each pair corresponds to the normalization and background parameters at a specific angle.
+
+        End of Card 6:
+            - Must be followed by a blank line (except possibly at end-of-file).
+            - If present, must follow Card Set 5 if that card is used.
+
+    Notes:
+    - This card may alternatively be placed in the INPut file if no parameters are to be varied.
+    - Flags allow for modeling flexibility across sequential SAMMY runs.
+    - Units and meanings of parameters adapt based on context (e.g., whether the data is transmission or cross section).
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 7 – Channel Radius Parameters (Standard Format)
+
+    Purpose:
+        Card 7 defines the effective and true channel radii used in potential scattering and in calculating
+        penetrability and shift factors for the R-matrix formalism.
+
+        This format is used when there are fewer than 99 spin groups or channels. For more than 99,
+        use Card 7-alt or the preferred Card 7a (keyword-based format).
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "RADIUs parameters follow"
+
+        Line 2
+            Defines the effective and true radii for specific spin groups and (optionally) specific channels.
+
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–10    | F    | PAREFF    | Effective radius (Fermi), used for potential scattering
+            11–20   | F    | PARTRU    | True radius (Fermi), used for penetrabilities and shifts
+
+            PARTRU behavior:
+            - If > 0: use the specified value
+            - If = 0 and IFLTRU is not negative: use CRFN from INPut file or Card 4
+            - If < 0: treated as mass ratio (sample nucleus to neutron); calculates radius via:
+                PARTRU = 1.23 * (AWRI)^(1/3) + 0.8
+
+            Variation Flags and Indicators:
+            21      | I    | ICHAN     | 0 = apply to all channels, 1 = specify channels
+            22      | I    | IFLEFF    | Flag for PAREFF: 0 = fixed, 1 = vary, 3 = PUP
+            23–24   | I    | IFLTRU    | Flag for PARTRU: 0 = fixed, 1 = vary, 3 = PUP
+
+            Spin Group Assignments:
+            25–80   | I    | IG1, IG2, ..., IG_Last | Spin group numbers using these radii
+                                                    | Use 2 columns per group, fill left to right
+
+            If ICHAN = 1:
+            - Insert a 0 after the spin group list to indicate the end of spin group numbers
+            - Followed by a list of channel numbers, each in 2-column format
+
+            Channel Assignments:
+            ??–80   | I    | IX, IC1, IC2, ..., IC_Last | IX flag denoting end of spin group list (IX==0),
+                                                        | followed by channel numbers using these radii
+                                                        | Use 2 columns per group, fill left to right
+
+            Example of ICHAN==1 with channel numbers:
+            PAREFF   PARTRU   ICHAN   IFLEFF  IFLTRU  IG1 IG2 IX  IC1 IC2 ...
+            3.500    3.500    1       1       1       1   2   0   1   2
+
+        Repeat Line 2:
+            Repeat as needed to assign different radii to other spin groups and/or channels.
+
+        End of Card 7:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - Units: Fermi (1 Fermi = 1e-15 meters)
+        - For more than 99 spin groups or more complex input, use Card 7a (keyword format)
+        - Card 7 and 7a should not be mixed in the same PAR file
+        - Flags allow PUP handling or parameter fitting control over radii values
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 7-alt – Channel Radius Parameters (Extended Format for >99 Spin Groups)
+
+    Purpose:
+        Card 7-alt is a column-based extension of Card 7, used when the number of spin groups or channels exceeds 99.
+        It preserves the same intent and data fields as Card 7 but adapts column widths to accommodate larger indices.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "RADIUs parameters follow"
+
+        Line 2
+            Defines the effective and true channel radii, flags for variation, and lists of spin groups and channels.
+
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–10    | F    | PAREFF    | Effective radius (Fermi), used for potential scattering
+            11–20   | F    | PARTRU    | True radius (Fermi), used for penetrabilities and shifts
+
+            PARTRU behavior:
+            - If > 0: use the specified value
+            - If = 0 and IFLTRU is not negative: use CRFN from INPut file or Card 4
+            - If < 0: interpreted as mass ratio (sample nucleus to neutron), then:
+                PARTRU = 1.23 * (AWRI)^(1/3) + 0.8
+
+            Extended Column Widths:
+            21–25   | I    | ICHAN     | 0 = apply to all channels, 1 = specify channels
+            26–30   | I    | IFLEFF    | Flag for PAREFF: 0 = fixed, 1 = vary, 3 = PUP
+            31–35   | I    | IFLTRU    | Flag for PARTRU: 0 = fixed, 1 = vary, 3 = PUP
+
+            Spin Group Assignments (as many as needed):
+            36–80+  | I    | IG1, IG2, ..., IG_Last | Spin group numbers using these radii
+                                                      Each group takes 5 columns.
+                                                      Add “0” (IX) to end the list if channels follow.
+
+            Channel Assignments (if ICHAN == 1):
+            Next columns | I | IC1, IC2, ..., IC_Last
+                        |    | After IX = 0 marker, define which channels use these radii
+
+            Example:
+            PAREFF   PARTRU   ICHAN  IFLEFF  IFLTRU   IG1  IG2   IX  IC1  IC2 ...
+             3.500     3.500       1       1       1   101  102    0    1    2
+
+        Repeat Line 2:
+            Repeat as needed for each unique spin group and/or channel configuration.
+
+        End of Card 7-alt:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - Units: Fermi (1 Fermi = 1e-15 meters)
+        - Used when more than 99 spin groups or channel configurations are needed
+        - Do not mix with Card 7 or Card 7a in the same PAR file
+        - Required if spin group or channel indices are three digits or more
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 7a – Channel Radius Parameters (Keyword Format)
+
+    Purpose:
+        Card 7a provides a flexible, keyword-based method for specifying channel radii, particularly suited for
+        cases involving a large number of spin groups or channel configurations. It is the preferred format for
+        defining radius parameters due to its clarity and extensibility.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must include the phrase: "RADII are in KEY-WORD format"
+                         or alternatively: "CHANNel radius parameters follow"
+
+        Line 2, 3, ... (Keyword-Based Radius Definitions)
+            These lines define radius values, uncertainties, variation flags, and assignments to particle-pair
+            names, orbital angular momentum values, and spin groups/channels using key-value syntax.
+
+            - Radius Specification:
+                Keyword: RADIus or RADIi or EFfective radius or TRue radius
+                Example: Radius= 3.200 3.200
+
+            - Flags for Variation:
+                Keyword: FLags
+                Example: Flags=1 3        # Vary effective radius; PUP true radius
+                If one value is provided, the second is assumed fixed.
+
+            - Uncertainties:
+                Keyword: RElative or ABsolute or UNcertainty
+                Example: Relative=0.01 0.01
+
+            - Particle Pair Assignment:
+                Keyword: PARTicle-pair or PP
+                Example: PP=n+16O
+
+            - Orbital Angular Momentum:
+                Keyword: L or ORbital angular momentum
+                Values can be ALl, EVen, ODd, or explicit l-values (e.g., 0,1,2)
+                Example: L=all
+
+            - Spin Group and Channel Assignments:
+                Keyword: GRoup and CHannels
+                Example: Group=1 Channels=1,2
+
+        Repeat lines as needed:
+            Each radius specification must be associated with relevant groups and channels.
+
+        End of Card 7a:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - If only one radius is specified, it applies to both effective and true radius.
+        - Keywords are case-insensitive, but only capitalized letters are required.
+        - Channel radii control boundary conditions for penetrability and phase shifts in the R-matrix.
+        - Recommended over Card Set 7 for general use, especially with complex systems.
+        - Do not mix Card 7 and Card 7a formats in the same PAR file.
+
+    Example:
+        Radius=3.200 3.200 Flags=1 3
+        PP=n+16O L=all
+        Group=1 Channels=1,2
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 8 – Data Reduction Parameters
+
+    Purpose:
+        Card 8 provides initial values for data reduction parameters. These parameters are used during the analysis
+        but are not resonance parameters. They may include experimental constants or correction factors and can be
+        varied, fixed, or treated as PUPs.
+
+        This card set is optional. It can alternatively be placed in the INPut file if no values are to be varied.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "DATA reduction parameters are next"
+
+        Line 2, 3, ...
+            Each line defines one data reduction parameter and its associated settings.
+
+            Columns | Type | Name      | Description
+            --------|------|-----------|------------------------------------------------------------
+            1–5     | A    | NAMDTP    | Alphanumeric name for the parameter
+            7       | I    | Iff       | Flag indicating how the parameter is treated:
+                                        | 0 = fixed, 1 = varied, 3 = PUP
+            11–20   | F    | PARDTP    | Current value of the parameter
+            21–30   | F    | UNCDTP    | Absolute uncertainty of the parameter
+            31–40   | F    | PTILDE    | Value used to generate partial derivatives
+                                        | If zero, SAMMY assumes PTILDE = PARDTP
+
+        Repeat Line 2:
+            Repeat for each data reduction parameter.
+
+        End of Card 8:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - Only parameters relevant to the current data set should be included.
+        - These parameters are typically determined experimentally or via preprocessing.
+        - Examples might include detector calibration factors, dead times, or geometric corrections.
+        - The names (NAMDTP) should match expected identifiers in the INPut file and model.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 9 – Oak Ridge Resolution Function (ORR) Parameters
+
+    Purpose:
+        Card 9 defines parameters used to model the resolution function, particularly for systems modeled
+        using the Oak Ridge Resolution (ORR) framework. This includes configurations for moderators like
+        water or tantalum, as well as lithium-glass or NE110 detectors, and channel width information.
+
+        This card set is optional. It can be placed either in the PAR file or the INPut file.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "ORRES"
+
+        Subsection 1 – BURST Width
+            Line:
+                Columns | Type | Name     | Description
+                --------|------|----------|-------------------------------------------
+                1–5     | A    | "BURST"  | Indicates this line contains burst info
+                7       | I    | Iff      | Variation flag: 0 = fixed, 1 = vary, 3 = PUP
+                11–20   | F    | BURST    | Burst width (ns)
+                21–30   | F    | DBURST   | Uncertainty on burst width (ns)
+
+        Subsection 2 – WATER Moderator
+            Line 1:
+                1–5     | A    | "WATER"  | OR alternate: "TANTA" (not both)
+                7       | I    | IF0      | Vary flag for WATR0
+                8       | I    | IF1      | Vary flag for WATR1
+                9       | I    | IF2      | Vary flag for WATR2
+                10      | I    | m        | Degrees of freedom (default = 4)
+                11–20   | F    | WATR0    | Constant term for mean free path (mm)
+                21–30   | F    | WATR1    | Linear coefficient (mm)
+                31–40   | F    | WATR2    | Quadratic coefficient (mm)
+
+            Line 2 (optional uncertainties):
+                11–20   | F    | DW0      | Uncertainty on WATR0
+                21–30   | F    | DW1      | Uncertainty on WATR1
+                31–40   | F    | DW2      | Uncertainty on WATR2
+
+        Subsection 3 – TANTA Moderator (mutually exclusive with WATER)
+            Line 1:
+                1–5     | A    | "TANTA"
+                7       | I    | IFTANT   | Variation flag
+                11–20   | F    | TANTA    | Tantalum mean free path (1/mm)
+                21–30   | F    | Dtanta   | Uncertainty
+
+            Optional lines follow with parameters X0, X1, X2, X3, WWW, ALPHA etc.
+
+        Subsection 4 – LITHI or NE110 Detector Options
+            Lines include:
+                - Delay constants (D, F, G)
+                - Energy/cross-section tables
+                - Number of entries to follow (NMDETS)
+
+        Subsection 5 – Channel Widths (CHANN)
+            Line:
+                1–5     | A    | "CHANN"
+                7       | I    | Ifchnn   | Variation flag (0 = fixed, 1 = vary, 2 = PUP)
+                11–20   | F    | ECRNCH   | Max energy for this channel width (eV)
+                21–30   | F    | CHANN    | Channel width (ns)
+                31–40   | F    | DCHANN   | Uncertainty (ns)
+
+            Repeat as needed for multiple channels
+
+        End of Card 9:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - WATER and TANTA moderator sections are mutually exclusive
+        - BURST, CHANN, and moderator entries may appear in any order
+        - Some lines are optional depending on your resolution function setup
+        - Ensure flags match how parameters should be handled in the fitting process
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 10 – Isotopic Abundances and Masses
+
+    Purpose:
+        Card 10 provides isotopic information for the sample material used in the experiment. This includes
+        atomic mass, fractional abundance, and associated spin group assignments for each isotope.
+
+        This information is essential when multiple isotopes contribute to the total cross section.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "ISOTOpic abundances and masses"
+                         or alternatively: "NUCLIde abundances and masses"
+
+        Line 2, 3, ...
+            Each line defines one isotope and its related spin groups.
+
+            Columns | Type | Name        | Description
+            --------|------|-------------|------------------------------------------------------------
+            1–10    | F    | AMUISO      | Atomic mass of isotope (amu)
+            11–20   | F    | PARISO      | Fractional abundance (dimensionless, typically < 1)
+            21–30   | F    | DELISO      | Uncertainty on abundance (dimensionless)
+
+            31–32   | I    | IFLISO      | Abundance treatment flag:
+                                         | 0 = fixed, 1 = vary, 2 = use INPut file value, 3 = PUP
+
+            33–34+  | I    | IGRISO(n)   | Spin group numbers associated with this isotope
+                                         | Each spin group occupies 2 columns (or 5 columns if >99 groups)
+
+            Optional Continuation Line:
+            If more than 24 spin groups are associated with an isotope, end the line with “-1” in columns 79–80.
+            Then continue listing IGRISO entries on the next line.
+
+        Repeat Line 2:
+            Repeat for each isotope in the sample.
+
+        End of Card 10:
+            - Terminate the card set with a blank line.
+
+    Notes:
+        - Accurate spin group mapping is essential for proper treatment of resonance parameters.
+        - When using more than 99 spin groups, use 5-column format for integer entries.
+        - This card must appear before Card Set 11 if both are used.
+        - Useful in complex samples such as natural elements (e.g., natural U, Cd, etc.)
+
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 11 – Miscellaneous Parameters
+
+    Purpose:
+        Card 11 includes a variety of optional parameters that influence specific aspects of the data analysis.
+        These include geometric corrections, efficiency factors, and other settings that do not fit cleanly
+        into other card sets. Each type of parameter is identified using a keyword in column 1.
+
+        This card set is optional and can be used selectively based on modeling needs.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "MISCEllaneous parameters follow"
+
+        Following Lines:
+            Each entry starts with a keyword in columns 1–5 to indicate the parameter type.
+            Specific fields and flags vary by keyword. Several commonly used entries are outlined below.
+
+        Subsection – DELTA (Energy-dependent path length)
+            Keyword: "DELTA"
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | "DELTA"
+            7       | I    | IFLAG1   | Variation flag for DELL11 (E-dependent term)
+            9       | I    | IFLAG0   | Variation flag for DELL00 (constant term)
+            11–20   | F    | DELL11   | Coefficient of E (m/eV)
+            21–30   | F    | D1       | Uncertainty on DELL11
+            31–40   | F    | DELL00   | Constant term (m)
+            41–50   | F    | D0       | Uncertainty on DELL00
+
+        Subsection – ETA (Fission/Absorption ratio)
+            Keyword: "ETA  "
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | "ETA  "
+            7       | I    | IFLAGN   | Variation flag for NU
+            11–20   | F    | NU       | Normalization coefficient (dimensionless)
+            21–30   | F    | DNU      | Uncertainty on NU
+            31–40   | F    | ENU      | Energy for which NU applies (eV) – optional
+
+        Subsection – FINIT (Finite-size corrections)
+            Keyword: "FINIT"
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | "FINIT"
+            7       | I    | IFLAGI   | Flag for incident attenuation ATTNI
+            9       | I    | IFLAGO   | Flag for exit attenuation ATTNO
+            11–20   | F    | ATTNI    | Incident-particle attenuation (atoms/barn)
+            21–30   | F    | DTTNI    | Uncertainty on ATTNI
+            31–40   | F    | ATTNO    | Exit-particle attenuation (atoms/barn)
+            41–50   | F    | DTTNO    | Uncertainty on ATTNO
+
+        Subsection – GAMMA (Spin-group averaged radiation widths)
+            Keyword: "GAMMA"
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | "GAMMA"
+            6–7     | I    | IG       | Spin group number
+            8–9     | I    | IFG      | Variation flag
+            11–20   | F    | GAMGAM   | Radiation width for spin group (meV)
+            21–30   | F    | DGAM     | Uncertainty on GAMGAM
+
+        Subsection – TZERO (Time-zero and flight path)
+            Keyword: "TZERO"
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | "TZERO"
+            7       | I    | IFTZER   | Flag for t₀
+            9       | I    | IFLZER   | Flag for L₀
+            11–20   | F    | TZERO    | t₀ (seconds)
+            21–30   | F    | DTZERO   | Uncertainty on t₀
+            31–40   | F    | LZERO    | L₀ (dimensionless)
+            41–50   | F    | DLZERO   | Uncertainty on L₀
+            51–60   | F    | FPL      | Flight path length (m), used only if DIST=0
+
+        Subsection – SIABN (Self-indication sample abundances)
+            Keyword: "SIABN"
+            1–5     | A    | WHAT     | "SIABN"
+            7,9,10  | I    | IF1–IF3  | Variation flags
+            11–20   | F    | SIABN(1) | Abundance for nuclide #1
+            21–30   | F    | DS(1)    | Uncertainty on SIABN(1)
+            ...
+
+        Subsection – SELFI (Sample conditions for self-indication)
+            Keyword: "SELFI"
+            1–5     | A    | WHAT     | "SELFI"
+            7       | I    | IFTEMP   | Variation flag for temperature
+            9       | I    | IFTHCK   | Variation flag for thickness
+            11–20   | F    | SITEM    | Effective temperature (K)
+            21–30   | F    | dSITEM   | Uncertainty on SITEM
+            31–40   | F    | SITHC    | Thickness (atoms/barn)
+            41–50   | F    | dSITHC   | Uncertainty on SITHC
+
+        Subsection – EFFIC (Detection efficiencies)
+            Keyword: "EFFIC"
+            1–5     | A    | WHAT     | "EFFIC"
+            7       | I    | IFCAPE   | Flag for capture efficiency
+            9       | I    | IFFISE   | Flag for fission efficiency
+            11–20   | F    | EFCAP    | Capture efficiency
+            21–30   | F    | EFFIS    | Fission efficiency
+            31–40   | F    | dEFCAP   | Uncertainty on capture efficiency
+            41–50   | F    | dEFFIS   | Uncertainty on fission efficiency
+
+        Subsection – DELTE (Delta-E time dispersion model)
+            Keyword: "DELTE"
+            1–5     | A    | WHAT     | "DELTE"
+            7,9,10  | I    | IFLAG1, IFLAG0, IFLAGL
+            11–20   | F    | DELE1    | Linear coefficient (m/eV)
+            21–30   | F    | DD1      | Uncertainty on DELE1
+            31–40   | F    | DELE0    | Constant term (m)
+            41–50   | F    | DD0      | Uncertainty on DELE0
+            51–60   | F    | DELEL    | Log term coefficient (m / ln(eV))
+            61–70   | F    | DDL      | Uncertainty on DELEL
+
+        Subsection – DRCAP (Direct capture contribution)
+            Keyword: "DRCAP"
+            1–5     | A    | WHAT     | "DRCAP"
+            7       | I    | IFLAG1   | Variation flag for coefficient
+            9       | I    | NUC      | Nuclide number
+            11–20   | F    | COEF     | Scaling factor applied to DRC file value
+            21–30   | F    | dCOEF    | Uncertainty on COEF
+
+        Subsection – NONUN (Non-uniform sample thickness)
+            Keyword: "NONUN" or "NON U"
+            1–5     | A    | WHAT     | "NONUN" or "NON U"
+            21–30   | F    | R        | Radial distance
+            31–40   | F    | Z        | Thickness at this radius
+            41–50   | F    | dZ       | Uncertainty on thickness
+
+        End of Card 11:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - Only include relevant subsections for the specific experiment
+        - Card 10 (isotopic definitions) must appear before Card 11
+        - Keywords must match exactly for SAMMY to interpret them correctly
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 12 – Paramagnetic Cross Section Parameters
+
+    Purpose:
+        Card 12 provides parameter values for modeling paramagnetic scattering cross sections.
+        These parameters follow a specific functional form and are defined per nuclide and scattering type.
+        This card set is optional and may also appear in the INPut file if no values are to be varied.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "PARAMagnetic cross section parameters follow"
+
+        Line 2 (Parameter Set for a Scattering Type)
+            Keyword: One of the following (in columns 1–5):
+                     "TM  ", "ER  ", "HO  "  # 2 letters + 3 blanks
+
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            1–5     | A    | WHAT     | Scattering type keyword ("TM  ", "ER  ", "HO  ")
+            7       | I    | IFA      | Flag to vary A (0 = fixed, 1 = vary, 3 = PUP)
+            9       | I    | IFB      | Flag to vary B
+            10      | I    | IFP      | Flag to vary P
+            11–20   | F    | A        | Parameter A in the paramagnetic cross section model
+            21–30   | F    | dA       | Uncertainty on A
+            31–40   | F    | B        | Parameter B
+            41–50   | F    | dB       | Uncertainty on B
+            51–60   | F    | P        | Parameter P
+            61–70   | F    | dP       | Uncertainty on P
+
+        Line 3 (Optional: Nuclide-Specific Parameter)
+            Columns | Type | Name     | Description
+            --------|------|----------|-------------------------------------------------------------
+            7       | I    | ISO      | Isotope (nuclide) number
+            9       | I    | IFC      | Flag to vary C (0 = fixed, 1 = vary, 3 = PUP)
+            11–20   | F    | C        | Parameter C
+            21–30   | F    | dC       | Uncertainty on C
+
+        Repeat:
+            Repeat lines 2 and 3 as necessary for each paramagnetic scattering configuration and nuclide.
+
+        End of Card 12:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - Default values for A, B, P, and C may be defined elsewhere (e.g., in code)
+        - Used primarily in magnetic scattering experiments
+        - Ensure that keywords and formatting match SAMMY's expectations
+        - Values should be physically justified and experimentally motivated
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 13 – Background Functions
+
+    Purpose:
+        Card 13 defines analytic or tabulated background functions used in modeling background
+        contributions in the experimental data, particularly those not captured by Card 6.
+        This includes constant, exponential, power-law, log-exponential, and point-wise formats.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the header string: "BACKGround functions"
+
+        Following Lines:
+            Each entry starts with a keyword in columns 1–5 to indicate the background function type.
+            Specific fields and flags vary by keyword.
+
+        Subsection – CONST (Constant Background)
+            Keyword: "CONST"
+            Columns | Type | Name   | Description
+            --------|------|--------|-------------------------------------------------------------
+            1–5     | A    | WHAT   | "CONST"
+            7       | I    | IFA     | Variation flag for A
+            11–20   | F    | A       | Constant background value
+            21–30   | F    | dA      | Uncertainty on A
+            31–40   | F    | Emin    | Minimum energy for application
+            41–50   | F    | Emax    | Maximum energy
+            51–60   | F    | FPL     | Optional flight-path length (m)
+
+        Subsection – EXPON (Exponential Background)
+            Keyword: "EXPON"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "EXPON"
+            7       | I    | IFA     | Flag to vary A
+            9       | I    | IFB     | Flag to vary B
+            11–20   | F    | A       | Coefficient of exp(B·t)
+            21–30   | F    | dA      | Uncertainty on A
+            31–40   | F    | B       | Exponent coefficient (1/ns)
+            41–50   | F    | dB      | Uncertainty on B
+            51–60   | F    | Emin    | Minimum energy
+            61–70   | F    | Emax    | Maximum energy
+            71–80   | F    | FPL     | Optional flight-path length
+
+        Subsection – POWER (Power-Law Background)
+            Keyword: "POWER"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "POWER"
+            7       | I    | IFA     | Flag to vary A
+            9       | I    | IFB     | Flag to vary B
+            11–20   | F    | A       | Amplitude
+            21–30   | F    | dA      | Uncertainty on A
+            31–40   | F    | B       | Power exponent
+            41–50   | F    | dB      | Uncertainty on B
+            51–60   | F    | Emin    | Min energy
+            61–70   | F    | Emax    | Max energy
+            71–80   | F    | FPL     | Optional flight-path length
+
+        Subsection – EXPLN (Log-Exponential)
+            Keyword: "EXPLN"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "EXPLN"
+            7       | I    | IFA     | Flag for A
+            9       | I    | IFB     | Flag for B
+            10      | I    | IFC     | Flag for C
+            11–20   | F    | A       | Constant term
+            21–30   | F    | dA      | Uncertainty on A
+            31–40   | F    | B       | Coefficient of t
+            41–50   | F    | dB      | Uncertainty on B
+            51–60   | F    | C       | Coefficient of ln(t)
+            61–70   | F    | dC      | Uncertainty on C
+
+        Line following EXPLN:
+            11–20   | F    | Emin    | Min energy
+            21–30   | F    | Emax    | Max energy
+            31–40   | F    | FPL     | Optional flight-path length
+
+        Subsection – T-PNT / E-PNT (Point-wise Backgrounds)
+            Keyword: "T-PNT" or "E-PNT"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "T-PNT" or "E-PNT"
+            7       | I    | IFA     | Flag for A
+            11–20   | F    | A       | Value at time/energy
+            21–30   | F    | dA      | Uncertainty
+            31–40   | F    | T or E  | Time or energy (ns or eV)
+            41–50   | F    | FPL     | Optional flight-path length
+
+        Subsection – TFILE / EFILE (Point-wise from File)
+            Keyword: "TFILE" or "EFILE"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "TFILE" or "EFILE"
+            7       | I    | IFB     | Flag for B
+            11–20   | F    | B       | Multiplier
+            21–30   | F    | dB      | Uncertainty on B
+            31–40   | F    | FPL     | Optional flight-path length
+            Next Line: 1–70   | A    | FILE     | Name of file containing pointwise (t,A) or (E,A)
+
+        Subsection – AETOB (E^(-B) Type)
+            Keyword: "AETOB"
+            Columns | Type | Name   | Description
+            1–5     | A    | WHAT   | "AETOB"
+            7       | I    | IFA     | Flag for A
+            9       | I    | IFB     | Flag for B
+            11–20   | F    | A       | Coefficient of E^(-B)
+            21–30   | F    | dA      | Uncertainty on A
+            31–40   | F    | B       | Exponent
+            41–50   | F    | dB      | Uncertainty on B
+            51–60   | F    | Emin    | Min energy
+            61–70   | F    | Emax    | Max energy
+
+        End of Card 13:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - Keyword entries must start in column 1 and match precisely for SAMMY to interpret.
+        - Units for times are typically in nanoseconds; energies in eV.
+        - Functions are summed to create a total background model.
+        - When using T-PNT or E-PNT, at least two consecutive lines must be provided, in increasing T or E.
+        - Files for TFILE/EFILE must follow format: one title line, then (Ti,Ai) or (Ei,Ai) pairs.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 14 – RPI / GELINA / nTOF Resolution Function Parameters (Card 14)
+
+    Purpose:
+        Card 14 defines the parameters for the RPI (Rensselaer Polytechnic Institute),
+        GELINA (Geel Electron Linear Accelerator), or nTOF (neutron Time Of Flight) resolution
+        broadening functions. These functions are based on empirical modeling and
+        convolution of multiple experimental contributions.
+
+        This card is intended for use when using the specialized resolution function
+        implemented in Section III.C.3 of the SAMMY manual.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain one of the following strings:
+                         - "RPI Resolution function"
+                         - "GELINa resolution function"
+                         - "NTOF resolution function"
+
+        Default Options (Phrase in Line 1 to use pre-loaded parameter sets):
+            - RPI Transmission resolution function
+            - RPI Capture resolution function
+            - GEEL DEFAUlt values
+            - GELINa DEFAUlt values
+            - NTOF DEFAUlt values
+
+        Optional INPut Commands:
+            - SHIFT RPI RESOLUTION function to center
+            - DO NOT SHIFT RPI RESOLUTION function to center
+
+    Format Details for Each Line:
+
+Keyword: "BURST"
+            Columns | Type | Name   | Description
+            --------|------|--------|-------------------------------------------------------------
+            1–5     | A    | WHAT   | "BURST"
+            7       | I    | IFBUR  | Variation flag for BURST width
+            11–20   | F    | BURST  | Burst width (ns), FWHM of Gaussian
+            21–30   | F    | DBURST | Uncertainty on BURST
+
+            Notes:
+            - Models the pulse width of the initial electron burst.
+            - Used as a Gaussian component in the convolution.
+
+Keyword: "TAU"
+            Columns | Type | Name   | Description
+            --------|------|--------|-------------------------------------------------------------
+            1–5     | A    | WHAT   | "TAU"
+            11–20   | F    | TAU1   | Delay offset (ns)
+            21–30   | F    | TAU2   | Linear energy coefficient (per eV)
+            31–40   | F    | TAU3   | Baseline delay (ns)
+            41–50   | F    | TAU4   | Logarithmic energy term (per eV)
+            51–60   | F    | TAU5   | Exponential falloff (ns)
+            61–70   | F    | TAU6   | Optional second exponential (ns)
+            71–80   | F    | TAU7   | Optional secondary multiplicative correction
+
+            Notes:
+            - Used for shaping the energy-dependent delay in the moderator response.
+
+Keyword: "LAMBD"
+            Columns | Type | Name   | Description
+            --------|------|--------|-------------------------------------------------------------
+            1–5     | A    | WHAT   | "LAMBD"
+            11–20   | F    | LAMB0  | Zeroth-order term for moderator path length
+            21–30   | F    | LAMB1  | Linear ln(E) coefficient
+            31–40   | F    | LAMB2  | Quadratic ln(E) coefficient
+            41–50   | F    | LAMB3  | Cubic ln(E) coefficient
+            51–60   | F    | LAMB4  | Optional higher-order term
+
+            Notes:
+            - Models the mean free path behavior of water moderators.
+            - Energy dependence is specified through log-polynomial form.
+
+        Additional Optional Lines:
+            - Polynomial and exponential coefficients (ai for A1, A3, A5)
+            - Time center (t0)
+            - Amplitude modifiers A2, A3, A4, A5
+            - Additional exponential tail terms (Bi)
+            - Channel width "c" (in ns)
+
+        End of Card 14:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - Do not use Card 14 and Card 14a in the same file.
+        - All energy values are in eV and time in nanoseconds.
+        - Default sets can be used directly or overridden with manual values.
+        - For GELINA and nTOF, energy-dependent variants of A3 and A5 are supported.
+        - Test cases: tr053, tr054, tr094, tr108
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 14a – Keyword-Based Format for Resolution Function Parameters
+
+    Purpose:
+        Card 14a allows the use of a keyword-driven syntax to define resolution function parameters.
+        It is an alternative to Card 14, providing a more flexible and readable way to declare
+        energy-dependent or instrument-specific resolution model components.
+
+        This format is especially useful for defining GELINA/nTOF-style components or
+        custom configurations for modern experiments.
+
+    Structure:
+
+        Line 1 (Header)
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the string:
+                         "KEYWORD-based resolution function input"
+
+        Following Lines:
+            Each line specifies a parameter using keyword=value syntax.
+
+    Keyword Formats and Interpretation:
+
+Keyword: "BURST"
+            Syntax: BURST = value
+            Meaning: Burst width (ns), typically FWHM of Gaussian
+            Notes: Used to model electron pulse width
+
+Keyword: "TAU"
+            Syntax: TAU1 = value, TAU2 = value, ..., TAU7 = value
+            Meaning: Time delays and modifiers used in pulse structure modeling
+            Notes:
+                - TAU1: Delay offset
+                - TAU2: Linear energy coefficient
+                - TAU3: Baseline delay
+                - TAU4: Log energy term
+                - TAU5: Exponential falloff
+                - TAU6, TAU7: Optional corrections
+
+Keyword: "LAMBD"
+            Syntax: LAMB0 = value, LAMB1 = value, ..., LAMB4 = value
+            Meaning: Moderator path-length coefficients (log-polynomial form)
+            Notes:
+                - Define energy dependence of path length via Λ = L0 + L1·ln(E) + ...
+
+Keyword: "A1", "A3", "A5"
+            Syntax: A1 = a0 + a1·E + a2·exp(−E) + a3·ln(E)
+            Meaning: Functional forms for resolution shaping terms
+            Notes:
+                - You may use polynomial + exponential/log components
+
+Keyword: "T0"
+            Syntax: T0 = value
+            Meaning: Time center in ns for symmetry centering
+
+Keyword: "A2", "A4", "A5"
+            Syntax: A2 = value, A4 = value, A5 = value
+            Meaning: Amplitude scaling factors for shaping functions
+
+Keyword: "B1", "B2", ..., "Bn"
+            Syntax: B1 = value, B2 = value
+            Meaning: Coefficients for additional exponential tail components
+
+Keyword: "CHAN"
+            Syntax: CHANWIDTH = value
+            Meaning: Channel width in ns
+
+        End of Card 14a:
+            - Terminate the card set with a blank line
+
+    Notes:
+        - This format is more human-readable and extensible than Card 14.
+        - Each keyword must appear at the beginning of the line.
+        - Useful for defining GELINA/nTOF resolution functions or custom facilities.
+        - Only use Card 14a or Card 14—not both—in a single PAR file.
+        - Test case examples: tr107, tr108
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 15 – Detector Efficiency
+
+    Skipping this card for now.
+
+///////////////////////////////////////////////////////////////////////////////
+ Card Set 16 – USER-Defined Resolution Function
+
+    Purpose:
+        Card 16 defines a resolution function using user-defined tabulated components, where
+        the resolution function shape is provided in a file. The components include lines
+        describing the burst and channel widths, and a pointer to the resolution file.
+
+        This is used for custom convolution kernels based on simulations or measurements.
+
+    Structure:
+
+        Line 1 (Header)
+            16:1
+            Columns: 1–80    Type: A   Name: WHAT
+            Description: Must contain the string:
+                         "USER-Defined resolution function"
+
+        Line 2 (BURST Line)
+            16:2
+            Keyword: "BURST"
+            Columns | Type | Name   | Description
+            --------|------|--------|-------------------------------------------------------------
+            1–5     | A    | WHAT   | "BURST"
+            7       | I    | IFBUR  | Variation flag for BURST width
+            11–20   | F    | BURST  | Burst width (ns), FWHM of Gaussian
+            21–30   | F    | DBURST | Uncertainty on BURST
+
+        Line 3 (CHANN Line)
+            16:3
+            Keyword: "CHANN"
+            Columns | Type | Name    | Description
+            --------|------|---------|-------------------------------------------------------------
+            1–5     | A    | WHAT    | "CHANN"
+            7       | I    | IFCHN   | Variation flag for channel width
+            11–20   | F    | CHANN   | Channel width (ns)
+            21–30   | F    | DCHANN  | Uncertainty on CHANN
+
+        Lines 4, 5, ...
+            16:4,5,...
+            Repeat Line 3 (CHANN) as many times as needed for different channel groupings
+
+        Line 6 (Resolution File Specification)
+            16:6
+            Keyword: "FILE="
+            Columns | Type | Name    | Description
+            --------|------|---------|-------------------------------------------------------------
+            1–5     | A    | WHAT    | "FILE="
+            6–80    | A    | FILENAME| Path to file containing resolution function data
+
+            Notes:
+            - FILE= must appear exactly as shown starting in column 1.
+            - File must contain two-column tabulated resolution function:
+                Time (ns) and Response value
+            - Response should be normalized (area under curve = 1)
+
+    End of Card 16:
+        - Terminate the card set with a blank line
+
+    Notes:
+        - CHANN lines define resolution widths over multiple energy regions
+        - FILE= line provides the custom kernel for convolution
+        - Resolution file must be well-formed with adequate interpolation points
+        - Cannot be used with Cards 14, 14a, or 9 (ORR models)
