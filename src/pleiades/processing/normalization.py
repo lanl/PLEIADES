@@ -14,7 +14,6 @@ from pleiades.processing.normalization_handler import (
     update_with_rebin,
 )
 from pleiades.utils.files import export_ascii
-from pleiades.utils.image_processing import remove_outliers
 from pleiades.utils.logger import loguru_logger
 from pleiades.utils.timepix import (
     update_with_nexus_files,
@@ -55,7 +54,7 @@ logger = loguru_logger.bind(name="normalization")
 # - rolling average then normalization
 
 # output:
-#  - numpy (otional)
+#  - numpy (optional)
 #  - output folder (optional)
 
 
