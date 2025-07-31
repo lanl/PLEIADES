@@ -29,7 +29,6 @@ def data_fixture(tmpdir):
 def test_load_tiff(data_fixture):
     # Test loading tiff files
     generic_tiff, generic_fits = list(map(str, data_fixture))
-    print(f"generic_tiff: {generic_tiff}")
 
     # Load the tiff files
     loaded_generic_tiff = tifffile.imread(str(generic_tiff))
