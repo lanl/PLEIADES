@@ -150,7 +150,6 @@ def convert_to_cross_section(from_unit, to_unit):
 #     energy = energy * convert_to_energy(EnergyUnitOptions.J, EnergyUnitOptions.eV)
 #     return energy
 
-
 def convert_array_from_time_to_lambda(
     time_array: np.ndarray,
     time_unit: TimeUnitOptions,
