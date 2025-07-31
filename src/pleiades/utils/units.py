@@ -105,7 +105,6 @@ def convert_to_energy(from_unit, to_unit):
         EnergyUnitOptions.keV: 1e3,
         EnergyUnitOptions.MeV: 1e6,
         EnergyUnitOptions.GeV: 1e9,
-        # EnergyUnitOptions.J: 6.242e12,
         EnergyUnitOptions.J: 1 / electron_volt,
     }
 
