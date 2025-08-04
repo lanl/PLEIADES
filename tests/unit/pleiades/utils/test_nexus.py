@@ -107,3 +107,7 @@ def test_get_proton_charge_dict_missing_ob_proton_charge(mock_h5py_file):
         assert result["state"] is False
         assert result["sample"] is None
         assert result["ob"] is None
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

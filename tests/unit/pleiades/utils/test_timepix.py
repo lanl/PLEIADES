@@ -20,3 +20,7 @@ def test_produce_spectra_list_for_lanl():
     list_diff = np.diff(time_spectra)
     for _diff in list_diff:
         np.testing.assert_almost_equal(_diff, time_bin_size, decimal=6)
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

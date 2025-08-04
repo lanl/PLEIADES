@@ -46,3 +46,7 @@ def test_load_fits(data_fixture):
 
     # Check the loaded data
     assert np.array_equal(loaded_generic_fits, np.ones((3, 3)))
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

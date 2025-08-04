@@ -94,3 +94,7 @@ def test_crop_with_invalid_roi():
     with pytest.raises(ValueError):
         roi = Roi(-1, -1, 2, 2)  # Negative coordinates
         crop(data, roi)
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

@@ -132,3 +132,7 @@ def test_physics_parameters_initialization():
     assert params.normalization_parameters.anorm == 1.0
     assert params.broadening_parameters.crfn == 1.0
     assert params.user_resolution_parameters.burst_width == 10.0
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])
