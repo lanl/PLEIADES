@@ -19,10 +19,10 @@ Supported Facilities:
 
 Example:
     Basic workflow for updating master dictionary:
-    
+
     >>> master_dict = init_master_dict(folders, DataType.sample)
     >>> normalization_status = NormalizationStatus()
-    >>> 
+    >>>
     >>> update_with_nexus_files(master_dict, normalization_status, "/path/to/nexus")
     >>> update_with_proton_charge(master_dict, normalization_status, Facility.ornl)
     >>> update_with_shutter_counts(master_dict, normalization_status, Facility.ornl)
@@ -30,7 +30,7 @@ Example:
 
 import glob
 import os
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -48,28 +48,28 @@ def get_shutter_values_dict(
 ) -> Dict[str, Dict[str, Any]]:
     """
     Extract shutter values from Timepix detector for sample and open beam folders.
-    
+
     Retrieves shutter timing information from a Timepix detector object for both
     sample and open beam measurements. This information is essential for proper
     normalization of time-of-flight data.
-    
+
     Args:
         list_sample_folders (List[str]): List of sample folder paths
-        list_obs_folders (List[str]): List of open beam folder paths  
+        list_obs_folders (List[str]): List of open beam folder paths
         timepix (Any): Timepix detector object with get_shutter_values method
-    
+
     Returns:
         Dict[str, Dict[str, Any]]: Nested dictionary structure with:
             - "sample": {folder_path: shutter_values}
             - "ob": {folder_path: shutter_values}
-    
+
     Example:
         >>> sample_folders = ["/path/to/sample1", "/path/to/sample2"]
         >>> ob_folders = ["/path/to/ob1"]
         >>> shutter_dict = get_shutter_values_dict(sample_folders, ob_folders, timepix_obj)
         >>> shutter_dict["sample"]["/path/to/sample1"]
         [1.0, 1.2, 0.8, ...]
-        
+
     Note:
         - Timepix object must implement get_shutter_values(folder) method
         - Shutter values represent timing corrections for each measurement
@@ -93,29 +93,29 @@ def get_shutter_values_dict(
 def isolate_run_number(run_number_full_path: str) -> Union[str, int]:
     """
     Extract run number from a full file path containing run information.
-    
+
     Parses folder paths to extract neutron beamline run numbers, typically
     used for identifying corresponding nexus files and metadata. Handles
     standard naming conventions like "Run_1234" or similar patterns.
-    
+
     Args:
         run_number_full_path (str): Full path to folder containing run information.
                                    Expected format includes underscore-separated run number.
-    
+
     Returns:
         Union[str, int]: Extracted run number as string, or -1 if parsing fails
-    
+
     Example:
         >>> path = "/data/VENUS/Run_7820/images"
         >>> run_num = isolate_run_number(path)
         >>> run_num
         '7820'
-        
+
         >>> path = "/invalid/path/format"
         >>> run_num = isolate_run_number(path)
         >>> run_num
         -1
-        
+
     Note:
         - Expects basename to contain underscore-separated run number
         - Returns -1 if parsing fails (invalid format)
@@ -131,32 +131,32 @@ def isolate_run_number(run_number_full_path: str) -> Union[str, int]:
 
 
 def update_with_nexus_files(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    nexus_path: Optional[str], 
-    facility: Facility = Facility.ornl
+    master_dict: Dict[str, Any],
+    normalization_status: NormalizationStatus,
+    nexus_path: Optional[str],
+    facility: Facility = Facility.ornl,
 ) -> None:
     """
     Update master dictionary with nexus file paths for metadata extraction.
-    
+
     Discovers and associates nexus files with corresponding data folders.
     Nexus files contain essential metadata including proton charge, beam
     conditions, and experimental parameters required for proper normalization.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder information
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         nexus_path (Optional[str]): Path to directory containing nexus files.
                                    If None, nexus processing is skipped.
         facility (Facility, optional): Neutron facility identifier. Defaults to Facility.ornl.
-    
+
     Raises:
         ValueError: If facility is not supported (only ORNL and LANL currently supported)
-        
+
     Example:
         >>> update_with_nexus_files(master_dict, status, "/path/to/nexus", Facility.ornl)
         >>> # master_dict now contains nexus file paths for each folder
-        
+
     Note:
         - Updates normalization_status.all_nexus_file_found when successful
         - Facility-specific implementations handle different file naming conventions
@@ -180,26 +180,24 @@ def update_with_nexus_files(
 
 
 def update_with_nexus_files_at_ornl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    nexus_path: str
+    master_dict: Dict[str, Any], normalization_status: NormalizationStatus, nexus_path: str
 ) -> None:
     """
     Update master dictionary with ORNL VENUS beamline nexus files.
-    
+
     Handles ORNL-specific nexus file discovery and association. Expects
     nexus files named in VENUS_[run_number].nxs.h5 format and matches
     them to corresponding data folders based on run numbers.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder information
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         nexus_path (str): Path to directory containing ORNL nexus files
-        
+
     Example:
         >>> # For folder "/data/Run_7820", looks for "/nexus/VENUS_7820.nxs.h5"
         >>> update_with_nexus_files_at_ornl(master_dict, status, "/path/to/nexus")
-        
+
     Note:
         - Sets normalization_status.all_nexus_file_found = True on success
         - Returns early if any run number cannot be parsed or nexus file not found
@@ -221,32 +219,30 @@ def update_with_nexus_files_at_ornl(
 
 
 def update_with_proton_charge(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    facility: Facility = Facility.ornl
+    master_dict: Dict[str, Any], normalization_status: NormalizationStatus, facility: Facility = Facility.ornl
 ) -> None:
     """
     Extract and store proton charge values for beam intensity normalization.
-    
+
     Retrieves proton charge measurements from nexus files to enable normalization
     for variations in neutron beam intensity. Proton charge is proportional to
     the number of neutrons produced and is essential for quantitative analysis.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary with nexus file paths.
                                      Must have been processed by update_with_nexus_files.
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         facility (Facility, optional): Neutron facility identifier. Defaults to Facility.ornl.
-        
+
     Raises:
         ValueError: If facility is not supported
-        
+
     Example:
         >>> update_with_proton_charge(master_dict, status, Facility.ornl)
         >>> charge = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.proton_charge]
         >>> charge
         1.234e-6  # in Coulombs
-        
+
     Note:
         - Sets normalization_status.all_proton_charge_value_found = True on success
         - Proton charge typically measured in microampere-hours or Coulombs
@@ -265,25 +261,22 @@ def update_with_proton_charge(
         raise ValueError(f"Unknown facility: {facility}. Supported facilities are: {Facility.ornl}, {Facility.lanl}.")
 
 
-def update_with_proton_charge_at_ornl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus
-) -> None:
+def update_with_proton_charge_at_ornl(master_dict: Dict[str, Any], normalization_status: NormalizationStatus) -> None:
     """
     Extract proton charge values from ORNL VENUS nexus files.
-    
+
     Reads proton charge data from ORNL nexus files using the nexus utility
     functions. Proton charge is stored in Coulombs and represents the total
     charge delivered to the neutron production target.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing nexus file paths
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
-        
+
     Example:
         >>> update_with_proton_charge_at_ornl(master_dict, status)
         >>> # Proton charge values now available in master_dict
-        
+
     Note:
         - Requires nexus files to be already associated via update_with_nexus_files_at_ornl
         - Sets normalization_status.all_proton_charge_value_found = True
@@ -303,31 +296,29 @@ def update_with_proton_charge_at_ornl(
 
 
 def update_with_shutter_counts(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    facility: Facility = Facility.ornl
+    master_dict: Dict[str, Any], normalization_status: NormalizationStatus, facility: Facility = Facility.ornl
 ) -> None:
     """
     Extract shutter count information for exposure time normalization.
-    
+
     Reads shutter count data from facility-specific files. Shutter counts
     represent the effective exposure time or number of neutron pulses for
     each measurement, essential for time-of-flight normalization.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder information
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         facility (Facility, optional): Neutron facility identifier. Defaults to Facility.ornl.
-        
+
     Raises:
         ValueError: If facility is not supported
-        
+
     Example:
         >>> update_with_shutter_counts(master_dict, status, Facility.ornl)
         >>> counts = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.shutter_counts]
         >>> counts
         [1000, 1200, 980, ...]  # counts per time bin
-        
+
     Note:
         - Sets normalization_status.all_shutter_counts_file_found = True on success
         - ORNL implementation reads from *_ShutterCount.txt files
@@ -343,32 +334,29 @@ def update_with_shutter_counts(
         raise ValueError(f"Unknown facility: {facility}. Supported facilities are: {Facility.ornl}, {Facility.lanl}.")
 
 
-def update_with_shutter_counts_at_ornl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus
-) -> None:
+def update_with_shutter_counts_at_ornl(master_dict: Dict[str, Any], normalization_status: NormalizationStatus) -> None:
     """
     Extract shutter count data from ORNL VENUS shutter count files.
-    
+
     Reads tab-separated shutter count files (*_ShutterCount.txt) containing
     timing information for each neutron pulse. These files are essential for
     proper normalization of time-of-flight data at ORNL facilities.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder paths
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
-        
+
     File Format:
         Tab-separated values with pulse timing information:
         pulse_index    shutter_count
         0              1000.5
         1              1200.3
         ...
-        
+
     Example:
         >>> update_with_shutter_counts_at_ornl(master_dict, status)
         >>> # Shutter counts now available for each folder
-        
+
     Note:
         - Sets normalization_status.all_shutter_counts_file_found = True
         - Stops reading when encountering "0" count (end of valid data)
@@ -402,28 +390,26 @@ def update_with_shutter_counts_at_ornl(
 
 
 def update_with_spectra_files(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    facility: Facility = Facility.ornl
+    master_dict: Dict[str, Any], normalization_status: NormalizationStatus, facility: Facility = Facility.ornl
 ) -> None:
     """
     Extract time-of-flight spectra information for energy conversion.
-    
+
     Reads or generates time spectra data needed for converting time-of-flight
     measurements to energy or wavelength scales. Implementation varies by
     facility based on available metadata and file formats.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder information
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         facility (Facility, optional): Neutron facility identifier. Defaults to Facility.ornl.
-        
+
     Example:
         >>> update_with_spectra_files(master_dict, status, Facility.ornl)
         >>> spectra = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
         >>> spectra[:5]
         array([0.000000e+00, 1.000000e-06, 2.000000e-06, 3.000000e-06, 4.000000e-06])
-        
+
     Note:
         - ORNL: Reads from *_Spectra.txt CSV files containing shutter_time column
         - LANL: Generates time arrays from filename metadata (bin size, frame count)
@@ -443,31 +429,28 @@ def update_with_spectra_files(
         pass
 
 
-def update_with_spectra_files_at_ornl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus
-) -> None:
+def update_with_spectra_files_at_ornl(master_dict: Dict[str, Any], normalization_status: NormalizationStatus) -> None:
     """
     Extract time spectra from ORNL VENUS spectra files.
-    
+
     Reads CSV-formatted spectra files (*_Spectra.txt) containing shutter timing
     information. These files provide the time axis for time-of-flight measurements
     at the ORNL VENUS beamline.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing folder paths
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
-        
+
     File Format:
         CSV file with headers including 'shutter_time' column:
         time_index,shutter_time,other_columns...
         0,0.000000e+00,...
         1,1.000000e-06,...
-        
+
     Example:
         >>> update_with_spectra_files_at_ornl(master_dict, status)
         >>> # Time spectra arrays now available for energy conversion
-        
+
     Note:
         - Sets normalization_status.all_spectra_file_found = True
         - Returns early if no spectra files found in any folder
@@ -489,27 +472,24 @@ def update_with_spectra_files_at_ornl(
     normalization_status.all_spectra_file_found = True
 
 
-def update_with_spectra_files_at_lanl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus
-) -> None:
+def update_with_spectra_files_at_lanl(master_dict: Dict[str, Any], normalization_status: NormalizationStatus) -> None:
     """
     Generate time spectra from LANL filename metadata.
-    
+
     Creates time-of-flight arrays by extracting timing parameters directly
     from LANL image filenames. This approach eliminates the need for separate
     spectra files by encoding timing information in the filename structure.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing file lists.
                                      Must have been processed by update_with_list_of_files.
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
-        
+
     Filename Format:
         image_m2M9997Ex512y512t1e6T2000p1e6P100.tiff
         - T2000: Number of time bins (frames)
         - t1e6: Time bin size in microseconds (1e6 -> 1e-6 seconds)
-        
+
     Example:
         >>> # For file with T2000 and t1e6:
         >>> update_with_spectra_files_at_lanl(master_dict, status)
@@ -518,7 +498,7 @@ def update_with_spectra_files_at_lanl(
         2000
         >>> spectra[1] - spectra[0]
         1e-06
-        
+
     Note:
         - Automatically sets normalization_status.all_spectra_file_found = True
         - Uses numpy.arange to generate uniform time arrays
@@ -546,30 +526,28 @@ def update_with_spectra_files_at_lanl(
 
 
 def update_with_shutter_values(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus, 
-    facility: Facility = Facility.ornl
+    master_dict: Dict[str, Any], normalization_status: NormalizationStatus, facility: Facility = Facility.ornl
 ) -> None:
     """
     Generate per-image shutter values for time-of-flight normalization.
-    
+
     Combines shutter count and time spectra information to create individual
     shutter values for each time-of-flight image. These values are essential
     for proper normalization of Timepix detector data.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary with shutter counts and time spectra.
                                      Must have been processed by update_with_shutter_counts
                                      and update_with_spectra_files.
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
         facility (Facility, optional): Neutron facility identifier. Defaults to Facility.ornl.
-        
+
     Example:
         >>> update_with_shutter_values(master_dict, status, Facility.ornl)
         >>> shutter_vals = master_dict[folder][MasterDictKeys.list_shutters]
         >>> len(shutter_vals)  # Same as number of time channels
         2000
-        
+
     Note:
         - Only processes ORNL facility currently
         - Requires both shutter counts and spectra data to be available
@@ -585,31 +563,28 @@ def update_with_shutter_values(
         pass
 
 
-def update_with_shutter_values_at_ornl(
-    master_dict: Dict[str, Any], 
-    normalization_status: NormalizationStatus
-) -> None:
+def update_with_shutter_values_at_ornl(master_dict: Dict[str, Any], normalization_status: NormalizationStatus) -> None:
     """
     Generate ORNL-specific per-image shutter correction values.
-    
+
     Processes ORNL time spectra and shutter count data to create individual
     shutter correction factors for each time-of-flight image. Uses time
     discontinuities to segment the data and assign appropriate shutter counts.
-    
+
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing time spectra and shutter counts
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
-        
+
     Algorithm:
         1. Identify time discontinuities (gaps > 0.0001 seconds) in time spectra
         2. Segment time array based on these discontinuities
         3. Assign corresponding shutter count to each segment
         4. Create per-image shutter value array
-        
+
     Example:
         >>> update_with_shutter_values_at_ornl(master_dict, status)
         >>> # Per-image shutter values now available for normalization
-        
+
     Note:
         - Requires both all_shutter_counts_file_found and all_spectra_file_found to be True
         - Sets normalization_status.all_list_shutter_values_for_each_image_found = True

@@ -212,7 +212,7 @@ def convert_array_from_time_to_energy(
 
     this is using the formula: E_ev = 1/2 m_n (L/t_tof)^2 / electron_volt
 
-    where 
+    where
         t_tof = L/ v (L is the distance from the source to the detector in m, v is the velocity of the neutron in m/s).
         E is the kinetic energy of the neutron in eV.
 

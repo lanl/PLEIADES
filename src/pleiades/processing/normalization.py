@@ -31,7 +31,7 @@ Example:
 """
 
 from pathlib import Path
-from typing import List, Optional, Union, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 
 from pleiades.processing import DataType, Facility, MasterDictKeys, NormalizationStatus, Roi
 from pleiades.processing.normalization_handler import (
