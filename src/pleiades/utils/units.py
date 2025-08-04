@@ -210,12 +210,12 @@ def convert_array_from_time_to_energy(
         detector_offset_unit (DistanceUnitOptions): Unit of the offset.
         energy_unit (EnergyUnitOptions): Unit of the output energy.
 
-    this is using the formula: E_ev = 1/2 m_n (L/t_tof)^2
+    this is using the formula: E_ev = 1/2 m_n (L/t_tof)^2 / electron_volt
 
     where 
         t_tof = L/ v (L is the distance from the source to the detector in m, v is the velocity of the neutron in m/s).
         E is the kinetic energy of the neutron in eV.
-        
+
     Returns:
         np.ndarray: Array of energy values.
     """
