@@ -1,6 +1,5 @@
-import os
-
 import numpy as np
+from pathlib import Path
 
 from pleiades.processing import MasterDictKeys, Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
@@ -20,7 +19,7 @@ def update_with_list_of_files(master_dict: dict) -> None:
     logger.info(f"Updating {data_type} master dictionary with list of files")
 
     for folder in master_dict[MasterDictKeys.list_folders].keys():
-        if os.path.exists(folder):
+        if Path(folder).exists():
             list_files, ext = retrieve_list_of_most_dominant_extension_from_folder(folder)
             logger.info(f"Found {len(list_files)} files in {folder} with extension {ext}")
             master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_images] = list_files

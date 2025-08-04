@@ -30,7 +30,7 @@ Example:
     ... )
 """
 
-import os
+from pathlib import Path
 from typing import List, Optional, Union, Dict, Any
 
 from pleiades.processing import DataType, Facility, MasterDictKeys, NormalizationStatus, Roi
@@ -405,8 +405,8 @@ def normalization(
             }
 
             # Generate output filename and export
-            output_file_name = os.path.join(output_folder, f"{os.path.basename(folder)}_transmission.txt")
-            export_ascii(data_dict, output_file_name)
+            output_file_name = Path(output_folder) / f"{Path(folder).name}_transmission.txt"
+            export_ascii(data_dict, str(output_file_name))
 
 
 if __name__ == "__main__":
@@ -430,3 +430,4 @@ if __name__ == "__main__":
     )
 
 # how to run it
+# pixi run python src/pleiades/processing/normalization.py
