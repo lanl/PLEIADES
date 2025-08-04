@@ -2,7 +2,7 @@
 Neutron imaging data normalization module for PLEIADES.
 
 This module provides comprehensive normalization functionality for neutron imaging data,
-including sample and open beam data processing, outlier removal, rebinning, and 
+including sample and open beam data processing, outlier removal, rebinning, and
 transmission calculation. Supports both Timepix and traditional detector data formats.
 
 The normalization process includes:
@@ -17,10 +17,10 @@ The normalization process includes:
 
 Example:
     Basic normalization workflow:
-    
+
     >>> from pleiades.processing.normalization import normalization
     >>> from pleiades.processing import Roi, Facility
-    >>> 
+    >>>
     >>> result = normalization(
     ...     list_sample_folders=["/path/to/sample"],
     ...     list_obs_folders=["/path/to/openbeam"],
@@ -68,29 +68,29 @@ logger = loguru_logger.bind(name="normalization")
 def init_master_dict(list_folders: List[str], data_type: DataType = DataType.sample) -> Dict[str, Any]:
     """
     Initialize a master dictionary to store data from sample and open beam folders.
-    
-    Creates a hierarchical dictionary structure that will hold all metadata and 
+
+    Creates a hierarchical dictionary structure that will hold all metadata and
     processed data for each folder in the normalization workflow.
-    
+
     Args:
         list_folders (List[str]): List of folder paths containing imaging data files
-        data_type (DataType, optional): Type of data (sample or open beam). 
+        data_type (DataType, optional): Type of data (sample or open beam).
                                        Defaults to DataType.sample.
-    
+
     Returns:
         Dict[str, Any]: Master dictionary with initialized structure containing:
             - data_type: The type of data being processed
             - list_folders: Nested dict with folder-specific metadata placeholders
-    
+
     Example:
         >>> folders = ["/path/to/sample1", "/path/to/sample2"]
         >>> master_dict = init_master_dict(folders, DataType.sample)
         >>> print(master_dict.keys())
         dict_keys(['data_type', 'list_folders'])
-    
+
     Note:
         Each folder entry is initialized with None values for:
-        nexus_path, data, frame_number, data_path, proton_charge, 
+        nexus_path, data, frame_number, data_path, proton_charge,
         matching_ob, list_images, ext, shutter_counts, list_spectra,
         list_shutters
     """
@@ -98,7 +98,7 @@ def init_master_dict(list_folders: List[str], data_type: DataType = DataType.sam
         MasterDictKeys.data_type: data_type,
         MasterDictKeys.list_folders: {},
     }
-    
+
     for folder in list_folders:
         master_dict[MasterDictKeys.list_folders][folder] = {
             MasterDictKeys.nexus_path: None,
@@ -120,20 +120,20 @@ def init_master_dict(list_folders: List[str], data_type: DataType = DataType.sam
 def init_normalization_dict(list_folders: List[str]) -> Dict[str, Any]:
     """
     Initialize a normalization dictionary to store processed and normalized data.
-    
+
     Creates the data structure that will hold the final normalized transmission
     data and associated uncertainties for each sample folder.
-    
+
     Args:
         list_folders (List[str]): List of sample folder paths
-    
+
     Returns:
         Dict[str, Any]: Normalization dictionary with structure for:
             - obs_data_combined: Combined open beam data
             - sample_data: Sample data for each folder
             - uncertainties_obs_data_combined: Open beam uncertainties
             - uncertainties_sample_data: Sample uncertainties
-    
+
     Example:
         >>> folders = ["/path/to/sample1", "/path/to/sample2"]
         >>> norm_dict = init_normalization_dict(folders)
@@ -146,7 +146,7 @@ def init_normalization_dict(list_folders: List[str]) -> Dict[str, Any]:
         MasterDictKeys.uncertainties_obs_data_combined: None,
         MasterDictKeys.uncertainties_sample_data: None,
     }
-    
+
     for folder in list_folders:
         normalization_dict[MasterDictKeys.sample_data][folder] = None
 
@@ -190,15 +190,15 @@ def normalization(
     10. Convert to energy units and export results
 
     Args:
-        list_sample_folders (Union[List[str], str]): Sample folder(s) containing 
+        list_sample_folders (Union[List[str], str]): Sample folder(s) containing
             TIFF or FITS files. If string, will be converted to single-item list.
-        list_obs_folders (Union[List[str], str]): Open beam folder(s) containing 
+        list_obs_folders (Union[List[str], str]): Open beam folder(s) containing
             TIFF or FITS files. Multiple folders will be combined using mean.
-        nexus_path (Optional[str], optional): Path to nexus file for proton charge 
+        nexus_path (Optional[str], optional): Path to nexus file for proton charge
             retrieval. Defaults to None.
-        background_roi (Optional[Roi], optional): Region of interest defining 
+        background_roi (Optional[Roi], optional): Region of interest defining
             background region in sample data for subtraction. Defaults to None.
-        crop_roi (Optional[Roi], optional): Region of interest for final data 
+        crop_roi (Optional[Roi], optional): Region of interest for final data
             cropping. Defaults to None.
         timepix (bool, optional): Whether Timepix detector data format is used.
             Affects shutter value normalization. Defaults to True.
@@ -233,7 +233,7 @@ def normalization(
 
     Example:
         Basic normalization:
-        
+
         >>> normalization(
         ...     list_sample_folders="/path/to/sample",
         ...     list_obs_folders="/path/to/openbeam",
@@ -241,7 +241,7 @@ def normalization(
         ... )
 
         Advanced normalization with ROIs and processing options:
-        
+
         >>> from pleiades.processing import Roi, Facility
         >>> normalization(
         ...     list_sample_folders=["/sample1", "/sample2"],
@@ -287,10 +287,10 @@ def normalization(
     # Input validation
     if not list_sample_folders or not list_obs_folders:
         raise ValueError("Sample and open beam folders must be provided.")
-    
+
     if pixel_binning <= 0:
         raise ValueError("Pixel binning factor must be positive")
-        
+
     if num_threads <= 0:
         raise ValueError("Number of threads must be positive")
 
@@ -377,10 +377,10 @@ def normalization(
     if output_folder:
         for folder in normalization_dict[MasterDictKeys.sample_data].keys():
             logger.info(f"Exporting data for folder: {folder}")
-            
+
             # Get time spectra for energy conversion
             spectra_array = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
-            
+
             # Convert time-of-flight to energy
             energy_array = convert_array_from_time_to_energy(
                 spectra_array,
@@ -391,7 +391,7 @@ def normalization(
                 detector_offset_unit=TimeUnitOptions.us,
                 energy_unit=EnergyUnitOptions.eV,
             )
-            
+
             # Extract transmission counts and uncertainties
             counts_array, uncertainties = get_counts_from_normalized_data(
                 normalization_dict[MasterDictKeys.sample_data][folder]

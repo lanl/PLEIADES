@@ -1,5 +1,33 @@
-import numpy as np
+"""
+Normalization handler utilities for PLEIADES neutron imaging data processing.
+
+This module provides core functions for handling the normalization workflow including
+data loading, rebinning, outlier removal, cropping, and the main normalization 
+calculations. These functions work with master dictionaries that store sample and
+open beam data along with their associated metadata.
+
+The normalization handler supports:
+- File discovery and data loading
+- Spatial rebinning and outlier removal
+- Proton charge and shutter count corrections
+- Background subtraction normalization
+- ROI-based cropping
+- Transmission calculation
+
+Example:
+    Basic workflow using the handler functions:
+    
+    >>> master_dict = init_master_dict(folders, DataType.sample)
+    >>> update_with_list_of_files(master_dict)
+    >>> update_with_data(master_dict)
+    >>> update_with_rebin(master_dict, binning_factor=2)
+    >>> performing_normalization(sample_dict, norm_dict, background_roi)
+"""
+
 from pathlib import Path
+from typing import Dict, Any, Tuple, Optional, Union
+
+import numpy as np
 
 from pleiades.processing import MasterDictKeys, Roi
 from pleiades.utils.files import retrieve_list_of_most_dominant_extension_from_folder
@@ -11,9 +39,35 @@ from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name="normalization_handler")
 
 
-def update_with_list_of_files(master_dict: dict) -> None:
+def update_with_list_of_files(master_dict: Dict[str, Any]) -> None:
     """
     Update the master dictionary with the list of files in the sample and open beam folders.
+    
+    Discovers all image files in each folder and updates the master dictionary with
+    the file list and dominant file extension. Only processes folders that exist
+    on the filesystem.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing folder paths and metadata.
+                                     Must have MasterDictKeys.list_folders structure.
+    
+    Raises:
+        FileNotFoundError: If any folder in the master dictionary does not exist
+        
+    Example:
+        >>> master_dict = {
+        ...     MasterDictKeys.list_folders: {
+        ...         "/path/to/data": {MasterDictKeys.list_images: None}
+        ...     }
+        ... }
+        >>> update_with_list_of_files(master_dict)
+        >>> len(master_dict[MasterDictKeys.list_folders]["/path/to/data"][MasterDictKeys.list_images])
+        100
+        
+    Note:
+        Updates master_dict in-place with:
+        - list_images: List of file paths with the dominant extension
+        - ext: The dominant file extension found in the folder
     """
     data_type = master_dict[MasterDictKeys.data_type]
     logger.info(f"Updating {data_type} master dictionary with list of files")
@@ -28,7 +82,33 @@ def update_with_list_of_files(master_dict: dict) -> None:
             raise FileNotFoundError(f"Folder {folder} does not exist")
 
 
-def update_with_data(master_dict: dict):
+def update_with_data(master_dict: Dict[str, Any]) -> None:
+    """
+    Load imaging data from files and update the master dictionary.
+    
+    Reads the actual image data from the file lists previously discovered by
+    update_with_list_of_files. Supports multiple image formats including
+    TIFF and FITS files.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing file lists and metadata.
+                                     Must have been processed by update_with_list_of_files first.
+    
+    Example:
+        >>> # After update_with_list_of_files has been called
+        >>> update_with_data(master_dict)
+        >>> data = master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data]
+        >>> data.shape
+        (100, 256, 256)  # (time_channels, height, width)
+        
+    Note:
+        Updates master_dict in-place with:
+        - data: 3D numpy array containing the loaded image stack
+        
+    Raises:
+        ValueError: If file list is empty or files cannot be loaded
+        IOError: If image files are corrupted or in unsupported format
+    """
     logger.info(f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with data")
 
     for folder in master_dict[MasterDictKeys.list_folders].keys():
@@ -38,9 +118,30 @@ def update_with_data(master_dict: dict):
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
-def update_with_crop(master_dict: dict, roi=Roi) -> None:
+def update_with_crop(master_dict: Dict[str, Any], roi: Optional[Roi] = None) -> None:
     """
-    Update the master dictionary with the crop values.
+    Apply spatial cropping to normalized data using a region of interest.
+    
+    Crops the normalized transmission data to the specified region of interest.
+    This function operates on the normalization dictionary's sample_data, not
+    the raw data in list_folders.
+    
+    Args:
+        master_dict (Dict[str, Any]): Normalization dictionary containing processed sample data.
+                                     Must have MasterDictKeys.sample_data structure.
+        roi (Optional[Roi], optional): Region of interest defining crop boundaries.
+                                      If None, no cropping is performed. Defaults to None.
+    
+    Example:
+        >>> roi = Roi(50, 50, 200, 200)  # x1, y1, x2, y2
+        >>> update_with_crop(normalization_dict, roi=roi)
+        >>> # Data is now cropped to 150x150 spatial region
+        
+    Note:
+        - Only crops data in the sample_data section of the dictionary
+        - Updates master_dict in-place
+        - Preserves time-of-flight dimension, only crops spatial dimensions
+        - If roi is None, function returns without any modifications
     """
     logger.info(f"Updating master normalization dictionary with crop values {roi}")
 
@@ -53,10 +154,37 @@ def update_with_crop(master_dict: dict, roi=Roi) -> None:
         master_dict[MasterDictKeys.sample_data][folder] = cropped_data
 
 
-def update_with_rebin(master_dict: dict, binning_factor: int) -> None:
+def update_with_rebin(master_dict: Dict[str, Any], binning_factor: int) -> None:
     """
-    Update the master dictionary with the rebin values.
+    Apply spatial rebinning to reduce data size and improve signal-to-noise ratio.
+    
+    Rebins the imaging data by averaging over spatial blocks of size binning_factor x binning_factor.
+    The time-of-flight dimension is preserved. Rebinning reduces spatial resolution but
+    improves statistics and reduces data size.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing imaging data.
+                                     Must have data loaded via update_with_data.
+        binning_factor (int): Spatial binning factor. Must be positive.
+                             1 = no binning, 2 = 2x2 binning, etc.
+    
+    Example:
+        >>> # Original data shape: (100, 512, 512)
+        >>> update_with_rebin(master_dict, binning_factor=2)
+        >>> # New data shape: (100, 256, 256)
+        
+    Note:
+        - Updates master_dict in-place
+        - If binning_factor is 1, function returns without modifications
+        - Spatial dimensions should be divisible by binning_factor for best results
+        - Uses mean averaging for binning (preserves intensity scaling)
+        
+    Raises:
+        ValueError: If binning_factor is not positive
     """
+    if binning_factor <= 0:
+        raise ValueError("Binning factor must be positive")
+        
     logger.info(
         f"Updating {master_dict[MasterDictKeys.data_type]} master dictionary with rebin values {binning_factor}"
     )
@@ -70,10 +198,42 @@ def update_with_rebin(master_dict: dict, binning_factor: int) -> None:
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = rebinned_data
 
 
-def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
+def remove_outliers(master_dict: Dict[str, Any], dif: float, num_threads: int) -> None:
     """
-    Remove outliers from the data in the master dictionary.
+    Remove outlier pixels from imaging data using tomopy's outlier detection algorithm.
+    
+    Identifies and corrects outlier pixels that deviate significantly from their neighbors.
+    This helps remove detector artifacts, cosmic rays, and other anomalous pixel values
+    that could affect normalization quality.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing imaging data.
+                                     Must have data loaded via update_with_data.
+        dif (float): Threshold for outlier detection. Higher values are more permissive.
+                    Typical values range from 10-50. Larger values detect fewer outliers.
+        num_threads (int): Number of CPU threads to use for parallel processing.
+                          Must be positive.
+    
+    Example:
+        >>> remove_outliers(master_dict, dif=20.0, num_threads=4)
+        >>> # Outlier pixels have been replaced with interpolated values
+        
+    Note:
+        - Updates master_dict in-place
+        - Uses tomopy's remove_outlier algorithm internally
+        - Processing time scales with data size and number of threads
+        - Conservative dif values (10-20) remove more outliers
+        - Liberal dif values (30-50) preserve more original data
+        
+    Raises:
+        ValueError: If num_threads is not positive
+        ValueError: If dif is not positive
     """
+    if dif <= 0:
+        raise ValueError("Outlier detection threshold must be positive")
+    if num_threads <= 0:
+        raise ValueError("Number of threads must be positive")
+        
     logger.info(
         f"Removing outliers from {master_dict[MasterDictKeys.data_type]} master dictionary with threshold {dif}"
     )
@@ -85,13 +245,42 @@ def remove_outliers(master_dict: dict, dif: float, num_threads: int) -> None:
 
 
 def combine_data(
-    master_dict: dict,
+    master_dict: Dict[str, Any],
     is_normalization_by_proton_charge: bool,
     is_normalization_by_shutter_counts: bool,
-    normalization_dict: dict,
+    normalization_dict: Dict[str, Any],
 ) -> None:
     """
-    Combine the open beams data.
+    Combine multiple open beam datasets and apply corrections.
+    
+    Processes and combines multiple open beam folders into a single reference dataset.
+    Applies proton charge normalization and shutter count corrections as needed,
+    then combines using median to reduce noise and artifacts.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing open beam data.
+                                     Must have DataType.ob and loaded data.
+        is_normalization_by_proton_charge (bool): Whether to apply proton charge correction.
+                                                 Requires proton charge data to be available.
+        is_normalization_by_shutter_counts (bool): Whether to apply shutter count correction.
+                                                   Requires shutter data to be available.
+        normalization_dict (Dict[str, Any]): Target dictionary to store combined open beam data.
+    
+    Example:
+        >>> combine_data(ob_master_dict, True, False, normalization_dict)
+        >>> combined_ob = normalization_dict[MasterDictKeys.obs_data_combined]
+        >>> combined_ob.shape
+        (100, 256, 256)
+        
+    Note:
+        - Uses median combination to reduce outliers and noise
+        - Applies corrections in order: proton charge, then shutter counts
+        - Sets zero values to NaN to avoid division errors in normalization
+        - Updates normalization_dict in-place with combined open beam data
+        - Uncertainty propagation is partially implemented (commented out)
+        
+    Raises:
+        ValueError: If required correction data is missing when corrections are enabled
     """
     logger.info(f"Combining {master_dict[MasterDictKeys.data_type]} master dictionary!")
     logger.info(f"\tis_normalization_by_proton_charge: {is_normalization_by_proton_charge}")
@@ -137,9 +326,33 @@ def combine_data(
     # normalization_dict[MasterDictKeys.uncertainties_ob_data_combined] = uncertainties_ob_data_combined
 
 
-def correct_data_for_proton_charge(master_dict: dict, is_normalization_by_proton_charge: bool) -> None:
+def correct_data_for_proton_charge(master_dict: Dict[str, Any], is_normalization_by_proton_charge: bool) -> None:
     """
-    Correct the data for proton charge.
+    Apply proton charge correction to sample data.
+    
+    Normalizes sample data by the proton charge to account for variations in
+    neutron beam intensity between different measurements. This correction
+    ensures that transmission values are independent of beam current fluctuations.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing sample data and proton charge values.
+                                     Must have proton_charge data loaded for each folder.
+        is_normalization_by_proton_charge (bool): Whether to apply the correction.
+                                                 If False, function returns without changes.
+    
+    Example:
+        >>> correct_data_for_proton_charge(sample_master_dict, True)
+        >>> # Sample data is now normalized by proton charge
+        
+    Note:
+        - Updates master_dict in-place by dividing data by proton charge
+        - Proton charge values are typically in microampere-hours (μAh)
+        - Essential for quantitative transmission measurements
+        - If correction is disabled, data remains unchanged
+        
+    Raises:
+        ValueError: If proton charge data is missing when correction is enabled
+        ZeroDivisionError: If proton charge values are zero
     """
     logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for proton charge")
     if not is_normalization_by_proton_charge:
@@ -153,9 +366,34 @@ def correct_data_for_proton_charge(master_dict: dict, is_normalization_by_proton
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
-def correct_data_for_shutter_counts(master_dict: dict, is_normalization_by_shutter_counts: bool) -> None:
+def correct_data_for_shutter_counts(master_dict: Dict[str, Any], is_normalization_by_shutter_counts: bool) -> None:
     """
-    Correct the data for shutter counts.
+    Apply shutter count correction to sample data.
+    
+    Normalizes each image by its corresponding shutter count to account for
+    variations in exposure time or shutter efficiency. This is particularly
+    important for Timepix detectors where shutter timing can vary between images.
+    
+    Args:
+        master_dict (Dict[str, Any]): Master dictionary containing sample data and shutter values.
+                                     Must have list_shutters data loaded for each folder.
+        is_normalization_by_shutter_counts (bool): Whether to apply the correction.
+                                                   If False, function returns without changes.
+    
+    Example:
+        >>> correct_data_for_shutter_counts(sample_master_dict, True)
+        >>> # Each image is now normalized by its shutter count
+        
+    Note:
+        - Updates master_dict in-place by dividing each image by its shutter count
+        - Shutter counts represent effective exposure time or shutter efficiency
+        - Applied on a per-image basis (different correction for each time channel)
+        - Essential for Timepix detector data normalization
+        
+    Raises:
+        ValueError: If shutter data is missing when correction is enabled
+        ZeroDivisionError: If any shutter count values are zero
+        IndexError: If shutter count array length doesn't match number of images
     """
     logger.info(f"Correcting {master_dict[MasterDictKeys.data_type]} master dictionary for shutter counts")
     if not is_normalization_by_shutter_counts:
@@ -172,7 +410,50 @@ def correct_data_for_shutter_counts(master_dict: dict, is_normalization_by_shutt
         master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.data] = data
 
 
-def performing_normalization(sample_master_dict, normalization_dict, background_roi=None):
+def performing_normalization(
+    sample_master_dict: Dict[str, Any], 
+    normalization_dict: Dict[str, Any], 
+    background_roi: Optional[Roi] = None
+) -> None:
+    """
+    Perform the main normalization calculation to compute transmission values.
+    
+    Calculates transmission as T = (Sample - Background) / (OpenBeam - Background)
+    with optional background subtraction. This is the core neutron imaging equation
+    that converts raw count data into physically meaningful transmission coefficients.
+    
+    Args:
+        sample_master_dict (Dict[str, Any]): Master dictionary containing corrected sample data.
+                                            Must have been processed through correction functions.
+        normalization_dict (Dict[str, Any]): Dictionary containing combined open beam data.
+                                            Must have obs_data_combined from combine_data.
+        background_roi (Optional[Roi], optional): Region defining background area for subtraction.
+                                                 If provided, background correction is applied.
+                                                 Defaults to None.
+    
+    Example:
+        >>> background_roi = Roi(0, 0, 10, 10)  # Top-left corner background
+        >>> performing_normalization(sample_dict, norm_dict, background_roi)
+        >>> transmission = norm_dict[MasterDictKeys.sample_data][folder]
+        >>> transmission.shape
+        (100, 256, 256)  # Same shape as input data
+        
+    Note:
+        - Updates normalization_dict in-place with transmission data
+        - Transmission values typically range from 0 (complete absorption) to 1 (no absorption)
+        - Background correction uses median values from specified ROI
+        - Background coefficient is applied as multiplicative factor
+        - Each sample folder is processed independently
+        
+    Mathematical Details:
+        Without background: T = Sample / OpenBeam
+        With background: T = (Sample / OpenBeam) * (median(OB_bg) / median(Sample_bg))
+        
+    Raises:
+        ValueError: If required data is missing in either dictionary
+        ZeroDivisionError: If open beam or background values are zero
+        IndexError: If background ROI exceeds image boundaries
+    """
     logger.info("Performing normalization:")
     ob_data_combined = normalization_dict[MasterDictKeys.obs_data_combined]
 
@@ -195,12 +476,48 @@ def performing_normalization(sample_master_dict, normalization_dict, background_
         normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample
 
 
-def get_counts_from_normalized_data(normalized_data: np.ndarray) -> tuple:
+def get_counts_from_normalized_data(normalized_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Get counts for each image from the normalized data.
+    Extract integrated transmission counts and uncertainties from normalized data.
+    
+    Sums the normalized transmission data over spatial dimensions to obtain
+    total transmission as a function of time-of-flight (or energy). Also
+    calculates statistical uncertainties assuming Poisson statistics.
+    
+    Args:
+        normalized_data (np.ndarray): 3D normalized transmission data with shape
+                                     (time_channels, height, width). Values should
+                                     be transmission coefficients (0-1 range typical).
+    
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: A tuple containing:
+            - counts_array: 1D array of integrated transmission values for each time channel
+            - uncertainties: 1D array of statistical uncertainties (sqrt of counts)
+    
+    Example:
+        >>> transmission_data.shape
+        (100, 256, 256)
+        >>> counts, uncertainties = get_counts_from_normalized_data(transmission_data)
+        >>> counts.shape
+        (100,)
+        >>> uncertainties.shape
+        (100,)
+        
+    Note:
+        - Spatial integration is performed over detector pixels (axes 1 and 2)
+        - Uncertainties assume Poisson statistics: σ = √counts
+        - Output is suitable for time-of-flight spectroscopy analysis
+        - Transmission "counts" are actually integrated transmission coefficients
+        
+    Raises:
+        TypeError: If input is not a numpy array
+        ValueError: If input array is not 3D
     """
     if not isinstance(normalized_data, np.ndarray):
         raise TypeError("Normalized data must be a numpy array")
+    
+    if normalized_data.ndim != 3:
+        raise ValueError(f"Expected 3D array, got {normalized_data.ndim}D array")
 
     # Assuming normalized_data is a 3D array with shape (num_images, height, width)
     counts_array = np.sum(normalized_data, axis=(1, 2))
