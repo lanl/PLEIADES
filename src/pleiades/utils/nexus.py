@@ -28,8 +28,9 @@ Example:
     ...     print("Proton charge normalization available")
 """
 
+from typing import Dict, List, Optional, Union
+
 import h5py
-from typing import List, Dict, Any, Optional, Union
 
 from pleiades.utils.logger import loguru_logger
 
