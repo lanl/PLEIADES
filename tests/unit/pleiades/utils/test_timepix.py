@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from pleiades.utils.files import retrieve_number_of_frames_from_file_name, retrieve_time_bin_size_from_file_name
 
