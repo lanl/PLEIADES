@@ -36,8 +36,8 @@ def test_get_proton_charge_none_input():
 
 def test_get_proton_charge_missing_proton_charge_key(mock_h5py_file):
     mock_h5py_file.return_value.__enter__.return_value = {"entry": {}}
-    with pytest.raises(KeyError):
-        get_proton_charge("mock_file_path")
+    result = get_proton_charge("mock_file_path")
+    assert result is None
 
 
 def test_get_proton_charge_dict_valid_case(mock_h5py_file):
