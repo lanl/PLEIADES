@@ -33,6 +33,8 @@ Example:
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
+
 from pleiades.processing import DataType, Facility, MasterDictKeys, NormalizationStatus, Roi
 from pleiades.processing.normalization_handler import (
     combine_data,
@@ -375,8 +377,12 @@ def normalization(
 
     # Format and export results
     if output_folder:
-        for folder in normalization_dict[MasterDictKeys.sample_data].keys():
-            logger.info(f"Exporting data for folder: {folder}")
+        sample_folders = list(normalization_dict[MasterDictKeys.sample_data].keys())
+        
+        if len(sample_folders) == 1:
+            # Single run - use original logic
+            folder = sample_folders[0]
+            logger.info(f"Exporting data for single folder: {folder}")
 
             # Get time spectra for energy conversion
             spectra_array = sample_master_dict[MasterDictKeys.list_folders][folder][MasterDictKeys.list_spectra]
@@ -407,6 +413,97 @@ def normalization(
             # Generate output filename and export
             output_file_name = Path(output_folder) / f"{Path(folder).name}_transmission.txt"
             export_ascii(data_dict, str(output_file_name))
+            
+        else:
+            # Multiple runs - export individual runs AND combined result
+            logger.info(f"Processing {len(sample_folders)} sample runs individually and combining")
+            
+            # Get energy array from first folder (all should be the same)
+            first_folder = sample_folders[0]
+            spectra_array = sample_master_dict[MasterDictKeys.list_folders][first_folder][MasterDictKeys.list_spectra]
+            
+            # Convert time-of-flight to energy
+            energy_array = convert_array_from_time_to_energy(
+                spectra_array,
+                time_unit=TimeUnitOptions.s,
+                distance_source_detector=distance_source_detector_m,
+                distance_source_detector_unit=DistanceUnitOptions.m,
+                detector_offset=detector_offset_micros,
+                detector_offset_unit=TimeUnitOptions.us,
+                energy_unit=EnergyUnitOptions.eV,
+            )
+            
+            # Step 1: Export individual runs
+            run_transmissions = []
+            run_uncertainties = []
+            
+            for folder in sample_folders:
+                logger.info(f"Processing and exporting individual run: {Path(folder).name}")
+                
+                # Extract transmission and uncertainties for this run
+                counts_array, uncertainties = get_counts_from_normalized_data(
+                    normalization_dict[MasterDictKeys.sample_data][folder]
+                )
+                
+                # Export individual run
+                individual_data_dict = {
+                    "energy_eV": energy_array[::-1],
+                    "transmission": counts_array[::-1],
+                    "uncertainties": uncertainties[::-1],
+                }
+                
+                individual_output_file = Path(output_folder) / f"{Path(folder).name}_transmission.txt"
+                export_ascii(individual_data_dict, str(individual_output_file))
+                logger.info(f"  Individual run exported to: {individual_output_file}")
+                
+                # Collect for combination
+                run_transmissions.append(counts_array)
+                run_uncertainties.append(uncertainties)
+            
+            # Step 2: Create combined result
+            logger.info("Creating weighted combination of all runs...")
+            
+            # Convert to numpy arrays for easier calculation
+            run_transmissions = np.array(run_transmissions)  # Shape: (n_runs, n_energy_bins)
+            run_uncertainties = np.array(run_uncertainties)
+            
+            # Calculate weights: w_i = 1/σ_i²
+            with np.errstate(divide='ignore', invalid='ignore'):
+                weights = 1.0 / (run_uncertainties ** 2)
+                weights[~np.isfinite(weights)] = 0  # Set invalid weights to 0
+            
+            # Weighted average: T_combined = Σ(w_i * T_i) / Σ(w_i)
+            total_weights = np.sum(weights, axis=0)
+            
+            with np.errstate(divide='ignore', invalid='ignore'):
+                combined_transmission = np.sum(weights * run_transmissions, axis=0) / total_weights
+                combined_uncertainties = 1.0 / np.sqrt(total_weights)
+                
+                # Handle edge cases
+                combined_transmission[total_weights == 0] = 0.001
+                combined_uncertainties[total_weights == 0] = 0.1
+            
+            # Log statistics
+            avg_improvement = np.sqrt(len(sample_folders))
+            actual_improvement = np.mean(run_uncertainties.mean(axis=0) / combined_uncertainties)
+            logger.info(f"Combined transmission range: {combined_transmission.min():.3f} to {combined_transmission.max():.3f}")
+            logger.info(f"Expected uncertainty improvement: {avg_improvement:.2f}x")
+            logger.info(f"Actual uncertainty improvement: {actual_improvement:.2f}x")
+            
+            # Export combined result
+            combined_data_dict = {
+                "energy_eV": energy_array[::-1],
+                "transmission": combined_transmission[::-1],
+                "uncertainties": combined_uncertainties[::-1],
+            }
+
+            # Generate combined output filename
+            run_numbers = [Path(folder).name.split('_')[1] for folder in sample_folders]
+            combined_output_file = Path(output_folder) / f"Combined_Runs_{'_'.join(run_numbers)}_transmission.txt"
+            export_ascii(combined_data_dict, str(combined_output_file))
+            
+            logger.info(f"Combined transmission data exported to: {combined_output_file}")
+            logger.info(f"Summary: {len(sample_folders)} individual files + 1 combined file exported")
 
 
 if __name__ == "__main__":
