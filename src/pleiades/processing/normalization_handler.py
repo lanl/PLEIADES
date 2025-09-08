@@ -312,7 +312,11 @@ def combine_data(
 
         logger.debug(f"2. {np.shape(_uncertainty) = }")
 
-        _uncertainty += 1 / ob_data
+        # VENUS fix: avoid division by zero in open beam data
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ob_reciprocal = 1 / ob_data
+            ob_reciprocal[~np.isfinite(ob_reciprocal)] = 0  # Set inf/nan to 0
+            _uncertainty += ob_reciprocal
         full_ob_data_corrected.append(ob_data)
         # uncertainties_ob_data_corrected.append(ob_data * np.sqrt(_uncertainty))
 
@@ -469,7 +473,11 @@ def performing_normalization(
                 median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
                 coeff = median_roi_of_ob / median_roi_of_sample
 
-            normalized_sample[_index] = (_sample / _ob) * coeff
+            # VENUS fix: avoid division by zero in transmission calculation
+            with np.errstate(divide='ignore', invalid='ignore'):
+                transmission = (_sample / _ob) * coeff
+                transmission[~np.isfinite(transmission)] = 0  # Set inf/nan to 0
+                normalized_sample[_index] = transmission
 
         normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample
 
@@ -517,9 +525,44 @@ def get_counts_from_normalized_data(normalized_data: np.ndarray) -> Tuple[np.nda
     if normalized_data.ndim != 3:
         raise ValueError(f"Expected 3D array, got {normalized_data.ndim}D array")
 
-    # Assuming normalized_data is a 3D array with shape (num_images, height, width)
-    counts_array = np.sum(normalized_data, axis=(1, 2))
+    # Debug info for VENUS troubleshooting
+    logger.info(f"Processing normalized data: shape={normalized_data.shape}, dtype={normalized_data.dtype}")
+    logger.info(f"Data range: {normalized_data.min():.6f} to {normalized_data.max():.6f}")
+    logger.info(f"Data mean: {normalized_data.mean():.6f}")
+    finite_count = np.count_nonzero(np.isfinite(normalized_data))
+    logger.info(f"Finite values: {finite_count}/{normalized_data.size} ({finite_count/normalized_data.size*100:.1f}%)")
 
-    uncertainties = np.sqrt(counts_array)  # Assuming Poisson statistics for counts
+    # VENUS FIX: Extract transmission values instead of summing spatial pixels
+    # The old approach summed ~262k pixels per time bin, giving transmission values of ~355k
+    # The correct approach averages transmission over detector area
+    
+    # Filter out unreasonable transmission values (bad pixels, no sample areas)
+    valid_transmission = normalized_data.copy()
+    valid_transmission[(valid_transmission < 0.01) | (valid_transmission > 2.0)] = np.nan
+    
+    # Average transmission over valid pixels for each time bin
+    valid_mean = np.nanmean(valid_transmission, axis=(1, 2))
+    simple_mean = np.nanmean(normalized_data, axis=(1, 2))
+    
+    # Count valid pixels per time bin
+    valid_pixel_count = np.sum(~np.isnan(valid_transmission), axis=(1, 2))
+    min_pixels = 1000  # Require at least 1000 valid pixels
+    
+    # Use valid pixel average if enough pixels, otherwise fall back to simple mean
+    counts_array = np.where(valid_pixel_count >= min_pixels, valid_mean, simple_mean)
+    
+    # Calculate uncertainties based on pixel-to-pixel variation (standard error)
+    pixel_std = np.nanstd(valid_transmission, axis=(1, 2))
+    pixel_count = np.sum(~np.isnan(valid_transmission), axis=(1, 2))
+    uncertainties = pixel_std / np.sqrt(np.maximum(pixel_count, 1))
+    
+    # Replace any remaining NaNs with reasonable values
+    counts_array = np.nan_to_num(counts_array, nan=0.001, posinf=2.0, neginf=0.0)
+    uncertainties = np.nan_to_num(uncertainties, nan=0.01, posinf=0.1, neginf=0.01)
+    
+    # Check if we got reasonable results
+    finite_counts = np.count_nonzero(np.isfinite(counts_array))
+    logger.info(f"Transmission values: {finite_counts} finite values, range={counts_array.min():.3f} to {counts_array.max():.3f}")
+    logger.info(f"Average transmission: {counts_array.mean():.3f}")
 
     return (counts_array, uncertainties)
