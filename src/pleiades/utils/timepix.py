@@ -568,10 +568,10 @@ def update_with_shutter_values_at_ornl(master_dict: Dict[str, Any], normalizatio
     Generate ORNL-specific per-image shutter correction values.
 
     Processes ORNL time spectra and shutter count data to create individual
-    shutter correction factors for each time-of-flight image. 
-    
+    shutter correction factors for each time-of-flight image.
+
     VENUS FIX: For VENUS data with continuous time bins and single-period measurements,
-    uses the first non-zero shutter count for the entire spectrum instead of 
+    uses the first non-zero shutter count for the entire spectrum instead of
     attempting time discontinuity segmentation.
 
     Args:
@@ -600,10 +600,10 @@ def update_with_shutter_values_at_ornl(master_dict: Dict[str, Any], normalizatio
             list_time_spectra = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_spectra]
             list_shutter_counts = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.shutter_counts]
             list_shutter_values_for_each_image = np.zeros(len(list_time_spectra), dtype=np.float32)
-            
+
             # Check for time discontinuities (original ORNL logic)
             list_index_jump = np.where(np.diff(list_time_spectra) > 0.0001)[0]
-            
+
             if len(list_index_jump) > 0:
                 # Original multi-segment logic for traditional ORNL data
                 list_shutter_values_for_each_image[0 : list_index_jump[0] + 1].fill(list_shutter_counts[0])
