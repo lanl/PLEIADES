@@ -1,0 +1,306 @@
+"""
+Tests for the JsonManager class.
+
+This module tests the functionality of the JsonManager class, which handles
+the creation, parsing, and validation of SAMMY JSON configuration files used
+in multi-isotope fitting workflows. It also tests the Pydantic models for
+JSON structure validation.
+"""
+
+import json
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+from pydantic import ValidationError
+
+from pleiades.nuclear.manager import NuclearDataManager
+from pleiades.sammy.io.json_manager import IsotopeEntry, JsonManager, SammyJsonConfig
+
+
+@pytest.fixture
+def temp_dir():
+    """Create a temporary directory for output files."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def sample_json_data():
+    """Create sample JSON data matching SAMMY JSON format."""
+    return {
+        "forceRMoore": "yes",
+        "purgeSpinGroups": "yes",
+        "fudge": "0.7",
+        "hf174_test": [{"mat": "7225", "abundance": "0.0016", "adjust": "false", "uncertainty": "0.02"}],
+        "hf176_test": [{"mat": "7231", "abundance": "0.0526", "adjust": "false", "uncertainty": "0.02"}],
+    }
+
+
+@pytest.fixture
+def mock_nuclear_manager():
+    """Create a mock NuclearDataManager instance."""
+    mock_manager = MagicMock(spec=NuclearDataManager)
+    return mock_manager
+
+
+class TestIsotopeEntry:
+    """Test the IsotopeEntry Pydantic model."""
+
+    def test_valid_isotope_entry(self):
+        """Test creating a valid IsotopeEntry."""
+        entry = IsotopeEntry(mat="7225", abundance="0.0016", adjust="false", uncertainty="0.02")
+
+        assert entry.mat == "7225"
+        assert entry.abundance == "0.0016"
+        assert entry.adjust == "false"
+        assert entry.uncertainty == "0.02"
+
+    def test_isotope_entry_defaults(self):
+        """Test IsotopeEntry with default values."""
+        entry = IsotopeEntry(mat="7225", abundance="0.0016")
+
+        assert entry.mat == "7225"
+        assert entry.abundance == "0.0016"
+        assert entry.adjust == "false"  # default
+        assert entry.uncertainty == "0.02"  # default
+
+    def test_invalid_mat_number(self):
+        """Test validation of invalid MAT number."""
+        with pytest.raises(ValidationError, match="MAT number must be a valid integer string"):
+            IsotopeEntry(mat="invalid", abundance="0.5")
+
+    def test_invalid_abundance_format(self):
+        """Test validation of invalid abundance format."""
+        with pytest.raises(ValidationError, match="Abundance must be a valid float string"):
+            IsotopeEntry(mat="7225", abundance="invalid")
+
+    def test_abundance_out_of_range(self):
+        """Test validation of abundance out of range."""
+        with pytest.raises(ValidationError, match="Abundance must be between 0.0 and 1.0"):
+            IsotopeEntry(mat="7225", abundance="1.5")
+
+    def test_model_dump(self):
+        """Test serialization of IsotopeEntry."""
+        entry = IsotopeEntry(mat="7225", abundance="0.0016")
+        data = entry.model_dump()
+
+        expected = {"mat": "7225", "abundance": "0.0016", "adjust": "false", "uncertainty": "0.02"}
+        assert data == expected
+
+
+class TestSammyJsonConfig:
+    """Test the SammyJsonConfig Pydantic model."""
+
+    def test_default_config(self):
+        """Test creating SammyJsonConfig with defaults."""
+        config = SammyJsonConfig()
+
+        assert config.forceRMoore == "yes"
+        assert config.purgeSpinGroups == "yes"
+        assert config.fudge == "0.7"
+
+    def test_custom_global_settings(self):
+        """Test creating SammyJsonConfig with custom global settings."""
+        config = SammyJsonConfig(forceRMoore="no", purgeSpinGroups="no", fudge="0.8")
+
+        assert config.forceRMoore == "no"
+        assert config.purgeSpinGroups == "no"
+        assert config.fudge == "0.8"
+
+    def test_add_isotope_entry(self):
+        """Test adding isotope entry to configuration."""
+        config = SammyJsonConfig()
+        entry = IsotopeEntry(mat="7225", abundance="0.0016")
+
+        config.add_isotope_entry("hf174_test", entry)
+
+        entries = config.get_isotope_entries()
+        assert "hf174_test" in entries
+        assert len(entries["hf174_test"]) == 1
+        assert entries["hf174_test"][0].mat == "7225"
+
+    def test_get_isotope_entries_empty(self):
+        """Test getting isotope entries from empty configuration."""
+        config = SammyJsonConfig()
+        entries = config.get_isotope_entries()
+
+        assert entries == {}
+
+    def test_get_isotope_entries_multiple(self):
+        """Test getting multiple isotope entries."""
+        config = SammyJsonConfig()
+
+        entry1 = IsotopeEntry(mat="7225", abundance="0.0016")
+        entry2 = IsotopeEntry(mat="7231", abundance="0.0526")
+
+        config.add_isotope_entry("hf174_test", entry1)
+        config.add_isotope_entry("hf176_test", entry2)
+
+        entries = config.get_isotope_entries()
+        assert len(entries) == 2
+        assert "hf174_test" in entries
+        assert "hf176_test" in entries
+
+    def test_to_dict(self):
+        """Test serialization to dictionary."""
+        config = SammyJsonConfig(fudge="0.8")
+        entry = IsotopeEntry(mat="7225", abundance="0.0016")
+        config.add_isotope_entry("hf174_test", entry)
+
+        result = config.to_dict()
+
+        expected = {
+            "forceRMoore": "yes",
+            "purgeSpinGroups": "yes",
+            "fudge": "0.8",
+            "hf174_test": [{"mat": "7225", "abundance": "0.0016", "adjust": "false", "uncertainty": "0.02"}],
+        }
+        assert result == expected
+
+
+class TestJsonManager:
+    """Test the JsonManager class."""
+
+    def test_init_default(self):
+        """Test JsonManager initialization with default nuclear manager."""
+        with patch("pleiades.sammy.io.json_manager.NuclearDataManager") as mock_nuclear_class:
+            mock_manager = MagicMock()
+            mock_nuclear_class.return_value = mock_manager
+
+            json_manager = JsonManager()
+
+            mock_nuclear_class.assert_called_once()
+            assert json_manager.nuclear_manager == mock_manager
+
+    def test_init_with_nuclear_manager(self, mock_nuclear_manager):
+        """Test JsonManager initialization with provided nuclear manager."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        assert json_manager.nuclear_manager == mock_nuclear_manager
+
+    def test_create_json_config_not_implemented(self, mock_nuclear_manager):
+        """Test that create_json_config raises NotImplementedError."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        with pytest.raises(NotImplementedError, match="create_json_config will be implemented"):
+            json_manager.create_json_config(isotopes=["Hf-174"], abundances=[0.5], output_path="test.json")
+
+    def test_stage_endf_files_not_implemented(self, mock_nuclear_manager):
+        """Test that stage_endf_files raises NotImplementedError."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        with pytest.raises(NotImplementedError, match="stage_endf_files will be implemented"):
+            json_manager.stage_endf_files("test_dir")
+
+    def test_parse_json_config_file_not_found(self, mock_nuclear_manager):
+        """Test parsing non-existent JSON file."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        with pytest.raises(FileNotFoundError, match="JSON file not found"):
+            json_manager.parse_json_config("nonexistent.json")
+
+    def test_parse_json_config_invalid_json(self, mock_nuclear_manager, temp_dir):
+        """Test parsing invalid JSON file."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        # Create invalid JSON file
+        invalid_json_path = temp_dir / "invalid.json"
+        with open(invalid_json_path, "w") as f:
+            f.write("{ invalid json }")
+
+        with pytest.raises(json.JSONDecodeError):
+            json_manager.parse_json_config(invalid_json_path)
+
+    def test_parse_json_config_valid(self, mock_nuclear_manager, temp_dir, sample_json_data):
+        """Test parsing valid JSON file."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        # Create valid JSON file
+        json_path = temp_dir / "valid.json"
+        with open(json_path, "w") as f:
+            json.dump(sample_json_data, f)
+
+        config = json_manager.parse_json_config(json_path)
+
+        # Verify global settings
+        assert config.forceRMoore == "yes"
+        assert config.purgeSpinGroups == "yes"
+        assert config.fudge == "0.7"
+
+        # Verify isotope entries
+        entries = config.get_isotope_entries()
+        assert len(entries) == 2
+        assert "hf174_test" in entries
+        assert "hf176_test" in entries
+
+        # Verify isotope entry content
+        hf174_entry = entries["hf174_test"][0]
+        assert hf174_entry.mat == "7225"
+        assert hf174_entry.abundance == "0.0016"
+
+    def test_parse_json_config_custom_globals(self, mock_nuclear_manager, temp_dir):
+        """Test parsing JSON with custom global settings."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        custom_json_data = {"forceRMoore": "no", "purgeSpinGroups": "no", "fudge": "0.8"}
+
+        json_path = temp_dir / "custom.json"
+        with open(json_path, "w") as f:
+            json.dump(custom_json_data, f)
+
+        config = json_manager.parse_json_config(json_path)
+
+        assert config.forceRMoore == "no"
+        assert config.purgeSpinGroups == "no"
+        assert config.fudge == "0.8"
+
+    def test_parse_json_config_roundtrip(self, mock_nuclear_manager, temp_dir, sample_json_data):
+        """Test round-trip parsing and serialization."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        # Write original JSON
+        json_path = temp_dir / "roundtrip.json"
+        with open(json_path, "w") as f:
+            json.dump(sample_json_data, f)
+
+        # Parse and re-serialize
+        config = json_manager.parse_json_config(json_path)
+        result_dict = config.to_dict()
+
+        # Should match original data
+        assert result_dict == sample_json_data
+
+
+class TestJsonManagerIntegration:
+    """Integration tests for JsonManager with real components."""
+
+    @pytest.mark.integration
+    def test_parse_real_sammy_json_example(self):
+        """Test parsing the actual SAMMY JSON example file."""
+        # This test requires the real sammy_json_example file
+        reference_path = Path("/SNS/users/8cz/tmp/sammy_json_example/endfAdd_new_1.js")
+
+        if not reference_path.exists():
+            pytest.skip("SAMMY JSON example file not available")
+
+        json_manager = JsonManager()
+
+        try:
+            config = json_manager.parse_json_config(reference_path)
+
+            # Verify it parsed successfully
+            assert config.forceRMoore == "yes"
+            assert config.fudge == "0.7"
+
+            # Should have hafnium isotope entries
+            entries = config.get_isotope_entries()
+            assert len(entries) > 0
+
+            # Check for expected isotope names
+            isotope_names = list(entries.keys())
+            assert any("hf" in name.lower() for name in isotope_names)
+
+        except Exception as e:
+            pytest.fail(f"Failed to parse real SAMMY JSON example: {e}")
