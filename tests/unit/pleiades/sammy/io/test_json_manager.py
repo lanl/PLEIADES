@@ -181,7 +181,7 @@ class TestJsonManager:
         assert json_manager.nuclear_manager == mock_nuclear_manager
 
     def test_create_json_config_single_isotope(self, mock_nuclear_manager, temp_dir):
-        """Test creating JSON config for single isotope."""
+        """Test creating JSON config for single isotope with new API."""
         json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
 
         # Mock isotope manager and isotope info
@@ -192,51 +192,79 @@ class TestJsonManager:
         mock_nuclear_manager.isotope_manager = mock_isotope_manager
         mock_isotope_manager.get_isotope_info.return_value = mock_isotope_info
 
-        output_path = temp_dir / "single_isotope.json"
+        # Mock ENDF file download - need to create actual file for new API
+        expected_endf_path = temp_dir / "072-Hf-174.B-VIII.0.par"
+        expected_endf_path.write_text("mock endf content")
+        mock_nuclear_manager.download_endf_resonance_file.return_value = str(expected_endf_path)
 
-        result_path = json_manager.create_json_config(isotopes=["Hf-174"], abundances=[0.0016], output_path=output_path)
+        # Test new API: working_dir instead of output_path
+        result_path = json_manager.create_json_config(isotopes=["Hf-174"], abundances=[0.0016], working_dir=temp_dir)
 
-        # Verify file was created
+        # Verify JSON file was created with default name
+        expected_json_path = temp_dir / "config.json"
         assert result_path.exists()
-        assert result_path == output_path
+        assert result_path == expected_json_path
 
-        # Verify content
+        # Verify ENDF file exists in same directory
+        assert expected_endf_path.exists()
+
+        # Verify JSON content uses actual ENDF filename as key
         with open(result_path, "r") as f:
             json_data = json.load(f)
 
         # Check structure
         assert "forceRMoore" in json_data
-        assert "hf174_endf" in json_data
-        assert isinstance(json_data["hf174_endf"], list)
-        assert len(json_data["hf174_endf"]) == 1
+        assert "072-Hf-174.B-VIII.0.par" in json_data  # Actual ENDF filename as key
+        assert isinstance(json_data["072-Hf-174.B-VIII.0.par"], list)
+        assert len(json_data["072-Hf-174.B-VIII.0.par"]) == 1
 
         # Check isotope entry
-        entry = json_data["hf174_endf"][0]
+        entry = json_data["072-Hf-174.B-VIII.0.par"][0]
         assert entry["mat"] == "7225"
         assert entry["abundance"] == "0.0016"
         assert entry["adjust"] == "false"
         assert entry["uncertainty"] == "0.02"
 
     def test_create_json_config_validation_errors(self, mock_nuclear_manager, temp_dir):
-        """Test validation errors in create_json_config."""
+        """Test validation errors in create_json_config with new API."""
         json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
 
         # Test mismatched lengths
         with pytest.raises(ValueError, match="must have same length"):
-            json_manager.create_json_config(
-                isotopes=["Hf-174", "Hf-176"], abundances=[0.5], output_path=temp_dir / "error.json"
-            )
+            json_manager.create_json_config(isotopes=["Hf-174", "Hf-176"], abundances=[0.5], working_dir=temp_dir)
 
         # Test empty lists
         with pytest.raises(ValueError, match="At least one isotope must be provided"):
-            json_manager.create_json_config(isotopes=[], abundances=[], output_path=temp_dir / "error.json")
+            json_manager.create_json_config(isotopes=[], abundances=[], working_dir=temp_dir)
 
-    def test_stage_endf_files_not_implemented(self, mock_nuclear_manager):
-        """Test that stage_endf_files raises NotImplementedError."""
+    def test_stage_endf_files_success(self, mock_nuclear_manager, temp_dir):
+        """Test successful ENDF file staging."""
         json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
 
-        with pytest.raises(NotImplementedError, match="stage_endf_files will be implemented"):
-            json_manager.stage_endf_files("test_dir")
+        # Mock isotope manager and isotope info
+        mock_isotope_manager = MagicMock()
+        mock_isotope_info = MagicMock()
+        mock_isotope_info.material_number = 7225
+
+        mock_nuclear_manager.isotope_manager = mock_isotope_manager
+        mock_isotope_manager.get_isotope_info.return_value = mock_isotope_info
+
+        # Mock ENDF file download
+        test_endf_path = temp_dir / "072-Hf-174.B-VIII.0.par"
+        test_endf_path.write_text("mock endf content")
+        mock_nuclear_manager.download_endf_resonance_file.return_value = str(test_endf_path)
+
+        # Test staging
+        staged_files = json_manager.stage_endf_files(isotopes=["Hf-174"], working_dir=temp_dir)
+
+        # Verify results
+        assert "Hf-174" in staged_files
+        assert staged_files["Hf-174"] == test_endf_path
+        assert test_endf_path.exists()
+
+        # Verify nuclear manager was called correctly
+        mock_isotope_manager.get_isotope_info.assert_called_once_with("Hf-174")
+        mock_nuclear_manager.download_endf_resonance_file.assert_called_once()
 
     def test_parse_json_config_file_not_found(self, mock_nuclear_manager):
         """Test parsing non-existent JSON file."""

@@ -148,9 +148,9 @@ class JsonManager:
         >>> json_path = json_manager.create_json_config(
         ...     isotopes=["Hf-174", "Hf-176", "Hf-177"],
         ...     abundances=[0.0016, 0.0526, 0.186],
-        ...     output_path="hafnium_config.json"
+        ...     working_dir="./sammy_workspace"
         ... )
-        >>> endf_files = json_manager.stage_endf_files("./working_dir")
+        # Creates complete workspace with config.json + ENDF files
     """
 
     def __init__(self, nuclear_manager: Optional[NuclearDataManager] = None):
@@ -168,18 +168,27 @@ class JsonManager:
         self,
         isotopes: List[str],
         abundances: List[float],
-        output_path: Union[str, Path],
+        working_dir: Union[str, Path],
+        json_filename: str = "config.json",
         library: EndfLibrary = EndfLibrary.ENDF_B_VIII_0,
+        method: DataRetrievalMethod = DataRetrievalMethod.API,
         custom_global_settings: Optional[Dict[str, str]] = None,
     ) -> Path:
         """
-        Create a SAMMY JSON configuration file using Pydantic models.
+        Create a SAMMY JSON configuration file and stage required ENDF files.
+
+        Creates a complete workspace for SAMMY JSON mode by:
+        1. Downloading/staging all required ENDF files to working directory
+        2. Generating JSON configuration that references the actual ENDF filenames
+        3. Ensuring JSON keys match the staged ENDF file names
 
         Args:
             isotopes: List of isotope names (e.g., ["Hf-174", "Hf-176"])
-            abundances: List of isotopic abundances (same order as isotopes)
-            output_path: Path where JSON file will be written
+            abundances: List of isotopic abundances as fractions (same order as isotopes)
+            working_dir: Directory where JSON file and ENDF files will be created
+            json_filename: Name for the JSON configuration file
             library: ENDF library to use for isotope data
+            method: Data retrieval method (API is faster for multiple files)
             custom_global_settings: Optional custom global settings to override defaults
 
         Returns:
@@ -198,11 +207,41 @@ class JsonManager:
         if not isotopes:
             raise ValueError("At least one isotope must be provided")
 
-        # Convert output path to Path object
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Convert working directory to Path object and create it
+        working_dir = Path(working_dir)
+        working_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Creating JSON config for {len(isotopes)} isotopes: {isotopes}")
+        logger.info(f"Creating SAMMY workspace for {len(isotopes)} isotopes: {isotopes}")
+        logger.info(f"Working directory: {working_dir}")
+
+        # Step 1: Stage ENDF files first to get actual filenames
+        logger.info("Step 1: Staging ENDF files...")
+        staged_files = {}
+
+        for isotope_name in isotopes:
+            try:
+                # Get isotope information
+                isotope_info = self.nuclear_manager.isotope_manager.get_isotope_info(isotope_name)
+
+                # Download ENDF file to working directory
+                endf_path = self.nuclear_manager.download_endf_resonance_file(
+                    isotope=isotope_info, library=library, output_dir=str(working_dir), method=method
+                )
+
+                # Store actual filename for JSON reference
+                endf_path_obj = Path(endf_path)
+                if endf_path_obj.exists():
+                    staged_files[isotope_name] = endf_path_obj
+                    logger.debug(f"Staged {isotope_name}: {endf_path_obj.name}")
+                else:
+                    raise FileNotFoundError(f"ENDF file not created for {isotope_name}")
+
+            except Exception as e:
+                logger.error(f"Failed to stage ENDF file for {isotope_name}: {e}")
+                raise ValueError(f"Failed to stage ENDF file for {isotope_name}: {e}")
+
+        # Step 2: Create JSON config using actual ENDF filenames as keys
+        logger.info("Step 2: Creating JSON configuration with actual ENDF filenames...")
 
         # Create SammyJsonConfig with custom global settings if provided
         global_settings = {}
@@ -211,10 +250,10 @@ class JsonManager:
 
         config = SammyJsonConfig(**global_settings)
 
-        # Process each isotope
+        # Process each isotope using actual ENDF filenames as JSON keys
         for isotope_name, abundance in zip(isotopes, abundances):
             try:
-                # Get isotope information from nuclear manager
+                # Get isotope information for MAT number
                 isotope_info = self.nuclear_manager.isotope_manager.get_isotope_info(isotope_name)
 
                 # Create isotope entry
@@ -224,30 +263,30 @@ class JsonManager:
                     # adjust and uncertainty use defaults ("false", "0.02")
                 )
 
-                # Generate meaningful JSON key name from isotope name
-                # Convert "Hf-174" -> "hf174_endf" (meaningful and short)
-                json_key = self._generate_isotope_key(isotope_name)
+                # Use actual ENDF filename as JSON key (maintains traceability)
+                endf_filename = staged_files[isotope_name].name
 
                 # Add to configuration
-                config.add_isotope_entry(json_key, entry)
+                config.add_isotope_entry(endf_filename, entry)
 
-                logger.debug(f"Added {isotope_name} (MAT={isotope_info.material_number}) as {json_key}")
+                logger.debug(f"Added {isotope_name} (MAT={isotope_info.material_number}) as {endf_filename}")
 
             except Exception as e:
                 logger.error(f"Failed to process isotope {isotope_name}: {e}")
                 raise ValueError(f"Failed to process isotope {isotope_name}: {e}")
 
-        # Convert to dictionary and write to JSON file
+        # Step 3: Write JSON file to working directory
+        json_path = working_dir / json_filename
         json_dict = config.to_dict()
 
-        # Write JSON with proper formatting
-        with open(output_path, "w") as f:
+        with open(json_path, "w") as f:
             json.dump(json_dict, f, indent=2)
 
-        logger.info(f"JSON configuration written to: {output_path}")
+        logger.info(f"JSON configuration written to: {json_path}")
         logger.info(f"Configuration contains {len(config.get_isotope_entries())} isotope entries")
+        logger.info(f"SAMMY workspace complete: {len(staged_files)} ENDF files + 1 JSON file")
 
-        return output_path
+        return json_path
 
     def _generate_isotope_key(self, isotope_name: str) -> str:
         """
@@ -266,14 +305,16 @@ class JsonManager:
 
     def stage_endf_files(
         self,
+        isotopes: List[str],
         working_dir: Union[str, Path],
         library: EndfLibrary = EndfLibrary.ENDF_B_VIII_0,
         method: DataRetrievalMethod = DataRetrievalMethod.API,
     ) -> Dict[str, Path]:
         """
-        Download and stage ENDF files for the isotopes in the current configuration.
+        Download and stage ENDF files for specified isotopes.
 
         Args:
+            isotopes: List of isotope names (e.g., ["Hf-174", "Hf-176"])
             working_dir: Directory where ENDF files will be staged
             library: ENDF library to use
             method: Data retrieval method (API is faster for multiple files)
@@ -281,8 +322,39 @@ class JsonManager:
         Returns:
             Dict[str, Path]: Mapping of isotope names to staged file paths
         """
-        # Implementation placeholder - will be implemented in Task 2C/2D
-        raise NotImplementedError("stage_endf_files will be implemented in Task 2C/2D")
+        working_dir = Path(working_dir)
+        working_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Staging ENDF files for {len(isotopes)} isotopes in {working_dir}")
+        logger.info(f"Using {method.name} method with {library.name}")
+
+        staged_files = {}
+
+        for isotope_name in isotopes:
+            try:
+                # Get isotope information
+                isotope_info = self.nuclear_manager.isotope_manager.get_isotope_info(isotope_name)
+
+                # Download ENDF file to working directory
+                endf_path = self.nuclear_manager.download_endf_resonance_file(
+                    isotope=isotope_info, library=library, output_dir=str(working_dir), method=method
+                )
+
+                # Verify file was created
+                endf_path_obj = Path(endf_path)
+                if endf_path_obj.exists():
+                    staged_files[isotope_name] = endf_path_obj
+                    logger.debug(f"Staged {isotope_name}: {endf_path_obj.name}")
+                else:
+                    logger.error(f"ENDF file not created for {isotope_name}: {endf_path}")
+                    raise FileNotFoundError(f"ENDF file not created for {isotope_name}")
+
+            except Exception as e:
+                logger.error(f"Failed to stage ENDF file for {isotope_name}: {e}")
+                raise ValueError(f"Failed to stage ENDF file for {isotope_name}: {e}")
+
+        logger.info(f"Successfully staged {len(staged_files)} ENDF files")
+        return staged_files
 
     def parse_json_config(self, json_path: Union[str, Path]) -> SammyJsonConfig:
         """
