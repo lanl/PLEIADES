@@ -180,12 +180,56 @@ class TestJsonManager:
 
         assert json_manager.nuclear_manager == mock_nuclear_manager
 
-    def test_create_json_config_not_implemented(self, mock_nuclear_manager):
-        """Test that create_json_config raises NotImplementedError."""
+    def test_create_json_config_single_isotope(self, mock_nuclear_manager, temp_dir):
+        """Test creating JSON config for single isotope."""
         json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
 
-        with pytest.raises(NotImplementedError, match="create_json_config will be implemented"):
-            json_manager.create_json_config(isotopes=["Hf-174"], abundances=[0.5], output_path="test.json")
+        # Mock isotope manager and isotope info
+        mock_isotope_manager = MagicMock()
+        mock_isotope_info = MagicMock()
+        mock_isotope_info.material_number = 7225
+
+        mock_nuclear_manager.isotope_manager = mock_isotope_manager
+        mock_isotope_manager.get_isotope_info.return_value = mock_isotope_info
+
+        output_path = temp_dir / "single_isotope.json"
+
+        result_path = json_manager.create_json_config(isotopes=["Hf-174"], abundances=[0.0016], output_path=output_path)
+
+        # Verify file was created
+        assert result_path.exists()
+        assert result_path == output_path
+
+        # Verify content
+        with open(result_path, "r") as f:
+            json_data = json.load(f)
+
+        # Check structure
+        assert "forceRMoore" in json_data
+        assert "hf174_endf" in json_data
+        assert isinstance(json_data["hf174_endf"], list)
+        assert len(json_data["hf174_endf"]) == 1
+
+        # Check isotope entry
+        entry = json_data["hf174_endf"][0]
+        assert entry["mat"] == "7225"
+        assert entry["abundance"] == "0.0016"
+        assert entry["adjust"] == "false"
+        assert entry["uncertainty"] == "0.02"
+
+    def test_create_json_config_validation_errors(self, mock_nuclear_manager, temp_dir):
+        """Test validation errors in create_json_config."""
+        json_manager = JsonManager(nuclear_manager=mock_nuclear_manager)
+
+        # Test mismatched lengths
+        with pytest.raises(ValueError, match="must have same length"):
+            json_manager.create_json_config(
+                isotopes=["Hf-174", "Hf-176"], abundances=[0.5], output_path=temp_dir / "error.json"
+            )
+
+        # Test empty lists
+        with pytest.raises(ValueError, match="At least one isotope must be provided"):
+            json_manager.create_json_config(isotopes=[], abundances=[], output_path=temp_dir / "error.json")
 
     def test_stage_endf_files_not_implemented(self, mock_nuclear_manager):
         """Test that stage_endf_files raises NotImplementedError."""

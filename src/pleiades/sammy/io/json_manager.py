@@ -188,8 +188,81 @@ class JsonManager:
         Raises:
             ValueError: If isotopes and abundances lists have different lengths
         """
-        # Implementation placeholder - will be implemented in Task 2C
-        raise NotImplementedError("create_json_config will be implemented in Task 2C")
+        # Validate input parameters
+        if len(isotopes) != len(abundances):
+            raise ValueError(
+                f"Isotopes and abundances lists must have same length: "
+                f"got {len(isotopes)} isotopes and {len(abundances)} abundances"
+            )
+
+        if not isotopes:
+            raise ValueError("At least one isotope must be provided")
+
+        # Convert output path to Path object
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Creating JSON config for {len(isotopes)} isotopes: {isotopes}")
+
+        # Create SammyJsonConfig with custom global settings if provided
+        global_settings = {}
+        if custom_global_settings:
+            global_settings.update(custom_global_settings)
+
+        config = SammyJsonConfig(**global_settings)
+
+        # Process each isotope
+        for isotope_name, abundance in zip(isotopes, abundances):
+            try:
+                # Get isotope information from nuclear manager
+                isotope_info = self.nuclear_manager.isotope_manager.get_isotope_info(isotope_name)
+
+                # Create isotope entry
+                entry = IsotopeEntry(
+                    mat=str(isotope_info.material_number),
+                    abundance=str(abundance),
+                    # adjust and uncertainty use defaults ("false", "0.02")
+                )
+
+                # Generate meaningful JSON key name from isotope name
+                # Convert "Hf-174" -> "hf174_endf" (meaningful and short)
+                json_key = self._generate_isotope_key(isotope_name)
+
+                # Add to configuration
+                config.add_isotope_entry(json_key, entry)
+
+                logger.debug(f"Added {isotope_name} (MAT={isotope_info.material_number}) as {json_key}")
+
+            except Exception as e:
+                logger.error(f"Failed to process isotope {isotope_name}: {e}")
+                raise ValueError(f"Failed to process isotope {isotope_name}: {e}")
+
+        # Convert to dictionary and write to JSON file
+        json_dict = config.to_dict()
+
+        # Write JSON with proper formatting
+        with open(output_path, "w") as f:
+            json.dump(json_dict, f, indent=2)
+
+        logger.info(f"JSON configuration written to: {output_path}")
+        logger.info(f"Configuration contains {len(config.get_isotope_entries())} isotope entries")
+
+        return output_path
+
+    def _generate_isotope_key(self, isotope_name: str) -> str:
+        """
+        Generate a meaningful but concise JSON key name from isotope name.
+
+        Args:
+            isotope_name: Isotope name like "Hf-174"
+
+        Returns:
+            str: JSON key like "hf174_endf"
+        """
+        # Convert "Hf-174" -> "hf174_endf"
+        # This is meaningful, shorter than full ENDF filename, but still descriptive
+        key = isotope_name.lower().replace("-", "") + "_endf"
+        return key
 
     def stage_endf_files(
         self,
