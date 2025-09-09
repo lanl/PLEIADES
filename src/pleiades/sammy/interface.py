@@ -150,9 +150,134 @@ class SammyFiles:
         self.parameter_file = self._original_parameter_file
         self.data_file = self._original_data_file
 
-        # Clear backup paths
+        # Clear stored paths
         self._original_input_file = None
         self._original_parameter_file = None
+        self._original_data_file = None
+
+
+@dataclass
+class SammyFilesMultiMode:
+    """Container for SAMMY multi-isotope JSON mode input files."""
+
+    input_file: Path  # .inp file
+    json_config_file: Path  # .json configuration file
+    data_file: Path  # .twenty/.dat data file
+    endf_directory: Path  # Directory containing ENDF files
+
+    # Store original paths for cleanup
+    _original_input_file: Optional[Path] = None
+    _original_json_config_file: Optional[Path] = None
+    _original_data_file: Optional[Path] = None
+
+    def validate(self) -> None:
+        """
+        Validate that all required input files exist.
+
+        Basic file existence validation only.
+
+        Raises:
+            FileNotFoundError: If any required file is missing
+        """
+        required_files = {
+            "input_file": self.input_file,
+            "json_config_file": self.json_config_file,
+            "data_file": self.data_file,
+        }
+
+        for field_name, file_path in required_files.items():
+            if not file_path.exists():
+                raise FileNotFoundError(f"{field_name.replace('_', ' ').title()} not found: {file_path}")
+            if not file_path.is_file():
+                raise FileNotFoundError(f"{field_name.replace('_', ' ').title()} is not a file: {file_path}")
+
+        # Validate ENDF directory exists
+        if not self.endf_directory.exists():
+            raise FileNotFoundError(f"ENDF directory not found: {self.endf_directory}")
+        if not self.endf_directory.is_dir():
+            raise FileNotFoundError(f"ENDF directory is not a directory: {self.endf_directory}")
+
+    def move_to_working_dir(self, working_dir: Path) -> None:
+        """
+        Move files to working directory for SAMMY JSON mode.
+
+        Strategy for JSON mode:
+        - input_file: copy to working directory
+        - json_config_file: copy to working directory
+        - data_file: symlink to working directory
+        - endf_directory files: symlink individual ENDF files to working directory
+
+        Args:
+            working_dir: Path to the working directory
+        """
+        logger.debug(f"Moving JSON mode files to working directory: {working_dir}")
+
+        # If we already moved files, clean them up first
+        if self._original_input_file is not None:
+            self.cleanup_working_files()
+
+        # Save original paths for cleanup
+        self._original_input_file = self.input_file
+        self._original_json_config_file = self.json_config_file
+        self._original_data_file = self.data_file
+
+        # Copy input file
+        working_input = working_dir / self.input_file.name
+        if working_input.exists():
+            working_input.unlink()
+        shutil.copy2(self.input_file, working_input)
+        self.input_file = working_input
+
+        # Copy JSON config file
+        working_json = working_dir / self.json_config_file.name
+        if working_json.exists():
+            working_json.unlink()
+        shutil.copy2(self.json_config_file, working_json)
+        self.json_config_file = working_json
+
+        # Symlink data file
+        working_data = working_dir / self.data_file.name
+        if working_data.exists():
+            working_data.unlink()
+        working_data.symlink_to(self.data_file.absolute())
+        self.data_file = working_data
+
+        # Symlink ENDF files to working directory (for SAMMY to find them)
+        if self.endf_directory.exists():
+            for endf_file in self.endf_directory.glob("*.par"):
+                working_endf = working_dir / endf_file.name
+                if working_endf.exists():
+                    working_endf.unlink()
+                working_endf.symlink_to(endf_file.absolute())
+                logger.debug(f"Symlinked ENDF file: {endf_file.name}")
+
+    def cleanup_working_files(self) -> None:
+        """Remove files copied or symlinked to working directory."""
+        logger.debug("Cleaning up JSON mode working files")
+
+        if self._original_input_file is None:
+            return
+
+        # Remove symlinked data file
+        if self.data_file.exists() and self.data_file.is_symlink():
+            self.data_file.unlink()
+
+        # Remove copied input file
+        if self.input_file.exists() and not self.input_file.is_symlink():
+            self.input_file.unlink()
+
+        # Remove copied JSON config file
+        if self.json_config_file.exists() and not self.json_config_file.is_symlink():
+            self.json_config_file.unlink()
+
+        # Restore original paths
+        self.input_file = self._original_input_file
+        self.json_config_file = self._original_json_config_file
+        self.data_file = self._original_data_file
+
+        # Clear stored paths
+        self._original_input_file = None
+        self._original_json_config_file = None
         self._original_data_file = None
 
 
