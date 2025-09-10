@@ -239,3 +239,43 @@ def convert_array_from_time_to_energy(
     energy_array = np.array(energy_array)
 
     return energy_array
+
+
+def calculate_number_density(material_density_g_cm3: float, thickness_mm: float, atomic_mass_amu: float) -> float:
+    """
+    Convert material properties to number density (atoms/barn).
+
+    Migrated from legacy/pleiades_old/simData.py for use in multi-isotope INP generation.
+
+    Args:
+        material_density_g_cm3: Material density in g/cm³
+        thickness_mm: Sample thickness in mm
+        atomic_mass_amu: Atomic mass in amu
+
+    Returns:
+        float: Number density in atoms/barn (areal density)
+
+    Example:
+        >>> # For Hafnium sample: density=13.31 g/cm³, thickness=5mm, mass=178.49 amu
+        >>> density = calculate_number_density(13.31, 5.0, 178.49)
+        >>> print(f"Number density: {density:.6e} atoms/barn")
+
+    Note:
+        This calculation uses the same formula as the legacy code:
+        areal_density = thickness * density * AVOGADRO / atomic_mass / CM2_TO_BARN
+
+        TODO: Future enhancement - auto-retrieve material density from element database
+    """
+    from pleiades.core.constants import CONSTANTS
+
+    # Convert thickness from mm to cm
+    thickness_cm = thickness_mm / 10.0
+
+    # Use PLEIADES physics constants
+    AVOGADRO = CONSTANTS.avogadro_number  # 6.02214076e23
+    CM2_TO_BARN = 1.0 / CONSTANTS.barn_to_cm2  # 1e24
+
+    # Calculate areal density (same formula as legacy code)
+    areal_density = thickness_cm * material_density_g_cm3 * AVOGADRO / atomic_mass_amu / CM2_TO_BARN
+
+    return areal_density

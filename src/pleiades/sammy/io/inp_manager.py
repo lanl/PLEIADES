@@ -120,6 +120,118 @@ class InpManager:
             return self.reaction_type
         return "# PLACEHOLDER: Replace with reaction type (transmission, capture, fission, etc.)"
 
+    def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
+        """
+        Generate broadening parameters section for multi-isotope mode.
+
+        Args:
+            material_properties: Dict with material properties for calculations
+
+        Returns:
+            str: Broadening parameters section
+        """
+        if material_properties:
+            from pleiades.utils.units import calculate_number_density
+
+            # Extract material properties with defaults
+            density = material_properties.get("density_g_cm3")  # Required
+            thickness = material_properties.get("thickness_mm", 5.0)  # Default 5mm
+            atomic_mass = material_properties.get("atomic_mass_amu")  # Required
+            temperature = material_properties.get("temperature_K", 293.6)  # Default room temp
+
+            if density is None or atomic_mass is None:
+                raise ValueError("material_properties must contain 'density_g_cm3' and 'atomic_mass_amu'")
+
+            # Calculate number density
+            number_density = calculate_number_density(density, thickness, atomic_mass)
+
+            # Generate broadening parameters section
+            # Format: CRFN TEMP THICK DELTAL DELTAG DELTAE FLAGS
+            # Reference: 8.0  293.60000 1.797e-04 0.0  0.0  0.0  0 0 1 0 0 0
+            lines = [
+                "",  # Empty line
+                "BROADENING PARAMETERS FOLLOW",
+                f"8.0        {temperature:9.5f} {number_density:.3e} 0.0       0.0       0.0       0 0 1 0 0 0",
+            ]
+            return "\n".join(lines)
+
+        return "\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
+
+    def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
+        """
+        Generate miscellaneous parameters (TZERO) section.
+
+        Args:
+            flight_path_m: Flight path length in meters (default 25.0 for VENUS)
+
+        Returns:
+            str: Miscellaneous parameters section
+        """
+        # Default TZERO values per your specification:
+        # t₀=0.0, t₀_unc=0.0, L₀=1.0, L₀_unc=0.0, flight_path=25.0m, flags=1,1
+        lines = [
+            "",  # Empty line
+            "MISCEllaneous parameters follow",
+            f"TZERO 1 1  0.0000000 0.0000000 1.0000000 0.0000000 {flight_path_m:9.6f}",
+        ]
+        return "\n".join(lines)
+
+    def generate_normalization_parameters_section(self) -> str:
+        """
+        Generate normalization parameters section.
+
+        Returns:
+            str: Normalization parameters section
+        """
+        # Default NORM values per your specification: 1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        # Flags: let SAMMY fit the first few parameters (1 1 1 1 0 0)
+        lines = [
+            "",  # Empty line
+            'NORMAlization and "constant" background follow',
+            "1.00000000 0.00000000 0.00000000 0.00000000 0.        0.        1 1 1 1 0 0",
+        ]
+        return "\n".join(lines)
+
+    def generate_resolution_function_section(self, resolution_file: str = "venus_resolution.dat") -> str:
+        """
+        Generate user-defined resolution function section.
+
+        Args:
+            resolution_file: Name of resolution function file
+
+        Returns:
+            str: Resolution function section
+        """
+        lines = [
+            "",  # Empty line
+            "USER-DEFINED RESOLUTION FUNCTION",
+            f"FILE={resolution_file}",
+        ]
+        return "\n".join(lines)
+
+    def generate_multi_isotope_inp_content(self, material_properties: Dict = None) -> str:
+        """
+        Generate complete multi-isotope INP content with parameter sections.
+
+        Args:
+            material_properties: Dict with material properties for parameter calculations
+
+        Returns:
+            str: Complete multi-isotope INP file content
+        """
+        sections = [
+            self.generate_title_section(),
+            self.generate_isotope_section(),
+            "\n".join(self.generate_commands()),
+            self.generate_physical_constants_section(),
+            self.generate_reaction_type_section(),
+            self.generate_broadening_parameters_section(material_properties),
+            self.generate_misc_parameters_section(),
+            self.generate_normalization_parameters_section(),
+            self.generate_resolution_function_section(),
+        ]
+        return "\n".join(sections)
+
     def generate_inp_content(self) -> str:
         """
         Generate full content for SAMMY input file.
@@ -217,4 +329,19 @@ class InpManager:
         """
         options = FitOptions.from_multi_isotope_config()
         manager = cls(options, title=title or "Multi-isotope JSON mode fitting", reaction_type="transmission")
-        return manager.write_inp_file(output_path)
+
+        # Use specialized multi-isotope content generation
+        try:
+            content = manager.generate_multi_isotope_inp_content(material_properties)
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(output_path, "w") as f:
+                f.write(content)
+
+            logger.info(f"Successfully wrote multi-isotope SAMMY input file to {output_path}")
+            return output_path
+
+        except Exception as e:
+            logger.error(f"Failed to write multi-isotope SAMMY input file: {str(e)}")
+            raise

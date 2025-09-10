@@ -309,3 +309,41 @@ def test_multi_isotope_config_integration(temp_dir):
     assert (
         len(found_commands) >= 6
     ), f"Found only {len(found_commands)}/{len(expected_commands)} commands: {found_commands}"
+
+
+def test_multi_isotope_with_material_properties(temp_dir):
+    """Test multi-isotope INP generation with material properties."""
+    output_path = temp_dir / "multi_isotope_with_materials.inp"
+
+    # Test with Hafnium material properties
+    material_props = {"density_g_cm3": 13.31, "thickness_mm": 5.0, "atomic_mass_amu": 178.49, "temperature_K": 293.6}
+
+    result_path = InpManager.create_multi_isotope_inp(
+        output_path, title="Hafnium multi-isotope test", material_properties=material_props
+    )
+
+    assert result_path == output_path
+    assert output_path.exists()
+
+    with open(output_path, "r") as f:
+        content = f.read()
+
+    # Check for calculated parameter sections
+    assert "BROADENING PARAMETERS FOLLOW" in content
+    assert "293.60000" in content  # Temperature
+    assert "2.245e-02" in content  # Calculated number density
+    assert "MISCEllaneous parameters follow" in content
+    assert "25.000000" in content  # Flight path
+    assert "NORMAlization" in content
+    assert "USER-DEFINED RESOLUTION FUNCTION" in content
+
+
+def test_multi_isotope_missing_required_properties(temp_dir):
+    """Test multi-isotope INP generation with missing required properties."""
+    output_path = temp_dir / "multi_isotope_missing.inp"
+
+    # Missing required density
+    incomplete_props = {"thickness_mm": 5.0, "atomic_mass_amu": 178.49}
+
+    with pytest.raises(ValueError, match="must contain 'density_g_cm3' and 'atomic_mass_amu'"):
+        InpManager.create_multi_isotope_inp(output_path, title="Should fail", material_properties=incomplete_props)
