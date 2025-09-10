@@ -96,18 +96,44 @@ class InpManager:
             return "# Actual isotope information would be formatted here"
         return "# PLACEHOLDER: Replace with isotope information (name, mass, energy range)"
 
-    def generate_physical_constants_section(self) -> str:
+    def generate_physical_constants_section(self, material_properties: Dict = None) -> str:
         """
-        Generate the physical constants section of the inp file.
+        Generate the physical constants section for multi-isotope mode.
+
+        Args:
+            material_properties: Dict with material properties
 
         Returns:
-            str: Physical constants or placeholder comment
+            str: Physical constants line
         """
-        if self.physical_constants:
-            # Format physical constants according to SAMMY specifications
-            # This would be expanded based on requirements
-            return "# PLACEHOLDER: Replace with physical constants (temperature, flight path, etc.)"
-        return "# PLACEHOLDER: Replace with physical constants (temperature, flight path, etc.)"
+        if material_properties:
+            temperature = material_properties.get("temperature_K", 293.6)
+            flight_path = material_properties.get("flight_path_m", 25.0)
+
+            # Format: TEMP FLIGHT_PATH DELTAL DELTAG DELTAE
+            # Reference: 293.6    25.0    0.0       0.0     0.0
+            return f"\n    {temperature:5.1f}    {flight_path:4.1f}    0.0       0.0     0.0"
+
+        # Default for VENUS
+        return "\n    293.6    25.0    0.0       0.0     0.0"
+
+    def generate_sample_density_section(self, material_properties: Dict = None) -> str:
+        """
+        Generate the sample density section.
+
+        Args:
+            material_properties: Dict with material properties
+
+        Returns:
+            str: Sample density line
+        """
+        if material_properties:
+            density = material_properties.get("density_g_cm3", 9.0)
+            thickness = material_properties.get("thickness_mm", 5.0) / 1000.0  # mm to m for this line
+            return f"  {density:8.6f} {thickness:.3e}"
+
+        # Default values (matching reference format)
+        return "  9.000000 1.797e-03"
 
     def generate_reaction_type_section(self) -> str:
         """
@@ -167,12 +193,12 @@ class InpManager:
         Returns:
             str: Miscellaneous parameters section
         """
-        # Default TZERO values per your specification:
-        # t₀=0.0, t₀_unc=0.0, L₀=1.0, L₀_unc=0.0, flight_path=25.0m, flags=1,1
+        # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty):
+        # t₀=0.86, t₀_unc=0.002, L₀=1.002, L₀_unc=2e-5, flight_path=25.0m, flags=1,1
         lines = [
             "",  # Empty line
             "MISCEllaneous parameters follow",
-            f"TZERO 1 1  0.0000000 0.0000000 1.0000000 0.0000000 {flight_path_m:9.6f}",
+            f"TZERO 1 1  .86000000 .00200000 1.0020000 2.00000-5 {flight_path_m:9.6f}",
         ]
         return "\n".join(lines)
 
@@ -183,12 +209,13 @@ class InpManager:
         Returns:
             str: Normalization parameters section
         """
-        # Default NORM values per your specification: 1.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        # NORM values (non-zero uncertainties required - SAMMY cannot fit parameters with zero uncertainty):
+        # anorm=1.0, backa=0.01, backb=0.02, backc=0.001, backd=0.0, backf=0.0
         # Flags: let SAMMY fit the first few parameters (1 1 1 1 0 0)
         lines = [
             "",  # Empty line
             'NORMAlization and "constant" background follow',
-            "1.00000000 0.00000000 0.00000000 0.00000000 0.        0.        1 1 1 1 0 0",
+            "1.00000000 .01000000 .02000000 .00100000 0.        0.        1 1 1 1 0 0",
         ]
         return "\n".join(lines)
 
@@ -221,9 +248,10 @@ class InpManager:
         """
         sections = [
             self.generate_title_section(),
-            self.generate_isotope_section(),
+            "Hf177     176.9432  1.0000E+00 1.7500E+6",  # Default Hf isotope line
             "\n".join(self.generate_commands()),
-            self.generate_physical_constants_section(),
+            self.generate_physical_constants_section(material_properties),
+            self.generate_sample_density_section(material_properties),
             self.generate_reaction_type_section(),
             self.generate_broadening_parameters_section(material_properties),
             self.generate_misc_parameters_section(),

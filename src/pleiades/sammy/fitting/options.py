@@ -255,6 +255,10 @@ class FitOptions(BaseModel):
         options.broadening = BroadeningOptions(broadening_is_wanted=True)
         options.bayes_solution = BayesSolutionOptions(solve_bayes_equations=True)
         options.lpt_output = LPTOutputOptions(chi_squared_is_wanted=True)
+        options.plot_file = PlotFileOptions(
+            generate_plot_file_automatically=True,  # Enable ODF file generation
+            do_not_generate_plot_file_automatically=False,
+        )
 
         return options
 
