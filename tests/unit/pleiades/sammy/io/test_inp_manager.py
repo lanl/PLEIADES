@@ -331,9 +331,9 @@ def test_multi_isotope_with_material_properties(temp_dir):
     # Check for calculated parameter sections
     assert "BROADENING PARAMETERS FOLLOW" in content
     assert "293.60000" in content  # Temperature
-    assert "2.245e-02" in content  # Calculated number density
+    assert "0.022454" in content  # Calculated number density (Card04 format)
     assert "MISCEllaneous parameters follow" in content
-    assert "25.000000" in content  # Flight path
+    assert "2.5000E+01" in content  # Flight path (Card format)
     assert "NORMAlization" in content
     assert "USER-DEFINED RESOLUTION FUNCTION" in content
 

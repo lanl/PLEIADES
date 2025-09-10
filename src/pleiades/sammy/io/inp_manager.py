@@ -146,6 +146,65 @@ class InpManager:
             return self.reaction_type
         return "# PLACEHOLDER: Replace with reaction type (transmission, capture, fission, etc.)"
 
+    def generate_isotope_section_proper(self, material_properties: Dict = None) -> str:
+        """
+        Generate isotope section using actual Card10 class.
+
+        Args:
+            material_properties: Dict with material properties including element info
+
+        Returns:
+            str: Properly formatted isotope line using Card10
+        """
+        from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
+        from pleiades.nuclear.models import IsotopeParameters
+        from pleiades.sammy.fitting.config import FitConfig
+        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
+        from pleiades.utils.helper import VaryFlag
+
+        if material_properties:
+            # Create FitConfig and add isotope using Card10
+            fit_config = FitConfig()
+
+            # Create IsotopeInfo with proper mass_data
+            element = material_properties.get("element", "Hf")
+            mass_number = material_properties.get("mass_number", 177)
+            atomic_mass = material_properties.get("atomic_mass_amu", 176.9432)
+
+            # Create mass data
+            mass_data = IsotopeMassData(
+                atomic_mass=atomic_mass,
+                mass_uncertainty=0.001,  # Default uncertainty
+                binding_energy=0.0,  # Default
+                beta_decay_energy=0.0,  # Default
+            )
+
+            isotope_info = IsotopeInfo(
+                name=f"{element}-{mass_number}", element=element, mass_number=mass_number, mass_data=mass_data
+            )
+
+            # Create IsotopeParameters
+            isotope_params = IsotopeParameters(
+                isotope_information=isotope_info,
+                abundance=material_properties.get("abundance", 1.0),
+                uncertainty=0.00002,  # Default uncertainty
+                vary_abundance=VaryFlag.NO,
+            )
+
+            # Add to fit_config
+            fit_config.nuclear_params.isotopes.append(isotope_params)
+
+            # Generate lines using Card10
+            lines = Card10.to_lines(fit_config)
+
+            # Return all data lines (skip header and empty lines)
+            data_lines = [line for line in lines if not Card10.is_header_line(line) and line.strip()]
+            if data_lines:
+                return "\n".join(data_lines)
+
+        # Fallback
+        return "Hf177     176.9432  1.0000E+00 1.7500E+6"
+
     def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
         """
         Generate broadening parameters section for multi-isotope mode.
@@ -157,13 +216,17 @@ class InpManager:
             str: Broadening parameters section
         """
         if material_properties:
+            from pleiades.experimental.models import BroadeningParameters
+            from pleiades.sammy.fitting.config import FitConfig
+            from pleiades.sammy.io.card_formats.par04_broadening import Card04
+            from pleiades.utils.helper import VaryFlag
             from pleiades.utils.units import calculate_number_density
 
-            # Extract material properties with defaults
-            density = material_properties.get("density_g_cm3")  # Required
-            thickness = material_properties.get("thickness_mm", 5.0)  # Default 5mm
-            atomic_mass = material_properties.get("atomic_mass_amu")  # Required
-            temperature = material_properties.get("temperature_K", 293.6)  # Default room temp
+            # Extract and validate material properties
+            density = material_properties.get("density_g_cm3")
+            thickness = material_properties.get("thickness_mm", 5.0)
+            atomic_mass = material_properties.get("atomic_mass_amu")
+            temperature = material_properties.get("temperature_K", 293.6)
 
             if density is None or atomic_mass is None:
                 raise ValueError("material_properties must contain 'density_g_cm3' and 'atomic_mass_amu'")
@@ -171,14 +234,25 @@ class InpManager:
             # Calculate number density
             number_density = calculate_number_density(density, thickness, atomic_mass)
 
-            # Generate broadening parameters section
-            # Format: CRFN TEMP THICK DELTAL DELTAG DELTAE FLAGS
-            # Reference: 8.0  293.60000 1.797e-04 0.0  0.0  0.0  0 0 1 0 0 0
-            lines = [
-                "",  # Empty line
-                "BROADENING PARAMETERS FOLLOW",
-                f"8.0        {temperature:9.5f} {number_density:.3e} 0.0       0.0       0.0       0 0 1 0 0 0",
-            ]
+            # Create FitConfig with broadening parameters using proper Card04
+            fit_config = FitConfig()
+
+            # Create BroadeningParameters object
+            broadening_params = BroadeningParameters(
+                crfn=8.0,  # Matching radius
+                temp=temperature,  # Temperature
+                thick=number_density,  # Calculated number density
+                deltal=0.0,  # Flight path spread
+                deltag=0.0,  # Gaussian resolution
+                deltae=0.0,  # Exponential resolution
+                flag_thick=VaryFlag.YES,  # Allow SAMMY to vary thickness
+            )
+
+            # Add to fit_config
+            fit_config.physics_params.broadening_parameters = broadening_params
+
+            # Generate proper Card04 output
+            lines = Card04.to_lines(fit_config)
             return "\n".join(lines)
 
         return "\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
@@ -193,13 +267,27 @@ class InpManager:
         Returns:
             str: Miscellaneous parameters section
         """
-        # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty):
-        # t₀=0.86, t₀_unc=0.002, L₀=1.002, L₀_unc=2e-5, flight_path=25.0m, flags=1,1
+        from pleiades.sammy.parameters.misc import TzeroParameters
+        from pleiades.utils.helper import VaryFlag
+
+        # Create TzeroParameters with proper values
+        # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty)
+        tzero_params = TzeroParameters(
+            t0_value=0.86000000,  # Time offset t₀ (μs)
+            t0_uncertainty=0.00200000,  # Uncertainty on t₀ (μs)
+            l0_value=1.0020000,  # L₀ value (dimensionless)
+            l0_uncertainty=2.00000e-5,  # Uncertainty on L₀
+            flight_path_length=flight_path_m,  # Flight path (m)
+            t0_flag=VaryFlag.YES,  # Allow SAMMY to vary t₀
+            l0_flag=VaryFlag.YES,  # Allow SAMMY to vary L₀
+        )
+
+        # Generate proper TZERO output with header
         lines = [
             "",  # Empty line
             "MISCEllaneous parameters follow",
-            f"TZERO 1 1  .86000000 .00200000 1.0020000 2.00000-5 {flight_path_m:9.6f}",
-        ]
+        ] + tzero_params.to_lines()
+
         return "\n".join(lines)
 
     def generate_normalization_parameters_section(self) -> str:
@@ -209,14 +297,36 @@ class InpManager:
         Returns:
             str: Normalization parameters section
         """
-        # NORM values (non-zero uncertainties required - SAMMY cannot fit parameters with zero uncertainty):
-        # anorm=1.0, backa=0.01, backb=0.02, backc=0.001, backd=0.0, backf=0.0
-        # Flags: let SAMMY fit the first few parameters (1 1 1 1 0 0)
-        lines = [
-            "",  # Empty line
-            'NORMAlization and "constant" background follow',
-            "1.00000000 .01000000 .02000000 .00100000 0.        0.        1 1 1 1 0 0",
-        ]
+        from pleiades.experimental.models import NormalizationParameters
+        from pleiades.sammy.fitting.config import FitConfig
+        from pleiades.sammy.io.card_formats.par06_normalization import Card06
+        from pleiades.utils.helper import VaryFlag
+
+        # Create FitConfig with normalization parameters using proper Card06
+        fit_config = FitConfig()
+
+        # Create NormalizationParameters object
+        # NORM values (non-zero uncertainties required - SAMMY cannot fit parameters with zero uncertainty)
+        norm_params = NormalizationParameters(
+            anorm=1.0,  # Normalization factor
+            backa=0.01000000,  # Constant background
+            backb=0.02000000,  # Background ∝ 1/E
+            backc=0.00100000,  # Background ∝ √E
+            backd=0.0,  # Exponential background coefficient
+            backf=0.0,  # Exponential decay constant
+            flag_anorm=VaryFlag.YES,  # Allow SAMMY to vary normalization
+            flag_backa=VaryFlag.YES,  # Allow SAMMY to vary constant background
+            flag_backb=VaryFlag.YES,  # Allow SAMMY to vary 1/E background
+            flag_backc=VaryFlag.YES,  # Allow SAMMY to vary √E background
+            flag_backd=VaryFlag.NO,  # Don't vary exponential coefficient
+            flag_backf=VaryFlag.NO,  # Don't vary exponential constant
+        )
+
+        # Add to fit_config
+        fit_config.physics_params.normalization_parameters = norm_params
+
+        # Generate proper Card06 output
+        lines = Card06.to_lines(fit_config)
         return "\n".join(lines)
 
     def generate_resolution_function_section(self, resolution_file: str = "venus_resolution.dat") -> str:
@@ -248,7 +358,7 @@ class InpManager:
         """
         sections = [
             self.generate_title_section(),
-            "Hf177     176.9432  1.0000E+00 1.7500E+6",  # Default Hf isotope line
+            self.generate_isotope_section_proper(material_properties),
             "\n".join(self.generate_commands()),
             self.generate_physical_constants_section(material_properties),
             self.generate_sample_density_section(material_properties),
