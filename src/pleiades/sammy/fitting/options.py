@@ -224,6 +224,41 @@ class FitOptions(BaseModel):
         return options
 
     @classmethod
+    def from_multi_isotope_config(cls) -> "FitOptions":
+        """Create a FitOptions instance configured for multi-isotope JSON mode fitting.
+
+        Multi-isotope mode combines ENDF extraction and Bayesian fitting in a single step
+        using JSON configuration files for multiple isotopes.
+
+        Key features for multi-isotope mode:
+        - UID 15: INPUT IS ENDF/B FILE (for JSON mode processing)
+        - UID 16: USE ENERGY RANGE FROM ENDF FILE (from ENDF data)
+        - UID 34: USE TWENTY SIGNIFICANT digits (for data format)
+        - UID 60: BROADENING IS WANTED (for instrumental broadening)
+        - UID 102: SOLVE BAYES EQUATIONS (fitting enabled)
+        - UID 133: CHI SQUARED IS WANTED (for fit quality)
+
+        Returns:
+            FitOptions: Instance configured for multi-isotope JSON mode fitting
+        """
+        # Create with default options
+        options = cls()
+
+        # Configure for multi-isotope JSON mode
+        options.endf = ENDFOptions(
+            input_is_endf_file_2=True,  # Enable JSON mode ENDF processing
+            use_energy_range_from_endf_file_2=True,  # Use ENDF energy range
+        )
+        options.experimental_data = ExperimentalDataInputOptions(
+            use_twenty_significant_digits=True  # Use twenty format
+        )
+        options.broadening = BroadeningOptions(broadening_is_wanted=True)
+        options.bayes_solution = BayesSolutionOptions(solve_bayes_equations=True)
+        options.lpt_output = LPTOutputOptions(chi_squared_is_wanted=True)
+
+        return options
+
+    @classmethod
     def from_custom_config(cls, **kwargs) -> "FitOptions":
         """Create a FitOptions instance with custom settings.
 

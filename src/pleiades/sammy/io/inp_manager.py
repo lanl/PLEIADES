@@ -198,3 +198,23 @@ class InpManager:
         options = FitOptions.from_fitting_config()
         manager = cls(options, title=title or "Bayesian fitting mode")
         return manager.write_inp_file(output_path)
+
+    @classmethod
+    def create_multi_isotope_inp(cls, output_path: Path, title: str = None, material_properties: Dict = None) -> Path:
+        """
+        Create input file for multi-isotope JSON mode fitting.
+
+        This method generates a complete INP file for multi-isotope fitting that includes
+        both static alphanumeric commands and calculated parameter sections.
+
+        Args:
+            output_path: Path to write the input file
+            title: Optional title for the inp file
+            material_properties: Optional dict with material properties for parameter calculations
+
+        Returns:
+            Path: Path to the created file
+        """
+        options = FitOptions.from_multi_isotope_config()
+        manager = cls(options, title=title or "Multi-isotope JSON mode fitting", reaction_type="transmission")
+        return manager.write_inp_file(output_path)

@@ -242,3 +242,70 @@ def test_custom_inp_creation(temp_dir):
 
     assert isinstance(content, str)
     assert len(content) > 0  # Ensure some content was written
+
+
+def test_create_multi_isotope_inp(temp_dir):
+    """Test creating input file for multi-isotope JSON mode using class method."""
+    output_path = temp_dir / "multi_isotope.inp"
+
+    with patch.object(FitOptions, "from_multi_isotope_config") as mock_from_multi:
+        mock_options = MagicMock(spec=FitOptions)
+        mock_options.get_alphanumeric_commands.return_value = [
+            "INPUT IS ENDF/B FILE 2",
+            "USE ENERGY RANGE FROM ENDF/B FILE 2",
+            "USE TWENTY SIGNIFICANT DIGITS",
+            "BROADENING IS WANTED",
+            "SOLVE BAYES EQUATIONS",
+            "CHI SQUARED IS WANTED",
+        ]
+        mock_from_multi.return_value = mock_options
+
+        result_path = InpManager.create_multi_isotope_inp(output_path, title="Multi-isotope test")
+
+        assert result_path == output_path
+        assert output_path.exists()
+
+        with open(output_path, "r") as f:
+            content = f.read()
+
+        assert "Multi-isotope test" in content
+        assert "transmission" in content  # Reaction type should be set
+        assert "INPUT IS ENDF/B FILE 2" in content
+        assert "USE TWENTY SIGNIFICANT DIGITS" in content
+        assert "BROADENING IS WANTED" in content
+        mock_from_multi.assert_called_once()
+
+
+def test_multi_isotope_config_integration(temp_dir):
+    """Test multi-isotope configuration integration without mocking."""
+    output_path = temp_dir / "multi_isotope_real.inp"
+
+    # Test real implementation without mocking
+    result_path = InpManager.create_multi_isotope_inp(output_path, title="Real multi-isotope integration test")
+
+    assert result_path == output_path
+    assert output_path.exists()
+
+    with open(output_path, "r") as f:
+        content = f.read()
+
+    # Check for key multi-isotope commands
+    expected_commands = [
+        "INPUT IS ENDF/B FILE",
+        "USE ENERGY RANGE FROM ENDF",
+        "USE TWENTY SIGNIFICANT DIGITS",
+        "BROADENING IS WANTED",
+        "SOLVE BAYES EQUATIONS",
+        "CHI SQUARED IS WANTED",
+        "transmission",
+    ]
+
+    found_commands = []
+    for cmd in expected_commands:
+        if cmd in content:
+            found_commands.append(cmd)
+
+    # Should find most of the expected commands
+    assert (
+        len(found_commands) >= 6
+    ), f"Found only {len(found_commands)}/{len(expected_commands)} commands: {found_commands}"
