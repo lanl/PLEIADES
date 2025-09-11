@@ -125,12 +125,19 @@ class InpManager:
             material_properties: Dict with material properties
 
         Returns:
-            str: Sample density line
+            str: Sample density line with density (g/cm3) and number density (atoms/barn)
         """
         if material_properties:
+            from pleiades.utils.units import calculate_number_density
+
             density = material_properties.get("density_g_cm3", 9.0)
-            thickness = material_properties.get("thickness_mm", 5.0) / 1000.0  # mm to m for this line
-            return f"  {density:8.6f} {thickness:.3e}"
+            thickness_mm = material_properties.get("thickness_mm", 5.0)
+            atomic_mass = material_properties.get("atomic_mass_amu", 28.0)
+
+            # Calculate number density (atoms/barn) - NOT physical thickness
+            number_density = calculate_number_density(density, thickness_mm, atomic_mass)
+
+            return f"  {density:8.6f} {number_density:.6e}"
 
         # Default values (matching reference format)
         return "  9.000000 1.797e-03"

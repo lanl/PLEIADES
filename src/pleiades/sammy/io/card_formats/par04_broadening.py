@@ -162,16 +162,18 @@ class Card04(BaseModel):
     def to_lines(cls, fit_config: FitConfig):
         broadening_params = fit_config.physics_params.broadening_parameters
 
-        # Helper to format floats or blank if None or zero
+        # Helper to format floats - explicit values over implicit blanks
         def fmt(val, width=10, prec=6):
-            if val is None or (isinstance(val, (int, float)) and float(val) == 0.0):
+            if val is None:
                 return " " * width
+            # Explicitly write 0.0 instead of blanks (explicit > implicit principle)
             return f"{val:>{width}.{prec}f}"
 
-        # Helper to format flags or blank if None or zero
+        # Helper to format flags - explicit zeros over implicit blanks
         def flag_val(flag, width=2):
-            if flag is None or flag.value == 0:
+            if flag is None:
                 return " " * width
+            # Explicitly write 0 instead of blanks (explicit > implicit principle)
             return f"{flag.value:{width}d}"
 
         line2 = (
