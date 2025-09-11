@@ -346,12 +346,15 @@ class InpManager:
         ]
         return "\n".join(lines)
 
-    def generate_multi_isotope_inp_content(self, material_properties: Dict = None) -> str:
+    def generate_multi_isotope_inp_content(
+        self, material_properties: Dict = None, resolution_file_path: Path = None
+    ) -> str:
         """
         Generate complete multi-isotope INP content with parameter sections.
 
         Args:
             material_properties: Dict with material properties for parameter calculations
+            resolution_file_path: Optional absolute path to resolution function file
 
         Returns:
             str: Complete multi-isotope INP file content
@@ -366,7 +369,9 @@ class InpManager:
             self.generate_broadening_parameters_section(material_properties),
             self.generate_misc_parameters_section(),
             self.generate_normalization_parameters_section(),
-            self.generate_resolution_function_section(),
+            self.generate_resolution_function_section(
+                str(resolution_file_path.resolve()) if resolution_file_path else "venus_resolution.dat"
+            ),
         ]
         return "\n".join(sections)
 
@@ -450,7 +455,9 @@ class InpManager:
         return manager.write_inp_file(output_path)
 
     @classmethod
-    def create_multi_isotope_inp(cls, output_path: Path, title: str = None, material_properties: Dict = None) -> Path:
+    def create_multi_isotope_inp(
+        cls, output_path: Path, title: str = None, material_properties: Dict = None, resolution_file_path: Path = None
+    ) -> Path:
         """
         Create input file for multi-isotope JSON mode fitting.
 
@@ -461,6 +468,7 @@ class InpManager:
             output_path: Path to write the input file
             title: Optional title for the inp file
             material_properties: Optional dict with material properties for parameter calculations
+            resolution_file_path: Optional absolute path to resolution function file
 
         Returns:
             Path: Path to the created file
@@ -470,7 +478,7 @@ class InpManager:
 
         # Use specialized multi-isotope content generation
         try:
-            content = manager.generate_multi_isotope_inp_content(material_properties)
+            content = manager.generate_multi_isotope_inp_content(material_properties, resolution_file_path)
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
