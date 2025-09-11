@@ -129,10 +129,17 @@ class LptManager:
                         abundance = float(abundance_str)
                         abundance_paren = match.group(3)
                         mass = float(match.group(4))
-                        spin_groups = [int(s) for s in match.group(5).split()]
+                        spin_group_numbers = [int(s) for s in match.group(5).split()]
 
                         # Set vary_abundance flag
                         vary_abundance = VaryFlag.YES if abundance_paren else VaryFlag.NO
+
+                        # Create SpinGroups objects from integers
+                        from pleiades.nuclear.models import SpinGroups
+
+                        spin_groups = [
+                            SpinGroups(spin_group_number=sg_num, excluded=False) for sg_num in spin_group_numbers
+                        ]
 
                         # Minial IsotopeMassData
                         mass_data_info = IsotopeMassData(atomic_mass=mass)
@@ -221,7 +228,8 @@ class LptManager:
 
         # For each isotope, group spin groups by (effective_radius, true_radius)
         for isotope in nuclear_data.isotopes:
-            spin_groups_set = set(isotope.spin_groups)
+            # Extract spin group numbers from SpinGroups objects
+            spin_groups_set = set(sg.spin_group_number for sg in isotope.spin_groups)
             # Group spin groups by radius pair
             grouped = defaultdict(list)
             for entry in radii:
@@ -231,8 +239,13 @@ class LptManager:
             # Create RadiusParameters objects for each group
             isotope.radius_parameters = []
             for (eff_radius, true_radius), spin_groups in grouped.items():
+                # Convert integer spin groups to SpinGroupChannels objects
+                from pleiades.nuclear.models import SpinGroupChannels
+
+                spin_group_channels = [SpinGroupChannels(group_number=sg_num, channels=[]) for sg_num in spin_groups]
+
                 temp_radius_parameters = RadiusParameters(
-                    effective_radius=eff_radius, true_radius=true_radius, spin_groups=spin_groups
+                    effective_radius=eff_radius, true_radius=true_radius, spin_groups=spin_group_channels
                 )
                 isotope.radius_parameters.append(temp_radius_parameters)
 
