@@ -85,16 +85,23 @@ class InpManager:
 
     def generate_isotope_section(self) -> str:
         """
-        Generate the isotope information section of the inp file.
+        Generate the isotope information section of the inp file using Card Set 2 format.
 
         Returns:
-            str: Isotope information line or placeholder comment
+            str: Properly formatted Card Set 2 element information line
         """
         if self.isotope_info:
-            # Format isotope information according to SAMMY specifications
-            # This would be expanded based on requirements
-            return "# Actual isotope information would be formatted here"
-        return "# PLACEHOLDER: Replace with isotope information (name, mass, energy range)"
+            # Use provided isotope_info if available
+            element = self.isotope_info.get("element", "Sample")
+            atomic_mass = self.isotope_info.get("atomic_mass_amu", 1.0)
+            min_energy = self.isotope_info.get("min_energy_eV", 0.001)
+            max_energy = self.isotope_info.get("max_energy_eV", 1000.0)
+
+            # Format according to SAMMY Card Set 2 specification
+            return f"{element:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
+
+        # Default fallback for legacy usage - generic sample
+        return "Sample         1.00000     0.001    1000.0"
 
     def generate_physical_constants_section(self, material_properties: Dict = None) -> str:
         """
@@ -153,64 +160,39 @@ class InpManager:
             return self.reaction_type
         return "# PLACEHOLDER: Replace with reaction type (transmission, capture, fission, etc.)"
 
-    def generate_isotope_section_proper(self, material_properties: Dict = None) -> str:
+    def generate_card_set_2_element_info(self, material_properties: Dict = None) -> str:
         """
-        Generate isotope section using actual Card10 class.
+        Generate Card Set 2 (element information) according to SAMMY documentation.
+
+        This generates the second line with element name, atomic weight, and energy range
+        according to SAMMY Card Set 2 specification:
+        - Columns 1-10 (A): ELMNT - Sample element's name
+        - Columns 11-20 (F): AW - Atomic weight (amu)
+        - Columns 21-30 (F): EMIN - Minimum energy for dataset (eV)
+        - Columns 31-40 (F): EMAX - Maximum energy (eV)
 
         Args:
             material_properties: Dict with material properties including element info
 
         Returns:
-            str: Properly formatted isotope line using Card10
+            str: Properly formatted Card Set 2 element information line
         """
-        from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
-        from pleiades.nuclear.models import IsotopeParameters
-        from pleiades.sammy.fitting.config import FitConfig
-        from pleiades.sammy.io.card_formats.par10_isotopes import Card10
-        from pleiades.utils.helper import VaryFlag
-
         if material_properties:
-            # Create FitConfig and add isotope using Card10
-            fit_config = FitConfig()
+            element = material_properties.get("element", "Au")
+            mass_number = material_properties.get("mass_number", 197)
+            atomic_mass = material_properties.get("atomic_mass_amu", 196.966569)
+            min_energy = material_properties.get("min_energy_eV", 0.001)  # Configurable minimum energy
+            max_energy = material_properties.get("max_energy_eV", 1000.0)
 
-            # Create IsotopeInfo with proper mass_data
-            element = material_properties.get("element", "Hf")
-            mass_number = material_properties.get("mass_number", 177)
-            atomic_mass = material_properties.get("atomic_mass_amu", 176.9432)
+            # For single isotope, use element-mass notation for ELMNT
+            element_name = f"{element}{mass_number}"
 
-            # Create mass data
-            mass_data = IsotopeMassData(
-                atomic_mass=atomic_mass,
-                mass_uncertainty=0.001,  # Default uncertainty
-                binding_energy=0.0,  # Default
-                beta_decay_energy=0.0,  # Default
-            )
+            # Format according to SAMMY Card Set 2 specification:
+            # ELMNT (A10), AW (F10), EMIN (F10), EMAX (F10)
+            return f"{element_name:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
 
-            isotope_info = IsotopeInfo(
-                name=f"{element}-{mass_number}", element=element, mass_number=mass_number, mass_data=mass_data
-            )
-
-            # Create IsotopeParameters
-            isotope_params = IsotopeParameters(
-                isotope_information=isotope_info,
-                abundance=material_properties.get("abundance", 1.0),
-                uncertainty=0.00002,  # Default uncertainty
-                vary_abundance=VaryFlag.NO,
-            )
-
-            # Add to fit_config
-            fit_config.nuclear_params.isotopes.append(isotope_params)
-
-            # Generate lines using Card10
-            lines = Card10.to_lines(fit_config)
-
-            # Return all data lines (skip header and empty lines)
-            data_lines = [line for line in lines if not Card10.is_header_line(line) and line.strip()]
-            if data_lines:
-                return "\n".join(data_lines)
-
-        # Fallback
-        return "Hf177     176.9432  1.0000E+00 1.7500E+6"
+        # Fallback for Au-197 from VENUS
+        return "Au197     196.96657     0.001    1000.0"
 
     def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
         """
@@ -341,11 +323,14 @@ class InpManager:
         Generate user-defined resolution function section.
 
         Args:
-            resolution_file: Name of resolution function file
+            resolution_file: Name of resolution function file, or None to disable
 
         Returns:
-            str: Resolution function section
+            str: Resolution function section or empty string if disabled
         """
+        if resolution_file is None:
+            return ""  # No resolution function section
+
         lines = [
             "",  # Empty line
             "USER-DEFINED RESOLUTION FUNCTION",
@@ -368,7 +353,7 @@ class InpManager:
         """
         sections = [
             self.generate_title_section(),
-            self.generate_isotope_section_proper(material_properties),
+            self.generate_card_set_2_element_info(material_properties),  # Use Card Set 2 for element info
             "\n".join(self.generate_commands()),
             self.generate_physical_constants_section(material_properties),
             self.generate_sample_density_section(material_properties),
@@ -377,7 +362,7 @@ class InpManager:
             self.generate_misc_parameters_section(),
             self.generate_normalization_parameters_section(),
             self.generate_resolution_function_section(
-                str(resolution_file_path.resolve()) if resolution_file_path else "venus_resolution.dat"
+                str(resolution_file_path.resolve()) if resolution_file_path else None
             ),
         ]
         return "\n".join(sections)

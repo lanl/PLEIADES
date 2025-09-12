@@ -119,7 +119,7 @@ def test_generate_inp_content(mock_fit_options):
     assert isinstance(content, str)
     expected_sections = [
         "Test Title",
-        "# PLACEHOLDER: Replace with isotope information",
+        "Sample         1.00000     0.001    1000.0",  # Card Set 2 format instead of placeholder
         "PUT QUANTUM NUMBERS INTO PARAMETER FILE",
         "DO NOT SOLVE BAYES EQUATIONS",
         "USE ENDF PARAMETERS",
@@ -335,7 +335,7 @@ def test_multi_isotope_with_material_properties(temp_dir):
     assert "MISCEllaneous parameters follow" in content
     assert "2.5000E+01" in content  # Flight path (Card format)
     assert "NORMAlization" in content
-    assert "USER-DEFINED RESOLUTION FUNCTION" in content
+    # No resolution function expected when no resolution_file_path provided
 
 
 def test_multi_isotope_missing_required_properties(temp_dir):
