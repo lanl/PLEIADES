@@ -202,7 +202,7 @@ class InpManager:
             material_properties: Dict with material properties for calculations
 
         Returns:
-            str: Broadening parameters section
+            str: Broadening parameters section with required blank line before it
         """
         if material_properties:
             from pleiades.experimental.models import BroadeningParameters
@@ -240,11 +240,11 @@ class InpManager:
             # Add to fit_config
             fit_config.physics_params.broadening_parameters = broadening_params
 
-            # Generate proper Card04 output
-            lines = Card04.to_lines(fit_config)
+            # Generate proper Card04 output with required blank line before it
+            lines = [""] + Card04.to_lines(fit_config)  # Add blank line before broadening section
             return "\n".join(lines)
 
-        return "\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
+        return "\n\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
 
     def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
         """
@@ -284,7 +284,7 @@ class InpManager:
         Generate normalization parameters section.
 
         Returns:
-            str: Normalization parameters section
+            str: Normalization parameters section with required blank line before it
         """
         from pleiades.experimental.models import NormalizationParameters
         from pleiades.sammy.fitting.config import FitConfig
@@ -314,8 +314,8 @@ class InpManager:
         # Add to fit_config
         fit_config.physics_params.normalization_parameters = norm_params
 
-        # Generate proper Card06 output
-        lines = Card06.to_lines(fit_config)
+        # Generate proper Card06 output with required blank line before it
+        lines = [""] + Card06.to_lines(fit_config)  # Add blank line before normalization section
         return "\n".join(lines)
 
     def generate_resolution_function_section(self, resolution_file: str = "venus_resolution.dat") -> str:
