@@ -230,37 +230,66 @@ class FitOptions(BaseModel):
         Multi-isotope mode combines ENDF extraction and Bayesian fitting in a single step
         using JSON configuration files for multiple isotopes.
 
-        Key features for multi-isotope mode:
-        - UID 15: INPUT IS ENDF/B FILE (for JSON mode processing)
-        - UID 16: USE ENERGY RANGE FROM ENDF FILE (from ENDF data)
-        - UID 34: USE TWENTY SIGNIFICANT digits (for data format)
-        - UID 60: BROADENING IS WANTED (for instrumental broadening)
-        - UID 102: SOLVE BAYES EQUATIONS (fitting enabled)
-        - UID 133: CHI SQUARED IS WANTED (for fit quality)
+        Key features for multi-isotope mode (following SAMMY expert recommendations):
+        - REICH-MOORE FORMALISM IS WANTED
+        - USE NEW SPIN GROUP Format
+        - USE TWENTY SIGNIFICANT DIGITS
+        - BROADENING IS WANTED
+        - INPUT IS ENDF/B FILE 2
+        - SOLVE BAYES EQUATIONS
+        - CHI SQUARED IS WANTED
+
+        Note: Removed unnecessary alphanumerics per expert recommendation to avoid
+        undocumented cross-firing between alphanumeric commands in SAMMY.
 
         Returns:
             FitOptions: Instance configured for multi-isotope JSON mode fitting
         """
-        # Create with default options
-        options = cls()
-
-        # Configure for multi-isotope JSON mode
-        options.endf = ENDFOptions(
-            input_is_endf_file_2=True,  # Enable JSON mode ENDF processing
-            use_energy_range_from_endf_file_2=True,  # Use ENDF energy range
+        # Create with ONLY the essential options - exclude problematic categories entirely
+        return cls(
+            r_matrix=RMatrixOptions(reich_moore=True),  # REICH-MOORE FORMALISM IS WANTED
+            quantum_numbers=QuantumNumbersOptions(new_spin_group_format=True),  # USE NEW SPIN GROUP Format
+            endf=ENDFOptions(
+                input_is_endf_file_2=True,  # INPUT IS ENDF/B FILE 2 (JSON mode processing)
+                # Removed: use_energy_range_from_endf_file_2 (expert recommendation)
+            ),
+            experimental_data=ExperimentalDataInputOptions(
+                use_twenty_significant_digits=True,  # USE TWENTY SIGNIFICANT DIGITS
+                # Override problematic defaults per expert recommendation:
+                data_in_original_multi_style_format=False,  # Disable default
+                do_not_divide_data_into_regions=False,  # Disable default (expert marked for removal)
+            ),
+            broadening=BroadeningOptions(broadening_is_wanted=True),  # BROADENING IS WANTED
+            bayes_solution=BayesSolutionOptions(
+                solve_bayes_equations=True,  # SOLVE BAYES EQUATIONS
+                # Override problematic defaults per expert recommendation:
+                let_sammy_choose_which_inversion_scheme_to_use=False,  # Disable default (expert marked for removal)
+            ),
+            lpt_output=LPTOutputOptions(
+                chi_squared_is_wanted=True,  # CHI SQUARED IS WANTED
+                # Override all other defaults per expert recommendation to disable unwanted print commands
+                do_not_print_any_input_parameters=False,
+                do_not_print_input_data=False,
+                do_not_print_theoretical_values=False,
+                do_not_print_partial_derivatives=False,
+                do_not_suppress_any_intermediate_printout=False,
+                do_not_use_short_format_for_output=False,
+                do_not_print_reduced_widths=False,
+                do_not_print_debug_info=False,
+                do_not_print_weighted_residuals=False,
+                do_not_print_bayes_weighted_residuals=False,
+                do_not_print_phase_shifts=False,
+            ),
+            # Completely exclude categories marked for removal by expert to avoid any defaults
+            # cross_section=None,  # Exclude entirely - expert marked all for removal
+            # covariance_matrix=None,  # Exclude entirely - expert marked all for removal
+            # multiple_scattering_corrections=None,  # Exclude entirely - expert marked all for removal
+            # plot_file=None,  # Exclude entirely - expert marked all for removal
+            # urr=None,  # Exclude entirely - expert marked all for removal
+            # physical_constants=None,  # Exclude entirely - expert marked all for removal
+            # special_analysis=None,  # Exclude entirely - expert marked all for removal
+            # averages=None,  # Exclude entirely - expert marked all for removal
         )
-        options.experimental_data = ExperimentalDataInputOptions(
-            use_twenty_significant_digits=True  # Use twenty format
-        )
-        options.broadening = BroadeningOptions(broadening_is_wanted=True)
-        options.bayes_solution = BayesSolutionOptions(solve_bayes_equations=True)
-        options.lpt_output = LPTOutputOptions(chi_squared_is_wanted=True)
-        options.plot_file = PlotFileOptions(
-            generate_plot_file_automatically=True,  # Enable ODF file generation
-            do_not_generate_plot_file_automatically=False,
-        )
-
-        return options
 
     @classmethod
     def from_custom_config(cls, **kwargs) -> "FitOptions":
