@@ -6,7 +6,7 @@ The FitOptions class encapsulates these options and provides factory methods
 for different modes of operation.
 """
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -84,43 +84,41 @@ class FitOptions(BaseModel):
 
     lpt_output: LPTOutputOptions = Field(default_factory=LPTOutputOptions, description="Options for LPT file output")
 
-    angular_distribution: AngularDistributionOptions = Field(
-        default_factory=AngularDistributionOptions, description="Options for angular distributions"
+    angular_distribution: Optional[AngularDistributionOptions] = Field(
+        default=None, description="Options for angular distributions"
     )
 
-    averages: AveragesOptions = Field(default_factory=AveragesOptions, description="Options for energy averages")
+    averages: Optional[AveragesOptions] = Field(default=None, description="Options for energy averages")
 
-    data_covariance: CovarianceMatrixOptions = Field(
-        default_factory=CovarianceMatrixOptions, description="Options for data covariance matrix"
+    data_covariance: Optional[CovarianceMatrixOptions] = Field(
+        default=None, description="Options for data covariance matrix"
     )
 
-    p_covariance_in: PCovarianceMatrixInOptions = Field(
-        default_factory=PCovarianceMatrixInOptions, description="Options for parameter covariance matrix input"
+    p_covariance_in: Optional[PCovarianceMatrixInOptions] = Field(
+        default=None, description="Options for parameter covariance matrix input"
     )
 
-    p_covariance_out: CovarianceMatrixOutputOptions = Field(
-        default_factory=CovarianceMatrixOutputOptions, description="Options for parameter covariance matrix output"
+    p_covariance_out: Optional[CovarianceMatrixOutputOptions] = Field(
+        default=None, description="Options for parameter covariance matrix output"
     )
 
-    multiple_scattering: MultipleScatteringCorrectionsOptions = Field(
-        default_factory=MultipleScatteringCorrectionsOptions, description="Options for multiple scattering corrections"
+    multiple_scattering: Optional[MultipleScatteringCorrectionsOptions] = Field(
+        default=None, description="Options for multiple scattering corrections"
     )
 
-    cross_section: CrossSectionOptions = Field(
-        default_factory=CrossSectionOptions, description="Options for cross section calculations"
+    cross_section: Optional[CrossSectionOptions] = Field(
+        default=None, description="Options for cross section calculations"
     )
 
-    physical_constants: PhysicalConstantsOptions = Field(
-        default_factory=PhysicalConstantsOptions, description="Options for physical constants"
+    physical_constants: Optional[PhysicalConstantsOptions] = Field(
+        default=None, description="Options for physical constants"
     )
 
-    plot_file: PlotFileOptions = Field(default_factory=PlotFileOptions, description="Options for plot file generation")
+    plot_file: Optional[PlotFileOptions] = Field(default=None, description="Options for plot file generation")
 
-    special_analysis: SpecialAnalysisOptions = Field(
-        default_factory=SpecialAnalysisOptions, description="Options for special analysis"
-    )
+    special_analysis: Optional[SpecialAnalysisOptions] = Field(default=None, description="Options for special analysis")
 
-    urr: URROptions = Field(default_factory=URROptions, description="Options for unresolved resonance region")
+    urr: Optional[URROptions] = Field(default=None, description="Options for unresolved resonance region")
 
     def get_alphanumeric_commands(self) -> List[str]:
         """Generate all SAMMY alphanumeric commands from constituent options.
@@ -130,7 +128,6 @@ class FitOptions(BaseModel):
         """
         commands = []
 
-        # Collect commands from each alphanumerics component
         commands.extend(self.r_matrix.get_alphanumeric_commands())
         commands.extend(self.quantum_numbers.get_alphanumeric_commands())
         commands.extend(self.experimental_data.get_alphanumeric_commands())
@@ -138,17 +135,29 @@ class FitOptions(BaseModel):
         commands.extend(self.endf.get_alphanumeric_commands())
         commands.extend(self.bayes_solution.get_alphanumeric_commands())
         commands.extend(self.lpt_output.get_alphanumeric_commands())
-        commands.extend(self.angular_distribution.get_alphanumeric_commands())
-        commands.extend(self.averages.get_alphanumeric_commands())
-        commands.extend(self.data_covariance.get_alphanumeric_commands())
-        commands.extend(self.p_covariance_in.get_alphanumeric_commands())
-        commands.extend(self.p_covariance_out.get_alphanumeric_commands())
-        commands.extend(self.multiple_scattering.get_alphanumeric_commands())
-        commands.extend(self.cross_section.get_alphanumeric_commands())
-        commands.extend(self.physical_constants.get_alphanumeric_commands())
-        commands.extend(self.plot_file.get_alphanumeric_commands())
-        commands.extend(self.special_analysis.get_alphanumeric_commands())
-        commands.extend(self.urr.get_alphanumeric_commands())
+
+        if self.angular_distribution:
+            commands.extend(self.angular_distribution.get_alphanumeric_commands())
+        if self.averages:
+            commands.extend(self.averages.get_alphanumeric_commands())
+        if self.data_covariance:
+            commands.extend(self.data_covariance.get_alphanumeric_commands())
+        if self.p_covariance_in:
+            commands.extend(self.p_covariance_in.get_alphanumeric_commands())
+        if self.p_covariance_out:
+            commands.extend(self.p_covariance_out.get_alphanumeric_commands())
+        if self.multiple_scattering:
+            commands.extend(self.multiple_scattering.get_alphanumeric_commands())
+        if self.cross_section:
+            commands.extend(self.cross_section.get_alphanumeric_commands())
+        if self.physical_constants:
+            commands.extend(self.physical_constants.get_alphanumeric_commands())
+        if self.plot_file:
+            commands.extend(self.plot_file.get_alphanumeric_commands())
+        if self.special_analysis:
+            commands.extend(self.special_analysis.get_alphanumeric_commands())
+        if self.urr:
+            commands.extend(self.urr.get_alphanumeric_commands())
 
         return commands
 
@@ -247,27 +256,21 @@ class FitOptions(BaseModel):
         """
         # Create with ONLY the essential options - exclude problematic categories entirely
         return cls(
-            r_matrix=RMatrixOptions(reich_moore=True),  # REICH-MOORE FORMALISM IS WANTED
-            quantum_numbers=QuantumNumbersOptions(new_spin_group_format=True),  # USE NEW SPIN GROUP Format
-            endf=ENDFOptions(
-                input_is_endf_file_2=True,  # INPUT IS ENDF/B FILE 2 (JSON mode processing)
-                # Removed: use_energy_range_from_endf_file_2 (expert recommendation)
-            ),
+            r_matrix=RMatrixOptions(reich_moore=True),
+            quantum_numbers=QuantumNumbersOptions(new_spin_group_format=True),
+            endf=ENDFOptions(input_is_endf_file_2=True),
             experimental_data=ExperimentalDataInputOptions(
-                use_twenty_significant_digits=True,  # USE TWENTY SIGNIFICANT DIGITS
-                # Override problematic defaults per expert recommendation:
-                data_in_original_multi_style_format=False,  # Disable default
-                do_not_divide_data_into_regions=False,  # Disable default (expert marked for removal)
+                use_twenty_significant_digits=True,
+                data_in_original_multi_style_format=False,
+                do_not_divide_data_into_regions=False,
             ),
-            broadening=BroadeningOptions(broadening_is_wanted=True),  # BROADENING IS WANTED
+            broadening=BroadeningOptions(broadening_is_wanted=True),
             bayes_solution=BayesSolutionOptions(
-                solve_bayes_equations=True,  # SOLVE BAYES EQUATIONS
-                # Override problematic defaults per expert recommendation:
-                let_sammy_choose_which_inversion_scheme_to_use=False,  # Disable default (expert marked for removal)
+                solve_bayes_equations=True,
+                let_sammy_choose_which_inversion_scheme_to_use=False,
             ),
             lpt_output=LPTOutputOptions(
-                chi_squared_is_wanted=True,  # CHI SQUARED IS WANTED
-                # Override all other defaults per expert recommendation to disable unwanted print commands
+                chi_squared_is_wanted=True,
                 do_not_print_any_input_parameters=False,
                 do_not_print_input_data=False,
                 do_not_print_theoretical_values=False,
@@ -280,15 +283,6 @@ class FitOptions(BaseModel):
                 do_not_print_bayes_weighted_residuals=False,
                 do_not_print_phase_shifts=False,
             ),
-            # Completely exclude categories marked for removal by expert to avoid any defaults
-            # cross_section=None,  # Exclude entirely - expert marked all for removal
-            # covariance_matrix=None,  # Exclude entirely - expert marked all for removal
-            # multiple_scattering_corrections=None,  # Exclude entirely - expert marked all for removal
-            # plot_file=None,  # Exclude entirely - expert marked all for removal
-            # urr=None,  # Exclude entirely - expert marked all for removal
-            # physical_constants=None,  # Exclude entirely - expert marked all for removal
-            # special_analysis=None,  # Exclude entirely - expert marked all for removal
-            # averages=None,  # Exclude entirely - expert marked all for removal
         )
 
     @classmethod
