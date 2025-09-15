@@ -6,7 +6,7 @@ import subprocess
 import textwrap
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Union
 from uuid import uuid4
 
 from pleiades.sammy.config import LocalSammyConfig
@@ -15,6 +15,7 @@ from pleiades.sammy.interface import (
     SammyExecutionError,
     SammyExecutionResult,
     SammyFiles,
+    SammyFilesMultiMode,
     SammyRunner,
 )
 from pleiades.utils.logger import loguru_logger
@@ -38,13 +39,18 @@ class LocalSammyRunner(SammyRunner):
         self.config: LocalSammyConfig = config
         self._moved_files: List[Path] = []
 
-    def prepare_environment(self, files: SammyFiles) -> None:
+    def prepare_environment(self, files: Union[SammyFiles, SammyFilesMultiMode]) -> None:
         """Prepare environment for local SAMMY execution."""
         try:
             logger.debug("Validating input files")
             files.validate()
 
-            # Move files to working directory - copy input and parameter files, symlink data file
+            # Additional validation for JSON mode
+            if isinstance(files, SammyFilesMultiMode):
+                logger.debug("Performing JSON-ENDF mapping validation")
+                self._validate_json_endf_mapping(files)
+
+            # Move files to working directory
             logger.debug("Moving files to working directory")
             files.move_to_working_dir(self.config.working_dir)
 
@@ -54,7 +60,49 @@ class LocalSammyRunner(SammyRunner):
         except Exception as e:
             raise EnvironmentPreparationError(f"Environment preparation failed: {str(e)}")
 
-    def execute_sammy(self, files: SammyFiles) -> SammyExecutionResult:
+    def _validate_json_endf_mapping(self, files: SammyFilesMultiMode) -> None:
+        """
+        Validate that JSON configuration references existing ENDF files.
+
+        Args:
+            files: SammyFilesMultiMode containing JSON config and ENDF directory
+
+        Raises:
+            ValueError: If JSON references missing ENDF files
+        """
+        import json
+
+        try:
+            # Parse JSON to find referenced ENDF files
+            with open(files.json_config_file, "r") as f:
+                json_data = json.load(f)
+
+            # Find isotope entries (lists in JSON) - keys are ENDF filenames
+            endf_files_referenced = []
+            for key, value in json_data.items():
+                if isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                    # Key is the ENDF filename (e.g., "079-Au-197.B-VIII.0.par")
+                    endf_files_referenced.append(key)
+
+            # Check each referenced ENDF file exists in ENDF directory
+            missing_files = []
+            for endf_filename in endf_files_referenced:
+                endf_path = files.endf_directory / endf_filename
+                if not endf_path.exists():
+                    missing_files.append(endf_filename)
+
+            if missing_files:
+                raise ValueError(
+                    f"JSON references missing ENDF files: {missing_files}. "
+                    f"Expected in directory: {files.endf_directory}"
+                )
+
+            logger.debug(f"JSON-ENDF validation passed: {len(endf_files_referenced)} ENDF files verified")
+
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON configuration file: {e}")
+
+    def execute_sammy(self, files: Union[SammyFiles, SammyFilesMultiMode]) -> SammyExecutionResult:
         """Execute SAMMY using local installation."""
         execution_id = str(uuid4())
         start_time = datetime.now()
@@ -62,12 +110,27 @@ class LocalSammyRunner(SammyRunner):
         logger.info(f"Starting SAMMY execution {execution_id}")
         logger.debug(f"Working directory: {self.config.working_dir}")
 
-        sammy_command = textwrap.dedent(f"""\
-            {self.config.sammy_executable} <<EOF
-            {shlex.quote(files.input_file.name)}
-            {shlex.quote(files.parameter_file.name)}
-            {shlex.quote(files.data_file.name)}
-            EOF""")
+        # Generate command based on file type
+        if isinstance(files, SammyFilesMultiMode):
+            # JSON mode command format
+            sammy_command = textwrap.dedent(f"""\
+                {self.config.sammy_executable} <<EOF
+                {shlex.quote(files.input_file.name)}
+                #file {shlex.quote(files.json_config_file.name)}
+                {shlex.quote(files.data_file.name)}
+
+                EOF""")
+            logger.debug("Using JSON mode command format")
+        else:
+            # Traditional mode command format
+            sammy_command = textwrap.dedent(f"""\
+                {self.config.sammy_executable} <<EOF
+                {shlex.quote(files.input_file.name)}
+                {shlex.quote(files.parameter_file.name)}
+                {shlex.quote(files.data_file.name)}
+
+                EOF""")
+            logger.debug("Using traditional mode command format")
 
         try:
             process = subprocess.run(

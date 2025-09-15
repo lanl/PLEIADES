@@ -147,6 +147,46 @@ def test_from_custom_config():
     assert "DO NOT SOLVE BAYES EQUATIONS" in commands
 
 
+def test_from_multi_isotope_config():
+    """Test the factory method that creates FitOptions for multi-isotope JSON mode fitting."""
+    fit_options = FitOptions.from_multi_isotope_config()
+
+    # Verify multi-isotope mode settings (updated per SAMMY expert recommendations)
+    assert fit_options.endf.input_is_endf_file_2 is True
+    assert fit_options.endf.use_energy_range_from_endf_file_2 is False  # Removed per expert recommendation
+    assert fit_options.experimental_data.use_twenty_significant_digits is True
+    assert fit_options.broadening.broadening_is_wanted is True
+    assert fit_options.bayes_solution.solve_bayes_equations is True
+    assert fit_options.lpt_output.chi_squared_is_wanted is True
+
+    # Check generated commands for multi-isotope mode (essential commands only per expert)
+    commands = fit_options.get_alphanumeric_commands()
+
+    # Essential commands that expert recommended to keep
+    essential_commands = [
+        "REICH-MOORE FORMALISM IS WANTED",
+        "USE NEW SPIN GROUP Format",
+        "USE TWENTY SIGNIFICANT DIGITS",
+        "BROADENING IS WANTED",
+        "INPUT IS ENDF/B FILE 2",
+        "SOLVE BAYES EQUATIONS",
+        "CHI SQUARED IS WANTED",
+    ]
+
+    for cmd in essential_commands:
+        assert cmd in commands, f"Essential command missing: {cmd}"
+
+    # Commands that expert specifically marked for removal should NOT be present
+    removed_commands = [
+        "USE ENERGY RANGE FROM ENDF/B FILE 2",  # Expert marked for removal
+        "DO NOT DIVIDE DATA INTO REGIONS",  # Expert marked for removal
+        "LET SAMMY CHOOSE WHICH INVERSION SCHEME TO USE",  # Expert marked for removal
+    ]
+
+    for cmd in removed_commands:
+        assert cmd not in commands, f"Command should be removed per expert: {cmd}"
+
+
 def test_mutually_exclusive_options():
     """Test that mutually exclusive options are handled correctly."""
     # Create RMatrixOptions with mutually exclusive options

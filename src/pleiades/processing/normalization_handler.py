@@ -312,7 +312,11 @@ def combine_data(
 
         logger.debug(f"2. {np.shape(_uncertainty) = }")
 
-        _uncertainty += 1 / ob_data
+        # VENUS fix: avoid division by zero in open beam data
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ob_reciprocal = 1 / ob_data
+            ob_reciprocal[~np.isfinite(ob_reciprocal)] = 0  # Set inf/nan to 0
+            _uncertainty += ob_reciprocal
         full_ob_data_corrected.append(ob_data)
         # uncertainties_ob_data_corrected.append(ob_data * np.sqrt(_uncertainty))
 
@@ -469,7 +473,11 @@ def performing_normalization(
                 median_roi_of_sample = np.median(_sample[y0:y1, x0:x1])
                 coeff = median_roi_of_ob / median_roi_of_sample
 
-            normalized_sample[_index] = (_sample / _ob) * coeff
+            # VENUS fix: avoid division by zero in transmission calculation
+            with np.errstate(divide="ignore", invalid="ignore"):
+                transmission = (_sample / _ob) * coeff
+                transmission[~np.isfinite(transmission)] = 0  # Set inf/nan to 0
+                normalized_sample[_index] = transmission
 
         normalization_dict[MasterDictKeys.sample_data][sample_folder] = normalized_sample
 
@@ -517,9 +525,47 @@ def get_counts_from_normalized_data(normalized_data: np.ndarray) -> Tuple[np.nda
     if normalized_data.ndim != 3:
         raise ValueError(f"Expected 3D array, got {normalized_data.ndim}D array")
 
-    # Assuming normalized_data is a 3D array with shape (num_images, height, width)
-    counts_array = np.sum(normalized_data, axis=(1, 2))
+    # VENUS FIX: Extract transmission values by averaging over spatial pixels
+    # The old approach summed ~262k pixels per time bin, giving transmission values of ~355k
+    # The correct approach averages transmission over detector area
 
-    uncertainties = np.sqrt(counts_array)  # Assuming Poisson statistics for counts
+    # Configuration constants
+    MIN_TRANSMISSION_THRESHOLD = 0.01  # Below this likely indicates bad pixels/no sample
+    MIN_VALID_PIXELS = 1000  # Minimum pixels required for robust statistics
+
+    # Calculate spatial average for each time bin using all pixels
+    counts_array = np.nanmean(normalized_data, axis=(1, 2))
+
+    # For uncertainty calculation, identify potentially problematic pixels
+    # but DO NOT modify the data - only use for uncertainty estimation
+    valid_mask = normalized_data >= MIN_TRANSMISSION_THRESHOLD
+    valid_pixel_count = np.sum(valid_mask, axis=(1, 2))
+
+    # Calculate uncertainties based on pixel-to-pixel variation (standard error)
+    # Use all pixels for standard deviation calculation
+    pixel_std = np.nanstd(normalized_data, axis=(1, 2))
+    total_pixel_count = np.sum(np.isfinite(normalized_data), axis=(1, 2))
+    uncertainties = pixel_std / np.sqrt(np.maximum(total_pixel_count, 1))
+
+    # Warn about potential data quality issues without modifying data
+    outlier_count = np.sum(normalized_data > 2.0)
+    low_transmission_count = np.sum((normalized_data > 0) & (normalized_data < MIN_TRANSMISSION_THRESHOLD))
+
+    if outlier_count > 0:
+        logger.warning(f"Found {outlier_count} pixels with transmission > 2.0 (potential outliers)")
+
+    if low_transmission_count > normalized_data.size * 0.1:  # More than 10% low transmission
+        logger.warning(
+            f"Found {low_transmission_count} pixels with very low transmission < {MIN_TRANSMISSION_THRESHOLD}"
+        )
+
+    # Warn about time bins with insufficient valid pixels for uncertainty calculation
+    problematic_bins = np.sum(valid_pixel_count < MIN_VALID_PIXELS)
+    if problematic_bins > 0:
+        logger.warning(f"{problematic_bins} time bins have fewer than {MIN_VALID_PIXELS} valid pixels")
+
+    # Replace NaN/inf values in final results only (preserve outliers)
+    counts_array = np.nan_to_num(counts_array, nan=0.0, posinf=np.inf, neginf=0.0)
+    uncertainties = np.nan_to_num(uncertainties, nan=0.1, posinf=0.1, neginf=0.1)
 
     return (counts_array, uncertainties)

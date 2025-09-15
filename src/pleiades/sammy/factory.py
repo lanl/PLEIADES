@@ -145,7 +145,16 @@ class SammyFactory:
 
             # Check backend availability
             available_backends = cls.list_available_backends()
-            if not available_backends[backend]:
+
+            # For local backend, also check if explicit sammy_executable was provided
+            if backend == BackendType.LOCAL and not available_backends[backend]:
+                explicit_sammy = kwargs.get("sammy_executable")
+                if explicit_sammy and Path(explicit_sammy).exists():
+                    # Explicit executable provided and exists - allow local backend
+                    pass
+                else:
+                    raise BackendNotAvailableError(f"Backend {backend.value} is not available")
+            elif not available_backends[backend]:
                 raise BackendNotAvailableError(f"Backend {backend.value} is not available")
 
             # Set default output directory if not specified

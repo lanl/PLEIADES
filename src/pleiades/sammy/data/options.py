@@ -264,16 +264,16 @@ class SammyData(BaseModel):
 
     @property
     def experimental_cross_section(self):
-        return self.data.get("Experimental cross section")
+        return self.data.get("Experimental cross section (barns)")
 
     @property
     def theoretical_cross_section(self):
-        return self.data.get("Final theoretical cross section")
+        return self.data.get("Final theoretical cross section as evaluated by SAMMY (barns)")
 
     @property
     def experimental_transmission(self):
-        return self.data.get("Experimental transmission")
+        return self.data.get("Experimental transmission (dimensionless)")
 
     @property
     def theoretical_transmission(self):
-        return self.data.get("Final theoretical transmission")
+        return self.data.get("Final theoretical transmission as evaluated by SAMMY (dimensionless)")

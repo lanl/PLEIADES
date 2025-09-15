@@ -568,17 +568,20 @@ def update_with_shutter_values_at_ornl(master_dict: Dict[str, Any], normalizatio
     Generate ORNL-specific per-image shutter correction values.
 
     Processes ORNL time spectra and shutter count data to create individual
-    shutter correction factors for each time-of-flight image. Uses time
-    discontinuities to segment the data and assign appropriate shutter counts.
+    shutter correction factors for each time-of-flight image.
+
+    VENUS FIX: For VENUS data with continuous time bins and single-period measurements,
+    uses the first non-zero shutter count for the entire spectrum instead of
+    attempting time discontinuity segmentation.
 
     Args:
         master_dict (Dict[str, Any]): Master dictionary containing time spectra and shutter counts
         normalization_status (NormalizationStatus): Status tracker for normalization workflow
 
     Algorithm:
-        1. Identify time discontinuities (gaps > 0.0001 seconds) in time spectra
-        2. Segment time array based on these discontinuities
-        3. Assign corresponding shutter count to each segment
+        1. Check for time discontinuities (gaps > 0.0001 seconds) in time spectra
+        2. If discontinuities found: segment and assign shutter counts per segment
+        3. If no discontinuities (VENUS case): use first non-zero shutter count for entire spectrum
         4. Create per-image shutter value array
 
     Example:
@@ -588,25 +591,31 @@ def update_with_shutter_values_at_ornl(master_dict: Dict[str, Any], normalizatio
     Note:
         - Requires both all_shutter_counts_file_found and all_spectra_file_found to be True
         - Sets normalization_status.all_list_shutter_values_for_each_image_found = True
-        - Uses threshold of 0.0001 seconds to detect time discontinuities
+        - VENUS compatibility: handles continuous time data without discontinuities
         - Creates float32 arrays for memory efficiency
         - Essential for ORNL Timepix detector normalization workflow
     """
     if normalization_status.all_shutter_counts_file_found and normalization_status.all_spectra_file_found:
         for data_path in master_dict[MasterDictKeys.list_folders].keys():
             list_time_spectra = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_spectra]
-            # delta_time_spectra = list_time_spectra[1] - list_time_spectra[0]
-            list_index_jump = np.where(np.diff(list_time_spectra) > 0.0001)[0]
-
             list_shutter_counts = master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.shutter_counts]
             list_shutter_values_for_each_image = np.zeros(len(list_time_spectra), dtype=np.float32)
-            list_shutter_values_for_each_image[0 : list_index_jump[0] + 1].fill(list_shutter_counts[0])
-            for _index in range(1, len(list_index_jump)):
-                _start = list_index_jump[_index - 1]
-                _end = list_index_jump[_index]
-                list_shutter_values_for_each_image[_start + 1 : _end + 1].fill(list_shutter_counts[_index])
 
-            list_shutter_values_for_each_image[list_index_jump[-1] + 1 :] = list_shutter_counts[-1]
+            # Check for time discontinuities (original ORNL logic)
+            list_index_jump = np.where(np.diff(list_time_spectra) > 0.0001)[0]
+
+            if len(list_index_jump) > 0:
+                # Original multi-segment logic for traditional ORNL data
+                list_shutter_values_for_each_image[0 : list_index_jump[0] + 1].fill(list_shutter_counts[0])
+                for _index in range(1, len(list_index_jump)):
+                    _start = list_index_jump[_index - 1]
+                    _end = list_index_jump[_index]
+                    list_shutter_values_for_each_image[_start + 1 : _end + 1].fill(list_shutter_counts[_index])
+                list_shutter_values_for_each_image[list_index_jump[-1] + 1 :] = list_shutter_counts[-1]
+            else:
+                # VENUS fix: continuous time data, use first non-zero shutter count for entire spectrum
+                first_valid_shutter = next((sc for sc in list_shutter_counts if sc > 0), list_shutter_counts[0])
+                list_shutter_values_for_each_image.fill(first_valid_shutter)
 
             master_dict[MasterDictKeys.list_folders][data_path][MasterDictKeys.list_shutters] = (
                 list_shutter_values_for_each_image

@@ -229,5 +229,48 @@ def test_convert_array_from_time_to_energy_zero_time_raises():
     assert np.isinf(result[0]) or np.isnan(result[0])
 
 
+def test_calculate_number_density():
+    """Test number density calculation function."""
+    from pleiades.utils.units import calculate_number_density
+
+    # Test with Hafnium example (density=13.31 g/cm³, thickness=5mm, mass=178.49 amu)
+    density = calculate_number_density(material_density_g_cm3=13.31, thickness_mm=5.0, atomic_mass_amu=178.49)
+
+    # Expected calculation:
+    # thickness_cm = 5.0 / 10.0 = 0.5 cm
+    # areal_density = 0.5 * 13.31 * 6.02214076e23 / 178.49 / 1e24
+    # areal_density ≈ 2.248e-02 atoms/barn
+
+    expected = 0.5 * 13.31 * 6.02214076e23 / 178.49 / 1e24
+    assert abs(density - expected) < 1e-6, f"Expected {expected:.6e}, got {density:.6e}"
+
+    # Test with simple values for verification
+    density_simple = calculate_number_density(
+        material_density_g_cm3=1.0,
+        thickness_mm=10.0,  # 1 cm
+        atomic_mass_amu=1.0,  # Simplified
+    )
+
+    expected_simple = 1.0 * 1.0 * 6.02214076e23 / 1.0 / 1e24  # ≈ 0.602
+    assert abs(density_simple - expected_simple) < 1e-6
+
+
+def test_calculate_number_density_edge_cases():
+    """Test number density calculation edge cases."""
+    from pleiades.utils.units import calculate_number_density
+
+    # Test zero thickness
+    density_zero = calculate_number_density(1.0, 0.0, 1.0)
+    assert density_zero == 0.0
+
+    # Test very small values
+    density_small = calculate_number_density(0.001, 0.1, 100.0)
+    assert density_small > 0.0
+
+    # Test large values
+    density_large = calculate_number_density(20.0, 50.0, 200.0)
+    assert density_large > 0.0
+
+
 if __name__ == "__main__":
     pytest.main()

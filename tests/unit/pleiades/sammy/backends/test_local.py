@@ -3,12 +3,13 @@
 
 import subprocess
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.config import LocalSammyConfig
-from pleiades.sammy.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles
+from pleiades.sammy.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles, SammyFilesMultiMode
 
 
 @pytest.fixture
@@ -173,6 +174,109 @@ class TestLocalSammyRunner:
         result = runner.execute_sammy(files)
         runner.collect_outputs(result)
         runner.cleanup()
+
+
+class TestLocalSammyRunnerJsonMode:
+    """Tests for LocalSammyRunner JSON mode functionality."""
+
+    @pytest.fixture
+    def mock_multimode_files(self, tmp_path):
+        """Create mock files for JSON mode testing."""
+        # Create mock files
+        inp_file = tmp_path / "test.inp"
+        json_file = tmp_path / "test.json"
+        dat_file = tmp_path / "test.dat"
+        endf_dir = tmp_path / "endf"
+
+        inp_file.write_text("INPUT IS ENDF/B FILE\nchi squared is wanted")
+        dat_file.write_text("mock dat content")
+        endf_dir.mkdir()
+
+        # Create valid JSON with ENDF reference
+        import json
+
+        json_data = {"forceRMoore": "yes", "079-Au-197.B-VIII.0.par": [{"mat": "7925", "abundance": "1.0"}]}
+        with open(json_file, "w") as f:
+            json.dump(json_data, f)
+
+        # Create referenced ENDF file
+        endf_file = endf_dir / "079-Au-197.B-VIII.0.par"
+        endf_file.write_text("mock endf content")
+
+        return {
+            "input_file": inp_file,
+            "json_config_file": json_file,
+            "data_file": dat_file,
+            "endf_directory": endf_dir,
+        }
+
+    def test_json_mode_validation_success(self, local_config, mock_multimode_files):
+        """Should validate JSON mode files successfully."""
+        runner = LocalSammyRunner(local_config)
+        files = SammyFilesMultiMode(**mock_multimode_files)
+
+        # Should not raise any exceptions
+        runner._validate_json_endf_mapping(files)
+
+    def test_json_mode_validation_missing_endf(self, local_config, mock_multimode_files):
+        """Should detect missing ENDF files referenced in JSON."""
+        runner = LocalSammyRunner(local_config)
+
+        # Create JSON that references missing ENDF file
+        import json
+
+        json_data = {"forceRMoore": "yes", "missing-endf-file.par": [{"mat": "1234", "abundance": "0.5"}]}
+        with open(mock_multimode_files["json_config_file"], "w") as f:
+            json.dump(json_data, f)
+
+        files = SammyFilesMultiMode(**mock_multimode_files)
+
+        with pytest.raises(ValueError, match="missing ENDF files"):
+            runner._validate_json_endf_mapping(files)
+
+    def test_json_mode_command_generation(self, local_config, mock_multimode_files, monkeypatch):
+        """Should generate correct SAMMY command for JSON mode."""
+        # Mock subprocess to capture command
+        executed_commands = []
+
+        def mock_run(command, **kwargs):
+            executed_commands.append(command)
+            mock_result = MagicMock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = " Normal finish to SAMMY"
+            return mock_result
+
+        monkeypatch.setattr(subprocess, "run", mock_run)
+
+        runner = LocalSammyRunner(local_config)
+        files = SammyFilesMultiMode(**mock_multimode_files)
+
+        # Execute (will be mocked)
+        runner.execute_sammy(files)
+
+        # Verify command format
+        assert len(executed_commands) == 1
+        command = executed_commands[0]
+
+        # Should contain #file for JSON mode
+        assert "#file" in command
+        assert "test.json" in command
+        assert "test.inp" in command
+        assert "test.dat" in command
+
+    def test_prepare_environment_json_mode(self, local_config, mock_multimode_files):
+        """Should prepare environment for JSON mode successfully."""
+        runner = LocalSammyRunner(local_config)
+        files = SammyFilesMultiMode(**mock_multimode_files)
+
+        # Should not raise any exceptions
+        runner.prepare_environment(files)
+
+        # Verify files were moved to working directory
+        assert files.input_file.parent == local_config.working_dir
+        assert files.json_config_file.parent == local_config.working_dir
+        assert files.data_file.parent == local_config.working_dir
 
 
 if __name__ == "__main__":
