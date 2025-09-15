@@ -21,7 +21,8 @@ logger = loguru_logger.bind(name=__name__)
 
 SAMMY_OUTPUT_FILES = {
     "SAMMY.LPT",  # Log file
-    "SAMMY.LST",  #
+    "SAMMY.LST",  # ASCII listing file with detailed results
+    "SAMMY.ODF",  # Plot file with calculated cross sections
     "SAMNDF.PAR",  # Updated parameter file based on SAMMY run
     "SAMNDF.INP",  # Updated input file based on SAMMY run
     "SAMMY.IO",  # terminal output file from SAMMY run

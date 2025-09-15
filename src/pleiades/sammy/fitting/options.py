@@ -275,13 +275,18 @@ class FitOptions(BaseModel):
                 do_not_print_input_data=False,
                 do_not_print_theoretical_values=False,
                 do_not_print_partial_derivatives=False,
-                do_not_suppress_any_intermediate_printout=False,
+                do_not_suppress_any_intermediate_printout=True,
                 do_not_use_short_format_for_output=False,
                 do_not_print_reduced_widths=False,
                 do_not_print_debug_info=False,
                 do_not_print_weighted_residuals=False,
                 do_not_print_bayes_weighted_residuals=False,
                 do_not_print_phase_shifts=False,
+            ),
+            plot_file=PlotFileOptions(
+                generate_plot_file_automatically=True,
+                do_not_generate_plot_file_automatically=False,
+                ev_units_on_energy_in_plot_file=True,  # Following expert recommendation
             ),
         )
 
