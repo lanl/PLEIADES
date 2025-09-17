@@ -18,32 +18,56 @@ logger = loguru_logger.bind(name="sammy_data_manager")
 
 def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[str, Path]) -> None:
     """
-    Convert PLEIADES transmission CSV to SAMMY twenty format.
+    Convert PLEIADES or iNEUIT transmission CSV to SAMMY twenty format.
 
-    Converts tab-separated transmission data (energy, transmission, uncertainty)
-    to SAMMY's twenty-column fixed-width format required for fitting.
+    This function supports both tab- and comma-separated CSV files, with either two columns
+    (energy, transmission) or three columns (energy, transmission, uncertainty).
+    If only two columns are present, the uncertainty column will be filled with 0.0.
 
     Args:
-        csv_file: Path to input CSV file with columns: energy_eV, transmission, uncertainties
+        csv_file: Path to input CSV file with columns: energy_eV, transmission, [uncertainty]
         twenty_file: Path to output SAMMY twenty format file
 
     File Formats:
-        Input CSV: "energy_eV\\ttransmission\\tuncertainties\\n6.673...\\t0.932...\\t0.272...\\n"
-        Output twenty: "        6.6732397079        0.9323834777        0.2727669477\\n"
+        Input CSV (tab or comma separated):
+            "energy_eV,transmission,uncertainty\n6.673,0.932,0.272\n"
+            or
+            "energy_eV\ttransmission\tuncertainty\n6.673\t0.932\t0.272\n"
+            or
+            "energy_eV,transmission\n6.673,0.932\n"
+        Output twenty:
+            "        6.6732397079        0.9323834777        0.2727669477\n"
 
     Example:
         >>> convert_csv_to_sammy_twenty(
-        ...     "venus_output/Combined_Runs_8022_8023_8024_8025_8026_8027_transmission.txt",
-        ...     "sammy_input/venus_transmission.twenty"
+        ...     "transmission.txt",
+        ...     "transmission.twenty"
+        ... )
+        >>> convert_csv_to_sammy_twenty(
+        ...     "ineuit.csv",
+        ...     "ineuit_transmission.twenty"
         ... )
     """
     logger.info(f"Converting {csv_file} to SAMMY twenty format: {twenty_file}")
 
-    # Load CSV data (skip header row)
-    data = np.loadtxt(csv_file, skiprows=1)
+    # Detect delimiter by reading the first data line
+    with open(csv_file, "r") as f:
+        header = f.readline()
+        first_data_line = f.readline()
+        delimiter = "," if "," in first_data_line else "\t"
 
-    if data.shape[1] != 3:
-        raise ValueError(f"Expected 3 columns (energy, transmission, uncertainty), got {data.shape[1]}")
+    # Load CSV data (skip header row)
+    data = np.loadtxt(csv_file, skiprows=1, delimiter=delimiter)
+
+    # Handle 2-column (energy, transmission) or 3-column (energy, transmission, uncertainty)
+    if data.ndim == 1:
+        data = data.reshape(1, -1)
+    if data.shape[1] == 2:
+        # Add uncertainty column filled with 0.0
+        zeros = np.zeros((data.shape[0], 1))
+        data = np.hstack([data, zeros])
+    elif data.shape[1] != 3:
+        raise ValueError(f"Expected 2 or 3 columns (energy, transmission, [uncertainty]), got {data.shape[1]}")
 
     # Create output directory if needed
     Path(twenty_file).parent.mkdir(parents=True, exist_ok=True)
