@@ -72,8 +72,7 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
 
     # Handle 2-column (energy, transmission) or 3-column (energy, transmission, uncertainty)
     if data.shape[1] == 2:
-        zeros = np.zeros((data.shape[0], 1))
-        data = np.hstack([data, zeros])
+        data = np.column_stack([data, np.zeros(data.shape[0])])
 
     # If data is not 2 or 3 columns, raise error
     elif data.shape[1] != 3:
