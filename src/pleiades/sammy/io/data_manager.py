@@ -61,6 +61,8 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
 
     # Handle 2-column (energy, transmission) or 3-column (energy, transmission, uncertainty)
     if data.ndim == 1:
+        # np.loadtxt returns a 1D array if the input file contains only a single data point (row).
+        # Reshape to 2D to ensure consistent downstream processing.
         data = data.reshape(1, -1)
     if data.shape[1] == 2:
         # Add uncertainty column filled with 0.0
