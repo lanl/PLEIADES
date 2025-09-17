@@ -65,7 +65,7 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
         header = next(reader)  # Skip header row
 
         # Read the remaining rows, skipping empty lines
-        data = [row for row in reader if row and any(field.strip() for field in row)]
+        data = (row for row in reader if row and any(field.strip() for field in row))
 
     # Convert data to numpy array of floats
     data = np.array(data, dtype=float)
