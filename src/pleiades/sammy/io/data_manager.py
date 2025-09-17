@@ -6,6 +6,7 @@ required by SAMMY, including the twenty-column fixed-width format used for
 experimental transmission data.
 """
 
+import csv
 from pathlib import Path
 from typing import Union
 
@@ -50,29 +51,38 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
     """
     logger.info(f"Converting {csv_file} to SAMMY twenty format: {twenty_file}")
 
-    # Detect delimiter by reading the first data line
-    with open(csv_file, "r") as f:
-        header = f.readline()
-        first_data_line = f.readline()
-        delimiter = "," if "," in first_data_line else "\t"
+    # Use csv.Sniffer to detect delimiter
+    with open(csv_file, "r", newline="") as f:
+        sample = f.read(2048)  # Read a sample of the file for delimiter detection
+        f.seek(0)  # Reset file pointer to start
 
-    # Load CSV data (skip header row)
-    data = np.loadtxt(csv_file, skiprows=1, delimiter=delimiter)
+        sniffer = csv.Sniffer()
+        dialect = sniffer.sniff(sample, delimiters=[",", "\t"])  # Detect comma or tab delimiter
+        delimiter = dialect.delimiter
+
+        # Create a CSV reader with the detected delimiter
+        reader = csv.reader(f, delimiter=delimiter)
+        header = next(reader)  # Skip header row
+
+        # Read the remaining rows, skipping empty lines
+        data = [row for row in reader if row and any(field.strip() for field in row)]
+
+    # Convert data to numpy array of floats
+    data = np.array(data, dtype=float)
 
     # Handle 2-column (energy, transmission) or 3-column (energy, transmission, uncertainty)
-    if data.ndim == 1:
-        data = data.reshape(1, -1)
     if data.shape[1] == 2:
-        # Add uncertainty column filled with 0.0
         zeros = np.zeros((data.shape[0], 1))
         data = np.hstack([data, zeros])
+
+    # If data is not 2 or 3 columns, raise error
     elif data.shape[1] != 3:
         raise ValueError(f"Expected 2 or 3 columns (energy, transmission, [uncertainty]), got {data.shape[1]}")
 
-    # Create output directory if needed
+    # Check if output directory exists, create if not
     Path(twenty_file).parent.mkdir(parents=True, exist_ok=True)
 
-    # Write in SAMMY twenty format: 20-character fixed-width columns, right-aligned
+    # Write to SAMMY twenty format (fixed-width columns)
     with open(twenty_file, "w") as f:
         for energy, transmission, uncertainty in data:
             f.write(f"{energy:20.10f}{transmission:20.10f}{uncertainty:20.10f}\n")
