@@ -18,7 +18,7 @@ logger = loguru_logger.bind(name="sammy_data_manager")
 
 def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[str, Path]) -> None:
     """
-    Convert PLEIADES or iNEUIT transmission CSV to SAMMY twenty format.
+    Convert transmission spectra from CSV to SAMMY twenty format.
 
     This function supports both tab- and comma-separated CSV files, with either two columns
     (energy, transmission) or three columns (energy, transmission, uncertainty).
