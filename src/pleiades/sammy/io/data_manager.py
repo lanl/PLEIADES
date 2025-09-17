@@ -52,7 +52,7 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
 
     # Detect delimiter by reading the first data line
     with open(csv_file, "r") as f:
-        header = f.readline()
+        f.readline()  # Skip header
         first_data_line = f.readline()
         delimiter = "," if "," in first_data_line else "\t"
 
