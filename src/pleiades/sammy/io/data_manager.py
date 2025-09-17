@@ -65,12 +65,12 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
         header = next(reader)  # Skip header row
 
         # Read the remaining rows, skipping empty lines
-        data = (row for row in reader if row and any(field.strip() for field in row))
+        data = [row for row in reader if row and any(field.strip() for field in row)]
 
     # Convert data to numpy array of floats
     data = np.array(data, dtype=float)
 
-    # Handle 2-column (energy, transmission) or 3-column (energy, transmission, uncertainty)
+    # Handle for 2-columns (energy, transmission), and adding zero uncertainty column
     if data.shape[1] == 2:
         data = np.column_stack([data, np.zeros(data.shape[0])])
 
