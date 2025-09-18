@@ -6,6 +6,7 @@ required by SAMMY, including the twenty-column fixed-width format used for
 experimental transmission data.
 """
 
+import csv
 from pathlib import Path
 from typing import Union
 
@@ -18,37 +19,69 @@ logger = loguru_logger.bind(name="sammy_data_manager")
 
 def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[str, Path]) -> None:
     """
-    Convert PLEIADES transmission CSV to SAMMY twenty format.
+    Convert transmission spectra from CSV to SAMMY twenty format.
 
-    Converts tab-separated transmission data (energy, transmission, uncertainty)
-    to SAMMY's twenty-column fixed-width format required for fitting.
+    This function supports both tab- and comma-separated CSV files, with either two columns
+    (energy, transmission) or three columns (energy, transmission, uncertainty).
+    If only two columns are present, the uncertainty column will be filled with 0.0.
 
     Args:
-        csv_file: Path to input CSV file with columns: energy_eV, transmission, uncertainties
+        csv_file: Path to input CSV file with columns: energy_eV, transmission, [uncertainty]
         twenty_file: Path to output SAMMY twenty format file
 
     File Formats:
-        Input CSV: "energy_eV\\ttransmission\\tuncertainties\\n6.673...\\t0.932...\\t0.272...\\n"
-        Output twenty: "        6.6732397079        0.9323834777        0.2727669477\\n"
+        Input CSV (tab or comma separated):
+            "energy_eV,transmission,uncertainty\n6.673,0.932,0.272\n"
+            or
+            "energy_eV\ttransmission\tuncertainty\n6.673\t0.932\t0.272\n"
+            or
+            "energy_eV,transmission\n6.673,0.932\n"
+        Output twenty:
+            "        6.6732397079        0.9323834777        0.2727669477\n"
 
     Example:
         >>> convert_csv_to_sammy_twenty(
-        ...     "venus_output/Combined_Runs_8022_8023_8024_8025_8026_8027_transmission.txt",
-        ...     "sammy_input/venus_transmission.twenty"
+        ...     "transmission.txt",
+        ...     "transmission.twenty"
+        ... )
+        >>> convert_csv_to_sammy_twenty(
+        ...     "ineuit.csv",
+        ...     "ineuit_transmission.twenty"
         ... )
     """
     logger.info(f"Converting {csv_file} to SAMMY twenty format: {twenty_file}")
 
-    # Load CSV data (skip header row)
-    data = np.loadtxt(csv_file, skiprows=1)
+    # Use csv.Sniffer to detect delimiter
+    with open(csv_file, "r", newline="") as f:
+        sample = f.read(2048)  # Read a sample of the file for delimiter detection
+        f.seek(0)  # Reset file pointer to start
 
-    if data.shape[1] != 3:
-        raise ValueError(f"Expected 3 columns (energy, transmission, uncertainty), got {data.shape[1]}")
+        sniffer = csv.Sniffer()
+        dialect = sniffer.sniff(sample, delimiters=[",", "\t"])  # Detect comma or tab delimiter
+        delimiter = dialect.delimiter
 
-    # Create output directory if needed
+        # Create a CSV reader with the detected delimiter
+        reader = csv.reader(f, delimiter=delimiter)
+        header = next(reader)  # Skip header row
+
+        # Read the remaining rows, skipping empty lines
+        data = [row for row in reader if row and any(field.strip() for field in row)]
+
+    # Convert data to numpy array of floats
+    data = np.array(data, dtype=float)
+
+    # Handle for 2-columns (energy, transmission), and adding zero uncertainty column
+    if data.shape[1] == 2:
+        data = np.column_stack([data, np.zeros(data.shape[0])])
+
+    # If data is not 2 or 3 columns, raise error
+    elif data.shape[1] != 3:
+        raise ValueError(f"Expected 2 or 3 columns (energy, transmission, [uncertainty]), got {data.shape[1]}")
+
+    # Check if output directory exists, create if not
     Path(twenty_file).parent.mkdir(parents=True, exist_ok=True)
 
-    # Write in SAMMY twenty format: 20-character fixed-width columns, right-aligned
+    # Write to SAMMY twenty format (fixed-width columns)
     with open(twenty_file, "w") as f:
         for energy, transmission, uncertainty in data:
             f.write(f"{energy:20.10f}{transmission:20.10f}{uncertainty:20.10f}\n")
