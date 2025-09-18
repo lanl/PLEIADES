@@ -88,13 +88,13 @@ def normalization(
 
     # Route to facility-specific implementation
     if facility == Facility.ornl:
-        logger.info("Using ORNL-specific normalization (Method 2)")
+        logger.info("Using ORNL-specific normalization")
         from pleiades.processing.normalization_ornl import normalization_ornl
 
         return normalization_ornl(
             sample_folders=list_sample_folders,
             ob_folders=list_obs_folders,
-            nexus_dir=nexus_path,  # Note: parameter name change
+            nexus_dir=nexus_path,
             roi=roi,
             combine_mode=combine_mode,
             output_folder=output_folder,

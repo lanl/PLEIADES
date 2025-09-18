@@ -129,6 +129,8 @@ def process_individual_mode(
         transmission = calculate_transmission(sample_run, effective_ob, roi, pc_uncertainty, pc_uncertainty)
         # Add source info to metadata
         transmission.metadata["sample_run_index"] = i
+        transmission.metadata["sample_folder"] = sample_run.metadata.get("folder", "")
+        transmission.metadata["ob_folders"] = [run.metadata.get("folder", "") for run in ob_runs]
         results.append(transmission)
 
     return results
@@ -162,6 +164,8 @@ def process_combined_mode(
     # Add combined run info to metadata
     transmission.metadata["n_sample_runs"] = len(sample_runs)
     transmission.metadata["n_ob_runs"] = len(ob_runs)
+    transmission.metadata["sample_folders"] = [run.metadata.get("folder", "") for run in sample_runs]
+    transmission.metadata["ob_folders"] = [run.metadata.get("folder", "") for run in ob_runs]
 
     return [transmission]
 
@@ -209,10 +213,38 @@ def normalization_ornl(
     # Step 3: Optionally save results
     if output_folder:
         import os
+        from pathlib import Path
 
         os.makedirs(output_folder, exist_ok=True)
         for i, trans in enumerate(results):
-            filepath = os.path.join(output_folder, f"transmission_{i:04d}.dat")
+            # Extract run numbers from folder paths
+            if combine_mode:
+                # Combined mode: use all sample run numbers
+                sample_folders = trans.metadata.get("sample_folders", [])
+                run_numbers = []
+                for folder in sample_folders:
+                    folder_name = Path(folder).name
+                    # Extract run number from folder name (e.g., "Run_8022" -> "8022")
+                    if "_" in folder_name:
+                        run_numbers.append(folder_name.split("_")[1])
+                    else:
+                        run_numbers.append(folder_name)
+
+                if run_numbers:
+                    filename = f"Combined_Runs_{'_'.join(run_numbers)}_transmission.txt"
+                else:
+                    filename = f"transmission_{i:04d}.dat"
+            else:
+                # Individual mode: use single sample run number
+                sample_folder = trans.metadata.get("sample_folder", "")
+                if sample_folder:
+                    folder_name = Path(sample_folder).name
+                    # Match normalization_v1 naming: "Run_8022_transmission.txt"
+                    filename = f"{folder_name}_transmission.txt"
+                else:
+                    filename = f"transmission_{i:04d}.dat"
+
+            filepath = os.path.join(output_folder, filename)
             trans.save_dat(filepath)
             logger.info(f"Saved transmission to {filepath}")
 

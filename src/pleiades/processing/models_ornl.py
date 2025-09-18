@@ -138,20 +138,28 @@ class Transmission(BaseModel):
     def to_dat_format(self) -> np.ndarray:
         """Export as 3-column array for SAMMY .dat file.
 
+        Energy values are sorted in increasing order as required by SAMMY.
+
         Returns:
             Array with shape (n_points, 3) containing:
-            - Column 0: Energy in eV
+            - Column 0: Energy in eV (increasing order)
             - Column 1: Transmission (0-1)
             - Column 2: Uncertainty (0-1)
         """
-        return np.column_stack([self.energy, self.transmission, self.uncertainty])
+        # Sort by increasing energy (SAMMY requirement)
+        sort_indices = np.argsort(self.energy)
+        return np.column_stack(
+            [self.energy[sort_indices], self.transmission[sort_indices], self.uncertainty[sort_indices]]
+        )
 
     def save_dat(self, filepath: str) -> None:
         """Save transmission data in SAMMY .dat format.
 
+        Data is automatically sorted by increasing energy as required by SAMMY.
+
         Args:
             filepath: Path to output .dat file
         """
-        data = self.to_dat_format()
-        header = "# Energy(eV)  Transmission  Uncertainty"
+        data = self.to_dat_format()  # Already sorted by energy
+        header = "Energy(eV)  Transmission  Uncertainty"  # np.savetxt adds the # automatically
         np.savetxt(filepath, data, header=header, fmt="%.6e")
