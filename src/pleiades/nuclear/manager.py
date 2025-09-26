@@ -144,7 +144,7 @@ class NuclearDataManager:
                         # Call unlink directly on the file path
                         file.unlink()
                         logger.info(f"Deleted cached file: {file}")
-                    except Exception as e:
+                    except (OSError, PermissionError) as e:
                         logger.error(f"Failed to delete {file}: {str(e)}")
 
     def _get_data_from_direct(

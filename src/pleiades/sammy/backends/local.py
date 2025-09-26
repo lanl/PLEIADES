@@ -23,14 +23,6 @@ from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
 
-# Known SAMMY output file patterns
-SAMMY_OUTPUT_FILES = {
-    "SAMMY.LPT",  # Log file
-    "SAMMIE.ODF",  # Output data file
-    "SAMNDF.PAR",  # Updated parameter file
-    "SAMRESOLVED.PAR",  # Additional parameter file
-}
-
 
 class LocalSammyRunner(SammyRunner):
     """Implementation of SAMMY runner for local installation."""

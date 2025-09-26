@@ -12,6 +12,10 @@ from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
 
 logger = loguru_logger.bind(name=__name__)
 
+# Plot constants
+RESIDUAL_YLIM = (-1, 1)  # Y-axis limits for residual plots
+HISTOGRAM_BIN_RANGE = (-1, 1, 0.01)  # Range and step for histogram bins
+
 
 class DataTypeOptions(str, Enum):
     TRANSMISSION = "TRANSMISSION"
@@ -234,7 +238,7 @@ class SammyData(BaseModel):
             )
             ax[2].set_ylabel("residuals\n(fit-data)/err [σ]")
             ax[2].set_xlabel("energy [eV]")
-            ax[2].set_ylim(-1, 1)
+            ax[2].set_ylim(*RESIDUAL_YLIM)
             # Apply same x-scale to residual plot
             ax[2].set_xscale(xscale)
 
@@ -242,7 +246,7 @@ class SammyData(BaseModel):
             if "residual_initial" in data.columns:
                 data.plot.hist(
                     y=["residual_initial"],
-                    bins=np.arange(-1, 1, 0.01),
+                    bins=np.arange(*HISTOGRAM_BIN_RANGE),
                     ax=ax[3],
                     orientation="horizontal",
                     legend=False,
