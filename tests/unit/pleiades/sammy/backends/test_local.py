@@ -236,11 +236,14 @@ class TestLocalSammyRunnerJsonMode:
 
     def test_json_mode_command_generation(self, local_config, mock_multimode_files, monkeypatch):
         """Should generate correct SAMMY command for JSON mode."""
-        # Mock subprocess to capture command
+        # Mock subprocess to capture command and input
         executed_commands = []
+        captured_inputs = []
 
         def mock_run(command, **kwargs):
             executed_commands.append(command)
+            if "input" in kwargs:
+                captured_inputs.append(kwargs["input"])
             mock_result = MagicMock()
             mock_result.returncode = 0
             mock_result.stdout = ""
@@ -255,15 +258,19 @@ class TestLocalSammyRunnerJsonMode:
         # Execute (will be mocked)
         runner.execute_sammy(files)
 
-        # Verify command format
+        # Verify command format - now using list format without shell
         assert len(executed_commands) == 1
         command = executed_commands[0]
+        assert isinstance(command, list)
+        assert str(local_config.sammy_executable) in command[0]
 
-        # Should contain #file for JSON mode
-        assert "#file" in command
-        assert "test.json" in command
-        assert "test.inp" in command
-        assert "test.dat" in command
+        # Verify input contains the JSON mode format
+        assert len(captured_inputs) == 1
+        input_text = captured_inputs[0]
+        assert "#file" in input_text
+        assert "test.json" in input_text
+        assert "test.inp" in input_text
+        assert "test.dat" in input_text
 
     def test_prepare_environment_json_mode(self, local_config, mock_multimode_files):
         """Should prepare environment for JSON mode successfully."""
