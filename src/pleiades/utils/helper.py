@@ -14,7 +14,7 @@ class VaryFlag(Enum):
     USE_FROM_OTHERS = -2  # do not vary, use value from other sources (INP, COV, etc.)
 
 
-def check_pseudo_scientific(val):
+def check_pseudo_scientific(val) -> float:
     """Check for pseudo scientific notation sometimes found in SAMMY files.
 
     Args:

@@ -49,13 +49,6 @@ class FitResults(BaseModel):
         """Retrieve the current chi-squared results."""
         return self.chi_squared_results
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Initialize nuclear and physics data with default values
-        self.nuclear_data = nuclearParameters()
-        self.physics_data = PhysicsParameters()
-        self.chi_squared_results = ChiSquaredResults()
-
 
 class RunResults(BaseModel):
     """RunResults is a container for aggregating multiple fit results from a given SAMMY execution.
@@ -68,15 +61,6 @@ class RunResults(BaseModel):
     data: SammyData = Field(
         default_factory=SammyData, description="Container for LST data loaded from a SAMMY .LST file."
     )
-
-    def __init__(self, **data):
-        super().__init__(**data)
-
-        # Initialize the list of fit results
-        self.fit_results = []
-
-        # Initialize the data container
-        self.data = SammyData()
 
     def add_fit_result(self, fit_result: FitResults):
         """Add a FitResults object to the list of fit results."""
