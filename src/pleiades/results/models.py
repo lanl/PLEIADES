@@ -18,12 +18,12 @@ class AbundanceInfo(BaseModel):
 
 class BackgroundInfo(BaseModel):
     # TODO: Add attributes and methods for background information
-    pass
+    ...
 
 
 class NormalizationInfo(BaseModel):
     # TODO: Add attributes and methods for normalization information
-    pass
+    ...
 
 
 class PixelInfo(BaseModel):

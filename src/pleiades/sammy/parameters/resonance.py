@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from pleiades.utils.helper import VaryFlag, safe_parse
 from pleiades.utils.logger import loguru_logger
 
-# setup logging
 logger = loguru_logger.bind(name=__name__)
 
 

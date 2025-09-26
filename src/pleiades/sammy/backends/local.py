@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Local backend implementation for SAMMY execution."""
 
+import os
 import shlex
 import subprocess
 import textwrap
@@ -133,11 +134,19 @@ class LocalSammyRunner(SammyRunner):
             logger.debug("Using traditional mode command format")
 
         try:
+            # Ensure libcrypto.so.1.1 is found by adding /usr/lib64 to LD_LIBRARY_PATH
+            env = dict(os.environ)
+            env.update(self.config.env_vars)
+            if "LD_LIBRARY_PATH" in env:
+                env["LD_LIBRARY_PATH"] = f"/usr/lib64:{env['LD_LIBRARY_PATH']}"
+            else:
+                env["LD_LIBRARY_PATH"] = "/usr/lib64"
+
             process = subprocess.run(
                 sammy_command,
                 shell=True,
                 executable=str(self.config.shell_path),
-                env=self.config.env_vars,
+                env=env,
                 cwd=str(self.config.working_dir),
                 capture_output=True,
                 text=True,
