@@ -79,17 +79,56 @@ class ResultsManager:
             logger.warning("No results data available.")
 
     def plot_transmission(
-        self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False
+        self,
+        override_data_type: bool = False,
+        show_diff: bool = False,
+        plot_uncertainty: bool = False,
+        figsize=None,
+        title=None,
+        xscale="linear",
+        yscale="linear",
+        data_color="#433E3F",
+        final_color="#ff6361",
+        show=True,
     ):
-        """Plot the transmission data from the results."""
+        """
+        Plot the transmission data from the results.
+
+        Args:
+            override_data_type (bool): Force plotting even if data type is not transmission.
+            show_diff (bool): If True, plot the residuals.
+            plot_uncertainty (bool): If True, plot error bars.
+            figsize (tuple): Figure size (width, height) in inches.
+            title (str): Plot title.
+            xscale (str): X-axis scale ('linear' or 'log').
+            yscale (str): Y-axis scale ('linear' or 'log').
+            data_color (str): Color for experimental data points.
+            final_color (str): Color for fitted theoretical curve.
+            show (bool): If True, display the plot. If False, return figure object.
+
+        Returns:
+            matplotlib.figure.Figure: The figure object if show=False, None otherwise.
+        """
         if self.run_results.data:
             # Check if data type is transmission
             if self.run_results.data.data_type == "TRANSMISSION" or override_data_type:
-                self.run_results.data.plot_transmission(show_diff=show_diff, plot_uncertainty=plot_uncertainty)
+                return self.run_results.data.plot_transmission(
+                    show_diff=show_diff,
+                    plot_uncertainty=plot_uncertainty,
+                    figsize=figsize,
+                    title=title,
+                    xscale=xscale,
+                    yscale=yscale,
+                    data_color=data_color,
+                    final_color=final_color,
+                    show=show,
+                )
             else:
                 logger.warning("Data type is not transmission. Cannot plot.")
+                return None
         else:
             logger.warning("No results data available for plotting.")
+            return None
 
     def plot_cross_section(
         self, override_data_type: bool = False, show_diff: bool = False, plot_uncertainty: bool = False
