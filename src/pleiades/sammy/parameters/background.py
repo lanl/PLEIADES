@@ -63,6 +63,7 @@ class BackgroundParameters(BaseModel):
         Raises:
             NotImplementedError: This class is not yet implemented
         """
+        # TODO: Implement Card Set 13 background parameter parsing
         raise NotImplementedError("Card Set 13 background parameter parsing is not yet implemented")
 
     def to_lines(self) -> List[str]:
@@ -71,4 +72,5 @@ class BackgroundParameters(BaseModel):
         Raises:
             NotImplementedError: This class is not yet implemented
         """
+        # TODO: Implement Card Set 13 background parameter formatting
         raise NotImplementedError("Card Set 13 background parameter formatting is not yet implemented")

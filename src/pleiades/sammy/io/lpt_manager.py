@@ -93,7 +93,6 @@ class LptManager:
         "***** INITIAL VALUES FOR PARAMETERS",
         "***** INTERMEDIATE VALUES FOR RESONANCE PARAMETERS",
         "***** NEW VALUES FOR RESONANCE PARAMETERS",
-        "***** NEW VALUES FOR RESONANCE PARAMETERS",
     ]
 
     # If initialize with a filepath then start processing the file

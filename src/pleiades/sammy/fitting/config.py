@@ -48,23 +48,3 @@ class FitConfig(BaseModel):
             self.nuclear_params.isotopes.append(isotope_info)
         else:
             logger.error(f"Could not append Isotope {isotope_string}.")
-
-
-# example usage
-if __name__ == "__main__":
-    example_config = FitConfig(
-        fit_title="Example SAMMY Fit",
-        tolerance=1e-5,
-        max_iterations=100,
-        i_correlation=10,
-        max_cpu_time=3600.0,
-        max_wall_time=7200.0,
-        max_memory=8.0,
-        max_disk=100.0,
-        nuclear_params=nuclearParameters(),
-        physics_params=PhysicsParameters(),
-        data_params=SammyData(),
-        options_and_routines=FitOptions(),
-    )
-
-    print(example_config)

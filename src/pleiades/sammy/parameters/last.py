@@ -41,6 +41,7 @@ class LastParameters(BaseModel):
         Raises:
             NotImplementedError: This feature needs to be implemented
         """
+        # TODO: Implement Last Card parameter parsing
         raise NotImplementedError("Last Card parsing not yet implemented")
 
     def to_lines(self) -> List[str]:
@@ -49,6 +50,7 @@ class LastParameters(BaseModel):
         Raises:
             NotImplementedError: This feature needs to be implemented
         """
+        # TODO: Implement Last Card parameter formatting
         raise NotImplementedError("Last Card formatting not yet implemented")
 
 
