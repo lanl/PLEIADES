@@ -1,7 +1,3 @@
-# This module imports a results class from the pleiades.sammy.results module
-# to create a new class called LptData. The LptData class is filled by reading
-# a .LPT file.
-
 import re
 from collections import defaultdict
 
@@ -14,7 +10,7 @@ from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name=__name__)
 
 
-def parse_value_and_varied(s):
+def parse_value_and_varied(s: str) -> tuple[float, bool]:
     """
     Parse a value that may have a parenthesis indicating it was varied.
     Returns (float_value, varied_flag)
@@ -27,7 +23,7 @@ def parse_value_and_varied(s):
     raise ValueError(f"Could not parse value: {s}")
 
 
-def split_lpt_values(line):
+def split_lpt_values(line: str) -> list[str]:
     """
     Splits a line into values, where each value may be followed by a parenthesis group.
     Example: '2.9660E+02(  4)  1.1592E-01(  5)' -> ['2.9660E+02(  4)', '1.1592E-01(  5)']
@@ -96,7 +92,6 @@ class LptManager:
     lpt_delimiters = [
         "***** INITIAL VALUES FOR PARAMETERS",
         "***** INTERMEDIATE VALUES FOR RESONANCE PARAMETERS",
-        "***** NEW VALUES FOR RESONANCE PARAMETERS",
         "***** NEW VALUES FOR RESONANCE PARAMETERS",
     ]
 

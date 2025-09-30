@@ -97,7 +97,7 @@ class PleiadesConfig:
 
 
 # Global configuration instance
-_config = None
+_config: Optional[PleiadesConfig] = None
 
 
 def get_config() -> PleiadesConfig:

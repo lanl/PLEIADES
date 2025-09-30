@@ -14,7 +14,7 @@ class VaryFlag(Enum):
     USE_FROM_OTHERS = -2  # do not vary, use value from other sources (INP, COV, etc.)
 
 
-def check_pseudo_scientific(val):
+def check_pseudo_scientific(val: str) -> float:
     """Check for pseudo scientific notation sometimes found in SAMMY files.
 
     Args:
@@ -35,7 +35,7 @@ def check_pseudo_scientific(val):
         s_fixed = f"{m.group(1)}e{m.group(2)}{m.group(3)}"
         try:
             return float(s_fixed)
-        except Exception:
+        except (ValueError, TypeError):
             raise ValueError(f"Cannot convert pseudo-scientific string '{val}' to float (fixed: '{s_fixed}')")
     # Case 2: 5.00000-5 or -1.23+4 (no dot before sign, no E)
     m2 = re.match(r"^([+-]?\d*\.?\d+)([+-]\d+)$", s)
@@ -43,12 +43,12 @@ def check_pseudo_scientific(val):
         s_fixed = f"{m2.group(1)}e{m2.group(2)}"
         try:
             return float(s_fixed)
-        except Exception:
+        except (ValueError, TypeError):
             raise ValueError(f"Cannot convert pseudo-scientific string '{val}' to float (fixed: '{s_fixed}')")
     # Case 3: already valid scientific notation or normal float
     try:
         return float(s)
-    except Exception as e:
+    except (ValueError, TypeError) as e:
         raise ValueError(f"Cannot convert string '{val}' to float. Original error: {e}")
 
 

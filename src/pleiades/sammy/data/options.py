@@ -12,6 +12,10 @@ from pleiades.utils.units import CrossSectionUnitOptions, EnergyUnitOptions
 
 logger = loguru_logger.bind(name=__name__)
 
+# Plot constants
+RESIDUAL_YLIM = (-1, 1)  # Y-axis limits for residual plots
+HISTOGRAM_BIN_RANGE = (-1, 1, 0.01)  # Range and step for histogram bins
+
 
 class DataTypeOptions(str, Enum):
     TRANSMISSION = "TRANSMISSION"
@@ -108,21 +112,44 @@ class SammyData(BaseModel):
                 if col in self.data.columns:
                     raise ValueError(f"Unexpected transmission column for cross-section data: {col}")
 
-    def plot_transmission(self, show_diff=False, plot_uncertainty=False):
+    def plot_transmission(
+        self,
+        show_diff=False,
+        plot_uncertainty=False,
+        figsize=None,
+        title=None,
+        xscale="linear",
+        yscale="linear",
+        data_color="#433E3F",
+        final_color="#ff6361",
+        show=True,
+    ):
         """
         Plot the transmission data and optionally the residuals.
 
         Args:
             show_diff (bool): If True, plot the residuals.
             plot_uncertainty (bool): (Unused, for compatibility)
+            figsize (tuple): Figure size (width, height) in inches.
+            title (str): Plot title.
+            xscale (str): X-axis scale ('linear' or 'log').
+            yscale (str): Y-axis scale ('linear' or 'log').
+            data_color (str): Color for experimental data points.
+            final_color (str): Color for fitted theoretical curve.
+            show (bool): If True, display the plot. If False, return figure object.
+
+        Returns:
+            matplotlib.figure.Figure: The figure object if show=False, None otherwise.
         """
         if self.data is None:
             raise ValueError("No data loaded to plot.")
 
         data = self.data
-        data_color = "#433E3F"
         initial_color = "#003f5c"
-        final_color = "#ff6361"
+
+        # Use provided figsize or default
+        if figsize is None:
+            figsize = (8, 6)
 
         # Column name mapping for compatibility
         col_exp = "Experimental transmission (dimensionless)"
@@ -135,12 +162,12 @@ class SammyData(BaseModel):
                 2,
                 2,
                 sharey=False,
-                figsize=(8, 6),
+                figsize=figsize,
                 gridspec_kw={"width_ratios": [5, 1], "height_ratios": [5, 2]},
             )
             ax = np.ravel(ax)
         else:
-            fig, ax = plt.subplots(figsize=(8, 6))
+            fig, ax = plt.subplots(figsize=figsize)
             ax = [ax]
 
         # Plot experimental transmission as scatter with error bars if available
@@ -165,10 +192,19 @@ class SammyData(BaseModel):
                 color=final_color,
                 lw=1,
             )
+        # Apply scale settings first
+        ax[0].set_xscale(xscale)
+        ax[0].set_yscale(yscale)
+
+        # Then remove x-axis labels and ticks (for show_diff layout)
         ax[0].set_xlabel("")
         ax[0].set_xticks([])
         ax[0].legend(["data", "final fit"])
         ax[0].set_ylabel("transmission")
+
+        # Apply title if provided
+        if title:
+            ax[0].set_title(title)
 
         # Determine y-axis limits
         max_y = data[col_exp].max()
@@ -202,13 +238,15 @@ class SammyData(BaseModel):
             )
             ax[2].set_ylabel("residuals\n(fit-data)/err [σ]")
             ax[2].set_xlabel("energy [eV]")
-            ax[2].set_ylim(-1, 1)
+            ax[2].set_ylim(*RESIDUAL_YLIM)
+            # Apply same x-scale to residual plot
+            ax[2].set_xscale(xscale)
 
             # Plot histograms of residuals
             if "residual_initial" in data.columns:
                 data.plot.hist(
                     y=["residual_initial"],
-                    bins=np.arange(-1, 1, 0.01),
+                    bins=np.arange(*HISTOGRAM_BIN_RANGE),
                     ax=ax[3],
                     orientation="horizontal",
                     legend=False,
@@ -235,7 +273,12 @@ class SammyData(BaseModel):
             ax[3].spines["left"].set_visible(False)
 
         plt.subplots_adjust(wspace=0.003, hspace=0.03)
-        plt.show()
+
+        if show:
+            plt.show()
+            return None
+        else:
+            return fig
 
     def plot_cross_section(self, show_diff=False, plot_uncertainty=False):
         """Plot the cross-section data."""

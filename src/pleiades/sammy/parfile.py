@@ -481,4 +481,5 @@ class SammyParameterFile(BaseModel):
 
 
 if __name__ == "__main__":
-    print("TODO: usage example for SAMMY parameter file handling")
+    # TODO: Add usage example for SAMMY parameter file handling
+    raise NotImplementedError("Example usage not yet implemented")

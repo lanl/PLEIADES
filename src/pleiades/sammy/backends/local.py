@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 """Local backend implementation for SAMMY execution."""
 
-import shlex
+import os
 import subprocess
-import textwrap
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union
@@ -21,14 +20,6 @@ from pleiades.sammy.interface import (
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
-
-# Known SAMMY output file patterns
-SAMMY_OUTPUT_FILES = {
-    "SAMMY.LPT",  # Log file
-    "SAMMIE.ODF",  # Output data file
-    "SAMNDF.PAR",  # Updated parameter file
-    "SAMRESOLVED.PAR",  # Additional parameter file
-}
 
 
 class LocalSammyRunner(SammyRunner):
@@ -111,36 +102,34 @@ class LocalSammyRunner(SammyRunner):
         logger.debug(f"Working directory: {self.config.working_dir}")
 
         # Generate command based on file type
+        # Prepare input text for SAMMY based on mode
         if isinstance(files, SammyFilesMultiMode):
-            # JSON mode command format
-            sammy_command = textwrap.dedent(f"""\
-                {self.config.sammy_executable} <<EOF
-                {shlex.quote(files.input_file.name)}
-                #file {shlex.quote(files.json_config_file.name)}
-                {shlex.quote(files.data_file.name)}
-
-                EOF""")
-            logger.debug("Using JSON mode command format")
+            # JSON mode input format
+            sammy_input = f"{files.input_file.name}\n#file {files.json_config_file.name}\n{files.data_file.name}\n\n"
+            logger.debug("Using JSON mode input format")
         else:
-            # Traditional mode command format
-            sammy_command = textwrap.dedent(f"""\
-                {self.config.sammy_executable} <<EOF
-                {shlex.quote(files.input_file.name)}
-                {shlex.quote(files.parameter_file.name)}
-                {shlex.quote(files.data_file.name)}
-
-                EOF""")
-            logger.debug("Using traditional mode command format")
+            # Traditional mode input format
+            sammy_input = f"{files.input_file.name}\n{files.parameter_file.name}\n{files.data_file.name}\n\n"
+            logger.debug("Using traditional mode input format")
 
         try:
+            # Ensure libcrypto.so.1.1 is found by adding /usr/lib64 to LD_LIBRARY_PATH
+            env = dict(os.environ)
+            env.update(self.config.env_vars)
+            if "LD_LIBRARY_PATH" in env:
+                env["LD_LIBRARY_PATH"] = f"/usr/lib64:{env['LD_LIBRARY_PATH']}"
+            else:
+                env["LD_LIBRARY_PATH"] = "/usr/lib64"
+
+            # Use safer subprocess call without shell
             process = subprocess.run(
-                sammy_command,
-                shell=True,
-                executable=str(self.config.shell_path),
-                env=self.config.env_vars,
+                [str(self.config.sammy_executable)],
+                input=sammy_input,
+                shell=False,
+                text=True,
+                env=env,
                 cwd=str(self.config.working_dir),
                 capture_output=True,
-                text=True,
             )
 
             end_time = datetime.now()

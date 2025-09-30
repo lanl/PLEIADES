@@ -57,6 +57,7 @@ class DetectorEfficiencyParameters(BaseModel):
         Raises:
             NotImplementedError: This class is not yet implemented
         """
+        # TODO: Implement Card Set 15 detector efficiency parameter parsing
         raise NotImplementedError("Card Set 15 detector efficiency parameter parsing is not yet implemented")
 
     def to_lines(self) -> List[str]:
@@ -65,4 +66,5 @@ class DetectorEfficiencyParameters(BaseModel):
         Raises:
             NotImplementedError: This class is not yet implemented
         """
+        # TODO: Implement Card Set 15 detector efficiency parameter formatting
         raise NotImplementedError("Card Set 15 detector efficiency parameter formatting is not yet implemented")

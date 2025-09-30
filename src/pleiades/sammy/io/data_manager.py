@@ -6,7 +6,6 @@ required by SAMMY, including the twenty-column fixed-width format used for
 experimental transmission data.
 """
 
-import csv
 from pathlib import Path
 from typing import Union
 
@@ -21,7 +20,7 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
     """
     Convert transmission spectra from CSV to SAMMY twenty format.
 
-    This function supports both tab- and comma-separated CSV files, with either two columns
+    This function supports tab-, comma-, and space-separated files, with either two columns
     (energy, transmission) or three columns (energy, transmission, uncertainty).
     If only two columns are present, the uncertainty column will be filled with 0.0.
 
@@ -30,10 +29,12 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
         twenty_file: Path to output SAMMY twenty format file
 
     File Formats:
-        Input CSV (tab or comma separated):
+        Input CSV (tab, comma, or space separated):
             "energy_eV,transmission,uncertainty\n6.673,0.932,0.272\n"
             or
             "energy_eV\ttransmission\tuncertainty\n6.673\t0.932\t0.272\n"
+            or
+            "# Energy(eV)  Transmission  Uncertainty\n6.673240e+00 1.003460e+00 7.242967e-03\n"
             or
             "energy_eV,transmission\n6.673,0.932\n"
         Output twenty:
@@ -51,21 +52,54 @@ def convert_csv_to_sammy_twenty(csv_file: Union[str, Path], twenty_file: Union[s
     """
     logger.info(f"Converting {csv_file} to SAMMY twenty format: {twenty_file}")
 
-    # Use csv.Sniffer to detect delimiter
-    with open(csv_file, "r", newline="") as f:
-        sample = f.read(2048)  # Read a sample of the file for delimiter detection
-        f.seek(0)  # Reset file pointer to start
+    data = []
 
-        sniffer = csv.Sniffer()
-        dialect = sniffer.sniff(sample, delimiters=[",", "\t"])  # Detect comma or tab delimiter
-        delimiter = dialect.delimiter
+    with open(csv_file, "r") as f:
+        lines = f.readlines()
 
-        # Create a CSV reader with the detected delimiter
-        reader = csv.reader(f, delimiter=delimiter)
-        header = next(reader)  # Skip header row
+    # Skip header lines (comments starting with # or containing non-numeric first field)
+    for line in lines:
+        # Strip whitespace and skip empty lines
+        line = line.strip()
+        if not line:
+            continue
 
-        # Read the remaining rows, skipping empty lines
-        data = [row for row in reader if row and any(field.strip() for field in row)]
+        # Skip comment lines
+        if line.startswith("#"):
+            continue
+
+        # Try to parse the line with different delimiters
+        # First try splitting by whitespace (most common for scientific data)
+        fields = line.split()
+
+        # If that doesn't give us 2 or 3 fields, try comma
+        if len(fields) not in [2, 3]:
+            fields = line.split(",")
+
+        # If still not right, try tab
+        if len(fields) not in [2, 3]:
+            fields = line.split("\t")
+
+        # Skip lines that don't have the right number of fields
+        if len(fields) not in [2, 3]:
+            # Check if this might be a header line
+            try:
+                float(fields[0])
+            except (ValueError, IndexError):
+                continue  # Skip header lines
+            logger.warning(f"Skipping line with {len(fields)} fields: {line[:50]}...")
+            continue
+
+        # Try to convert to floats
+        try:
+            numeric_fields = [float(field) for field in fields]
+            data.append(numeric_fields)
+        except ValueError:
+            # This is likely a header line, skip it
+            continue
+
+    if not data:
+        raise ValueError(f"No valid data found in {csv_file}")
 
     # Convert data to numpy array of floats
     data = np.array(data, dtype=float)

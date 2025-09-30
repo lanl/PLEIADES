@@ -14,6 +14,20 @@ from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
 
+# Default constants for SAMMY parameters
+DEFAULT_DENSITY = 9.000000  # Default material density (g/cm³)
+DEFAULT_NUMBER_DENSITY = 1.797e-03  # Default number density (atoms/barn-cm)
+
+# TZERO default parameters
+DEFAULT_T0_VALUE = 0.86000000  # Time offset t₀ (μs)
+DEFAULT_T0_UNCERTAINTY = 0.00200000  # Uncertainty on t₀ (μs)
+DEFAULT_L0_VALUE = 1.0020000  # L₀ value (dimensionless)
+DEFAULT_L0_UNCERTAINTY = 2.00000e-5  # Uncertainty on L₀
+
+# Normalization default parameters
+DEFAULT_NORM_CONSTANT = 1.00  # Default normalization constant
+DEFAULT_NORM_UNCERTAINTY = 0.00  # Default normalization uncertainty
+
 
 class InpManager:
     """
@@ -147,7 +161,7 @@ class InpManager:
             return f"  {density:8.6f} {number_density:.6e}"
 
         # Default values (matching reference format)
-        return "  9.000000 1.797e-03"
+        return f"  {DEFAULT_DENSITY:.6f} {DEFAULT_NUMBER_DENSITY:.3e}"
 
     def generate_reaction_type_section(self) -> str:
         """
@@ -262,10 +276,10 @@ class InpManager:
         # Create TzeroParameters with proper values
         # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty)
         tzero_params = TzeroParameters(
-            t0_value=0.86000000,  # Time offset t₀ (μs)
-            t0_uncertainty=0.00200000,  # Uncertainty on t₀ (μs)
-            l0_value=1.0020000,  # L₀ value (dimensionless)
-            l0_uncertainty=2.00000e-5,  # Uncertainty on L₀
+            t0_value=DEFAULT_T0_VALUE,  # Time offset t₀ (μs)
+            t0_uncertainty=DEFAULT_T0_UNCERTAINTY,  # Uncertainty on t₀ (μs)
+            l0_value=DEFAULT_L0_VALUE,  # L₀ value (dimensionless)
+            l0_uncertainty=DEFAULT_L0_UNCERTAINTY,  # Uncertainty on L₀
             flight_path_length=flight_path_m,  # Flight path (m)
             t0_flag=VaryFlag.YES,  # Allow SAMMY to vary t₀
             l0_flag=VaryFlag.YES,  # Allow SAMMY to vary L₀

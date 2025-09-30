@@ -1,4 +1,4 @@
-#!/usr/env/bin python
+#!/usr/bin/env python
 """
 Interface definitions for SAMMY execution system.
 
@@ -395,15 +395,6 @@ class SammyRunner(ABC):
             CleanupError: If cleanup fails
         """
         raise NotImplementedError
-
-    async def __aenter__(self) -> "SammyRunner":
-        """Allow usage as async context manager."""
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Ensure cleanup on context exit."""
-        if hasattr(self, "files"):
-            await self.cleanup(self.files)
 
     @abstractmethod
     def validate_config(self) -> bool:
