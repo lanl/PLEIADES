@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from pleiades.sammy.fitting.options import FitOptions
 from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
 from pleiades.sammy.io.card_formats.inp03_constants import Card03, PhysicalConstants
+from pleiades.sammy.io.card_formats.inp03_density import Card03Density, SampleDensity
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -172,13 +173,20 @@ class InpManager:
             thickness_mm = material_properties.get("thickness_mm", 5.0)
             atomic_mass = material_properties.get("atomic_mass_amu", 28.0)
 
-            # Calculate number density (atoms/barn) - NOT physical thickness
             number_density = calculate_number_density(density, thickness_mm, atomic_mass)
 
-            return f"  {density:8.6f} {number_density:.6e}"
+            sample_density = SampleDensity(
+                density=density,
+                number_density=number_density,
+            )
+        else:
+            sample_density = SampleDensity(
+                density=DEFAULT_DENSITY,
+                number_density=DEFAULT_NUMBER_DENSITY,
+            )
 
-        # Default values (matching reference format)
-        return f"  {DEFAULT_DENSITY:.6f} {DEFAULT_NUMBER_DENSITY:.3e}"
+        lines = Card03Density.to_lines(sample_density)
+        return lines[0]
 
     def generate_reaction_type_section(self) -> str:
         """
