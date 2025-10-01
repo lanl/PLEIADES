@@ -90,11 +90,11 @@ class InpManager:
         Generate the title section of the inp file.
 
         Returns:
-            str: Title line or placeholder comment
+            str: Title line (defaults to "SAMMY analysis" if not provided)
         """
         if self.title:
             return self.title
-        return "# PLACEHOLDER: Replace with actual title/description"
+        return "SAMMY analysis"
 
     def generate_isotope_section(self) -> str:
         """
@@ -199,11 +199,11 @@ class InpManager:
         Generate the reaction type section of the inp file.
 
         Returns:
-            str: Reaction type or placeholder comment
+            str: Reaction type (defaults to "transmission" if not provided)
         """
         if self.reaction_type:
             return self.reaction_type
-        return "# PLACEHOLDER: Replace with reaction type (transmission, capture, fission, etc.)"
+        return "transmission"
 
     def generate_card_set_2_element_info(self, material_properties: Dict = None) -> str:
         """
@@ -294,7 +294,7 @@ class InpManager:
             lines = [""] + Card04.to_lines(fit_config)  # Add blank line before broadening section
             return "\n".join(lines)
 
-        return "\n\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
+        return ""  # Return empty string when no broadening parameters
 
     def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
         """
@@ -422,8 +422,7 @@ class InpManager:
         Generate full content for SAMMY input file.
 
         Returns:
-            str: Complete content for SAMMY input file with placeholders for sections
-                 that are not yet implemented
+            str: Complete content for SAMMY input file
         """
         sections = [
             self.generate_title_section(),
@@ -432,7 +431,6 @@ class InpManager:
             "",  # Empty line for readability
             self.generate_physical_constants_section(),
             self.generate_reaction_type_section(),
-            "# PLACEHOLDER: Replace with spin group and channel specifications if needed",
         ]
         return "\n".join(sections)
 

@@ -102,9 +102,9 @@ def test_generate_commands(mock_fit_options):
 
 def test_generate_title_section():
     """Test generating title section."""
-    # With no title
+    # With no title - should use default
     inp_manager = InpManager()
-    assert inp_manager.generate_title_section() == "# PLACEHOLDER: Replace with actual title/description"
+    assert inp_manager.generate_title_section() == "SAMMY analysis"
 
     # With title
     inp_manager = InpManager(title="Test Title")
@@ -126,8 +126,7 @@ def test_generate_inp_content(mock_fit_options):
         "USE ENDF PARAMETERS",
         "293.6",  # Physical constants temperature
         "25.0000",  # Physical constants flight path
-        "# PLACEHOLDER: Replace with reaction type",
-        "# PLACEHOLDER: Replace with spin group",
+        "transmission",  # Default reaction type
     ]
 
     for section in expected_sections:
