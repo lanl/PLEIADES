@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from pleiades.sammy.fitting.options import FitOptions
+from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -179,11 +180,7 @@ class InpManager:
         Generate Card Set 2 (element information) according to SAMMY documentation.
 
         This generates the second line with element name, atomic weight, and energy range
-        according to SAMMY Card Set 2 specification:
-        - Columns 1-10 (A): ELMNT - Sample element's name
-        - Columns 11-20 (F): AW - Atomic weight (amu)
-        - Columns 21-30 (F): EMIN - Minimum energy for dataset (eV)
-        - Columns 31-40 (F): EMAX - Maximum energy (eV)
+        according to SAMMY Card Set 2 specification.
 
         Args:
             material_properties: Dict with material properties including element info
@@ -195,18 +192,27 @@ class InpManager:
             element = material_properties.get("element", "Au")
             mass_number = material_properties.get("mass_number", 197)
             atomic_mass = material_properties.get("atomic_mass_amu", 196.966569)
-            min_energy = material_properties.get("min_energy_eV", 0.001)  # Configurable minimum energy
+            min_energy = material_properties.get("min_energy_eV", 0.001)
             max_energy = material_properties.get("max_energy_eV", 1000.0)
 
-            # For single isotope, use element-mass notation for ELMNT
             element_name = f"{element}{mass_number}"
 
-            # Format according to SAMMY Card Set 2 specification:
-            # ELMNT (A10), AW (F10), EMIN (F10), EMAX (F10)
-            return f"{element_name:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
+            element_info = ElementInfo(
+                element=element_name,
+                atomic_weight=atomic_mass,
+                min_energy=min_energy,
+                max_energy=max_energy,
+            )
+        else:
+            element_info = ElementInfo(
+                element="Au197",
+                atomic_weight=196.96657,
+                min_energy=0.001,
+                max_energy=1000.0,
+            )
 
-        # Fallback for Au-197 from VENUS
-        return "Au197     196.96657     0.001    1000.0"
+        lines = Card02.to_lines(element_info)
+        return lines[0]
 
     def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
         """
