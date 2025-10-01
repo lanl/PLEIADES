@@ -27,10 +27,6 @@ DEFAULT_T0_UNCERTAINTY = 0.00200000  # Uncertainty on t₀ (μs)
 DEFAULT_L0_VALUE = 1.0020000  # L₀ value (dimensionless)
 DEFAULT_L0_UNCERTAINTY = 2.00000e-5  # Uncertainty on L₀
 
-# Normalization default parameters
-DEFAULT_NORM_CONSTANT = 1.00  # Default normalization constant
-DEFAULT_NORM_UNCERTAINTY = 0.00  # Default normalization uncertainty
-
 
 class InpManager:
     """
@@ -108,17 +104,27 @@ class InpManager:
             str: Properly formatted Card Set 2 element information line
         """
         if self.isotope_info:
-            # Use provided isotope_info if available
             element = self.isotope_info.get("element", "Sample")
             atomic_mass = self.isotope_info.get("atomic_mass_amu", 1.0)
             min_energy = self.isotope_info.get("min_energy_eV", 0.001)
             max_energy = self.isotope_info.get("max_energy_eV", 1000.0)
 
-            # Format according to SAMMY Card Set 2 specification
-            return f"{element:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
+            element_info = ElementInfo(
+                element=element,
+                atomic_weight=atomic_mass,
+                min_energy=min_energy,
+                max_energy=max_energy,
+            )
+        else:
+            element_info = ElementInfo(
+                element="Sample",
+                atomic_weight=1.0,
+                min_energy=0.001,
+                max_energy=1000.0,
+            )
 
-        # Default fallback for legacy usage - generic sample
-        return "Sample         1.00000     0.001    1000.0"
+        lines = Card02.to_lines(element_info)
+        return lines[0]
 
     def generate_physical_constants_section(self, material_properties: Dict = None) -> str:
         """
@@ -373,14 +379,14 @@ class InpManager:
             str: Resolution function section or empty string if disabled
         """
         if resolution_file is None:
-            return ""  # No resolution function section
+            return ""
 
-        lines = [
-            "",  # Empty line
-            "USER-DEFINED RESOLUTION FUNCTION",
-            f"FILE={resolution_file}",
-        ]
-        return "\n".join(lines)
+        from pleiades.sammy.parameters.user_resolution import UserResolutionParameters
+
+        user_res = UserResolutionParameters(filenames=[resolution_file])
+        lines = user_res.to_lines()
+
+        return "\n" + "\n".join(lines)
 
     def generate_multi_isotope_inp_content(
         self, material_properties: Dict = None, resolution_file_path: Path = None

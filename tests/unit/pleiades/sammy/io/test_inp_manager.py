@@ -119,7 +119,8 @@ def test_generate_inp_content(mock_fit_options):
     assert isinstance(content, str)
     expected_sections = [
         "Test Title",
-        "Sample         1.00000     0.001    1000.0",  # Card Set 2 format instead of placeholder
+        "Sample",  # Element name
+        "1.000000",  # Atomic weight (Card02 format with 6 decimals)
         "PUT QUANTUM NUMBERS INTO PARAMETER FILE",
         "DO NOT SOLVE BAYES EQUATIONS",
         "USE ENDF PARAMETERS",
