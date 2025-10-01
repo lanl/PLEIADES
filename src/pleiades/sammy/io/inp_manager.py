@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from pleiades.sammy.fitting.options import FitOptions
+from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
+from pleiades.sammy.io.card_formats.inp03_constants import Card03, PhysicalConstants
+from pleiades.sammy.io.card_formats.inp03_density import Card03Density, SampleDensity
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -23,10 +26,6 @@ DEFAULT_T0_VALUE = 0.86000000  # Time offset t₀ (μs)
 DEFAULT_T0_UNCERTAINTY = 0.00200000  # Uncertainty on t₀ (μs)
 DEFAULT_L0_VALUE = 1.0020000  # L₀ value (dimensionless)
 DEFAULT_L0_UNCERTAINTY = 2.00000e-5  # Uncertainty on L₀
-
-# Normalization default parameters
-DEFAULT_NORM_CONSTANT = 1.00  # Default normalization constant
-DEFAULT_NORM_UNCERTAINTY = 0.00  # Default normalization uncertainty
 
 
 class InpManager:
@@ -91,11 +90,11 @@ class InpManager:
         Generate the title section of the inp file.
 
         Returns:
-            str: Title line or placeholder comment
+            str: Title line (defaults to "SAMMY analysis" if not provided)
         """
         if self.title:
             return self.title
-        return "# PLACEHOLDER: Replace with actual title/description"
+        return "SAMMY analysis"
 
     def generate_isotope_section(self) -> str:
         """
@@ -105,17 +104,27 @@ class InpManager:
             str: Properly formatted Card Set 2 element information line
         """
         if self.isotope_info:
-            # Use provided isotope_info if available
             element = self.isotope_info.get("element", "Sample")
             atomic_mass = self.isotope_info.get("atomic_mass_amu", 1.0)
             min_energy = self.isotope_info.get("min_energy_eV", 0.001)
             max_energy = self.isotope_info.get("max_energy_eV", 1000.0)
 
-            # Format according to SAMMY Card Set 2 specification
-            return f"{element:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
+            element_info = ElementInfo(
+                element=element,
+                atomic_weight=atomic_mass,
+                min_energy=min_energy,
+                max_energy=max_energy,
+            )
+        else:
+            element_info = ElementInfo(
+                element="Sample",
+                atomic_weight=1.0,
+                min_energy=0.001,
+                max_energy=1000.0,
+            )
 
-        # Default fallback for legacy usage - generic sample
-        return "Sample         1.00000     0.001    1000.0"
+        lines = Card02.to_lines(element_info)
+        return lines[0]
 
     def generate_physical_constants_section(self, material_properties: Dict = None) -> str:
         """
@@ -130,13 +139,28 @@ class InpManager:
         if material_properties:
             temperature = material_properties.get("temperature_K", 293.6)
             flight_path = material_properties.get("flight_path_m", 25.0)
+            delta_l = material_properties.get("delta_l", 0.0)
+            delta_g = material_properties.get("delta_g", 0.0)
+            delta_e = material_properties.get("delta_e", 0.0)
 
-            # Format: TEMP FLIGHT_PATH DELTAL DELTAG DELTAE
-            # Reference: 293.6    25.0    0.0       0.0     0.0
-            return f"\n    {temperature:5.1f}    {flight_path:4.1f}    0.0       0.0     0.0"
+            constants = PhysicalConstants(
+                temperature=temperature,
+                flight_path_length=flight_path,
+                delta_l=delta_l,
+                delta_g=delta_g,
+                delta_e=delta_e,
+            )
+        else:
+            constants = PhysicalConstants(
+                temperature=293.6,
+                flight_path_length=25.0,
+                delta_l=0.0,
+                delta_g=0.0,
+                delta_e=0.0,
+            )
 
-        # Default for VENUS
-        return "\n    293.6    25.0    0.0       0.0     0.0"
+        lines = Card03.to_lines(constants)
+        return "\n" + lines[0]
 
     def generate_sample_density_section(self, material_properties: Dict = None) -> str:
         """
@@ -155,35 +179,38 @@ class InpManager:
             thickness_mm = material_properties.get("thickness_mm", 5.0)
             atomic_mass = material_properties.get("atomic_mass_amu", 28.0)
 
-            # Calculate number density (atoms/barn) - NOT physical thickness
             number_density = calculate_number_density(density, thickness_mm, atomic_mass)
 
-            return f"  {density:8.6f} {number_density:.6e}"
+            sample_density = SampleDensity(
+                density=density,
+                number_density=number_density,
+            )
+        else:
+            sample_density = SampleDensity(
+                density=DEFAULT_DENSITY,
+                number_density=DEFAULT_NUMBER_DENSITY,
+            )
 
-        # Default values (matching reference format)
-        return f"  {DEFAULT_DENSITY:.6f} {DEFAULT_NUMBER_DENSITY:.3e}"
+        lines = Card03Density.to_lines(sample_density)
+        return lines[0]
 
     def generate_reaction_type_section(self) -> str:
         """
         Generate the reaction type section of the inp file.
 
         Returns:
-            str: Reaction type or placeholder comment
+            str: Reaction type (defaults to "transmission" if not provided)
         """
         if self.reaction_type:
             return self.reaction_type
-        return "# PLACEHOLDER: Replace with reaction type (transmission, capture, fission, etc.)"
+        return "transmission"
 
     def generate_card_set_2_element_info(self, material_properties: Dict = None) -> str:
         """
         Generate Card Set 2 (element information) according to SAMMY documentation.
 
         This generates the second line with element name, atomic weight, and energy range
-        according to SAMMY Card Set 2 specification:
-        - Columns 1-10 (A): ELMNT - Sample element's name
-        - Columns 11-20 (F): AW - Atomic weight (amu)
-        - Columns 21-30 (F): EMIN - Minimum energy for dataset (eV)
-        - Columns 31-40 (F): EMAX - Maximum energy (eV)
+        according to SAMMY Card Set 2 specification.
 
         Args:
             material_properties: Dict with material properties including element info
@@ -195,18 +222,27 @@ class InpManager:
             element = material_properties.get("element", "Au")
             mass_number = material_properties.get("mass_number", 197)
             atomic_mass = material_properties.get("atomic_mass_amu", 196.966569)
-            min_energy = material_properties.get("min_energy_eV", 0.001)  # Configurable minimum energy
+            min_energy = material_properties.get("min_energy_eV", 0.001)
             max_energy = material_properties.get("max_energy_eV", 1000.0)
 
-            # For single isotope, use element-mass notation for ELMNT
             element_name = f"{element}{mass_number}"
 
-            # Format according to SAMMY Card Set 2 specification:
-            # ELMNT (A10), AW (F10), EMIN (F10), EMAX (F10)
-            return f"{element_name:<10s}{atomic_mass:10.5f}{min_energy:10.3f}{max_energy:10.1f}"
+            element_info = ElementInfo(
+                element=element_name,
+                atomic_weight=atomic_mass,
+                min_energy=min_energy,
+                max_energy=max_energy,
+            )
+        else:
+            element_info = ElementInfo(
+                element="Au197",
+                atomic_weight=196.96657,
+                min_energy=0.001,
+                max_energy=1000.0,
+            )
 
-        # Fallback for Au-197 from VENUS
-        return "Au197     196.96657     0.001    1000.0"
+        lines = Card02.to_lines(element_info)
+        return lines[0]
 
     def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
         """
@@ -258,7 +294,7 @@ class InpManager:
             lines = [""] + Card04.to_lines(fit_config)  # Add blank line before broadening section
             return "\n".join(lines)
 
-        return "\n\n# PLACEHOLDER: Broadening parameters (provide material_properties to generate)"
+        return ""  # Return empty string when no broadening parameters
 
     def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
         """
@@ -343,14 +379,14 @@ class InpManager:
             str: Resolution function section or empty string if disabled
         """
         if resolution_file is None:
-            return ""  # No resolution function section
+            return ""
 
-        lines = [
-            "",  # Empty line
-            "USER-DEFINED RESOLUTION FUNCTION",
-            f"FILE={resolution_file}",
-        ]
-        return "\n".join(lines)
+        from pleiades.sammy.parameters.user_resolution import UserResolutionParameters
+
+        user_res = UserResolutionParameters(filenames=[resolution_file])
+        lines = user_res.to_lines()
+
+        return "\n" + "\n".join(lines)
 
     def generate_multi_isotope_inp_content(
         self, material_properties: Dict = None, resolution_file_path: Path = None
@@ -386,8 +422,7 @@ class InpManager:
         Generate full content for SAMMY input file.
 
         Returns:
-            str: Complete content for SAMMY input file with placeholders for sections
-                 that are not yet implemented
+            str: Complete content for SAMMY input file
         """
         sections = [
             self.generate_title_section(),
@@ -396,7 +431,6 @@ class InpManager:
             "",  # Empty line for readability
             self.generate_physical_constants_section(),
             self.generate_reaction_type_section(),
-            "# PLACEHOLDER: Replace with spin group and channel specifications if needed",
         ]
         return "\n".join(sections)
 
