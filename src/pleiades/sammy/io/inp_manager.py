@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 from pleiades.sammy.fitting.options import FitOptions
 from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
+from pleiades.sammy.io.card_formats.inp03_constants import Card03, PhysicalConstants
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
@@ -131,13 +132,28 @@ class InpManager:
         if material_properties:
             temperature = material_properties.get("temperature_K", 293.6)
             flight_path = material_properties.get("flight_path_m", 25.0)
+            delta_l = material_properties.get("delta_l", 0.0)
+            delta_g = material_properties.get("delta_g", 0.0)
+            delta_e = material_properties.get("delta_e", 0.0)
 
-            # Format: TEMP FLIGHT_PATH DELTAL DELTAG DELTAE
-            # Reference: 293.6    25.0    0.0       0.0     0.0
-            return f"\n    {temperature:5.1f}    {flight_path:4.1f}    0.0       0.0     0.0"
+            constants = PhysicalConstants(
+                temperature=temperature,
+                flight_path_length=flight_path,
+                delta_l=delta_l,
+                delta_g=delta_g,
+                delta_e=delta_e,
+            )
+        else:
+            constants = PhysicalConstants(
+                temperature=293.6,
+                flight_path_length=25.0,
+                delta_l=0.0,
+                delta_g=0.0,
+                delta_e=0.0,
+            )
 
-        # Default for VENUS
-        return "\n    293.6    25.0    0.0       0.0     0.0"
+        lines = Card03.to_lines(constants)
+        return "\n" + lines[0]
 
     def generate_sample_density_section(self, material_properties: Dict = None) -> str:
         """
