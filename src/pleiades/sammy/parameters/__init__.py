@@ -1,3 +1,5 @@
+# Temporary backward compatibility alias - see GitHub issue #146 for naming convention tracking
+from pleiades.sammy.io.card_formats.par10_isotopes import Card10 as IsotopeCard  # noqa: F401
 from pleiades.sammy.parameters.broadening import BroadeningParameterCard  # noqa: F401
 from pleiades.sammy.parameters.data_reduction import DataReductionCard  # noqa: F401
 from pleiades.sammy.parameters.external_r import ExternalREntry, ExternalRFunction  # noqa: F401
