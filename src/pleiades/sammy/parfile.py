@@ -455,7 +455,7 @@ class SammyParameterFile(BaseModel):
         print("Sammy Parameter File Details:")
 
         # check if any cards are present
-        if all(value is None for value in self.dict().values()):
+        if all(value is None for value in self.model_dump().values()):
             print("No cards present in the parameter file.")
             return
         else:
