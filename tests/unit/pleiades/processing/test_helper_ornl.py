@@ -2,6 +2,8 @@
 
 import os
 import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -9,6 +11,9 @@ import pytest
 from pleiades.processing.helper_ornl import (
     combine_runs,
     detect_persistent_dead_pixels,
+    find_nexus_file,
+    load_multiple_runs,
+    load_run_from_folder,
     load_spectra_file,
     tof_to_energy,
 )
@@ -172,3 +177,315 @@ class TestLoadSpectraFile:
 
             data = load_spectra_file(tmpdir, header=0, sep=",")
             assert data is None  # Should return None on error
+
+
+class TestFindNexusFile:
+    """Test NeXus file discovery."""
+
+    def test_find_nexus_in_parent_structure(self):
+        """Test finding NeXus file in standard ORNL directory structure."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create ORNL-like structure: parent/nexus/VENUS_8022.nxs.h5
+            parent = Path(tmpdir)
+            nexus_dir = parent / "nexus"
+            nexus_dir.mkdir()
+            run_dir = parent / "measurements" / "Run_8022"
+            run_dir.mkdir(parents=True)
+
+            # Create mock NeXus file
+            nexus_file = nexus_dir / "VENUS_8022.nxs.h5"
+            nexus_file.touch()
+
+            # Test finding from run folder
+            result = find_nexus_file(str(run_dir))
+            assert result == str(nexus_file)
+
+    def test_find_nexus_with_custom_dir(self):
+        """Test finding NeXus file with custom nexus directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create custom nexus directory
+            custom_nexus = Path(tmpdir) / "custom_nexus"
+            custom_nexus.mkdir()
+
+            # Create NeXus file
+            nexus_file = custom_nexus / "VENUS_9999.nxs.h5"
+            nexus_file.touch()
+
+            # Test finding with custom directory
+            result = find_nexus_file("Run_9999", nexus_dir=str(custom_nexus))
+            assert result == str(nexus_file)
+
+    def test_find_nexus_multiple_matches(self):
+        """Test that first match is returned when multiple files exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nexus_dir = Path(tmpdir)
+
+            # Create multiple matching files
+            nexus1 = nexus_dir / "VENUS_8022.nxs.h5"
+            nexus2 = nexus_dir / "VENUS_8022_corrected.nxs.h5"
+            nexus1.touch()
+            nexus2.touch()
+
+            result = find_nexus_file("Run_8022", nexus_dir=str(nexus_dir))
+            assert result in [str(nexus1), str(nexus2)]  # Should return one of them
+
+    def test_find_nexus_not_found(self):
+        """Test when NeXus file is not found."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = find_nexus_file("Run_9999", nexus_dir=tmpdir)
+            assert result is None
+
+    def test_extract_run_number_from_folder(self):
+        """Test run number extraction from different folder name formats."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nexus_dir = Path(tmpdir)
+
+            # Test with underscore format
+            nexus_file = nexus_dir / "VENUS_1234.nxs.h5"
+            nexus_file.touch()
+
+            result = find_nexus_file("Run_1234", nexus_dir=str(nexus_dir))
+            assert result == str(nexus_file)
+
+            # Test with just number
+            result = find_nexus_file("1234", nexus_dir=str(nexus_dir))
+            assert result == str(nexus_file)
+
+
+class TestLoadRunFromFolder:
+    """Test loading run data from folder."""
+
+    @patch("pleiades.processing.helper_ornl.retrieve_list_of_most_dominant_extension_from_folder")
+    @patch("pleiades.processing.helper_ornl.load")
+    @patch("pleiades.processing.helper_ornl.load_spectra_file")
+    @patch("pleiades.processing.helper_ornl.find_nexus_file")
+    @patch("pleiades.processing.helper_ornl.get_proton_charge")
+    def test_load_run_complete(self, mock_get_pc, mock_find_nexus, mock_load_spectra, mock_load, mock_retrieve):
+        """Test loading a complete run with all data available."""
+        # Setup mocks
+        mock_retrieve.return_value = (["img1.tiff", "img2.tiff"], ".tiff")
+        mock_load.return_value = np.ones((100, 256, 256))
+        mock_load_spectra.return_value = np.column_stack([np.arange(100) * 0.001, np.ones(100)])
+        mock_find_nexus.return_value = "/path/to/nexus.h5"
+        mock_get_pc.return_value = 1234567.0  # in pC
+
+        # Load run
+        run = load_run_from_folder("/path/to/Run_8022")
+
+        # Verify calls
+        mock_retrieve.assert_called_once_with("/path/to/Run_8022")
+        mock_load.assert_called_once_with(["img1.tiff", "img2.tiff"], ".tiff")
+        mock_load_spectra.assert_called_once_with("/path/to/Run_8022")
+        mock_find_nexus.assert_called_once_with("/path/to/Run_8022", None)
+        mock_get_pc.assert_called_once_with("/path/to/nexus.h5", units="pc")
+
+        # Check run object
+        assert run.counts.shape == (100, 256, 256)
+        assert run.proton_charge == pytest.approx(1.234567)  # 1234567 pC / 1e6 = 1.234567 μC
+        assert run.metadata["folder"] == "/path/to/Run_8022"
+        assert run.metadata["nexus_path"] == "/path/to/nexus.h5"
+        assert run.metadata["n_tof"] == 100
+        assert len(run.metadata["tof_values"]) == 100
+
+    @patch("pleiades.processing.helper_ornl.retrieve_list_of_most_dominant_extension_from_folder")
+    def test_load_run_no_files(self, mock_retrieve):
+        """Test error when no image files found."""
+        mock_retrieve.return_value = ([], "")
+
+        with pytest.raises(ValueError, match="No image files found"):
+            load_run_from_folder("/empty/folder")
+
+    @patch("pleiades.processing.helper_ornl.retrieve_list_of_most_dominant_extension_from_folder")
+    @patch("pleiades.processing.helper_ornl.load")
+    @patch("pleiades.processing.helper_ornl.load_spectra_file")
+    @patch("pleiades.processing.helper_ornl.find_nexus_file")
+    def test_load_run_tof_mismatch(self, mock_find_nexus, mock_load_spectra, mock_load, mock_retrieve):
+        """Test handling of TOF length mismatch."""
+        mock_retrieve.return_value = (["img1.tiff"], ".tiff")
+        mock_load.return_value = np.ones((100, 256, 256))
+        # Return wrong number of TOF values
+        mock_load_spectra.return_value = np.column_stack([np.arange(50) * 0.001, np.ones(50)])
+        mock_find_nexus.return_value = None
+
+        run = load_run_from_folder("/path/to/Run_8022")
+
+        # TOF values should be None due to mismatch
+        assert run.metadata["tof_values"] is None
+        assert run.metadata["n_tof"] == 100
+
+    @patch("pleiades.processing.helper_ornl.retrieve_list_of_most_dominant_extension_from_folder")
+    @patch("pleiades.processing.helper_ornl.load")
+    @patch("pleiades.processing.helper_ornl.load_spectra_file")
+    @patch("pleiades.processing.helper_ornl.find_nexus_file")
+    @patch("pleiades.processing.helper_ornl.get_proton_charge")
+    def test_load_run_with_custom_nexus_path(
+        self, mock_get_pc, mock_find_nexus, mock_load_spectra, mock_load, mock_retrieve
+    ):
+        """Test loading run with explicitly provided nexus path."""
+        mock_retrieve.return_value = (["img1.tiff"], ".tiff")
+        mock_load.return_value = np.ones((10, 128, 128))
+        mock_load_spectra.return_value = None
+        mock_get_pc.return_value = 5000000.0  # in pC
+
+        # Load with custom nexus path
+        run = load_run_from_folder("/path/to/Run", nexus_path="/custom/nexus.h5")
+
+        # find_nexus_file should not be called
+        mock_find_nexus.assert_not_called()
+        mock_get_pc.assert_called_once_with("/custom/nexus.h5", units="pc")
+
+        assert run.proton_charge == pytest.approx(5.0)  # 5000000 pC / 1e6 = 5.0 μC
+        assert run.metadata["nexus_path"] == "/custom/nexus.h5"
+
+    @patch("pleiades.processing.helper_ornl.retrieve_list_of_most_dominant_extension_from_folder")
+    @patch("pleiades.processing.helper_ornl.load")
+    @patch("pleiades.processing.helper_ornl.load_spectra_file")
+    @patch("pleiades.processing.helper_ornl.find_nexus_file")
+    @patch("pleiades.processing.helper_ornl.get_proton_charge")
+    def test_load_run_no_proton_charge(self, mock_get_pc, mock_find_nexus, mock_load_spectra, mock_load, mock_retrieve):
+        """Test loading run when proton charge is not available."""
+        mock_retrieve.return_value = (["img1.tiff"], ".tiff")
+        mock_load.return_value = np.ones((10, 128, 128))
+        mock_load_spectra.return_value = None
+        mock_find_nexus.return_value = None
+        mock_get_pc.return_value = None  # No proton charge available
+
+        run = load_run_from_folder("/path/to/Run")
+
+        # Should use default proton charge of 1.0
+        assert run.proton_charge == 1.0
+        assert run.metadata["nexus_path"] is None
+
+
+class TestLoadMultipleRuns:
+    """Test loading multiple runs."""
+
+    @patch("pleiades.processing.helper_ornl.load_run_from_folder")
+    def test_load_multiple_runs_success(self, mock_load_run):
+        """Test successfully loading multiple runs."""
+        # Create mock runs
+        run1 = Run(
+            counts=np.ones((100, 256, 256)),
+            proton_charge=1000.0,
+            metadata={"run_number": "8022"},
+        )
+        run2 = Run(
+            counts=np.ones((100, 256, 256)) * 2,
+            proton_charge=1500.0,
+            metadata={"run_number": "8023"},
+        )
+        run3 = Run(
+            counts=np.ones((100, 256, 256)) * 3,
+            proton_charge=2000.0,
+            metadata={"run_number": "8024"},
+        )
+
+        mock_load_run.side_effect = [run1, run2, run3]
+
+        folders = ["/path/Run_8022", "/path/Run_8023", "/path/Run_8024"]
+        runs = load_multiple_runs(folders)
+
+        assert len(runs) == 3
+        assert runs[0] == run1
+        assert runs[1] == run2
+        assert runs[2] == run3
+
+        # Check that each folder was loaded
+        assert mock_load_run.call_count == 3
+
+    @patch("pleiades.processing.helper_ornl.load_run_from_folder")
+    def test_load_multiple_runs_with_nexus_dir(self, mock_load_run):
+        """Test loading multiple runs with custom nexus directory."""
+        run1 = Run(counts=np.ones((10, 10, 10)), proton_charge=100.0)
+        mock_load_run.return_value = run1
+
+        folders = ["/path/Run_8022"]
+        runs = load_multiple_runs(folders, nexus_dir="/custom/nexus")
+
+        mock_load_run.assert_called_once_with("/path/Run_8022", nexus_dir="/custom/nexus")
+        assert len(runs) == 1
+
+    @patch("pleiades.processing.helper_ornl.load_run_from_folder")
+    def test_load_multiple_runs_with_failure(self, mock_load_run):
+        """Test that failure in one run propagates."""
+        mock_load_run.side_effect = ValueError("Failed to load run")
+
+        with pytest.raises(ValueError, match="Failed to load run"):
+            load_multiple_runs(["/path/Run_8022"])
+
+    @patch("pleiades.processing.helper_ornl.load_run_from_folder")
+    def test_load_multiple_runs_empty_list(self, mock_load_run):
+        """Test loading empty list of runs."""
+        runs = load_multiple_runs([])
+
+        assert len(runs) == 0
+        mock_load_run.assert_not_called()
+
+
+class TestIntegrationScenarios:
+    """Test integration scenarios combining multiple functions."""
+
+    def test_tof_energy_conversion_roundtrip(self):
+        """Test TOF to energy conversion consistency."""
+        # Create a range of TOF values
+        tof_original = np.logspace(-4, -1, 100)  # 0.1ms to 100ms
+
+        # Convert to energy
+        energy = tof_to_energy(tof_original, flight_path=25.0)
+
+        # Energy should decrease as TOF increases (slower neutrons)
+        assert np.all(np.diff(energy) < 0)
+
+        # All energies should be positive (except for zero TOF)
+        assert np.all(energy[tof_original > 0] > 0)
+
+    def test_dead_pixel_detection_with_noise(self):
+        """Test dead pixel detection with noisy data."""
+        np.random.seed(42)
+
+        # Create data with noise
+        data = np.random.poisson(10, size=(100, 256, 256)).astype(float)
+
+        # Add some dead pixels
+        dead_regions = [(10, 20, 30, 40), (100, 110, 150, 160)]
+        for y1, y2, x1, x2 in dead_regions:
+            data[:, y1:y2, x1:x2] = 0
+
+        dead_mask = detect_persistent_dead_pixels(data)
+
+        # Check dead regions are detected
+        for y1, y2, x1, x2 in dead_regions:
+            assert np.all(dead_mask[y1:y2, x1:x2])
+
+        # Check non-dead regions are not marked
+        assert not np.all(dead_mask)
+
+    def test_combine_runs_preserves_metadata(self):
+        """Test that combining runs preserves important metadata."""
+        tof_values = np.arange(50) * 0.001
+
+        runs = [
+            Run(
+                counts=np.ones((50, 128, 128)) * i,
+                proton_charge=100.0 * i,
+                metadata={
+                    "run_number": f"802{i}",
+                    "folder": f"/path/Run_802{i}",
+                    "tof_values": tof_values,
+                    "n_tof": 50,
+                },
+            )
+            for i in range(1, 4)
+        ]
+
+        combined = combine_runs(runs)
+
+        # Check metadata preservation
+        assert combined.metadata["n_runs_combined"] == 3
+        assert combined.metadata["source_run_numbers"] == ["8021", "8022", "8023"]
+        assert np.array_equal(combined.metadata["tof_values"], tof_values)
+        assert combined.metadata["n_tof"] == 50
+
+        # Check numerical accuracy
+        assert combined.proton_charge == 600.0  # 100 + 200 + 300
+        assert np.all(combined.counts == 6.0)  # 1 + 2 + 3
