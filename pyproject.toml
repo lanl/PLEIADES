@@ -95,6 +95,14 @@ markers = [
     "gui: tests for the GUI components"
 ]
 
+# ---------------------------------- #
+# ----- Coverage configuration ----- #
+# ---------------------------------- #
+[tool.coverage.run]
+omit = [
+    "src/pleiades/processing/normalization_v1.py",  # Deprecated legacy code, will be removed
+]
+
 # ------------------------------ #
 # ----- Ruff configuration ----- #
 # ------------------------------ #
