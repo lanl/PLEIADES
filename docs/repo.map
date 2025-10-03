@@ -1,0 +1,89 @@
+PLEIADES
+├── .readthedocs.yaml
+├── .gitignore
+├── .pre-commit-config.yaml
+├── pyproject.toml
+├── poetry.lock
+├── LICENSE
+├── environment.yaml
+├── pleiades.egg-info
+├── README.rst
+├── src/
+│   └── pleiades
+|       ├── __init__.py
+|       ├── __main__.py
+|       ├── utils/
+|       |   ├── config.py
+|       |   ├── helper.py
+|       |   ├── logger.py
+|       |   ├── plotter.py
+|       |   └── units.py
+|       ├── nuclear/
+|       |   ├── isotopes/
+|       |   |   ├── files/
+|       |   |   ├── manager.py
+|       |   |   └── models.py
+|       |   ├── resonances/
+|       |   |   └── res_endf8.endf
+|       |   ├── manager.py
+|       |   └── models.py
+|       ├── experimental/
+|       |   ├── UserResolutionFiles/
+|       |   └── models.py
+|       ├── core/
+|       │   └── constants.py
+|       ├── results/
+|       │   └── models.py
+|       └── sammy/
+|           ├── interface.py
+|           ├── config.py
+|           ├── factory.py
+|           ├── parfile.py
+|           ├── results/
+|           │   └── models.py
+|           ├── backends/
+|           │   ├── nova_ornl.py
+|           │   ├── __init__.py
+|           │   ├── local.py
+|           │   └── docker.py
+|           └── parameters/
+|               ├── unused_var.py
+|               ├── paramagnetic.py
+|               ├── orres.py
+|               ├── normalization.py
+|               ├── misc.py
+|               ├── helper.py
+|               ├── external_r.py
+|               ├── data_reduction.py
+|               ├── user_resolution.py
+|               ├── resonance.py
+|               ├── resolution.py
+|               ├── radius.py
+|               ├── last.py
+|               ├── det_efficiency.py
+|               ├── broadening.py
+|               ├── background.py
+|               ├── __init__.py
+|               └── isotope.py
+├── examples/
+├── scripts/
+├── docs/
+│   └── repo.map
+├── legacy/
+├── paper/
+├── tests/
+│   ├── unit/
+│   │   ├── pleiades
+│   │   └── conftest.py
+│   └── data/
+│       ├── config
+│       └── ex012
+└── notebook/
+    ├── sammy.param/
+    │   └── example.ipynb
+    └── samexm/
+        ├── ex012/
+        │   ├── ex012.ipynb
+        │   └── ex012a.par
+        └── ex027/
+            └── ex027a.endf

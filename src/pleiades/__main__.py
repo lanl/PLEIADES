@@ -5,7 +5,8 @@ import sys
 
 
 def main():
-    print("Placeholder for PLEIADES main function")
+    # TODO: Implement PLEIADES CLI
+    raise NotImplementedError("PLEIADES CLI not yet implemented")
 
 
 if __name__ == "__main__":

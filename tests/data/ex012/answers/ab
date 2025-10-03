@@ -1,0 +1,8 @@
+par ex012a.par
+odf ex012bb.odf
+ops 1 1 1 1 1 1
+avg 6
+x
+1 dt  300.,1800.
+
+q

@@ -1,0 +1,64 @@
+##########################################################################
+### PURPOSE of Exercise EX012:  Learn to treat multiple nuclides in a sample
+
+
+### DESCRIPTION:
+
+    In a real experiment, the sample usually contains more than one
+	nuclide.  There may be several isotopes of the same element, the
+	sample may be an oxide or other chemical compound, or there may be
+	contaminants.
+
+    The treatment for all of these is the same:  Include spin groups and
+	resonance parameters for any and all nuclides.  Assign the
+	appropriate abundances for each nuclide; search for the correct
+	values of the abundances if needed.
+
+
+### INSTRUCTIONS:
+
+(1) File ex012a.dat is "real data" for transmission through natural
+    silicon, taken on the 200-meter flight path at ORELA.  In the INPut
+    file (ex012a.inp), spin groups 1 through 7 correspond to Si28, 8-17 to
+    Si29, and 18-22 to Si30.  Spin groups 23-29, which correspond to
+    Oxygen-16, are defined, but do not enter into this calculation (the
+    "X" in column 5 for those spin groups means that these are to be
+    eXcluded); oxygen is included in the INPut and PARameter files because
+    the complete analysis used data on Si29- and Si30-oxide samples.
+    (Those data are not included in this exercise.)
+
+    Note that the resonances in the parameter file ex012a.par are grouped
+    by nuclide, not by energy.  This is the analyst's choice -- SAMMY has
+    no requirements regarding the ordering of the resonances in the PAR
+    file.
+ 
+    Two Card Sets at the end of the PAR file give more information about
+    the spin groups and/or nuclides.  The "radius" Card Set defines the
+    radii for the odd and even el-values of Si28, for Si29, for Si30, and
+    for Oxygen.  The "isotopic masses and abundances" Card Set provides
+    masses (in amu) and abundances (relative by weight) for the four
+    nuclides.  Some of this information is also given in the INP file;
+    however, the PAR file values take precedent.  In other words, values
+    given in the PAR file are the ones which will be used.  (This is
+    almost always true; there are, however, some cases in which a flag of
+    "-2" tells SAMMY to use the value from the INPut file.)
+
+    SAMMY does require consistency between the two Card Sets, in the sense
+    that spin groups which have the same radius must also belong to the
+    same nuclide.  E.g., spin groups 1 and 4 both belong to Si28.  Spin
+    groups 18 and 23, which belong to Si30 and Oxygen, respectively, must
+    have separate radii defined even though the two have the same value
+    (4.2 Fermi).
+
+    Run this case; see answers/ex012a* for results.  Note that the initial
+    values of the abundance for Si28 was wrong, but the SAMMY run provided 
+    a more reasonable result.
+
+(2) An easy way to study the contribution from just one isotope (or
+    nuclide or spin group) is to "X" the other spin groups.  Play around
+    with this -- what is the contribution due only to Si28, for example?
+    How about s-waves only?
+
+    See answers/ex012b* for Si28 p waves.
+
+##########################################################################

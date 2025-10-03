@@ -201,3 +201,16 @@ cython_debug/
 
 # Ignore vscode stuff.
 .vscode/
+
+# Ignore development work files (use Github issues instead)
+docs/project_management
+
+# pixi environments
+.pixi
+*.egg-info
+
+# ignore versioning git files
+_version.py
+
+# ignore any scratch spaces or temporary files
+.scratch/

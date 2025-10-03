@@ -1,0 +1,3 @@
+[submodule "tests/data/pleiades_data"]
+	path = tests/data/pleiades_data
+	url = git@code.ornl.gov:sns-hfir-scse/infrastructure/test-data/pleiades_data.git
