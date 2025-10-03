@@ -9,20 +9,20 @@ repos:
       args: [--allow-multiple-documents]
       exclude: "conda.recipe/meta.yaml"
     - id: end-of-file-fixer
-      exclude: "nucDataLibs/.*"
+      exclude: "(tests/data/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
     - id: trailing-whitespace
-      exclude: "nucDataLibs/.*"
+      exclude: "(tests/data/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.11.2
   hooks:
     - id: ruff
       args: [--fix, --exit-non-zero-on-fix]
-      exclude: "nucDataLibs/.*"
+      exclude: "(tests/data/.*|legacy/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
     - id: ruff-format
-      exclude: "nucDataLibs/.*"
+      exclude: "(tests/data/.*|legacy/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
 - repo: https://github.com/codespell-project/codespell
   rev: v2.4.1
   hooks:
     - id: codespell
-      exclude: "(nucDataLibs/.*|.*\\.ipynb)|poetry.lock"
+      exclude: "(tests/data/.*|.*\\.ipynb|pixi.lock|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*|src/pleiades/sammy/alphanumerics/.*\\.(md|yaml|yml))"
       args: ["--ignore-words-list=DELTE"]

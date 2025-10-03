@@ -1,0 +1,39 @@
+# This file represents an example of a working directory structure
+# that is followed when using PLEIADES. This example is shown with
+# two isotopes and two transmission data sets. All tope dirs are
+# created and verifiied before sammy is called. * represents symbolic
+# links.
+
+working_dir/
+├── endf_dir/
+│	├── isotope_1_dir/
+│	│	├── results_dir/
+│	│	│	└── endf.par
+│	│	├── dummy.inpfile
+│	│	└── dummy.parfile
+│   └── isotope_2_dir/
+│		├── results_dir/
+│		│	└── endf.par
+│		├── dummy.inpfile
+│		└── dummy.parfile
+│
+├── fitting_dir/
+│	├── fit_x1_y1_dir/
+│	│	├── results_dir/
+│	│	│	└── sammy.lpt
+│	│	├── input_file.inp
+│	│	├── transmission_x1_y1.data*
+│	│	└── parameter_file.par
+│	├── fit_x2_y2_dir/
+│	│	├── results_dir/
+│	│	│	└── sammy.lpt
+│	│	├── input_file.inp
+│	│	├── transmission_x2_y2.data*
+│	│	└── parameter_file.par
+│	└── ...
+├── results_dir/
+├── data_dir/
+│	├── transmission_x1_y1.dat
+│	├── transmission_x2_y2.dat
+│	└── ...
+└── image_dir*/

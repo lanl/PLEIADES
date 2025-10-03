@@ -1,9 +1,8 @@
-.. image:: ./docs/images/PLEIADES.jpg
-   :alt: **PLEIADES:** Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY.
-   :align: center
-
 PLEIADES
 ========
+.. image:: https://results.pre-commit.ci/badge/github/lanl/PLEIADES/main.svg
+   :target: https://results.pre-commit.ci/latest/github/lanl/PLEIADES/main
+   :alt: pre-commit.ci status
 
 .. image:: https://readthedocs.org/projects/example-sphinx-basic/badge/?version=latest
    :target: https://pleiades-sammy.readthedocs.io/en/latest/
@@ -31,7 +30,7 @@ Installation
 **Prerequisites:**
 
 * ``git``: A version control system used to clone the SAMMY repository. You can usually install it using your system's package manager.
-* ``pip``: A package installer for Python. You can usually install it using your system's package manager.
+* ``pixi``: A package installer for Python that manages environments and dependencies. You can install it following the instructions at `Pixi Installation <https://pixi.sh/latest/>`_.
 
 **Steps:**
 
@@ -66,47 +65,37 @@ Installation
 
 4. **Clone the PLEIADES Repository:**
 
-   Use ``git`` to clone the ``pleiades`` repository from GitHub:
+   Use ``git`` to clone the PLEIADES repository from GitHub:
 
    .. code-block:: bash
 
-      git clone https://github.com/along4/Pleiades
+      git clone https://github.com/lanl/PLEIADES.git
 
 5. **Navigate to the Directory:**
 
-   Change directories to the cloned `pleiades` repository:
+   Change directories to the cloned PLEIADES repository:
 
    .. code-block:: bash
 
-      cd Pleiades
+      cd PLEIADES
 
-6. **Install the Package:**
+6. **Install Using Pixi:**
 
-   Use ``pip`` to install the ``pleiades`` package:
-
-   .. code-block:: bash
-
-      pip install -e .
-
-   Alternatively, you can use ``poetry`` to install the package. First, install ``poetry`` using the following command:
+   Use ``pixi`` to create and activate the development environment:
 
    .. code-block:: bash
 
-      pip install poetry
+      pixi install
 
-   Use ``poetry`` to install the ``pleiades`` package:
+   This will install all required dependencies in an isolated environment and activate it.
 
-   .. code-block:: bash
-
-      poetry install
-
-   Then run the following command to perform the post-installation check after sammy is installed:
+   You can run the post-installation check after SAMMY is installed:
 
    .. code-block:: bash
 
-      poetry run post_install_check
+      pixi run post_install_check
 
-   Using Poetry is recommended for managing dependencies and virtual environments, especially if you are working with multiple Python projects sharing the same base Python installation.
+   Pixi manages all dependencies and environments for you, making it easy to work with PLEIADES alongside other Python projects.
 
 7. **Add SAMMY's bin Directory to PATH:**
 
@@ -126,14 +115,37 @@ Installation
 
         source ~/.bashrc  # Replace with your shell configuration file name
 
+8. **Development Tasks (Optional):**
+
+   PLEIADES provides several convenient development tasks through Pixi:
+
+   .. code-block:: bash
+
+      # Run tests
+      pixi run test
+
+      # Build documentation
+      pixi run build-docs
+
+      # Format code
+      pixi run format
+
+      # Run linting checks
+      pixi run lint
+
+      # Install pre-commit hooks
+      pixi run pre-commit-install
+
 
 **Troubleshooting:**
 
    * If you encounter issues during the SAMMY installation or path configuration, refer to the SAMMY documentation for specific guidance.
+   * For Pixi-related issues, check the `Pixi documentation <https://pixi.sh/latest/>`_.
 
 **Additional Notes:**
 
-* You can uninstall ``pleiades`` using ``pip uninstall pleiades``.
+* Different environments are available for different workflows. Use ``pixi env list`` to see available environments and ``pixi env activate <env-name>`` to switch between them.
+* You can uninstall PLEIADES by removing the Pixi environment directory (``.pixi``).
 
 License
 =======

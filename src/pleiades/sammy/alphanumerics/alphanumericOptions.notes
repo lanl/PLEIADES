@@ -1,0 +1,267 @@
+# These notes are taken from the SAMMY manual.
+# * denotes a default options
+# Mutually exclusive options are grouped together starting with ------ and ending with ------
+# options can be written out multiple ways indicated with ["Default","Alternate 1","Alternate 2"]
+
+# We have tried to implement the exclusivity logic in the following way while still adhering to defaults
+#   Defaults:
+#   -   option_one=True and option_six=True by default; all others default to False.
+#   -   If the user provides no input, you end up with {option_one=True, option_six=True}.
+#   After Validator:
+#   -   Runs once Pydantic finishes building the model (including defaults + user-supplied data).
+#   -   Looks at each of the mutually_exclusive_groups.
+#   -   For each group:
+#   	-   Collects which fields ended up True.
+#   	-   Separates them into user-specified vs. default (using f in self.model_fields_set to detect
+#           if the user explicitly set that field).
+#   	-   Case A: If more than one user-specified field is True in the same group → raise ValueError.
+#   	-   Case B: If exactly one user-specified field is True in that group → turn off any default fields
+#           that are True in that group. The user’s choice “wins.”
+#   	-   Case C: If no user-specified fields are True (all True fields in that group are defaults)
+#           but there’s more than one → raise ValueError. Otherwise, it’s fine.
+
+# Commands for R-matrix approximation
+# Define which approximation to the R-matrix is to be used for this calculation
+r_matrix_options = [
+    ----------------------------
+    *   ["REICH-MOORE FORMALISm is wanted","MORE ACCURATE REICHmoore","XCT"],
+        ["ORIGINAL REICH-MOORE formalism","CRO"],
+        ["MULTILEVEL BREITWIGner is wanted","MLBW FORMALISM IS WAnted","MLBW"],
+        ["SINGLE LEVEL BREITWigner is wanted","SLBW FORMALISM IS WAnted","SLBW"],
+        "REDUCED WIDTH AMPLITudes are used for input"
+    ----------------------------
+    ]
+
+# Parameters input control for quantum numbers
+# Define which type of input is to be used for spin group information and other parameters
+input_quantum_numbers_options = [
+    ----------------------------
+    *   "USE NEW SPIN GROUP Format",
+        "PARTICLE PAIR DEFINItions are used",
+        "KEY-WORD PARTICLE-PAir definitions are given",
+    ----------------------------
+    ----------------------------
+        "QUANTUM NUMBERS ARE in parameter file",
+        "PUT QUANTUM NUMBERS into parameter file"
+    ----------------------------,
+        ["SPIN OF INCIDENT PARticle is +","SPIN OF INCIDENT PARticle is -"],
+    ----------------------------,
+        "USE I4 FORMAT TO REAd spin group number",
+    ----------------------------,
+        "INPUT IS ENDF/B FILE",
+    ----------------------------,
+        "USE ENERGY RANGE FROm endf/b file 2",
+    ----------------------------,
+        "FLAG ALL RESONANCE Parameters"
+    ]
+
+# Parameters input control for prior covariance matrix:
+# Define the prior parameter covariance matrix
+input_covariance_matrix_options = [
+        ["IGNORE INPUT BINARY covariance file","IGNORE"],
+        "ENERGY UNCERTAINTIES are at end of line in par file",
+    ----------------------------
+        ["RETROACTIVE OLD PARAmeter file new covariance",
+        "RETROACTIVE",
+        "U COVARIANCE MATRIX is correct, p is not"],
+        "P COVARIANCE MATRIX is correct, u is not",
+    ----------------------------
+        "MODIFY P COVARIANCE matrix before using",
+    ----------------------------
+        "INITIAL DIAGONAL U Covariance",
+        "INITIAL DIAGONAL P Covariance",
+    ----------------------------
+        ["PERMIT NON POSITIVE definite parameter covariance matrices",
+        "PERMIT ZERO UNCERTAInties on parameters"],
+    ----------------------------
+        ["READ COMPACT COVARIAnces for parameter priors",
+        "READ COMPACT CORRELAtions for parameter priors",
+        "COMPACT CORRELATIONS are to be read and used",
+        "COMPACT COVARIANCES are to be read and used"],
+        ["PARAMETER COVARIANCE matrix is in endf format",
+        "ENDF COVARIANCE MATRix is to be read and Used"],
+    ----------------------------
+        "USE LEAST SQUARES TO define prior parameter covariance matrix"
+    ]
+
+# Parameters output control for parameter covariance matrix
+# Define the method of output for the parameter covariance matrix
+output_covariance_matrix_options = [
+    ----------------------------
+        ["WRITE CORRELATIONS Into compact format","PUT CORRELATIONS INTo compact format"],
+        ["WRITE COVARIANCES INto compact format","PUT COVARIANCES INTO compact format"],
+        "PUT COVARIANCE MATRIx into endf file 32"
+    ----------------------------
+    ]
+
+# Experimental data input control
+# Define the format for the experimental data
+experimental_data_input_options = [
+    ----------------------------
+    *   "DATA ARE IN ORIGINAL multi-style format",
+        ["DATA FORMAT IS ONE Point per line","USE CSISRS FORMAT FOr data","CSISRS"],
+        ["USE TWENTY SIGNIFICAnt digits","TWENTY"],
+        "DATA ARE IN STANDARD odf format",
+        "DATA ARE IN ODF FILE",
+        ["DATA ARE ENDF/B FILE","USE ENDF/B ENERGIES and data, with MAT=9999"],
+    ----------------------------
+        "DIFFERENTIAL DATA ARe in ascii file",
+    ----------------------------
+    *   "DO NOT DIVIDE DATA Into regions",
+        "DIVIDE DATA INTO REGions with a fixed number of data points per region"
+    ----------------------------
+    ]
+
+# Experimental data input control for covariance matrix
+# Define the format for input of data covariance matrix
+covariance_matrix_data_input_options = [
+    ----------------------------
+        ["IMPLICIT DATA COVARIance is wanted","IDC"],
+        ["USER SUPPLIED IMPLICit data covariance matrix","USER IDC"],
+    ----------------------------
+        "PUP COVARIANCE IS IN an ascii file",
+    ----------------------------
+        "CREATE PUP FILE FROM varied parameters used in this run",
+    ----------------------------
+        ["ADD CONSTANT TERM TO data covariance ","ADD CONSTANT TO DATA covariance matrix"],
+    *   "DO NOT ADD CONSTANT term to data covariance",
+        "USE DEFAULT FOR CONStant term to add to data covariance",
+    ----------------------------
+        "USE TEN PERCENT DATA uncertainty "or "ADD TEN PERCENT DATA uncertainty",
+    ----------------------------
+    *   "DATA COVARIANCE IS Diagonal"
+        "DATA HAS OFF-DIAGONAl contribution to covariance matrix of the form (a+bEi) (a+bEj)",
+        "DATA COVARIANCE FILE is named YYYYYY.YYY",
+        "FREE FORMAT DATA COVariance YYYYYY.YYY",
+    ]
+
+# Experimental data angular distribution options
+# Define frames of references and other details for angle-differential calculations
+# Not supported at the moment.
+
+# Broadening options
+# Is broadening wanted
+broadening_options = [
+    ----------------------------
+    *"BROADENING IS WANTED",
+    "BROADENING IS NOT WAnted"
+    ----------------------------
+]
+
+# Doppler Broadening options
+# Define which version of Doppler broadening is to be used
+doppler_broadening_options = [
+    ----------------------------
+    *["USE FREE GAS MODEL Of doppler broadening","FGM"],
+    "USE LEAL-HWANG DOPPLer broadening",
+    ["HIGH ENERGY GAUSSIAN approximation for Doppler broadening","USE MULTI-STYLE DOPPler broadening","HEGA"],
+    ["USE CRYSTAL LATTICE model of doppler broadening","CLM"],
+    ----------------------------
+    "NO LOW-ENERGY BROADEning is to be used"
+    ]
+
+# Multiple scattering corrections
+# Define how the multiple-scattering corrections are to proceed
+multiple_scattering_corrections_options = [
+    ----------------------------
+    *   ["DO NOT INCLUDE SELF-shielding multiple-scattering corrections","NO SELF-SHIELDING ANd multiple-scattering corrections"],
+        ["USE SELF SHIELDING Only no scattering","SELF SHIELD","INCLUDE ONLY SELF SHielding and not Multiple scattering"],
+        ["USE SINGLE SCATTERINg plus self shielding","SINGLE"],
+        ["INCLUDE DOUBLE SCATTering corrections","USE MULTIPLE SCATTERing plus single scattering","DOUBLE","MULTIPLE"],
+    ----------------------------
+        ["INFINITE SLAB","NO FINITE-SIZE CORREctions to single scattering"],
+    *   ["FINITE SLAB","FINITE SIZE CORRECTIons to single scattering"],
+    ----------------------------
+    *   "MAKE NEW FILE WITH Edge effects",
+        "FILE WITH EDGE EFFECts already exists",
+    ----------------------------
+        "MAKE PLOT FILE OF MUltiple scattering pieces",
+    ----------------------------
+        ["NORMALIZE AS CROSS Section rather than yield","CROSS SECTION"],
+        ["NORMALIZE AS YIELD Rather than cross section","YIELD"],
+        "NORMALIZE AS (1-E)SIgma",
+    ----------------------------
+        "PRINT MULTIPLE SCATTering corrections",
+        ["PREPARE INPUT FOR MOnte carlo simulation","MONTE CARLO"],
+        "Y2 VALUES ARE TABULAted",
+    ----------------------------
+        "USE QUADRATIC INTERPolation for y1",
+        "USE LINEAR INTERPOLAtion for y1",
+    ----------------------------
+        ["VERSION 7.0.0 FOR Multiple scattering","V7"],
+    ----------------------------
+        "DO NOT CALCULATE Y0"
+    ]
+
+# Bayes solution options
+# Define details of the fitting procedure
+bayes_solution_options = [
+    ----------------------------
+    *   "SOLVE BAYES EQUATIONs",
+        "DO NOT SOLVE BAYES Equations",
+    ----------------------------
+    *   "LET SAMMY CHOOSE WHIch inversion scheme to use",
+        "USE (N+V) INVERSION scheme" or "NPV",
+        "USE (I+Q) INVERSION scheme" or "IPQ",
+        "USE (M+W) INVERSION scheme" or "MPW",
+    ----------------------------
+        "USE LEAST SQUARES TO define prior parameter covariance matrix",
+    ----------------------------
+        "TAKE BABY STEPS WITH least-squares method",
+    ----------------------------
+        "REMEMBER ORIGINAL PArameter values",
+    ----------------------------
+        "USE REMEMBERED ORIGInal parameter values"
+    ----------------------------
+    ]
+
+# Options for printing into SAMMY.LPT
+# Define what information will be printed in output file SAMMY.LPT
+lpt_file_options = [
+    ----------------------------
+    *   "DO NOT PRINT ANY INPut parameters",
+        "PRINT ALL INPUT PARAmeters",
+        "PRINT VARIED INPUT Parameters",
+    ----------------------------
+    *   "DO NOT PRINT INPUT Data",
+        "PRINT INPUT DATA" or "PRINT EXPERIMENTAL Values",
+    ----------------------------
+    *   "DO NOT PRINT THEORETical values",
+        "PRINT THEORETICAL VAlues" or "PRINT THEORETICAL CRoss sections",
+    ----------------------------
+    *   "DO NOT PRINT PARTIAL derivatives",
+        "PRINT PARTIAL DERIVAtives",
+    ----------------------------
+        "SUPPRESS INTERMEDIATe printout",
+        "DO NOT SUPPRESS INTErmediate printout",
+    *   "DO NOT SUPPRESS ANY intermediate printout",
+    ----------------------------
+    *   "DO NOT USE SHORT FORmat for output",
+        "USE SHORT FORMAT FOR output",
+    ----------------------------
+    *   "DO NOT PRINT REDUCED widths",
+        "PRINT REDUCED WIDTHS",
+    ----------------------------
+    "DO NOT PRINT SMALL Correlation coefficients",
+    ----------------------------
+    *   "DO NOT PRINT DEBUG Info",
+        "PRINT DEBUG INFORMATion" or "DEBUG",
+    ----------------------------
+    "PRINT CAPTURE AREA In lpt file",
+    ----------------------------
+        "CHI SQUARED IS NOT Wanted" or "DO NOT PRINT LS CHI squared",
+    *   "CHI SQUARED IS WANTEd" or "PRINT LS CHI SQUARED",
+    ----------------------------
+    *   "PRINT BAYES CHI SQUAred",
+        "DO NOT PRINT BAYES Chi squared",
+    ----------------------------
+    *   "DO NOT PRINT WEIGHTEd Residuals" or "DO NOT PRINT LS WEIGhted residuals",
+        "PRINT WEIGHTED RESIDuals" or "PRINT LS WEIGHTED REsiduals",
+    ----------------------------
+        "PRINT BAYES WEIGHTED residuals",
+    *   "DO NOT PRINT BAYES Weighted residuals",
+    ----------------------------
+    *   "DO NOT PRINT PHASE Shifts",
+        "PRINT PHASE SHIFTS For input parameters"
+    ----------------------------
+    ]

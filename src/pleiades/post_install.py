@@ -24,15 +24,10 @@ def check_sammy_installed():
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
         )
-        stdout, stderr = process.communicate(
-            input=b"q\n"
-        )  # Send 'q' (quit) followed by newline
+        stdout, stderr = process.communicate(input=b"q\n")  # Send 'q' (quit) followed by newline
 
         # Check for keywords in output indicating successful execution
-        if (
-            b"SAMMY Version" in stdout
-            or b"What is the name of the INPut file" in stdout
-        ):
+        if b"SAMMY Version" in stdout or b"What is the name of the INPut file" in stdout:
             print("SAMMY is installed and available in the PATH.")
         else:
             print("SAMMY could not be launched or might not be installed correctly.")
