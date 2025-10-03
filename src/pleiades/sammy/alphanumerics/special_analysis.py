@@ -211,7 +211,7 @@ class SpecialAnalysisOptions(BaseModel):
         ]
         if sum(grid_options) > 1:
             raise ValueError(
-                "Only one of UNIFORM ENERGY GRID, UNIFORM VELOCITY GRID, or UNIFORM TIME GRID " "can be enabled"
+                "Only one of UNIFORM ENERGY GRID, UNIFORM VELOCITY GRID, or UNIFORM TIME GRID can be enabled"
             )
 
         return self

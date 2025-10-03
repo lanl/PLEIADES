@@ -125,7 +125,7 @@ def process_individual_mode(
     # Step 2: Process each sample run
     results = []
     for i, sample_run in enumerate(sample_runs):
-        logger.debug(f"Processing sample run {i+1}/{len(sample_runs)}")
+        logger.debug(f"Processing sample run {i + 1}/{len(sample_runs)}")
         transmission = calculate_transmission(sample_run, effective_ob, roi, pc_uncertainty, pc_uncertainty)
         # Add source info to metadata
         transmission.metadata["sample_run_index"] = i

@@ -348,7 +348,7 @@ class TantalumParameters(BaseModel):
 
         # Shape uncertainties - optional
         if shape_line_idx + 1 < len(lines):
-            line5 = f"{lines[shape_line_idx+1]:<30}"
+            line5 = f"{lines[shape_line_idx + 1]:<30}"
             if d_beta := safe_parse(line5[FORMAT_TANTA["d_beta"]]):
                 params["d_beta"] = d_beta
             if d_alpha := safe_parse(line5[FORMAT_TANTA["d_alpha"]]):

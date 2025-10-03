@@ -307,9 +307,9 @@ def test_multi_isotope_config_integration(temp_dir):
             found_commands.append(cmd)
 
     # Should find most of the expected commands
-    assert (
-        len(found_commands) >= 6
-    ), f"Found only {len(found_commands)}/{len(expected_commands)} commands: {found_commands}"
+    assert len(found_commands) >= 6, (
+        f"Found only {len(found_commands)}/{len(expected_commands)} commands: {found_commands}"
+    )
 
 
 def test_multi_isotope_with_material_properties(temp_dir):

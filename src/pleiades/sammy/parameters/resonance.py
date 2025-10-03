@@ -154,7 +154,7 @@ class ResonanceEntry(BaseModel):
 
         for field, formatted_value in updates.items():
             slice_obj = RESONANCE_FORMAT[field]
-            line = f"{line[:slice_obj.start]}{formatted_value}{line[slice_obj.stop:]}"
+            line = f"{line[: slice_obj.start]}{formatted_value}{line[slice_obj.stop :]}"
 
         return line.rstrip()
 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     logger.debug("**Testing valid formats**")
     for i, line in enumerate(good_examples):
         entry = ResonanceEntry.from_str(line)
-        logger.debug(f"Example {i+1}:")
+        logger.debug(f"Example {i + 1}:")
         logger.debug(f"Original: {line}")
         logger.debug(f"Parsed: {entry}")
         logger.debug(f"Reformatted: {entry.to_str()}")

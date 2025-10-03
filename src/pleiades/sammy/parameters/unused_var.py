@@ -70,7 +70,7 @@ class UnusedCorrelatedParameters(BaseModel):
                 break
 
             name_line = f"{lines[i]:<80}"  # Pad to full width
-            value_line = f"{lines[i+1]:<80}"
+            value_line = f"{lines[i + 1]:<80}"
 
             # Extract all non-empty names and corresponding values
             for j in range(8):

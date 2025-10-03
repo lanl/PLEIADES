@@ -115,7 +115,7 @@ class TestEtaParameters:
         """Test parsing of valid ETA parameter line."""
         # check col number for each char
         for i, char in enumerate(valid_eta_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = EtaParameters.from_lines([valid_eta_line])
         assert params.nu_value == pytest.approx(1.234)
@@ -206,7 +206,7 @@ class TestFinitParameters:
         """Test parsing of valid FINIT parameter line."""
         # check col number for each char
         for i, char in enumerate(valid_finit_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = FinitParameters.from_lines([valid_finit_line])
         assert params.incident_attenuation == pytest.approx(1.234)
@@ -285,7 +285,7 @@ class TestGammaParameters:
         """Test parsing of valid GAMMA parameter line."""
         # check col number for each char
         for i, char in enumerate(valid_gamma_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = GammaParameters.from_lines([valid_gamma_line])
         assert params.spin_group == 1
@@ -380,7 +380,7 @@ class TestTzeroParameters:
         """Test parsing of valid TZERO parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_tzero_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = TzeroParameters.from_lines([valid_tzero_line])
         assert params.t0_value == pytest.approx(1.234)
@@ -489,7 +489,7 @@ class TestSiabnParameters:
         """Test parsing of valid SIABN parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_siabn_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = SiabnParameters.from_lines([valid_siabn_line])
         assert params.abundances[0] == pytest.approx(1.234)
@@ -508,7 +508,7 @@ class TestSiabnParameters:
         assert len(lines) == 1
 
         for i, char in enumerate(lines[0]):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = SiabnParameters.from_lines(lines)
         assert params == valid_siabn_params
@@ -595,7 +595,7 @@ class TestSelfiParameters:
         """Test parsing of valid SELFI parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_selfi_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = SelfiParameters.from_lines([valid_selfi_line])
         assert params.temperature == pytest.approx(123.4)
@@ -700,7 +700,7 @@ class TestEfficParameters:
         """Test parsing of valid EFFIC parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_effic_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = EfficParameters.from_lines([valid_effic_line])
         assert params.capture_efficiency == pytest.approx(1.234)
@@ -813,7 +813,7 @@ class TestDelteParameters:
         """Test parsing of valid DELTE parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_delte_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = DelteParameters.from_lines([valid_delte_line])
         assert params.e_coefficient == pytest.approx(1.234)
@@ -877,7 +877,7 @@ class TestDelteParameters:
         line = "DELTE 1 111.234E+00           3.456E+00           5.678E+00"  # No uncertainties
 
         for i, char in enumerate(line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = DelteParameters.from_lines([line])
         assert params.e_coefficient == pytest.approx(1.234)
@@ -930,7 +930,7 @@ class TestDrcapParameters:
         """Test parsing of valid DRCAP parameter line."""
         # Check column number for each char
         for i, char in enumerate(valid_drcap_line):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = DrcapParameters.from_lines([valid_drcap_line])
         assert params.coefficient == pytest.approx(1.234)
@@ -1033,7 +1033,7 @@ class TestNonunParameters:
         """Test parsing of valid NONUN parameter lines."""
         # Check column number for each char in first line
         for i, char in enumerate(valid_nonun_lines[0]):
-            print(f"{i+1}: {char}")
+            print(f"{i + 1}: {char}")
 
         params = NonunParameters.from_lines(valid_nonun_lines)
         assert params.radii[0] == pytest.approx(0.0)

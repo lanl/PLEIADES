@@ -353,7 +353,7 @@ if __name__ == "__main__":
 
     for i, line in enumerate(format3_examples):
         entry = ExternalREntry.from_str(line, ExternalRFormat.FORMAT_3)
-        logger.debug(f"Format 3 Example {i+1}:")
+        logger.debug(f"Format 3 Example {i + 1}:")
         logger.debug(f"Object     : {entry}")
         logger.debug(f"Original   : {line}")
         logger.debug(f"Reformatted: {entry.to_str()}")
@@ -367,7 +367,7 @@ if __name__ == "__main__":
 
     for i, line in enumerate(format3a_examples):
         entry = ExternalREntry.from_str(line, ExternalRFormat.FORMAT_3A)
-        logger.debug(f"Format 3A Example {i+1}:")
+        logger.debug(f"Format 3A Example {i + 1}:")
         logger.debug(f"Object     : {entry}")
         logger.debug(f"Original   : {line}")
         logger.debug(f"Reformatted: {entry.to_str()}")

@@ -103,7 +103,7 @@ def normalization(
 
     elif facility == Facility.lanl:
         raise NotImplementedError(
-            "LANL normalization not yet implemented. " "Use use_legacy=True for the old implementation."
+            "LANL normalization not yet implemented. Use use_legacy=True for the old implementation."
         )
 
     else:

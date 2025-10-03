@@ -45,7 +45,7 @@ class TestExternalREntry:
         """Test parsing of Format 3A entries"""
         line = " 1210010001.2340E+005.6780E+001.2300E-014.5600E-017.8900E-018.9000E-019.0000E-01"
         for i, char in enumerate(line):
-            print(f"{i+1:2d}: {char}")
+            print(f"{i + 1:2d}: {char}")
         entry = ExternalREntry.from_str(line, ExternalRFormat.FORMAT_3A)
 
         assert entry.spin_group == 1

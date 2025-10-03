@@ -132,7 +132,7 @@ class Transmission(BaseModel):
 
         if not (n_energy == n_trans == n_uncert):
             raise ValueError(
-                f"Array length mismatch: energy={n_energy}, " f"transmission={n_trans}, uncertainty={n_uncert}"
+                f"Array length mismatch: energy={n_energy}, transmission={n_trans}, uncertainty={n_uncert}"
             )
 
     def to_dat_format(self) -> np.ndarray:

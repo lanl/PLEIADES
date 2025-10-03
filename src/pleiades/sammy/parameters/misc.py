@@ -786,7 +786,7 @@ class SiabnParameters(Card11Parameter):
                 try:
                     flags.append(VaryFlag(int(flag_str)))
                 except ValueError as e:
-                    raise ValueError(f"Invalid flag value for flag {i+1}: {e}")
+                    raise ValueError(f"Invalid flag value for flag {i + 1}: {e}")
 
         # Parse abundance-uncertainty pairs
         abundances = []

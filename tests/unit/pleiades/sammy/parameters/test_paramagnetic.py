@@ -89,9 +89,9 @@ class TestParamagneticParameters:
         """Test parsing of valid TM parameter set."""
         # Print column positions for debugging
         for i, line in enumerate(valid_tm_lines):
-            print(f"\nLine {i+1}:")
+            print(f"\nLine {i + 1}:")
             for j, char in enumerate(line):
-                print(f"{j+1}: {char}")
+                print(f"{j + 1}: {char}")
 
         params = ParamagneticParameters.from_lines(valid_tm_lines)
         assert params.nuclide_type == NuclideType.TM

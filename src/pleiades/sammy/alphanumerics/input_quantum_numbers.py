@@ -81,7 +81,7 @@ class QuantumNumbersOptions(BaseModel):
             # If >1 user-specified in same group => error
             if len(user_true) > 1:
                 raise ValueError(
-                    f"Multiple user-specified fields {user_true} are True in group {group}. " f"Only one allowed."
+                    f"Multiple user-specified fields {user_true} are True in group {group}. Only one allowed."
                 )
 
             # If exactly 1 user-specified => turn off all defaults in that group
@@ -92,9 +92,7 @@ class QuantumNumbersOptions(BaseModel):
 
             # If all True fields are defaults, and more than 1 => error
             if len(default_true) > 1:
-                raise ValueError(
-                    f"Multiple default fields {default_true} are True in group {group}. " f"Only one allowed."
-                )
+                raise ValueError(f"Multiple default fields {default_true} are True in group {group}. Only one allowed.")
         return self
 
     def get_alphanumeric_commands(self) -> List[str]:

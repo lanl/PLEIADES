@@ -281,7 +281,7 @@ class SammyParameterFile(BaseModel):
         if fudge_factor:
             try:
                 params["fudge"] = float(fudge_factor)
-                logger.info(f"{where_am_i}: Successfully parsed fudge factor\n {'-'*80}")
+                logger.info(f"{where_am_i}: Successfully parsed fudge factor\n {'-' * 80}")
             except ValueError as e:
                 logger.error(f"Failed to parse fudge factor: {str(e)}\nLines: {fudge_factor}")
                 raise ValueError(f"Failed to parse fudge factor: {str(e)}\nLines: {fudge_factor}")
@@ -290,7 +290,7 @@ class SammyParameterFile(BaseModel):
         if resonances_entries:
             try:
                 params["resonance"] = ResonanceCard.from_lines(resonances_entries)
-                logger.info(f"{where_am_i}: Successfully parsed resonance table\n {'-'*80}")
+                logger.info(f"{where_am_i}: Successfully parsed resonance table\n {'-' * 80}")
             except Exception as e:
                 logger.error(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
                 raise ValueError(f"Failed to parse resonance table: {str(e)}\nLines: {resonances_entries}")
@@ -329,7 +329,7 @@ class SammyParameterFile(BaseModel):
                 # Process card with header
                 try:
                     params[CardOrder.get_field_name(card_type)] = card_class.from_lines(group)
-                    logger.info(f"{where_am_i}: Successfully parsed {card_type.name} card\n {'-'*80}")
+                    logger.info(f"{where_am_i}: Successfully parsed {card_type.name} card\n {'-' * 80}")
                 except Exception as e:
                     logger.error(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
                     raise ValueError(f"Failed to parse {card_type.name} card: {str(e)}\nLines: {group}")
@@ -339,7 +339,7 @@ class SammyParameterFile(BaseModel):
                 logger.error(f"{where_am_i}: Card type not implemented: {group[0]}")
                 raise ValueError(f"Card type not implemented: {group[0]}")
 
-        logger.info(f"{where_am_i}: Successfully parsed all parameter file content from string\n {'='*80}")
+        logger.info(f"{where_am_i}: Successfully parsed all parameter file content from string\n {'=' * 80}")
         return cls(**params)
 
     @classmethod

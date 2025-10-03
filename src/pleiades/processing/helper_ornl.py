@@ -190,7 +190,7 @@ def detect_persistent_dead_pixels(data: np.ndarray) -> np.ndarray:
     dead_mask = np.all(data == 0, axis=0)
     n_dead = np.sum(dead_mask)
     n_total = dead_mask.size
-    logger.debug(f"Found {n_dead}/{n_total} dead pixels ({100*n_dead/n_total:.1f}%)")
+    logger.debug(f"Found {n_dead}/{n_total} dead pixels ({100 * n_dead / n_total:.1f}%)")
     return dead_mask
 
 
