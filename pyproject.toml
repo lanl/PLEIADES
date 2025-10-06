@@ -1,15 +1,19 @@
 [project]
 name = "pleiades-neutron"
 description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
+readme = "README.rst"
 dynamic = ["version"]
 requires-python = ">=3.10,<4.0"
-license = { text = "MIT" }
+license = { text = "LANL-Modified-MIT" }
 keywords = ["neutron", "resonance", "cross-section"]
 authors = [
     {name = "Alex M. Long", email = "alexlong@lanl.gov"},
     {name = "Tsviki Hirsh", email = "tsviki.hirsh@gmail.com"},
     {name = "Chen Zhang", email = "zhangc@ornl.gov"},
     {name = "Jean Bilheux", email = "bilheuxjm@ornl.gov"},
+]
+maintainers = [
+    {name = "Chen Zhang", email = "zhangc@ornl.gov"},
 ]
 dependencies = [
     "numpy",
