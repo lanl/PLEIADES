@@ -23,9 +23,8 @@ def normalization(
     facility: Facility = Facility.ornl,
     combine_mode: bool = False,
     output_folder: Optional[str] = None,
-    use_legacy: bool = False,
     **kwargs,
-) -> Union[List[Transmission], dict]:
+) -> List[Transmission]:
     """Main entry point for neutron imaging normalization.
 
     Routes to facility-specific implementations based on the facility parameter.
@@ -38,12 +37,10 @@ def normalization(
         facility: Facility identifier (ornl, lanl, etc.)
         combine_mode: If True, combine all runs before processing
         output_folder: Optional folder to save results
-        use_legacy: If True, use the legacy v1 implementation
         **kwargs: Additional facility-specific parameters
 
     Returns:
-        List[Transmission] for new implementations
-        dict for legacy v1 implementation
+        List[Transmission]: Transmission objects containing normalized data
 
     Raises:
         NotImplementedError: If facility is not supported
@@ -51,18 +48,11 @@ def normalization(
     Example:
         >>> from pleiades.processing import normalization, Facility, Roi
         >>>
-        >>> # Use new ORNL implementation
+        >>> # Use ORNL implementation
         >>> results = normalization(
         ...     list_sample_folders=["sample1", "sample2"],
         ...     list_obs_folders=["ob1", "ob2"],
         ...     facility=Facility.ornl
-        ... )
-        >>>
-        >>> # Use legacy implementation
-        >>> old_dict = normalization(
-        ...     list_sample_folders=["sample1"],
-        ...     list_obs_folders=["ob1"],
-        ...     use_legacy=True
         ... )
     """
     # Convert single strings to lists
@@ -70,21 +60,6 @@ def normalization(
         list_sample_folders = [list_sample_folders]
     if isinstance(list_obs_folders, str):
         list_obs_folders = [list_obs_folders]
-
-    # Use legacy implementation if requested
-    if use_legacy:
-        logger.warning("Using legacy v1 normalization implementation. This will be deprecated.")
-        from pleiades.processing.normalization_v1 import normalization as normalization_v1
-
-        return normalization_v1(
-            list_sample_folders=list_sample_folders,
-            list_obs_folders=list_obs_folders,
-            nexus_path=nexus_path,
-            roi=roi,
-            facility=facility,
-            output_folder=output_folder,
-            **kwargs,
-        )
 
     # Route to facility-specific implementation
     if facility == Facility.ornl:

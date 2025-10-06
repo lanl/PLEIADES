@@ -21,15 +21,11 @@ __all__ = ["loguru_logger", "configure_logger"]
 def main():
     """Main entry point for the application."""
     parser = argparse.ArgumentParser(
-        description="PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
+        description="PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY",
+        prog="pleiades",
     )
     parser.add_argument("--version", action="store_true", help="Print version information")
     args = parser.parse_args()
 
     if args.version:
         print(f"PLEIADES version {__version__}")
-    else:
-        print(
-            f"PLEIADES {__version__} - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
-        )
-        print("Run with --help for available options")

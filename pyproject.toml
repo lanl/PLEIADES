@@ -1,5 +1,5 @@
 [project]
-name = "pleiades"
+name = "pleiades-neutron"
 description = "PLEIADES - Python Libraries Extensions for Isotopic Analysis via Detailed Examination of SAMMY"
 dynamic = ["version"]
 requires-python = ">=3.10,<4.0"
@@ -99,9 +99,7 @@ markers = [
 # ----- Coverage configuration ----- #
 # ---------------------------------- #
 [tool.coverage.run]
-omit = [
-    "src/pleiades/processing/normalization_v1.py",  # Deprecated legacy code, will be removed
-]
+omit = []
 
 # ------------------------------ #
 # ----- Ruff configuration ----- #
@@ -134,7 +132,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
 [tool.pixi.pypi-dependencies]
-pleiades = { path = ".", editable = true }
+pleiades-neutron = { path = ".", editable = true }
 
 [tool.pixi.dependencies]
 numpy = ">=2.2.5,<3"
@@ -147,7 +145,6 @@ pydantic = ">=2.11.3,<3"
 loguru = ">=0.7.2,<0.8"
 dxchange = ">=0.1.8,<0.2"
 h5py = ">=3.13.0,<4"
-tomopy = ">=1.14.4,<2"
 
 [tool.pixi.tasks]
 # PyPi packaging tasks
