@@ -28,9 +28,10 @@ dependencies = [
     "scikit-image",
     "pydantic",
     "loguru",
-    "nova-galaxy>=0.7.4,<0.8",
-
 ]
+
+[project.optional-dependencies]
+nova = ["nova-galaxy>=0.7.4,<0.8"]
 
 [project.urls]
 homepage = "https://github.com/lanl/PLEIADES"
