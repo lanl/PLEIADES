@@ -33,19 +33,6 @@ class TestNormalizationRouter:
             assert isinstance(result, list)
             assert len(result) == 1
 
-    def test_routes_to_legacy_when_requested(self):
-        """Test that use_legacy=True routes to v1 implementation."""
-        with patch("pleiades.processing.normalization_v1.normalization") as mock_v1:
-            mock_v1.return_value = {"some": "dict"}
-
-            result = normalization(list_sample_folders=["sample"], list_obs_folders=["ob"], use_legacy=True)
-
-            # Check that v1 implementation was called
-            mock_v1.assert_called_once()
-
-            # Check return value
-            assert isinstance(result, dict)
-
     def test_converts_single_string_to_list(self):
         """Test that single string folders are converted to lists."""
         with patch("pleiades.processing.normalization_ornl.normalization_ornl") as mock_ornl:

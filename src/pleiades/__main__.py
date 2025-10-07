@@ -1,13 +1,10 @@
 #!/usr/bin/env python
-"""Module entry"""
+"""Module entry point for PLEIADES CLI."""
 
 import sys
 
-
-def main():
-    # TODO: Implement PLEIADES CLI
-    raise NotImplementedError("PLEIADES CLI not yet implemented")
-
+from pleiades import main
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
+    sys.exit(0)
