@@ -27,6 +27,22 @@ The user documentation can be found at `Read the Docs <https://pleiades-sammy.re
 Installation
 ============
 
+**For Users:**
+
+Install from PyPI:
+
+.. code-block:: bash
+
+   pip install pleiades-neutron
+
+Or from conda-forge:
+
+.. code-block:: bash
+
+   conda install -c conda-forge pleiades-neutron
+
+**For Developers:**
+
 **Prerequisites:**
 
 * ``git``: A version control system used to clone the SAMMY repository. You can usually install it using your system's package manager.
@@ -144,10 +160,10 @@ Installation
 
 **Additional Notes:**
 
-* Different environments are available for different workflows. Use ``pixi env list`` to see available environments and ``pixi env activate <env-name>`` to switch between them.
-* You can uninstall PLEIADES by removing the Pixi environment directory (``.pixi``).
+* Two environments available: ``default`` (development) and ``jupyter`` (notebook work). Use ``pixi shell -e jupyter`` to activate jupyter environment.
+* See available tasks: ``pixi task list``
 
 License
 =======
 
-This project is licensed under the MIT License - see the `LICENSE <LICENSE>`_ file for details.
+This project is licensed under the LANL-Modified-MIT License - see the `LICENSE <LICENSE>`_ file for details.
