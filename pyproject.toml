@@ -81,7 +81,7 @@ where = ["src"]
 exclude = ["tests*", "docs*", "notebooks*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.yml","*.yaml","*.ini","**/*.ui","**/*.json", "**/icons/*"]
+"*" = ["*.yml","*.yaml","*.ini","**/*.ui","**/*.json", "**/icons/*", "*.info", "*.mas20", "*.list", "README"]
 
 # -------------------------------- #
 # ----- Pytest configuration ----- #
