@@ -6661,8 +6661,8 @@ packages:
   timestamp: 1756227402815
 - pypi: ./
   name: pleiades-neutron
-  version: 2.2.0.dev3+d202510071649
-  sha256: 46976c8fe86d483b07c9319e885c9b2f5cc22caef3a57b25e890586d7b2720ca
+  version: 2.1.0.dev10+d202510271845
+  sha256: 74832b7841b7d85e43041ad642b66430d41316cb743b40ede148e6203ff4f151
   requires_dist:
   - numpy
   - scipy
