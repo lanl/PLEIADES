@@ -58,3 +58,4 @@ R-matrix fitting with SAMMY remains the standard approach for extracting resonan
 - Python API suitable for scripting, interactive analysis, and integration with other tools  
 
 # Acknowledgements
+Work was supported in part through the Nuclear Science User Facilities (NSUF), under DOE Idaho Operations Office Contract DE-AC07-05ID14517. 
