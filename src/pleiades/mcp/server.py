@@ -15,23 +15,18 @@ TODO(#166): Add tool registration and discovery.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from pleiades.mcp import MCP_AVAILABLE, check_mcp_available
 
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-
 # Server instance created at module load for decorator support
-_server: FastMCP | None = None
+_server = None
 
 if MCP_AVAILABLE:
-    from fastmcp import FastMCP as _FastMCP
+    from fastmcp import FastMCP
 
-    _server = _FastMCP("pleiades-mcp")
+    _server = FastMCP("pleiades-mcp")
 
 
-def get_server() -> FastMCP:
+def get_server():
     """Get the MCP server instance.
 
     Returns:
@@ -39,11 +34,9 @@ def get_server() -> FastMCP:
 
     Raises:
         ImportError: If MCP dependencies are not installed.
-        RuntimeError: If server initialization failed unexpectedly.
     """
     check_mcp_available()
-    if _server is None:
-        raise RuntimeError("MCP server not initialized. This should not happen if MCP is available.")
+    # After check_mcp_available() passes, _server is guaranteed to be initialized
     return _server
 
 

@@ -20,26 +20,15 @@ Example:
 
 from __future__ import annotations
 
-import warnings
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
+# Attempt to import FastMCP, track availability
+# Following the nova backend pattern: no warning on import, clear error on use
+try:
     from fastmcp import FastMCP
 
-# Attempt to import FastMCP, track availability
-try:
-    from fastmcp import FastMCP as _FastMCP
-
     MCP_AVAILABLE: bool = True
-except ImportError as _import_error:
+except ImportError:
     MCP_AVAILABLE = False
-    _FastMCP = None  # type: ignore[assignment, misc]
-    # Warn during import so developers know MCP is unavailable
-    warnings.warn(
-        f"MCP dependencies not available ({_import_error}). Install with: pip install pleiades-neutron[mcp]",
-        ImportWarning,
-        stacklevel=2,
-    )
+    FastMCP = None  # type: ignore[assignment, misc]
 
 
 def check_mcp_available() -> None:
@@ -64,9 +53,8 @@ def check_mcp_available() -> None:
         )
 
 
-# Re-export FastMCP only when available to avoid AttributeError
+# Export FastMCP only when available
 if MCP_AVAILABLE:
-    FastMCP: type[FastMCP] = _FastMCP  # type: ignore[no-redef]
     __all__ = ["MCP_AVAILABLE", "FastMCP", "check_mcp_available"]
 else:
     __all__ = ["MCP_AVAILABLE", "check_mcp_available"]

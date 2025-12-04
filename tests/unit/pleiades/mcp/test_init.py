@@ -10,6 +10,14 @@ Tests cover:
 
 import pytest
 
+# Detect fastmcp availability at module load (correct pattern)
+try:
+    import fastmcp  # noqa: F401
+
+    HAS_FASTMCP = True
+except ImportError:
+    HAS_FASTMCP = False
+
 
 class TestMCPAvailability:
     """Test MCP availability detection and reporting."""
@@ -20,20 +28,13 @@ class TestMCPAvailability:
 
         assert isinstance(MCP_AVAILABLE, bool)
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("fastmcp", reason="fastmcp not installed"),
-        reason="fastmcp required",
-    )
-    def test_mcp_available_when_fastmcp_installed(self):
-        """MCP_AVAILABLE should be True when fastmcp is installed."""
+    def test_mcp_available_matches_fastmcp_installed(self):
+        """MCP_AVAILABLE should match whether fastmcp is installed."""
         from pleiades.mcp import MCP_AVAILABLE
 
-        assert MCP_AVAILABLE is True
+        assert MCP_AVAILABLE == HAS_FASTMCP
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("fastmcp", reason="fastmcp not installed"),
-        reason="fastmcp required",
-    )
+    @pytest.mark.skipif(not HAS_FASTMCP, reason="fastmcp not installed")
     def test_fastmcp_exported_when_available(self):
         """FastMCP should be importable when available."""
         from pleiades.mcp import FastMCP
@@ -44,10 +45,13 @@ class TestMCPAvailability:
 class TestCheckMCPAvailable:
     """Test check_mcp_available function."""
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("fastmcp", reason="fastmcp not installed"),
-        reason="fastmcp required",
-    )
+    def test_check_mcp_available_exists(self):
+        """check_mcp_available should be importable."""
+        from pleiades.mcp import check_mcp_available
+
+        assert callable(check_mcp_available)
+
+    @pytest.mark.skipif(not HAS_FASTMCP, reason="fastmcp not installed")
     def test_check_mcp_available_does_not_raise_when_installed(self):
         """check_mcp_available should not raise when MCP is installed."""
         from pleiades.mcp import check_mcp_available
@@ -55,20 +59,19 @@ class TestCheckMCPAvailable:
         # Should not raise
         check_mcp_available()
 
-    def test_check_mcp_available_exists(self):
-        """check_mcp_available should be importable."""
+    @pytest.mark.skipif(HAS_FASTMCP, reason="fastmcp is installed")
+    def test_check_mcp_available_raises_when_not_installed(self):
+        """check_mcp_available should raise ImportError when MCP is not installed."""
         from pleiades.mcp import check_mcp_available
 
-        assert callable(check_mcp_available)
+        with pytest.raises(ImportError, match="MCP dependencies not installed"):
+            check_mcp_available()
 
 
 class TestServerModule:
     """Test server module components."""
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("fastmcp", reason="fastmcp not installed"),
-        reason="fastmcp required",
-    )
+    @pytest.mark.skipif(not HAS_FASTMCP, reason="fastmcp not installed")
     def test_get_server_returns_fastmcp_instance(self):
         """get_server should return a FastMCP instance."""
         from pleiades.mcp.server import get_server
@@ -77,10 +80,7 @@ class TestServerModule:
         assert server is not None
         assert server.name == "pleiades-mcp"
 
-    @pytest.mark.skipif(
-        not pytest.importorskip("fastmcp", reason="fastmcp not installed"),
-        reason="fastmcp required",
-    )
+    @pytest.mark.skipif(not HAS_FASTMCP, reason="fastmcp not installed")
     def test_get_server_returns_same_instance(self):
         """get_server should return the same instance on multiple calls."""
         from pleiades.mcp.server import get_server
