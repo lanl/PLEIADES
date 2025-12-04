@@ -32,6 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 nova = ["nova-galaxy>=0.7.4,<0.8"]
+mcp = ["fastmcp>=2.3.0,<2.8"]
 
 [project.urls]
 homepage = "https://github.com/lanl/PLEIADES"
@@ -41,6 +42,7 @@ issues = "https://github.com/lanl/PLEIADES/issues"
 
 [project.scripts]
 pleiades = "pleiades:main"  # Console script entry point
+pleiades-mcp = "pleiades.mcp.server:main"  # MCP server entry point
 post_install_check = "pleiades.post_install:check_sammy_installed"
 
 [build-system]
@@ -197,6 +199,16 @@ jupyterlab = "*"
 ipympl = "*"
 ipywidgets = "*"
 
+[tool.pixi.feature.mcp.dependencies]
+pydantic = ">=2.0.0,<2.12"
+
+[tool.pixi.feature.mcp.pypi-dependencies]
+pleiades-neutron = { path = ".", editable = true, extras = ["mcp"] }
+
+[tool.pixi.feature.mcp.tasks]
+mcp-server = { cmd = "python -m pleiades.mcp", description = "Start the PLEIADES MCP server" }
+
 [tool.pixi.environments]
 default = {features = ["test", "package", "docs", "developer"]}
 jupyter = {features = ["developer", "jupyter"]}
+mcp = {features = ["developer", "mcp"]}
