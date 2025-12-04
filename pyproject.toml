@@ -32,7 +32,8 @@ dependencies = [
 
 [project.optional-dependencies]
 nova = ["nova-galaxy>=0.7.4,<0.8"]
-mcp = ["fastmcp>=2.3.0,<2.8"]
+# fastmcp 2.12+ fixed pydantic 2.12 compatibility issues
+mcp = ["fastmcp>=2.12.0,<3"]
 
 [project.urls]
 homepage = "https://github.com/lanl/PLEIADES"
@@ -200,7 +201,8 @@ ipympl = "*"
 ipywidgets = "*"
 
 [tool.pixi.feature.mcp.dependencies]
-pydantic = ">=2.0.0,<2.12"
+# Override referencing to allow fastmcp's jsonschema-path dependency
+referencing = ">=0.35.0,<0.37"
 
 [tool.pixi.feature.mcp.pypi-dependencies]
 pleiades-neutron = { path = ".", editable = true, extras = ["mcp"] }
@@ -211,4 +213,4 @@ mcp-server = { cmd = "python -m pleiades.mcp", description = "Start the PLEIADES
 [tool.pixi.environments]
 default = {features = ["test", "package", "docs", "developer"]}
 jupyter = {features = ["developer", "jupyter"]}
-mcp = {features = ["developer", "mcp"]}
+mcp = {features = ["developer", "mcp", "test"]}
