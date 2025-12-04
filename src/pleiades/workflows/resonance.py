@@ -257,6 +257,10 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
     yaml_content = parts[1].strip()
     frontmatter = yaml.safe_load(yaml_content)
 
+    # Handle empty frontmatter (yaml.safe_load returns None for empty content)
+    if frontmatter is None:
+        frontmatter = {}
+
     # Handle datetime objects (PyYAML auto-parses ISO timestamps)
     if "created" in frontmatter and hasattr(frontmatter["created"], "isoformat"):
         frontmatter["created"] = frontmatter["created"].isoformat()
@@ -268,11 +272,15 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
     material_props = None
     if "material_properties" in frontmatter and frontmatter["material_properties"]:
         mp = frontmatter["material_properties"]
-        material_props = MaterialProperties(
-            density_g_cm3=mp.get("density_g_cm3"),
-            atomic_mass_amu=mp.get("atomic_mass_amu"),
-            temperature_k=mp.get("temperature_k"),
-        )
+        try:
+            material_props = MaterialProperties(
+                density_g_cm3=mp.get("density_g_cm3"),
+                atomic_mass_amu=mp.get("atomic_mass_amu"),
+                temperature_k=mp.get("temperature_k"),
+            )
+        except Exception as e:
+            # Log but don't fail - material properties are optional for some workflows
+            logger.warning(f"Invalid material_properties in manifest: {e}")
 
     return ManifestData(
         name=frontmatter.get("name", "unknown"),
@@ -341,6 +349,17 @@ def analyze_resonance(
     start_time = time.time()
     workflow_steps: dict[str, str] = {}
 
+    # Validate isotopes parameter
+    if isotopes is not None and len(isotopes) == 0:
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.SIMPLIFIED,
+            primary_isotope="unknown",
+            error_message="isotopes parameter cannot be an empty list",
+            error_step="parameter_validation",
+            workflow_steps={},
+        )
+
     logger.info(f"Starting resonance analysis: {dataset_path}")
 
     # Step 1: Validate dataset
@@ -376,12 +395,29 @@ def analyze_resonance(
                 workflow_steps=workflow_steps,
             )
     else:
-        # Assume simplified workflow if skipping validation
+        # When skipping validation, detect workflow from available files
         sammy_data_dir = dataset_path / "sammy_data"
-        if sammy_data_dir.exists() and list(sammy_data_dir.glob("*.inp")):
+        try:
+            has_sammy_files = sammy_data_dir.exists() and any(sammy_data_dir.glob("*.inp"))
+        except (PermissionError, OSError) as e:
+            logger.warning(f"Cannot access sammy_data directory: {e}")
+            has_sammy_files = False
+        has_imaging_data = (dataset_path / "raw").exists() and (dataset_path / "open_beam").exists()
+
+        if has_sammy_files:
             workflow_type = WorkflowType.SIMPLIFIED
-        else:
+        elif has_imaging_data:
             workflow_type = WorkflowType.FULL
+        else:
+            # Neither workflow is available - return clear error
+            return ResonanceResult(
+                success=False,
+                workflow_type=WorkflowType.SIMPLIFIED,
+                primary_isotope="unknown",
+                error_message="No SAMMY files (sammy_data/*.inp) or imaging data (raw/, open_beam/) found",
+                error_step="file_discovery",
+                workflow_steps=workflow_steps,
+            )
 
     # Extract manifest for parameters
     manifest = extract_manifest(dataset_path)
@@ -529,6 +565,31 @@ def _execute_simplified_workflow(
         lpt_file = sammy_output / "SAMMY.LPT"
         lst_file = sammy_output / "SAMMY.LST"
 
+        # Verify SAMMY produced output files
+        if not lpt_file.exists():
+            error_msg = f"SAMMY output file not found: {lpt_file}"
+            logger.error(error_msg)
+            return ResonanceResult(
+                success=False,
+                workflow_type=WorkflowType.SIMPLIFIED,
+                primary_isotope=primary_isotope,
+                error_message=error_msg,
+                error_step="results_parsing",
+                workflow_steps=workflow_steps,
+            )
+
+        if not lst_file.exists():
+            error_msg = f"SAMMY output file not found: {lst_file}"
+            logger.error(error_msg)
+            return ResonanceResult(
+                success=False,
+                workflow_type=WorkflowType.SIMPLIFIED,
+                primary_isotope=primary_isotope,
+                error_message=error_msg,
+                error_step="results_parsing",
+                workflow_steps=workflow_steps,
+            )
+
         results_manager = ResultsManager(
             lpt_file_path=lpt_file,
             lst_file_path=lst_file,
@@ -557,7 +618,7 @@ def _execute_simplified_workflow(
             broadening = final_fit.physics_data.broadening_parameters
             temperature = float(broadening.temp)
             number_density = float(broadening.thick)
-        except (AttributeError, KeyError) as e:
+        except (AttributeError, KeyError, ValueError, TypeError) as e:
             logger.debug(f"Broadening parameters not available: {e}")
 
         workflow_steps["results_parsing"] = "completed"
@@ -575,15 +636,26 @@ def _execute_simplified_workflow(
     # Build successful result
     runtime = time.time() - start_time
 
+    # Use 'is not None' instead of truthiness check since 0.0 is a valid chi-squared value
+    # Also check chi_sq itself is not None before accessing its attributes
+    chi_squared_val = None
+    reduced_chi_sq_val = None
+    dof_val = None
+    if chi_sq is not None:
+        chi_squared_val = float(chi_sq.chi_squared) if chi_sq.chi_squared is not None else None
+        reduced_chi_sq_val = float(chi_sq.reduced_chi_squared) if chi_sq.reduced_chi_squared is not None else None
+        dof_val = chi_sq.dof
+    fit_quality_val = FitQuality.from_chi_squared(reduced_chi_sq_val) if reduced_chi_sq_val is not None else None
+
     return ResonanceResult(
         success=True,
         workflow_type=WorkflowType.SIMPLIFIED,
         primary_isotope=primary_isotope,
         isotopes_analyzed=[primary_isotope],
-        chi_squared=float(chi_sq.chi_squared) if chi_sq.chi_squared else None,
-        reduced_chi_squared=float(chi_sq.reduced_chi_squared) if chi_sq.reduced_chi_squared else None,
-        degrees_of_freedom=chi_sq.dof,
-        fit_quality=FitQuality.from_chi_squared(chi_sq.reduced_chi_squared) if chi_sq.reduced_chi_squared else None,
+        chi_squared=chi_squared_val,
+        reduced_chi_squared=reduced_chi_sq_val,
+        degrees_of_freedom=dof_val,
+        fit_quality=fit_quality_val,
         number_density=number_density,
         temperature_k=temperature,
         output_dir=sammy_output,

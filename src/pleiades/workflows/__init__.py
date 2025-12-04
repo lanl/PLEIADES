@@ -15,8 +15,12 @@ Example:
     >>> # Run analysis
     >>> result = analyze_resonance("/path/to/dataset")
     >>> if result.success:
-    ...     print(f"Chi²/dof: {result.reduced_chi_squared:.3f}")
-    ...     print(f"Fit quality: {result.fit_quality.value}")
+    ...     if result.reduced_chi_squared is not None:
+    ...         print(f"Chi²/dof: {result.reduced_chi_squared:.3f}")
+    ...     if result.fit_quality is not None:
+    ...         print(f"Fit quality: {result.fit_quality.value}")
+    >>> else:
+    ...     print(f"Analysis failed: {result.error_message}")
 """
 
 from __future__ import annotations

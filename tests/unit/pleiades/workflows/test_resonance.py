@@ -278,7 +278,8 @@ class TestAnalyzeResonance:
         result = analyze_resonance(tmp_path, skip_validation=True)
         # Should fail at file discovery, not validation
         assert not result.success
-        assert result.error_step != "validation"
+        assert result.error_step == "file_discovery"
+        assert "No SAMMY files" in result.error_message
 
     @patch("pleiades.sammy.results.manager.ResultsManager")
     @patch("pleiades.sammy.factory.SammyFactory")
@@ -292,6 +293,12 @@ class TestAnalyzeResonance:
         (sammy_dir / "ex012a.inp").write_text("input")
         (sammy_dir / "ex012a.par").write_text("params")
         (sammy_dir / "ex012a.dat").write_text("data")
+
+        # Create expected SAMMY output files (these are checked before parsing)
+        sammy_output = tmp_path / "sammy_output"
+        sammy_output.mkdir()
+        (sammy_output / "SAMMY.LPT").write_text("log output")
+        (sammy_output / "SAMMY.LST").write_text("list output")
 
         # Mock SAMMY runner
         mock_runner = MagicMock()
@@ -345,6 +352,12 @@ class TestAnalyzeResonance:
         (sammy_dir / "ex012a.inp").write_text("input")
         (sammy_dir / "ex012a.par").write_text("params")
         (sammy_dir / "ex012a.dat").write_text("data")
+
+        # Create expected SAMMY output files (these are checked before parsing)
+        sammy_output = tmp_path / "sammy_output"
+        sammy_output.mkdir()
+        (sammy_output / "SAMMY.LPT").write_text("log output")
+        (sammy_output / "SAMMY.LST").write_text("list output")
 
         # Mock SAMMY runner
         mock_runner = MagicMock()

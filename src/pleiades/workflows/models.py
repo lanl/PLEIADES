@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -105,7 +105,7 @@ class ResonanceResult(BaseModel):
 class ValidationIssue(BaseModel):
     """Single validation issue found in dataset."""
 
-    severity: str = Field(..., description="Issue severity: 'error' or 'warning'")
+    severity: Literal["error", "warning"] = Field(..., description="Issue severity")
     message: str = Field(..., description="Description of the issue")
     path: Path | None = Field(None, description="Path related to the issue")
 
