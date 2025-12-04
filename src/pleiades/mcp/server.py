@@ -18,12 +18,15 @@ if MCP_AVAILABLE:
     # @mcp.tool
     # def analyze_resonance(dataset_path: str) -> dict:
     #     ...
+else:
+    mcp = None  # type: ignore[assignment]
 
 
 def main() -> None:
     """Start the PLEIADES MCP server."""
     check_mcp_available()
-    mcp.run()
+    # mcp is guaranteed to be defined after check_mcp_available() succeeds
+    mcp.run()  # type: ignore[union-attr]
 
 
-__all__ = ["mcp", "main"]
+__all__ = ["main"]

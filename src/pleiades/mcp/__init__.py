@@ -12,12 +12,12 @@ Usage:
 """
 
 try:
-    from fastmcp import FastMCP
+    from fastmcp import FastMCP as _FastMCP
 
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
-    FastMCP = None  # type: ignore[misc, assignment]
+    _FastMCP = None  # type: ignore[misc, assignment]
 
 
 def check_mcp_available() -> None:
@@ -30,4 +30,9 @@ def check_mcp_available() -> None:
         raise ImportError("MCP dependencies not installed. Install with: pip install pleiades-neutron[mcp]")
 
 
-__all__ = ["MCP_AVAILABLE", "FastMCP", "check_mcp_available"]
+# Re-export FastMCP only when available to avoid confusion
+if MCP_AVAILABLE:
+    FastMCP = _FastMCP
+    __all__ = ["MCP_AVAILABLE", "FastMCP", "check_mcp_available"]
+else:
+    __all__ = ["MCP_AVAILABLE", "check_mcp_available"]
