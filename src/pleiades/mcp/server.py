@@ -53,10 +53,10 @@ def main() -> None:
     Raises:
         ImportError: If MCP dependencies are not installed.
     """
-    from pleiades.utils.logger import logger
+    from pleiades.utils.logger import loguru_logger
 
     server = get_server()
-    logger.info("Starting PLEIADES MCP server...")
+    loguru_logger.info("Starting PLEIADES MCP server...")
     server.run()
 
 
