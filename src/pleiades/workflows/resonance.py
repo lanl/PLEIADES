@@ -126,15 +126,6 @@ def validate_dataset(dataset_path: str | Path) -> ValidationResult:
             )
         )
 
-    if not has_raw and not has_sammy_files:
-        issues.append(
-            ValidationIssue(
-                severity="error",
-                message="No raw data directory found",
-                path=raw_dir,
-            )
-        )
-
     if has_raw and not has_ob:
         issues.append(
             ValidationIssue(
@@ -187,11 +178,13 @@ def validate_dataset(dataset_path: str | Path) -> ValidationResult:
                 )
 
     # Determine recommended workflow
+    # Prefer simplified workflow when both are available since full workflow
+    # is not yet implemented (see #172)
     recommended = None
-    if can_run_full:
-        recommended = WorkflowType.FULL
-    elif can_run_simplified:
+    if can_run_simplified:
         recommended = WorkflowType.SIMPLIFIED
+    elif can_run_full:
+        recommended = WorkflowType.FULL
 
     # Dataset is valid if there are no errors
     has_errors = any(i.severity == "error" for i in issues)
@@ -251,11 +244,12 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
 
     logger.info(f"Parsing manifest: {manifest_path}")
 
-    with open(manifest_path) as f:
+    with open(manifest_path, encoding="utf-8") as f:
         content = f.read()
 
     # Split YAML frontmatter from Markdown body
-    parts = content.split("---")
+    # Use maxsplit=2 to handle "---" in the markdown body (e.g., horizontal rules)
+    parts = content.split("---", 2)
     if len(parts) < 3:
         raise ValueError(f"Invalid manifest format in {manifest_path}: missing YAML frontmatter")
 
@@ -267,7 +261,7 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
     if "created" in frontmatter and hasattr(frontmatter["created"], "isoformat"):
         frontmatter["created"] = frontmatter["created"].isoformat()
 
-    # Extract markdown body
+    # Extract markdown body (everything after the second "---")
     body = parts[2].strip()
 
     # Parse material properties if present
@@ -330,9 +324,8 @@ def analyze_resonance(
 
     Returns:
         ResonanceResult with analysis results and output paths.
-
-    Raises:
-        ValueError: If dataset is invalid and skip_validation=False.
+        If the dataset is invalid and skip_validation=False, returns a
+        ResonanceResult with success=False and an appropriate error message.
 
     Example:
         >>> result = analyze_resonance("/data/Au197_sample")
@@ -367,6 +360,8 @@ def analyze_resonance(
         workflow_steps["validation"] = "completed"
 
         # Determine workflow type
+        # Prefer simplified workflow when both are available since full workflow
+        # is not yet implemented (see #172) - matches validate_dataset logic
         if validation.can_run_simplified_workflow:
             workflow_type = WorkflowType.SIMPLIFIED
         elif validation.can_run_full_workflow:
@@ -539,7 +534,20 @@ def _execute_simplified_workflow(
             lst_file_path=lst_file,
         )
 
-        final_fit = results_manager.run_results.fit_results[-1]
+        fit_results = results_manager.run_results.fit_results
+        if not fit_results:
+            error_msg = "No fit results found in SAMMY output"
+            logger.error(error_msg)
+            return ResonanceResult(
+                success=False,
+                workflow_type=WorkflowType.SIMPLIFIED,
+                primary_isotope=primary_isotope,
+                error_message=error_msg,
+                error_step="results_parsing",
+                workflow_steps=workflow_steps,
+            )
+
+        final_fit = fit_results[-1]
         chi_sq = final_fit.chi_squared_results
 
         # Extract broadening parameters if available
@@ -549,8 +557,8 @@ def _execute_simplified_workflow(
             broadening = final_fit.physics_data.broadening_parameters
             temperature = float(broadening.temp)
             number_density = float(broadening.thick)
-        except (AttributeError, KeyError):
-            pass
+        except (AttributeError, KeyError) as e:
+            logger.debug(f"Broadening parameters not available: {e}")
 
         workflow_steps["results_parsing"] = "completed"
     except Exception as e:

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from pleiades.workflows.models import (
     FitQuality,
+    IsotopeResult,
     ManifestData,
     MaterialProperties,
     ResonanceResult,
@@ -47,6 +48,7 @@ __all__ = [
     "ValidationIssue",
     "ManifestData",
     "MaterialProperties",
+    "IsotopeResult",
     # Enums
     "WorkflowType",
     "FitQuality",

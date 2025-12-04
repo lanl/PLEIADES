@@ -80,13 +80,17 @@ class TestValidateDataset:
         assert result.has_open_beam
 
     def test_full_workflow_missing_open_beam(self, tmp_path):
-        """Missing open_beam should be a warning."""
+        """Missing open_beam makes full workflow unavailable (invalid dataset)."""
         (tmp_path / "raw").mkdir()
 
         result = validate_dataset(tmp_path)
-        # Still valid but with warning
+        # Dataset is invalid because full workflow needs both raw and open_beam
+        # and no simplified workflow is available either
+        assert not result.valid
         assert result.has_raw_data
         assert not result.has_open_beam
+        assert not result.can_run_full_workflow
+        # Should have warning about missing open_beam
         assert any("Open beam directory" in w.message for w in result.warnings)
 
     def test_manifest_detection(self, tmp_path):
@@ -112,6 +116,26 @@ created: "2024-01-01T00:00:00Z"
         result = validate_dataset(tmp_path)
         assert result.valid
         assert result.has_manifest
+
+    def test_both_workflow_types_available(self, tmp_path):
+        """Dataset with both imaging data and SAMMY files should prefer simplified."""
+        # Create imaging data
+        (tmp_path / "raw").mkdir()
+        (tmp_path / "open_beam").mkdir()
+
+        # Create SAMMY files
+        sammy_dir = tmp_path / "sammy_data"
+        sammy_dir.mkdir()
+        (sammy_dir / "test.inp").write_text("input")
+        (sammy_dir / "test.par").write_text("params")
+        (sammy_dir / "test.dat").write_text("data")
+
+        result = validate_dataset(tmp_path)
+        assert result.valid
+        assert result.can_run_full_workflow
+        assert result.can_run_simplified_workflow
+        # Should prefer simplified since full is not yet implemented
+        assert result.recommended_workflow == WorkflowType.SIMPLIFIED
 
 
 class TestExtractManifest:
@@ -199,6 +223,41 @@ Body
         assert result is not None
         assert result.name == "test"
 
+    def test_manifest_with_horizontal_rule_in_body(self, tmp_path):
+        """Should handle markdown body containing --- (horizontal rule)."""
+        manifest_content = """---
+name: test
+description: Test with horizontal rule
+tool: pleiades
+physics: nri
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+---
+# Section 1
+
+Some content here.
+
+---
+
+# Section 2
+
+More content after horizontal rule.
+
+---
+
+Final section.
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.name == "test"
+        # Body should contain the horizontal rules
+        assert "---" in result.body
+        assert "Section 1" in result.body
+        assert "Section 2" in result.body
+        assert "Final section" in result.body
+
 
 class TestAnalyzeResonance:
     """Tests for analyze_resonance function."""
@@ -273,6 +332,38 @@ class TestAnalyzeResonance:
         assert not result.success
         assert result.workflow_type == WorkflowType.FULL
         assert "not yet implemented" in result.error_message
+
+    @patch("pleiades.sammy.results.manager.ResultsManager")
+    @patch("pleiades.sammy.factory.SammyFactory")
+    def test_empty_fit_results_handled(self, mock_factory, mock_results_manager_class, tmp_path):
+        """Empty fit_results list should return error, not crash."""
+        from pleiades.workflows.resonance import analyze_resonance
+
+        # Create SAMMY files
+        sammy_dir = tmp_path / "sammy_data"
+        sammy_dir.mkdir()
+        (sammy_dir / "ex012a.inp").write_text("input")
+        (sammy_dir / "ex012a.par").write_text("params")
+        (sammy_dir / "ex012a.dat").write_text("data")
+
+        # Mock SAMMY runner
+        mock_runner = MagicMock()
+        mock_exec_result = MagicMock()
+        mock_exec_result.success = True
+        mock_runner.execute_sammy.return_value = mock_exec_result
+        mock_factory.auto_select.return_value = mock_runner
+
+        # Mock results manager with EMPTY fit_results
+        mock_run_results = MagicMock()
+        mock_run_results.fit_results = []  # Empty list
+        mock_results_manager_class.return_value.run_results = mock_run_results
+
+        result = analyze_resonance(tmp_path)
+
+        # Should fail gracefully, not crash with IndexError
+        assert not result.success
+        assert result.error_step == "results_parsing"
+        assert "No fit results" in result.error_message
 
 
 class TestGetSammyRunner:
