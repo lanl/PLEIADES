@@ -6,11 +6,12 @@ enabling type-safe results and consistent output formatting.
 
 from __future__ import annotations
 
+import math
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class WorkflowType(str, Enum):
@@ -30,7 +31,19 @@ class FitQuality(str, Enum):
 
     @classmethod
     def from_chi_squared(cls, reduced_chi_sq: float) -> FitQuality:
-        """Determine fit quality from reduced chi-squared value."""
+        """Determine fit quality from reduced chi-squared value.
+
+        Args:
+            reduced_chi_sq: Reduced chi-squared value (must be non-negative and finite).
+
+        Returns:
+            FitQuality enum value based on the chi-squared value.
+
+        Raises:
+            ValueError: If reduced_chi_sq is negative, NaN, or infinite.
+        """
+        if not math.isfinite(reduced_chi_sq) or reduced_chi_sq < 0:
+            raise ValueError(f"Invalid reduced chi-squared value: {reduced_chi_sq}")
         if reduced_chi_sq < 1.2:
             return cls.EXCELLENT
         elif reduced_chi_sq < 2.0:
@@ -47,6 +60,22 @@ class MaterialProperties(BaseModel):
     density_g_cm3: float = Field(..., description="Material density in g/cm³")
     atomic_mass_amu: float = Field(..., description="Atomic mass in amu")
     temperature_k: float | None = Field(None, description="Sample temperature in Kelvin")
+
+    @field_validator("density_g_cm3", "atomic_mass_amu")
+    @classmethod
+    def validate_positive(cls, v: float, info) -> float:
+        """Validate that physical properties are positive."""
+        if v <= 0:
+            raise ValueError(f"{info.field_name} must be positive, got {v}")
+        return v
+
+    @field_validator("temperature_k")
+    @classmethod
+    def validate_temperature(cls, v: float | None) -> float | None:
+        """Validate that temperature is positive if provided."""
+        if v is not None and v <= 0:
+            raise ValueError(f"temperature_k must be positive, got {v}")
+        return v
 
 
 class IsotopeResult(BaseModel):

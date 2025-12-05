@@ -1,5 +1,6 @@
 """Tests for pleiades.workflows.models module."""
 
+import math
 from pathlib import Path
 
 import pytest
@@ -40,6 +41,21 @@ class TestFitQuality:
         assert FitQuality.from_chi_squared(5.0) == FitQuality.POOR
         assert FitQuality.from_chi_squared(10.0) == FitQuality.POOR
 
+    def test_from_chi_squared_invalid_negative(self):
+        """Negative chi-squared should raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid reduced chi-squared"):
+            FitQuality.from_chi_squared(-1.0)
+
+    def test_from_chi_squared_invalid_nan(self):
+        """NaN chi-squared should raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid reduced chi-squared"):
+            FitQuality.from_chi_squared(math.nan)
+
+    def test_from_chi_squared_invalid_infinity(self):
+        """Infinite chi-squared should raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid reduced chi-squared"):
+            FitQuality.from_chi_squared(math.inf)
+
 
 class TestWorkflowType:
     """Tests for WorkflowType enum."""
@@ -76,6 +92,26 @@ class TestMaterialProperties:
         """Missing required fields should raise ValidationError."""
         with pytest.raises(Exception):  # Pydantic ValidationError
             MaterialProperties(density_g_cm3=19.3)
+
+    def test_negative_density_raises(self):
+        """Negative density should raise ValidationError."""
+        with pytest.raises(Exception, match="must be positive"):
+            MaterialProperties(density_g_cm3=-1.0, atomic_mass_amu=196.97)
+
+    def test_zero_density_raises(self):
+        """Zero density should raise ValidationError."""
+        with pytest.raises(Exception, match="must be positive"):
+            MaterialProperties(density_g_cm3=0.0, atomic_mass_amu=196.97)
+
+    def test_negative_atomic_mass_raises(self):
+        """Negative atomic mass should raise ValidationError."""
+        with pytest.raises(Exception, match="must be positive"):
+            MaterialProperties(density_g_cm3=19.3, atomic_mass_amu=-10.0)
+
+    def test_negative_temperature_raises(self):
+        """Negative temperature should raise ValidationError."""
+        with pytest.raises(Exception, match="must be positive"):
+            MaterialProperties(density_g_cm3=19.3, atomic_mass_amu=196.97, temperature_k=-100.0)
 
 
 class TestValidationIssue:

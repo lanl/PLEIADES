@@ -644,7 +644,7 @@ def _execute_simplified_workflow(
     if chi_sq is not None:
         chi_squared_val = float(chi_sq.chi_squared) if chi_sq.chi_squared is not None else None
         reduced_chi_sq_val = float(chi_sq.reduced_chi_squared) if chi_sq.reduced_chi_squared is not None else None
-        dof_val = chi_sq.dof
+        dof_val = chi_sq.dof if chi_sq.dof is not None else None
     fit_quality_val = FitQuality.from_chi_squared(reduced_chi_sq_val) if reduced_chi_sq_val is not None else None
 
     return ResonanceResult(
