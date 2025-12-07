@@ -22,12 +22,16 @@ import pytest
 class TestToolRegistration:
     """Test that tools are registered via @mcp_tool decorator."""
 
-    @classmethod
-    def setup_class(cls):
-        """Ensure tools module is imported (registers tools once for all tests)."""
-        import pleiades.mcp.tools as _tools_module  # Import for side-effect (registration)
+    def setup_method(self):
+        """Clear and re-register all tools for consistent test isolation."""
+        import importlib
 
-        del _tools_module  # Not used after import
+        import pleiades.mcp.tools as tools_module
+        from pleiades.mcp.decorators import clear_registry
+
+        # Always clear and reload for consistent test isolation
+        clear_registry()
+        importlib.reload(tools_module)
 
     def test_validate_resonance_dataset_is_registered(self):
         """validate_resonance_dataset should be registered with decorator."""
@@ -814,16 +818,15 @@ class TestParameterDescriptions:
     """Test that tools have helpful parameter descriptions."""
 
     def setup_method(self):
-        """Ensure tools are registered by reloading if needed."""
+        """Clear and re-register all tools for consistent test isolation."""
         import importlib
 
-        from pleiades.mcp.decorators import get_registered_tools
+        import pleiades.mcp.tools as tools_module
+        from pleiades.mcp.decorators import clear_registry
 
-        # If registry is empty (cleared by previous tests), reload to re-register
-        if not get_registered_tools():
-            import pleiades.mcp.tools as tools_module
-
-            importlib.reload(tools_module)
+        # Always clear and reload for consistent test isolation
+        clear_registry()
+        importlib.reload(tools_module)
 
     def test_validate_dataset_has_parameter_description(self):
         """validate_resonance_dataset should document its parameters."""
