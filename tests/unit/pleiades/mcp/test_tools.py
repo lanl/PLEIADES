@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Test suite for pleiades.mcp.tools module.
 
 Tests cover MCP tool wrappers that expose workflow functions.
@@ -14,7 +13,6 @@ Tests verify:
 - Error handling and graceful degradation
 """
 
-import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -738,22 +736,22 @@ class TestOutputConsistency:
             validate_resonance_dataset,
         )
 
-        with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_v:
+        with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
             mock_result = MagicMock()
             mock_result.model_dump.return_value = {}
-            mock_v.return_value = mock_result
+            mock_validate.return_value = mock_result
             result = validate_resonance_dataset("/test")
             assert isinstance(result, dict)
 
-        with patch("pleiades.mcp.tools.workflows.extract_manifest") as mock_e:
-            mock_e.return_value = None
+        with patch("pleiades.mcp.tools.workflows.extract_manifest") as mock_extract:
+            mock_extract.return_value = None
             result = extract_resonance_manifest("/test")
             assert isinstance(result, dict)
 
-        with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_a:
+        with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_analyze:
             mock_result = MagicMock()
             mock_result.model_dump.return_value = {}
-            mock_a.return_value = mock_result
+            mock_analyze.return_value = mock_result
             result = analyze_resonance("/test")
             assert isinstance(result, dict)
 
@@ -765,22 +763,22 @@ class TestOutputConsistency:
             validate_resonance_dataset,
         )
 
-        with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_v:
+        with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
             mock_result = MagicMock()
             mock_result.model_dump.return_value = {}
-            mock_v.return_value = mock_result
+            mock_validate.return_value = mock_result
             result = validate_resonance_dataset("/test")
             assert "status" in result
 
-        with patch("pleiades.mcp.tools.workflows.extract_manifest") as mock_e:
-            mock_e.return_value = None
+        with patch("pleiades.mcp.tools.workflows.extract_manifest") as mock_extract:
+            mock_extract.return_value = None
             result = extract_resonance_manifest("/test")
             assert "status" in result
 
-        with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_a:
+        with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_analyze:
             mock_result = MagicMock()
             mock_result.model_dump.return_value = {}
-            mock_a.return_value = mock_result
+            mock_analyze.return_value = mock_result
             result = analyze_resonance("/test")
             assert "status" in result
 
@@ -817,6 +815,8 @@ class TestParameterDescriptions:
 
     def setup_method(self):
         """Ensure tools are registered by reloading if needed."""
+        import importlib
+
         from pleiades.mcp.decorators import get_registered_tools
 
         # If registry is empty (cleared by previous tests), reload to re-register
@@ -856,6 +856,215 @@ class TestParameterDescriptions:
         if tool.get("parameter_descriptions"):
             # Should document at least the main parameter
             assert "dataset_path" in tool["parameter_descriptions"]
+
+
+class TestJsonSerializationEdgeCases:
+    """Test _convert_to_json_serializable handles all edge cases."""
+
+    def test_circular_reference_protection(self):
+        """Should detect deeply nested structures that exceed depth limit."""
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        # Create deeply nested structure exceeding _MAX_SERIALIZATION_DEPTH (100)
+        deep = {"level": 0}
+        current = deep
+        for i in range(150):
+            current["next"] = {"level": i + 1}
+            current = current["next"]
+
+        with pytest.raises(ValueError, match="maximum serialization depth"):
+            _convert_to_json_serializable(deep)
+
+    def test_handles_datetime(self):
+        """Should convert datetime to ISO format string."""
+        import json
+        from datetime import datetime
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        dt = datetime(2024, 6, 15, 12, 30, 45)
+        result = _convert_to_json_serializable(dt)
+
+        assert result == "2024-06-15T12:30:45"
+        # Verify JSON-serializable
+        json.dumps(result)
+
+    def test_handles_date(self):
+        """Should convert date to ISO format string."""
+        import json
+        from datetime import date
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        d = date(2024, 6, 15)
+        result = _convert_to_json_serializable(d)
+
+        assert result == "2024-06-15"
+        json.dumps(result)
+
+    def test_handles_time(self):
+        """Should convert time to ISO format string."""
+        import json
+        from datetime import time
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        t = time(12, 30, 45)
+        result = _convert_to_json_serializable(t)
+
+        assert result == "12:30:45"
+        json.dumps(result)
+
+    def test_handles_decimal(self):
+        """Should convert Decimal to float."""
+        import json
+        from decimal import Decimal
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        d = Decimal("3.14159")
+        result = _convert_to_json_serializable(d)
+
+        assert isinstance(result, float)
+        assert abs(result - 3.14159) < 0.00001
+        json.dumps(result)
+
+    def test_handles_bytes(self):
+        """Should convert bytes to UTF-8 string."""
+        import json
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        b = b"hello world"
+        result = _convert_to_json_serializable(b)
+
+        assert result == "hello world"
+        json.dumps(result)
+
+    def test_handles_bytes_with_invalid_utf8(self):
+        """Should handle bytes with invalid UTF-8 using replacement."""
+        import json
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        b = b"hello \xff\xfe world"
+        result = _convert_to_json_serializable(b)
+
+        assert isinstance(result, str)
+        assert "hello" in result
+        assert "world" in result
+        json.dumps(result)
+
+    def test_handles_set(self):
+        """Should convert set to sorted list."""
+        import json
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        s = {3, 1, 2}
+        result = _convert_to_json_serializable(s)
+
+        assert isinstance(result, list)
+        assert result == [1, 2, 3]
+        json.dumps(result)
+
+    def test_handles_frozenset(self):
+        """Should convert frozenset to sorted list."""
+        import json
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        fs = frozenset(["c", "a", "b"])
+        result = _convert_to_json_serializable(fs)
+
+        assert isinstance(result, list)
+        assert result == ["a", "b", "c"]
+        json.dumps(result)
+
+    def test_handles_enum(self):
+        """Should convert Enum to its value."""
+        import json
+        from enum import Enum
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        class Color(Enum):
+            RED = "red"
+            GREEN = "green"
+
+        result = _convert_to_json_serializable(Color.RED)
+
+        assert result == "red"
+        json.dumps(result)
+
+    def test_handles_int_enum(self):
+        """Should convert IntEnum to its value."""
+        import json
+        from enum import IntEnum
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        class Priority(IntEnum):
+            LOW = 1
+            HIGH = 2
+
+        result = _convert_to_json_serializable(Priority.HIGH)
+
+        assert result == 2
+        json.dumps(result)
+
+    def test_handles_unknown_type_with_fallback(self):
+        """Should convert unknown types to string with warning."""
+        import json
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        class CustomClass:
+            def __str__(self):
+                return "custom_instance"
+
+        obj = CustomClass()
+        result = _convert_to_json_serializable(obj)
+
+        assert result == "custom_instance"
+        json.dumps(result)
+
+    def test_handles_nested_mixed_types(self):
+        """Should handle complex nested structures with mixed types."""
+        import json
+        from datetime import datetime
+        from decimal import Decimal
+        from enum import Enum
+
+        from pleiades.mcp.tools import _convert_to_json_serializable
+
+        class Status(Enum):
+            ACTIVE = "active"
+
+        data = {
+            "timestamp": datetime(2024, 1, 1, 12, 0),
+            "values": {1, 2, 3},
+            "price": Decimal("99.99"),
+            "status": Status.ACTIVE,
+            "nested": {
+                "path": Path("/test/path"),
+                "items": [datetime(2024, 1, 2), b"data"],
+            },
+        }
+
+        result = _convert_to_json_serializable(data)
+
+        # Verify all types converted
+        assert result["timestamp"] == "2024-01-01T12:00:00"
+        assert result["values"] == [1, 2, 3]
+        assert isinstance(result["price"], float)
+        assert result["status"] == "active"
+        assert result["nested"]["path"] == "/test/path"
+        assert result["nested"]["items"][0] == "2024-01-02T00:00:00"
+        assert result["nested"]["items"][1] == "data"
+
+        # Verify entire result is JSON-serializable
+        json.dumps(result)
 
 
 if __name__ == "__main__":

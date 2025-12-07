@@ -16,6 +16,9 @@ Security Notes:
 
 from __future__ import annotations
 
+from datetime import date, datetime, time
+from decimal import Decimal
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +35,8 @@ _MAX_SERIALIZATION_DEPTH = 100
 def _convert_to_json_serializable(obj: Any, _depth: int = 0) -> Any:
     """Convert an object to JSON-serializable format.
 
-    Handles Path objects, Pydantic models, and nested structures.
+    Handles Path objects, Pydantic models, datetime/date/time, Decimal, bytes,
+    sets/frozensets, Enums, and nested structures (dicts, lists, tuples).
     Includes depth protection against circular references.
 
     Args:
@@ -48,19 +52,53 @@ def _convert_to_json_serializable(obj: Any, _depth: int = 0) -> Any:
     if _depth > _MAX_SERIALIZATION_DEPTH:
         raise ValueError("Exceeded maximum serialization depth (possible circular reference)")
 
+    # None is JSON-serializable
     if obj is None:
         return None
+
+    # Primitives are JSON-serializable
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+
+    # Path objects -> string
     if isinstance(obj, Path):
         return str(obj)
+
+    # datetime/date/time -> ISO format string
+    if isinstance(obj, (datetime, date, time)):
+        return obj.isoformat()
+
+    # Decimal -> float (some precision loss, but JSON-compatible)
+    if isinstance(obj, Decimal):
+        return float(obj)
+
+    # bytes -> UTF-8 string with replacement for invalid chars
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+
+    # Enum -> value
+    if isinstance(obj, Enum):
+        return obj.value
+
+    # sets/frozensets -> sorted list (for deterministic output)
+    if isinstance(obj, (set, frozenset)):
+        return [_convert_to_json_serializable(item, _depth + 1) for item in sorted(obj, key=str)]
+
+    # Pydantic model -> use model_dump with JSON mode
     if hasattr(obj, "model_dump"):
-        # Pydantic model - use JSON mode for proper datetime/etc serialization
         return _convert_to_json_serializable(obj.model_dump(mode="json"), _depth + 1)
+
+    # dict -> recurse on values
     if isinstance(obj, dict):
         return {k: _convert_to_json_serializable(v, _depth + 1) for k, v in obj.items()}
+
+    # list/tuple -> recurse on items
     if isinstance(obj, (list, tuple)):
         return [_convert_to_json_serializable(item, _depth + 1) for item in obj]
-    # Primitive types (str, int, float, bool) are already serializable
-    return obj
+
+    # Unknown type - log warning and convert to string as fallback
+    logger.warning(f"Unknown type {type(obj).__name__} in JSON serialization, converting to string")
+    return str(obj)
 
 
 @mcp_tool(
