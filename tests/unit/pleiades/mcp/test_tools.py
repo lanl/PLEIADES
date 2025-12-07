@@ -98,11 +98,11 @@ class TestValidateResonanceDatasetInput:
 
         # Mock the workflow function
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("/fake/path"),
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("/fake/path")
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/fake/path")
 
@@ -116,11 +116,11 @@ class TestValidateResonanceDatasetInput:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("/absolute/path"),
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("/absolute/path")
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/absolute/path/to/dataset")
 
@@ -132,11 +132,11 @@ class TestValidateResonanceDatasetInput:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("relative/path"),
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("relative/path")
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("relative/path")
 
@@ -149,11 +149,11 @@ class TestValidateResonanceDatasetInput:
 
         # Real workflow returns ValidationResult with valid=False for missing paths
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=False,
-                dataset_path=Path("/nonexistent"),
-                model_dump=lambda: {"valid": False, "issues": []},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = False
+            mock_result.dataset_path = Path("/nonexistent")
+            mock_result.model_dump.return_value = {"valid": False, "issues": []}
+            mock_validate.return_value = mock_result
 
             # Should not raise - should return error result
             result = validate_resonance_dataset("/nonexistent/path")
@@ -179,11 +179,11 @@ class TestValidateResonanceDatasetOutput:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("/fake"),
-                model_dump=lambda: {"valid": True, "dataset_path": "/fake"},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("/fake")
+            mock_result.model_dump.return_value = {"valid": True, "dataset_path": "/fake"}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/fake/path")
 
@@ -196,11 +196,11 @@ class TestValidateResonanceDatasetOutput:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("/fake"),
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("/fake")
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/fake/path")
 
@@ -254,14 +254,14 @@ class TestValidateResonanceDatasetOutput:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                dataset_path=Path("/fake/path"),
-                model_dump=lambda: {
-                    "valid": True,
-                    "dataset_path": "/fake/path",  # Already converted
-                },
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.dataset_path = Path("/fake/path")
+            mock_result.model_dump.return_value = {
+                "valid": True,
+                "dataset_path": "/fake/path",  # Already converted
+            }
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/fake/path")
 
@@ -424,7 +424,7 @@ class TestAnalyzeResonanceInput:
             mock_result.model_dump.return_value = {"success": True}
             mock_analyze.return_value = mock_result
 
-            result = analyze_resonance("/fake/path", backend="docker")
+            analyze_resonance("/fake/path", backend="docker")
 
             # Verify backend was passed
             call_kwargs = mock_analyze.call_args[1]
@@ -440,7 +440,7 @@ class TestAnalyzeResonanceInput:
             mock_result.model_dump.return_value = {"success": True}
             mock_analyze.return_value = mock_result
 
-            result = analyze_resonance("/fake/path")
+            analyze_resonance("/fake/path")
 
             call_kwargs = mock_analyze.call_args[1]
             assert call_kwargs["backend"] == "auto"
@@ -579,10 +579,10 @@ class TestWorkflowIntegration:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             validate_resonance_dataset("/test/path")
 
@@ -608,10 +608,10 @@ class TestWorkflowIntegration:
         from pleiades.mcp.tools import analyze_resonance
 
         with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_analyze:
-            mock_analyze.return_value = MagicMock(
-                success=True,
-                model_dump=lambda: {"success": True},
-            )
+            mock_result = MagicMock()
+            mock_result.success = True
+            mock_result.model_dump.return_value = {"success": True}
+            mock_analyze.return_value = mock_result
 
             analyze_resonance("/test/path")
 
@@ -696,10 +696,10 @@ class TestErrorHandling:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=False,
-                model_dump=lambda: {"valid": False},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = False
+            mock_result.model_dump.return_value = {"valid": False}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("")
 
@@ -737,7 +737,9 @@ class TestOutputConsistency:
         )
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_v:
-            mock_v.return_value = MagicMock(model_dump=lambda: {})
+            mock_result = MagicMock()
+            mock_result.model_dump.return_value = {}
+            mock_v.return_value = mock_result
             result = validate_resonance_dataset("/test")
             assert isinstance(result, dict)
 
@@ -747,7 +749,9 @@ class TestOutputConsistency:
             assert isinstance(result, dict)
 
         with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_a:
-            mock_a.return_value = MagicMock(model_dump=lambda: {})
+            mock_result = MagicMock()
+            mock_result.model_dump.return_value = {}
+            mock_a.return_value = mock_result
             result = analyze_resonance("/test")
             assert isinstance(result, dict)
 
@@ -760,7 +764,9 @@ class TestOutputConsistency:
         )
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_v:
-            mock_v.return_value = MagicMock(model_dump=lambda: {})
+            mock_result = MagicMock()
+            mock_result.model_dump.return_value = {}
+            mock_v.return_value = mock_result
             result = validate_resonance_dataset("/test")
             assert "status" in result
 
@@ -770,7 +776,9 @@ class TestOutputConsistency:
             assert "status" in result
 
         with patch("pleiades.mcp.tools.workflows.analyze_resonance") as mock_a:
-            mock_a.return_value = MagicMock(model_dump=lambda: {})
+            mock_result = MagicMock()
+            mock_result.model_dump.return_value = {}
+            mock_a.return_value = mock_result
             result = analyze_resonance("/test")
             assert "status" in result
 
@@ -779,10 +787,10 @@ class TestOutputConsistency:
         from pleiades.mcp.tools import validate_resonance_dataset
 
         with patch("pleiades.mcp.tools.workflows.validate_dataset") as mock_validate:
-            mock_validate.return_value = MagicMock(
-                valid=True,
-                model_dump=lambda: {"valid": True},
-            )
+            mock_result = MagicMock()
+            mock_result.valid = True
+            mock_result.model_dump.return_value = {"valid": True}
+            mock_validate.return_value = mock_result
 
             result = validate_resonance_dataset("/test")
 
@@ -811,7 +819,7 @@ class TestParameterDescriptions:
 
         # If registry is empty (cleared by previous tests), reload to re-register
         if not get_registered_tools():
-            import pleiades.mcp.tools
+            import pleiades.mcp.tools  # noqa: F401
 
             importlib.reload(pleiades.mcp.tools)
 

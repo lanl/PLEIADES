@@ -126,7 +126,7 @@ def extract_resonance_manifest(dataset_path: str) -> dict:
         if result is None:
             return {
                 "status": "error",
-                "error": f"No manifest found in {path} (searched: manifest.md, smcp_manifest.md, manifest_intermediate.md)",
+                "error": f"No manifest found in {path} (searched: manifest_intermediate.md, smcp_manifest.md, manifest.md)",
             }
 
         # Convert result to JSON-serializable dict
@@ -168,6 +168,8 @@ def analyze_resonance(dataset_path: str, backend: str = "auto") -> dict:
         path = Path(dataset_path)
         result = workflows.analyze_resonance(path, backend=backend)
 
+        # Defensive check: workflow always returns ResonanceResult per its type annotation,
+        # but we handle None gracefully in case of future API changes or edge cases.
         if result is None:
             return {
                 "status": "error",
