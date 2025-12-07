@@ -282,6 +282,9 @@ def main() -> None:
     Raises:
         ImportError: If MCP dependencies are not installed.
     """
+    # Import tools module to trigger @mcp_tool decorator registration
+    import pleiades.mcp.tools  # noqa: F401
+
     server = get_server()
 
     # Register all discovered tools
