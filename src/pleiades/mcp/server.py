@@ -29,6 +29,12 @@ from pleiades.mcp import MCP_AVAILABLE, check_mcp_available
 from pleiades.mcp.decorators import get_registered_tools
 from pleiades.utils.logger import loguru_logger
 
+# Module-level logger with context binding (follows codebase convention)
+logger = loguru_logger.bind(name=__name__)
+
+# NoneType constant for efficient type comparisons in union handling
+NoneType: type = type(None)
+
 # Server instance created at module load for decorator support
 _server: Any = None
 
@@ -46,7 +52,7 @@ _TYPE_MAP: dict[type, str] = {
     bool: "boolean",
     list: "array",
     dict: "object",
-    type(None): "null",
+    NoneType: "null",
 }
 
 
@@ -182,7 +188,7 @@ def _python_type_to_json_type(python_type: type | None) -> str:
         if is_union:
             args = get_args(python_type)
             # Filter out NoneType for Optional
-            non_none_args = [a for a in args if a is not type(None)]
+            non_none_args = [a for a in args if a is not NoneType]
             if non_none_args:
                 # Return type of first non-None arg
                 return _python_type_to_json_type(non_none_args[0])
@@ -215,7 +221,7 @@ def _python_type_to_json_type(python_type: type | None) -> str:
             return "object"
 
     # Log unrecognized type and fall back to string
-    loguru_logger.debug(f"Unrecognized type '{python_type}' defaulting to 'string' in JSON schema")
+    logger.debug(f"Unrecognized type '{python_type}' defaulting to 'string' in JSON schema")
     return "string"
 
 
@@ -237,7 +243,7 @@ def register_tools(server: Any) -> None:
     tools = discover_tools()
 
     if not tools:
-        loguru_logger.debug("No tools found in registry")
+        logger.debug("No tools found in registry")
         return
 
     for tool_name, tool_info in tools.items():
@@ -247,9 +253,9 @@ def register_tools(server: Any) -> None:
         try:
             # Register with FastMCP using its decorator
             server.tool(name=tool_name, description=description)(func)
-            loguru_logger.debug(f"Registered tool: {tool_name}")
+            logger.debug(f"Registered tool: {tool_name}")
         except (TypeError, ValueError, AttributeError, RuntimeError) as e:
-            loguru_logger.warning(f"Failed to register tool '{tool_name}': {e}")
+            logger.warning(f"Failed to register tool '{tool_name}': {e}")
             # Continue registering other tools
 
 
@@ -281,7 +287,7 @@ def main() -> None:
     # Register all discovered tools
     register_tools(server)
 
-    loguru_logger.info("Starting PLEIADES MCP server...")
+    logger.info("Starting PLEIADES MCP server...")
     server.run()
 
 

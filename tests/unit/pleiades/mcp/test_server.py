@@ -12,6 +12,7 @@ These tests define the expected API for Issue #166 (MCP server with auto-discove
 They are written BEFORE implementation to guide the development process.
 """
 
+import importlib.util
 import inspect
 from typing import Any, Optional
 from unittest.mock import MagicMock, patch
@@ -19,12 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Detect fastmcp availability at module load
-try:
-    import fastmcp  # noqa: F401
-
-    HAS_FASTMCP = True
-except ImportError:
-    HAS_FASTMCP = False
+HAS_FASTMCP = importlib.util.find_spec("fastmcp") is not None
 
 
 class TestToolDiscovery:
