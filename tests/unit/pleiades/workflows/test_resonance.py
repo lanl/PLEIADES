@@ -326,11 +326,11 @@ class TestAnalyzeResonance:
         assert result.reduced_chi_squared == 1.05
         assert result.temperature_k == 293.6
 
-    def test_full_workflow_not_implemented(self, tmp_path):
-        """Full workflow should return not-implemented error."""
+    def test_full_workflow_handles_empty_raw_folder(self, tmp_path):
+        """Full workflow should handle empty raw folder gracefully."""
         from pleiades.workflows.resonance import analyze_resonance
 
-        # Create imaging data structure
+        # Create imaging data structure with empty folders
         (tmp_path / "raw").mkdir()
         (tmp_path / "open_beam").mkdir()
 
@@ -338,7 +338,9 @@ class TestAnalyzeResonance:
 
         assert not result.success
         assert result.workflow_type == WorkflowType.FULL
-        assert "not yet implemented" in result.error_message
+        # The normalization step should fail because there are no TIFF files
+        assert result.error_step == "normalization"
+        assert "Normalization failed" in result.error_message or "No files found" in result.error_message
 
     @patch("pleiades.sammy.results.manager.ResultsManager")
     @patch("pleiades.sammy.factory.SammyFactory")

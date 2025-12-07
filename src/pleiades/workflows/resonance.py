@@ -179,7 +179,7 @@ def validate_dataset(dataset_path: str | Path) -> ValidationResult:
 
     # Determine recommended workflow
     # Prefer simplified workflow when both are available since full workflow
-    # is not yet implemented (see #172)
+    # is not yet implemented (see #201)
     recommended = None
     if can_run_simplified:
         recommended = WorkflowType.SIMPLIFIED
@@ -380,7 +380,7 @@ def analyze_resonance(
 
         # Determine workflow type
         # Prefer simplified workflow when both are available since full workflow
-        # is not yet implemented (see #172) - matches validate_dataset logic
+        # is not yet implemented (see #201) - matches validate_dataset logic
         if validation.can_run_simplified_workflow:
             workflow_type = WorkflowType.SIMPLIFIED
         elif validation.can_run_full_workflow:
@@ -678,27 +678,419 @@ def _execute_full_workflow(
 ) -> ResonanceResult:
     """Execute full workflow from imaging data.
 
-    This is a placeholder for the full imaging workflow.
-    Full implementation will be added when imaging processing
-    infrastructure is ready.
-    """
-    # TODO(#172): Implement full imaging workflow
-    # This requires:
-    # - pleiades.processing.normalization
-    # - pleiades.sammy.io.data_manager (CSV to SAMMY conversion)
-    # - pleiades.sammy.io.json_manager (multi-isotope JSON config)
-    # - pleiades.sammy.io.inp_manager (INP file generation)
+    Full workflow steps:
+        1. Normalization (TIFF images → transmission spectra)
+        2. Format conversion (CSV → SAMMY .twenty format)
+        3. ENDF retrieval (download nuclear parameters)
+        4. INP file generation (create SAMMY input)
+        5. SAMMY execution (run fitting)
+        6. Results parsing (extract fit parameters)
+        7. Plotting (generate fit plot)
 
-    logger.warning("Full imaging workflow not yet implemented")
+    Args:
+        dataset_path: Path to dataset directory.
+        manifest: Parsed manifest data (optional but recommended).
+        primary_isotope: Primary isotope being analyzed.
+        isotopes: List of isotopes for multi-isotope analysis.
+        backend: SAMMY backend to use.
+        start_time: Workflow start time for runtime calculation.
+        workflow_steps: Dictionary to track step completion.
+
+    Returns:
+        ResonanceResult with analysis results.
+    """
+    import time
+
+    from pleiades.processing import Facility
+    from pleiades.processing.normalization import normalization
+    from pleiades.sammy.interface import SammyFilesMultiMode
+    from pleiades.sammy.io.data_manager import convert_csv_to_sammy_twenty
+    from pleiades.sammy.io.inp_manager import InpManager
+    from pleiades.sammy.io.json_manager import JsonManager
+    from pleiades.sammy.results.manager import ResultsManager
+
+    # Step 1: Normalization (imaging data -> transmission spectra)
+    workflow_steps["normalization"] = "running"
+    logger.info("Step 1: Running normalization")
+
+    try:
+        sample_folders = [str(dataset_path / "raw")]
+        ob_folders = [str(dataset_path / "open_beam")]
+        nexus_path = str(dataset_path / "metadata")
+
+        # Determine facility (default to ORNL)
+        facility = Facility.ornl
+
+        spectra_dir = dataset_path / "spectra"
+        spectra_dir.mkdir(exist_ok=True)
+
+        transmissions = normalization(
+            list_sample_folders=sample_folders,
+            list_obs_folders=ob_folders,
+            nexus_path=nexus_path,
+            facility=facility,
+            output_folder=str(spectra_dir),
+        )
+
+        if not transmissions:
+            raise ValueError("Normalization produced no transmission spectra")
+
+        workflow_steps["normalization"] = f"completed ({len(transmissions)} spectra)"
+        logger.info(f"Normalization completed: {len(transmissions)} spectra")
+    except Exception as e:
+        logger.error(f"Normalization failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"Normalization failed: {e}",
+            error_step="normalization",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 2: Format conversion (CSV -> SAMMY .twenty)
+    workflow_steps["format_conversion"] = "running"
+    logger.info("Step 2: Converting to SAMMY format")
+
+    try:
+        twenty_dir = dataset_path / "twenty"
+        twenty_dir.mkdir(exist_ok=True)
+
+        # Find transmission files created by normalization (space/tab-delimited .txt)
+        txt_files = list(spectra_dir.glob("*transmission*.txt"))
+        if not txt_files:
+            txt_files = list(spectra_dir.glob("*.txt"))
+
+        if not txt_files:
+            raise ValueError(
+                f"No transmission files found in {spectra_dir}. "
+                f"Expected files matching '*transmission*.txt' or '*.txt'. "
+                f"Check normalization output_folder setting."
+            )
+
+        twenty_files = []
+        for txt_file in txt_files:
+            # Replace .txt extension with .twenty
+            twenty_file = twenty_dir / (txt_file.stem + ".twenty")
+            convert_csv_to_sammy_twenty(str(txt_file), str(twenty_file))
+            twenty_files.append(twenty_file)
+
+        workflow_steps["format_conversion"] = f"completed ({len(twenty_files)} files)"
+        logger.info(f"Format conversion completed: {len(twenty_files)} files")
+    except Exception as e:
+        logger.error(f"Format conversion failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"Format conversion failed: {e}",
+            error_step="format_conversion",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 3: ENDF retrieval (nuclear data download)
+    workflow_steps["endf_retrieval"] = "running"
+    logger.info("Step 3: Retrieving ENDF nuclear data")
+
+    try:
+        # Determine isotopes for analysis
+        if isotopes:
+            # User-specified isotopes
+            analysis_isotopes = isotopes
+            abundances = [1.0 / len(isotopes)] * len(isotopes)
+        elif primary_isotope in ("Hf", "Hf-nat"):
+            # Natural hafnium - use all stable isotopes with natural abundances
+            analysis_isotopes = ["Hf-174", "Hf-176", "Hf-177", "Hf-178", "Hf-179", "Hf-180"]
+            abundances = [0.0016, 0.0526, 0.1860, 0.2728, 0.1362, 0.3508]
+        elif primary_isotope.startswith("Hf-"):
+            # Hf foil samples are typically natural abundance even when labeled with specific isotope.
+            # The manifest labels primary isotope (e.g., Hf-177 for the strongest resonance visible),
+            # but we need to fit all isotopes to properly account for overlapping resonances.
+            # TODO(#201): Add support for enriched samples via manifest field 'enriched: true'
+            analysis_isotopes = ["Hf-174", "Hf-176", "Hf-177", "Hf-178", "Hf-179", "Hf-180"]
+            abundances = [0.0016, 0.0526, 0.1860, 0.2728, 0.1362, 0.3508]
+        else:
+            # Single isotope analysis (e.g., U-235, Pu-239)
+            analysis_isotopes = [primary_isotope]
+            abundances = [1.0]
+
+        # Validate isotope list
+        if not analysis_isotopes or not all(analysis_isotopes):
+            raise ValueError(f"Invalid isotope configuration: {analysis_isotopes}")
+
+        # Use dataset_path as working_dir (ENDF .par files go here)
+        working_dir = dataset_path
+
+        json_manager = JsonManager()
+        json_path = json_manager.create_json_config(
+            isotopes=analysis_isotopes,
+            abundances=abundances,
+            working_dir=str(working_dir),
+            custom_global_settings={
+                "forceRMoore": "yes",
+                "purgeSpinGroups": "yes",
+                "fudge": "0.7",
+            },
+        )
+
+        # Validate JSON config was created
+        if json_path is None or not json_path.exists():
+            raise FileNotFoundError(f"JSON config file not created: {json_path}")
+
+        # Verify ENDF parameter files were downloaded
+        for isotope in analysis_isotopes:
+            par_file = working_dir / f"{isotope}.par"
+            if not par_file.exists():
+                raise FileNotFoundError(f"ENDF parameter file not created: {par_file}")
+
+        workflow_steps["endf_retrieval"] = f"completed ({len(analysis_isotopes)} isotopes)"
+        logger.info(f"ENDF retrieval completed: {', '.join(analysis_isotopes)}")
+    except Exception as e:
+        logger.error(f"ENDF retrieval failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"ENDF retrieval failed: {e}",
+            error_step="endf_retrieval",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 4: SAMMY input file generation
+    workflow_steps["inp_generation"] = "running"
+    logger.info("Step 4: Generating SAMMY input file")
+
+    try:
+        # Get material properties from manifest
+        if manifest and manifest.material_properties:
+            mat_props = manifest.material_properties
+            density = mat_props.density_g_cm3
+            atomic_mass = mat_props.atomic_mass_amu
+            temperature = mat_props.temperature_k or 293.6
+        else:
+            raise ValueError("Material properties required in manifest for full workflow")
+
+        element = primary_isotope.split("-")[0]
+        if primary_isotope.startswith("Hf"):
+            mass_number = 178  # Weighted average for natural Hf
+        else:
+            mass_number = int(primary_isotope.split("-")[1])
+
+        material_props = {
+            "element": element,
+            "mass_number": mass_number,
+            "density_g_cm3": density,
+            "atomic_mass_amu": atomic_mass,
+            "abundance": 1.0,
+            "thickness_mm": 0.05,  # Will be fitted by SAMMY
+            "temperature_K": temperature,
+            "min_energy": 1.0,
+            "max_energy_eV": 200.0,
+        }
+
+        # Get resolution file path if available
+        resolution_file_path = _get_resolution_file_path(dataset_path)
+
+        inp_file = working_dir / "fitting.inp"
+        InpManager.create_multi_isotope_inp(
+            inp_file,
+            title=f"{primary_isotope} resonance analysis",
+            material_properties=material_props,
+            resolution_file_path=resolution_file_path,
+        )
+        workflow_steps["inp_generation"] = "completed"
+        logger.info("INP file generation completed")
+    except Exception as e:
+        logger.error(f"INP generation failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"INP generation failed: {e}",
+            error_step="inp_generation",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 5: SAMMY execution
+    workflow_steps["sammy_execution"] = "running"
+    logger.info("Step 5: Running SAMMY")
+
+    try:
+        sammy_working = dataset_path / "sammy_working"
+        sammy_output = dataset_path / "sammy_output"
+
+        runner = _get_sammy_runner(backend, sammy_working, sammy_output)
+
+        # Use first transmission file
+        data_file = twenty_files[0] if twenty_files else None
+        if not data_file:
+            raise ValueError("No transmission data available for fitting")
+
+        files = SammyFilesMultiMode(
+            input_file=inp_file,
+            json_config_file=Path(json_path),
+            data_file=data_file,
+            endf_directory=working_dir,
+        )
+
+        runner.prepare_environment(files)
+        exec_result = runner.execute_sammy(files)
+
+        if not exec_result.success:
+            raise RuntimeError(f"SAMMY execution failed: {exec_result.error_message}")
+
+        runner.collect_outputs(exec_result)
+        workflow_steps["sammy_execution"] = f"completed ({exec_result.runtime_seconds:.2f}s)"
+        logger.info(f"SAMMY execution completed in {exec_result.runtime_seconds:.2f}s")
+    except Exception as e:
+        logger.error(f"SAMMY execution failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"SAMMY execution failed: {e}",
+            error_step="sammy_execution",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 6: Results parsing
+    workflow_steps["results_parsing"] = "running"
+    logger.info("Step 6: Parsing results")
+
+    try:
+        lpt_file = sammy_output / "SAMMY.LPT"
+        lst_file = sammy_output / "SAMMY.LST"
+
+        if not lpt_file.exists() or not lst_file.exists():
+            raise FileNotFoundError("SAMMY output files not found")
+
+        results_manager = ResultsManager(
+            lpt_file_path=lpt_file,
+            lst_file_path=lst_file,
+        )
+
+        fit_results = results_manager.run_results.fit_results
+        if not fit_results:
+            raise ValueError("No fit results found in SAMMY output")
+
+        final_fit = fit_results[-1]
+        chi_sq = final_fit.chi_squared_results
+
+        # Extract broadening parameters
+        temperature_result = None
+        number_density = None
+        try:
+            broadening = final_fit.physics_data.broadening_parameters
+            temperature_result = float(broadening.temp)
+            number_density = float(broadening.thick)
+        except (AttributeError, KeyError, ValueError, TypeError):
+            logger.debug("Broadening parameters not available")
+
+        workflow_steps["results_parsing"] = "completed"
+        logger.info("Results parsing completed")
+    except Exception as e:
+        logger.error(f"Results parsing failed: {e}")
+        return ResonanceResult(
+            success=False,
+            workflow_type=WorkflowType.FULL,
+            primary_isotope=primary_isotope,
+            error_message=f"Results parsing failed: {e}",
+            error_step="results_parsing",
+            workflow_steps=workflow_steps,
+        )
+
+    # Step 7: Generate fitting plot
+    workflow_steps["plotting"] = "running"
+    logger.info("Step 7: Generating plot")
+
+    plot_file = None
+    try:
+        plot_file = dataset_path / "fit_results.png"
+
+        fig = results_manager.plot_transmission(
+            figsize=(12, 8),
+            title=f"{primary_isotope} Resonance Fit",
+            xscale="log",
+            data_color="blue",
+            final_color="red",
+            show=False,
+            show_diff=True,
+            plot_uncertainty=True,
+        )
+
+        fig.savefig(str(plot_file), dpi=300, bbox_inches="tight")
+        workflow_steps["plotting"] = f"completed ({plot_file.name})"
+        logger.info(f"Plot saved to {plot_file}")
+
+        import matplotlib.pyplot as plt
+
+        plt.close(fig)
+    except Exception as e:
+        logger.warning(f"Plotting failed (non-critical): {e}")
+        workflow_steps["plotting"] = f"failed ({e})"
+        plot_file = None
+
+    # Build successful result
+    runtime = time.time() - start_time
+
+    chi_squared_val = float(chi_sq.chi_squared) if chi_sq and chi_sq.chi_squared is not None else None
+    reduced_chi_sq_val = (
+        float(chi_sq.reduced_chi_squared) if chi_sq and chi_sq.reduced_chi_squared is not None else None
+    )
+    dof_val = chi_sq.dof if chi_sq and chi_sq.dof is not None else None
+    fit_quality_val = FitQuality.from_chi_squared(reduced_chi_sq_val) if reduced_chi_sq_val is not None else None
 
     return ResonanceResult(
-        success=False,
+        success=True,
         workflow_type=WorkflowType.FULL,
         primary_isotope=primary_isotope,
-        error_message="Full imaging workflow not yet implemented. Use simplified workflow with pre-existing SAMMY files.",
-        error_step="workflow_selection",
+        isotopes_analyzed=analysis_isotopes,
+        chi_squared=chi_squared_val,
+        reduced_chi_squared=reduced_chi_sq_val,
+        degrees_of_freedom=dof_val,
+        fit_quality=fit_quality_val,
+        number_density=number_density,
+        temperature_k=temperature_result,
+        output_dir=sammy_output,
+        lpt_file=lpt_file,
+        lst_file=lst_file,
+        par_file=sammy_output / "SAMMY.PAR",
+        plot_file=plot_file,
+        runtime_seconds=runtime,
         workflow_steps=workflow_steps,
     )
+
+
+def _get_resolution_file_path(dataset_path: Path) -> Path | None:
+    """Get resolution file path for VENUS resonance analysis.
+
+    Resolution file is facility-specific. Checks:
+    1. VENUS_RES_FUNC environment variable
+    2. Default VENUS location
+
+    Args:
+        dataset_path: Dataset root directory.
+
+    Returns:
+        Path to resolution file or None.
+    """
+    import os
+
+    # Check environment variable
+    venus_res = os.environ.get("VENUS_RES_FUNC", "")
+    if venus_res:
+        res_path = Path(venus_res)
+        if res_path.exists():
+            return res_path
+
+    # Check default VENUS location
+    default_venus_res = Path.home() / "SNS" / "VENUS" / "shared" / "instrument" / "resonance"
+    if default_venus_res.exists():
+        res_files = list(default_venus_res.glob("*.txt"))
+        if res_files:
+            return res_files[0]
+
+    return None
 
 
 def _get_sammy_runner(
