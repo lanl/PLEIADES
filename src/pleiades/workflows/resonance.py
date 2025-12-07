@@ -838,10 +838,13 @@ def _execute_full_workflow(
             raise FileNotFoundError(f"JSON config file not created: {json_path}")
 
         # Verify ENDF parameter files were downloaded
+        # Files use ENDF naming convention: e.g., 072-Hf-174.B-VIII.0.par
         for isotope in analysis_isotopes:
-            par_file = working_dir / f"{isotope}.par"
-            if not par_file.exists():
-                raise FileNotFoundError(f"ENDF parameter file not created: {par_file}")
+            # Match pattern like "*Hf-174*.par"
+            pattern = f"*{isotope}*.par"
+            matching_files = list(working_dir.glob(pattern))
+            if not matching_files:
+                raise FileNotFoundError(f"ENDF parameter file not found for {isotope} (pattern: {pattern})")
 
         workflow_steps["endf_retrieval"] = f"completed ({len(analysis_isotopes)} isotopes)"
         logger.info(f"ENDF retrieval completed: {', '.join(analysis_isotopes)}")
