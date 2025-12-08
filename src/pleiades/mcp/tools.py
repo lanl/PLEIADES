@@ -187,9 +187,10 @@ def extract_resonance_manifest(dataset_path: str) -> dict:
     parameter_descriptions={
         "dataset_path": "Path to the dataset directory containing resonance data.",
         "backend": "SAMMY execution backend: 'auto', 'local', 'docker', or 'nova'.",
+        "isotopes": "List of isotopes to analyze (e.g., ['Hf-177', 'Hf-178']). If not specified, all natural isotopes for the element are used.",
     },
 )
-def analyze_resonance(dataset_path: str, backend: str = "auto") -> dict:
+def analyze_resonance(dataset_path: str, backend: str = "auto", isotopes: list[str] | None = None) -> dict:
     """Analyze a resonance dataset.
 
     Runs resonance analysis on the dataset using the appropriate
@@ -198,13 +199,14 @@ def analyze_resonance(dataset_path: str, backend: str = "auto") -> dict:
     Args:
         dataset_path: Path to the dataset directory.
         backend: SAMMY execution backend (default: "auto").
+        isotopes: List of specific isotopes to analyze. If None, uses all natural isotopes.
 
     Returns:
         Dict with status and analysis results or error message.
     """
     try:
         path = Path(dataset_path)
-        result = workflows.analyze_resonance(path, backend=backend)
+        result = workflows.analyze_resonance(path, backend=backend, isotopes=isotopes)
 
         # Defensive check: workflow always returns ResonanceResult per its type annotation,
         # but we handle None gracefully in case of future API changes or edge cases.
