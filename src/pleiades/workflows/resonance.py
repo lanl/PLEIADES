@@ -13,6 +13,8 @@ Example:
 
 from __future__ import annotations
 
+import math
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -38,6 +40,11 @@ logger = loguru_logger.bind(name=__name__)
 
 # Module-level IsotopeManager instance for data-driven isotope lookup
 _isotope_manager = IsotopeManager()
+
+# Compiled regex for validating primary_isotope format
+# Format: Element symbol (1-2 chars, first uppercase) optionally followed by -number or -nat
+# Examples: "Hf", "Hf-177", "Hf-nat", "U-235", "Au-197"
+_ISOTOPE_PATTERN = re.compile(r"^[A-Z][a-z]?(-(\d+|nat))?$")
 
 
 def validate_dataset(dataset_path: str | Path) -> ValidationResult:
@@ -487,8 +494,6 @@ def _get_isotope_composition(
         >>> isotopes, abundances = _get_isotope_composition(None, None, "Hf-177")
         >>> # Returns all 6 natural Hf isotopes with natural abundances
     """
-    import re
-
     # Priority 1: User-specified isotopes with equal weights
     if user_isotopes:
         abundances = [1.0 / len(user_isotopes)] * len(user_isotopes)
@@ -507,13 +512,12 @@ def _get_isotope_composition(
     if not primary_isotope or not primary_isotope.strip():
         raise ValueError("primary_isotope cannot be empty. Valid formats: 'Hf-177', 'Hf-nat', 'Hf'")
 
-    # Validate format: Element (1-2 chars, first uppercase) optionally followed by -number or -nat
-    isotope_pattern = re.compile(r"^[A-Z][a-z]?(-(\d+|nat))?$", re.IGNORECASE)
-    if not isotope_pattern.match(primary_isotope.strip()):
+    # Validate format using module-level compiled pattern
+    if not _ISOTOPE_PATTERN.match(primary_isotope.strip()):
         raise ValueError(
             f"Invalid primary_isotope format: '{primary_isotope}'. "
             f"Valid formats: 'Hf-177', 'Hf-nat', 'Hf'. "
-            f"Element symbol must start with uppercase letter."
+            f"Element symbol must start with uppercase letter (e.g., 'Hf', not 'hf')."
         )
 
     # Extract element from primary_isotope (e.g., "Hf-177" -> "Hf", "Hf" -> "Hf", "Hf-nat" -> "Hf")
@@ -811,17 +815,18 @@ def _execute_full_workflow(
         nexus_path = str(dataset_path / "metadata")
 
         # Determine facility from manifest or default to ORNL (Issue #204)
+        # Facility class only has 'ornl' and 'lanl' values
         facility = Facility.ornl  # Default
         if manifest and manifest.facility:
             facility_str = manifest.facility.lower()
             if facility_str in ("sns", "ornl"):
                 facility = Facility.ornl
-            elif facility_str == "lansce":
-                facility = Facility.lansce
-            elif facility_str == "j_parc":
-                facility = Facility.j_parc
+            elif facility_str in ("lansce", "lanl"):
+                # LANSCE is at LANL (Los Alamos Neutron Science Center)
+                facility = Facility.lanl
             else:
-                logger.warning(f"Unknown facility '{manifest.facility}', defaulting to ORNL")
+                # Unsupported facilities (e.g., J-PARC) default to ORNL with warning
+                logger.warning(f"Unsupported facility '{manifest.facility}', defaulting to ORNL")
 
         spectra_dir = dataset_path / "spectra"
         spectra_dir.mkdir(exist_ok=True)
@@ -988,8 +993,6 @@ def _execute_full_workflow(
             )
 
         # Use floor + 0.5 for consistent rounding (avoids banker's rounding)
-        import math
-
         mass_number = int(math.floor(mass_number + 0.5))
 
         material_props = {
