@@ -260,3 +260,113 @@ class TestManifestData:
         assert manifest.isotope == "Au-197"
         assert manifest.material_properties.density_g_cm3 == 19.3
         assert "Analysis Instructions" in manifest.body
+
+    def test_default_use_natural_abundance(self):
+        """ManifestData should default to using natural abundance."""
+        manifest = ManifestData(
+            name="test_dataset",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+        )
+        assert manifest.use_natural_abundance is True
+        assert manifest.enrichment is None
+
+    def test_enriched_sample_configuration(self):
+        """ManifestData should support enriched sample configuration."""
+        enrichment_data = {"U-235": 0.90, "U-238": 0.10}
+        manifest = ManifestData(
+            name="enriched_U235",
+            description="Enriched uranium sample",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="U-235",
+            use_natural_abundance=False,
+            enrichment=enrichment_data,
+        )
+        assert manifest.use_natural_abundance is False
+        assert manifest.enrichment == enrichment_data
+        assert manifest.enrichment["U-235"] == 0.90
+
+    def test_enrichment_without_flag_defaults_to_natural(self):
+        """Enrichment dict alone doesn't change use_natural_abundance default."""
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            enrichment={"Hf-177": 0.95, "Hf-178": 0.05},
+        )
+        # Enrichment provided but flag still True - user must explicitly set False
+        assert manifest.use_natural_abundance is True
+
+    def test_enrichment_values_should_be_fractions(self):
+        """Enrichment values should be fractions (0-1), not percentages."""
+        # This is a design constraint - values should be fractions for consistency
+        # with IsotopeManager.get_natural_composition()
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            use_natural_abundance=False,
+            enrichment={"Pu-239": 0.94, "Pu-240": 0.06},
+        )
+        # Verify enrichment values sum to 1.0 (fractions, not percentages)
+        total = sum(manifest.enrichment.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_enrichment_sum_not_1_raises(self):
+        """Enrichment values that don't sum to 1.0 should raise validation error."""
+        with pytest.raises(Exception, match="sum to approximately 1.0"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                enrichment={"U-235": 0.95, "U-238": 0.95},  # Sums to 1.9
+            )
+
+    def test_negative_enrichment_values_raises(self):
+        """Negative enrichment values should raise validation error."""
+        with pytest.raises(Exception, match="cannot be negative"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                enrichment={"U-235": -0.5, "U-238": 1.5},
+            )
+
+    def test_enrichment_exceeds_1_raises(self):
+        """Enrichment values exceeding 1.0 should raise validation error."""
+        with pytest.raises(Exception, match="exceeds 1.0"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                enrichment={"U-235": 1.5, "U-238": 0.0},
+            )
+
+    def test_invalid_isotope_key_format_raises(self):
+        """Malformed isotope keys in enrichment should raise validation error."""
+        with pytest.raises(Exception, match="Invalid isotope key"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                enrichment={"Uranium-235": 1.0},  # Full element name instead of symbol
+            )
+
+    def test_invalid_isotope_format_raises(self):
+        """Isotope keys without mass number should raise validation error."""
+        with pytest.raises(Exception, match="Invalid isotope key"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                enrichment={"U": 1.0},  # Missing mass number
+            )

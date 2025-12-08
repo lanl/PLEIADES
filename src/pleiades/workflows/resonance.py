@@ -32,7 +32,12 @@ from pleiades.workflows.models import (
 if TYPE_CHECKING:
     from pleiades.sammy.interface import SammyRunner
 
+from pleiades.nuclear.isotopes.manager import IsotopeManager
+
 logger = loguru_logger.bind(name=__name__)
+
+# Module-level IsotopeManager instance for data-driven isotope lookup
+_isotope_manager = IsotopeManager()
 
 
 def validate_dataset(dataset_path: str | Path) -> ValidationResult:
@@ -282,6 +287,10 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
             # Log but don't fail - material properties are optional for some workflows
             logger.warning(f"Invalid material_properties in manifest: {e}")
 
+    # Parse enrichment configuration (Issue #204)
+    use_natural_abundance = frontmatter.get("use_natural_abundance", True)
+    enrichment = frontmatter.get("enrichment")
+
     return ManifestData(
         name=frontmatter.get("name", "unknown"),
         description=frontmatter.get("description", ""),
@@ -293,6 +302,8 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
         sample_id=frontmatter.get("sample_id"),
         isotope=frontmatter.get("isotope"),
         material_properties=material_props,
+        use_natural_abundance=use_natural_abundance,
+        enrichment=enrichment,
         body=body,
         raw_frontmatter=frontmatter,
     )
@@ -446,6 +457,85 @@ def analyze_resonance(
             start_time=start_time,
             workflow_steps=workflow_steps,
         )
+
+
+def _get_isotope_composition(
+    user_isotopes: list[str] | None,
+    manifest: ManifestData | None,
+    primary_isotope: str,
+) -> tuple[list[str], list[float]]:
+    """Get isotope list and abundances for analysis.
+
+    Determines the isotopes and their relative abundances based on:
+    1. User-specified isotopes (highest priority) - equal weights
+    2. Manifest enrichment data - custom composition
+    3. Natural abundance from isotopes.info - data-driven lookup
+
+    Args:
+        user_isotopes: User-specified list of isotopes (takes priority).
+        manifest: Parsed manifest data (may contain enrichment info).
+        primary_isotope: Primary isotope from manifest or detection.
+            Valid formats: "Hf-177", "Hf-nat", "Hf"
+
+    Returns:
+        Tuple of (isotope_list, abundance_list).
+
+    Raises:
+        ValueError: If no isotopes can be determined or primary_isotope format is invalid.
+
+    Example:
+        >>> isotopes, abundances = _get_isotope_composition(None, None, "Hf-177")
+        >>> # Returns all 6 natural Hf isotopes with natural abundances
+    """
+    import re
+
+    # Priority 1: User-specified isotopes with equal weights
+    if user_isotopes:
+        abundances = [1.0 / len(user_isotopes)] * len(user_isotopes)
+        return user_isotopes, abundances
+
+    # Priority 2: Manifest enrichment data
+    # Use explicit iteration to ensure isotope-abundance pairing is correct
+    if manifest and not manifest.use_natural_abundance and manifest.enrichment:
+        items = list(manifest.enrichment.items())
+        isotopes = [iso for iso, _ in items]
+        abundances = [abund for _, abund in items]
+        return isotopes, abundances
+
+    # Priority 3: Natural abundance from isotopes.info
+    # Validate primary_isotope format before extraction
+    if not primary_isotope or not primary_isotope.strip():
+        raise ValueError("primary_isotope cannot be empty. Valid formats: 'Hf-177', 'Hf-nat', 'Hf'")
+
+    # Validate format: Element (1-2 chars, first uppercase) optionally followed by -number or -nat
+    isotope_pattern = re.compile(r"^[A-Z][a-z]?(-(\d+|nat))?$", re.IGNORECASE)
+    if not isotope_pattern.match(primary_isotope.strip()):
+        raise ValueError(
+            f"Invalid primary_isotope format: '{primary_isotope}'. "
+            f"Valid formats: 'Hf-177', 'Hf-nat', 'Hf'. "
+            f"Element symbol must start with uppercase letter."
+        )
+
+    # Extract element from primary_isotope (e.g., "Hf-177" -> "Hf", "Hf" -> "Hf", "Hf-nat" -> "Hf")
+    element = primary_isotope.split("-")[0]
+
+    # Get natural composition from IsotopeManager
+    composition = _isotope_manager.get_natural_composition(element)
+
+    if not composition:
+        raise ValueError(
+            f"No natural isotopes found for element '{element}' (from primary_isotope='{primary_isotope}'). "
+            f"Valid formats: 'Hf-177', 'Hf-nat', 'Hf'. "
+            f"Element symbol must be a valid chemical element (e.g., 'Hf', 'U', 'Au'). "
+            f"Alternatively, provide explicit isotopes via the isotopes parameter."
+        )
+
+    # Use explicit iteration to ensure isotope-abundance pairing is correct
+    items = list(composition.items())
+    isotopes = [iso for iso, _ in items]
+    abundances = [abund for _, abund in items]
+
+    return isotopes, abundances
 
 
 def _execute_simplified_workflow(
@@ -611,7 +701,7 @@ def _execute_simplified_workflow(
         final_fit = fit_results[-1]
         chi_sq = final_fit.chi_squared_results
 
-        # Extract broadening parameters if available
+        # Extract broadening parameters (Issue #204: upgraded from debug to warning)
         temperature = None
         number_density = None
         try:
@@ -619,7 +709,9 @@ def _execute_simplified_workflow(
             temperature = float(broadening.temp)
             number_density = float(broadening.thick)
         except (AttributeError, KeyError, ValueError, TypeError) as e:
-            logger.debug(f"Broadening parameters not available: {e}")
+            # Broadening parameters are important for fit quality assessment
+            # Missing parameters may indicate incomplete SAMMY output
+            logger.warning(f"Broadening parameters not available in SAMMY output: {e}")
 
         workflow_steps["results_parsing"] = "completed"
     except Exception as e:
@@ -718,8 +810,18 @@ def _execute_full_workflow(
         ob_folders = [str(dataset_path / "open_beam")]
         nexus_path = str(dataset_path / "metadata")
 
-        # Determine facility (default to ORNL)
-        facility = Facility.ornl
+        # Determine facility from manifest or default to ORNL (Issue #204)
+        facility = Facility.ornl  # Default
+        if manifest and manifest.facility:
+            facility_str = manifest.facility.lower()
+            if facility_str in ("sns", "ornl"):
+                facility = Facility.ornl
+            elif facility_str == "lansce":
+                facility = Facility.lansce
+            elif facility_str == "j_parc":
+                facility = Facility.j_parc
+            else:
+                logger.warning(f"Unknown facility '{manifest.facility}', defaulting to ORNL")
 
         spectra_dir = dataset_path / "spectra"
         spectra_dir.mkdir(exist_ok=True)
@@ -793,26 +895,15 @@ def _execute_full_workflow(
     logger.info("Step 3: Retrieving ENDF nuclear data")
 
     try:
-        # Determine isotopes for analysis
-        if isotopes:
-            # User-specified isotopes
-            analysis_isotopes = isotopes
-            abundances = [1.0 / len(isotopes)] * len(isotopes)
-        elif primary_isotope in ("Hf", "Hf-nat"):
-            # Natural hafnium - use all stable isotopes with natural abundances
-            analysis_isotopes = ["Hf-174", "Hf-176", "Hf-177", "Hf-178", "Hf-179", "Hf-180"]
-            abundances = [0.0016, 0.0526, 0.1860, 0.2728, 0.1362, 0.3508]
-        elif primary_isotope.startswith("Hf-"):
-            # Hf foil samples are typically natural abundance even when labeled with specific isotope.
-            # The manifest labels primary isotope (e.g., Hf-177 for the strongest resonance visible),
-            # but we need to fit all isotopes to properly account for overlapping resonances.
-            # TODO(#201): Add support for enriched samples via manifest field 'enriched: true'
-            analysis_isotopes = ["Hf-174", "Hf-176", "Hf-177", "Hf-178", "Hf-179", "Hf-180"]
-            abundances = [0.0016, 0.0526, 0.1860, 0.2728, 0.1362, 0.3508]
-        else:
-            # Single isotope analysis (e.g., U-235, Pu-239)
-            analysis_isotopes = [primary_isotope]
-            abundances = [1.0]
+        # Determine isotopes for analysis using data-driven lookup (Issue #204)
+        # Priority: user-specified > manifest enrichment > natural abundance from isotopes.info
+        analysis_isotopes, abundances = _get_isotope_composition(
+            user_isotopes=isotopes,
+            manifest=manifest,
+            primary_isotope=primary_isotope,
+        )
+
+        logger.info(f"Isotope composition: {dict(zip(analysis_isotopes, abundances))}")
 
         # Validate isotope list
         if not analysis_isotopes or not all(analysis_isotopes):
@@ -874,10 +965,32 @@ def _execute_full_workflow(
             raise ValueError("Material properties required in manifest for full workflow")
 
         element = primary_isotope.split("-")[0]
-        if primary_isotope.startswith("Hf"):
-            mass_number = 178  # Weighted average for natural Hf
-        else:
-            mass_number = int(primary_isotope.split("-")[1])
+        # Calculate weighted average mass number from isotope composition (Issue #204)
+        mass_number = 0.0
+        for iso, abund in zip(analysis_isotopes, abundances):
+            parts = iso.split("-")
+            if len(parts) > 1:
+                mass_part = parts[1]
+                # Skip "nat" suffix - it's not a mass number
+                if mass_part.lower() == "nat":
+                    continue
+                try:
+                    mass_number += int(mass_part) * abund
+                except ValueError:
+                    logger.warning(f"Invalid mass number in isotope '{iso}', skipping")
+                    continue
+
+        # Validate we got a valid mass number
+        if mass_number < 1.0:
+            raise ValueError(
+                f"Unable to calculate mass number from isotopes {analysis_isotopes}. "
+                f"Isotope strings must include mass number (e.g., 'Hf-177', not 'Hf' or 'Hf-nat')."
+            )
+
+        # Use floor + 0.5 for consistent rounding (avoids banker's rounding)
+        import math
+
+        mass_number = int(math.floor(mass_number + 0.5))
 
         material_props = {
             "element": element,
@@ -979,15 +1092,17 @@ def _execute_full_workflow(
         final_fit = fit_results[-1]
         chi_sq = final_fit.chi_squared_results
 
-        # Extract broadening parameters
+        # Extract broadening parameters (Issue #204: upgraded from debug to warning)
         temperature_result = None
         number_density = None
         try:
             broadening = final_fit.physics_data.broadening_parameters
             temperature_result = float(broadening.temp)
             number_density = float(broadening.thick)
-        except (AttributeError, KeyError, ValueError, TypeError):
-            logger.debug("Broadening parameters not available")
+        except (AttributeError, KeyError, ValueError, TypeError) as e:
+            # Broadening parameters are important for fit quality assessment
+            # Missing parameters may indicate incomplete SAMMY output
+            logger.warning(f"Broadening parameters not available in SAMMY output: {e}")
 
         workflow_steps["results_parsing"] = "completed"
         logger.info("Results parsing completed")

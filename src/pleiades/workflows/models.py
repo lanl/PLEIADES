@@ -199,6 +199,64 @@ class ManifestData(BaseModel):
     isotope: str | None = Field(None, description="Primary isotope (e.g., 'Au-197')")
     material_properties: MaterialProperties | None = Field(None, description="Material physical properties")
 
+    # Isotope composition settings (Issue #204)
+    use_natural_abundance: bool = Field(
+        True,
+        description="If True, use natural abundance from isotopes.info. If False, use custom enrichment values.",
+    )
+    enrichment: dict[str, float] | None = Field(
+        None,
+        description="Custom isotope composition for enriched samples. "
+        "Keys are isotope strings (e.g., 'U-235'), values are fractions (0-1). "
+        "Only used when use_natural_abundance=False.",
+    )
+
+    @field_validator("enrichment")
+    @classmethod
+    def validate_enrichment(cls, v: dict[str, float] | None) -> dict[str, float] | None:
+        """Validate enrichment dict has valid isotope keys and abundance fractions.
+
+        Checks:
+        - All values are in range [0, 1]
+        - Values sum to approximately 1.0 (within 1% tolerance)
+        - Keys match isotope format (Element-MassNumber)
+        """
+        import re
+
+        if v is None:
+            return v
+
+        if not v:
+            return v
+
+        # Validate isotope key format
+        isotope_pattern = re.compile(r"^[A-Z][a-z]?-\d+$")
+        for key in v.keys():
+            if not isotope_pattern.match(key):
+                raise ValueError(
+                    f"Invalid isotope key '{key}' in enrichment. "
+                    f"Expected format: 'Element-MassNumber' (e.g., 'U-235', 'Hf-177')"
+                )
+
+        # Validate values are in valid range
+        for key, value in v.items():
+            if not isinstance(value, (int, float)):
+                raise ValueError(f"Enrichment value for '{key}' must be a number, got {type(value).__name__}")
+            if value < 0:
+                raise ValueError(f"Enrichment value for '{key}' cannot be negative: {value}")
+            if value > 1.0:
+                raise ValueError(
+                    f"Enrichment value for '{key}' exceeds 1.0: {value}. "
+                    f"Values should be fractions (0-1), not percentages."
+                )
+
+        # Validate sum is approximately 1.0
+        total = sum(v.values())
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"Enrichment values must sum to approximately 1.0, got {total:.4f}. Values: {v}")
+
+        return v
+
     # Raw content
     body: str = Field("", description="Markdown body with processing instructions")
     raw_frontmatter: dict[str, Any] = Field(default_factory=dict, description="Raw YAML frontmatter")
