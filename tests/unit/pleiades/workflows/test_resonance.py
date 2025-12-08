@@ -527,8 +527,8 @@ class TestGetIsotopeComposition:
         # Should return all natural Hf isotopes
         assert len(isotopes) == 6
 
-    def test_single_isotope_100_percent_abundance(self):
-        """Single specific isotope should have 100% abundance."""
+    def test_single_natural_isotope_element_100_percent_abundance(self):
+        """Elements with only one naturally occurring isotope should return that isotope with 100% abundance."""
         from pleiades.workflows.resonance import _get_isotope_composition
 
         isotopes, abundances = _get_isotope_composition(
@@ -537,7 +537,7 @@ class TestGetIsotopeComposition:
             primary_isotope="Au-197",
         )
 
-        # Gold has only one natural isotope anyway
+        # Gold has only one natural isotope (Au-197)
         assert len(isotopes) == 1
         assert isotopes[0] == "Au-197"
         assert abundances[0] == 1.0

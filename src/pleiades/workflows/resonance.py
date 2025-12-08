@@ -972,6 +972,7 @@ def _execute_full_workflow(
         element = primary_isotope.split("-")[0]
         # Calculate weighted average mass number from isotope composition (Issue #204)
         mass_number = 0.0
+        valid_isotope_count = 0
         for iso, abund in zip(analysis_isotopes, abundances):
             parts = iso.split("-")
             if len(parts) > 1:
@@ -981,15 +982,16 @@ def _execute_full_workflow(
                     continue
                 try:
                     mass_number += int(mass_part) * abund
+                    valid_isotope_count += 1
                 except ValueError:
                     logger.warning(f"Invalid mass number in isotope '{iso}', skipping")
                     continue
 
-        # Validate we got a valid mass number
-        if mass_number < 1.0:
+        # Validate we processed at least one valid isotope with a mass number
+        if valid_isotope_count == 0:
             raise ValueError(
-                f"Unable to calculate mass number from isotopes {analysis_isotopes}. "
-                f"Isotope strings must include mass number (e.g., 'Hf-177', not 'Hf' or 'Hf-nat')."
+                f"No valid mass numbers found in isotopes {analysis_isotopes}. "
+                f"Isotope strings must include numeric mass number (e.g., 'Hf-177', not 'Hf' or 'Hf-nat')."
             )
 
         # Use floor + 0.5 for consistent rounding (avoids banker's rounding)
