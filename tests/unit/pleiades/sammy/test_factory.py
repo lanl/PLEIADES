@@ -7,7 +7,9 @@ import pytest
 
 from pleiades.sammy.backends.docker import DockerSammyRunner
 from pleiades.sammy.backends.local import LocalSammyRunner
-from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
+
+# NOVA backend is disabled - nova-galaxy package is unstable
+# from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
 from pleiades.sammy.factory import (
     BackendNotAvailableError,
     BackendType,
@@ -133,13 +135,14 @@ class TestSammyFactory:
     """Tests for SammyFactory."""
 
     def test_list_available_backends_all_available(self, mock_which, mock_subprocess_run, mock_nova_env_vars):
-        """All backends should be available."""
+        """All backends should be available (except NOVA which is disabled)."""
         _ = mock_which, mock_subprocess_run, mock_nova_env_vars  # implicitly used by the fixture
         available = SammyFactory.list_available_backends()
+        # NOVA is disabled at code level, so it's always False regardless of env vars
         assert available == {
             BackendType.LOCAL: True,
             BackendType.DOCKER: True,
-            BackendType.NOVA: True,
+            BackendType.NOVA: False,
         }
 
     def test_list_available_backends_none_available(
@@ -171,11 +174,13 @@ class TestSammyFactory:
         runner = SammyFactory.create_runner("docker", tmp_path)
         assert isinstance(runner, DockerSammyRunner)
 
+    @pytest.mark.skip(reason="NOVA backend is disabled - nova-galaxy package is unstable")
     def test_create_runner_nova(self, mock_sammy_runner, tmp_path):
         """Should create NovaSammyRunner."""
         _ = mock_sammy_runner  # implicitly used by the fixture
         runner = SammyFactory.create_runner("nova", tmp_path)
-        assert isinstance(runner, NovaSammyRunner)
+        # NovaSammyRunner import is commented out, this test is skipped
+        # assert isinstance(runner, NovaSammyRunner)
 
     def test_create_runner_invalid_backend(self, tmp_path):
         """Should raise error for invalid backend."""

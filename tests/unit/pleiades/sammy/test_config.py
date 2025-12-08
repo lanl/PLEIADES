@@ -138,8 +138,13 @@ class TestDockerSammyConfig:
         assert "must be different" in str(exc.value)
 
 
+@pytest.mark.skip(reason="NOVA backend is disabled - nova-galaxy package is unstable")
 class TestNovaSammyConfig:
-    """Tests for NovaSammyConfig."""
+    """Tests for NovaSammyConfig.
+
+    NOTE: These tests are skipped because NOVA backend is disabled.
+    See GitHub issue for details.
+    """
 
     def test_create_with_valid_config(self, temp_working_dir):
         """Should create config with valid values."""

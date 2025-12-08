@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-"""Unit tests for NOVA SAMMY backend implementation (updated for new API)."""
+"""Unit tests for NOVA SAMMY backend implementation (updated for new API).
+
+NOTE: NOVA backend is currently disabled. These tests are skipped.
+See GitHub issue for details on why NOVA support is disabled.
+"""
 
 import os
 import zipfile
@@ -7,9 +11,12 @@ from unittest import mock
 
 import pytest
 
-from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
-from pleiades.sammy.config import NovaSammyConfig
-from pleiades.sammy.interface import SammyFiles
+# Skip entire module - NOVA backend is disabled (nova-galaxy package is unstable)
+pytest.skip("NOVA backend is disabled - nova-galaxy package is unstable", allow_module_level=True)
+
+from pleiades.sammy.backends.nova_ornl import NovaSammyRunner  # noqa: E402
+from pleiades.sammy.config import NovaSammyConfig  # noqa: E402
+from pleiades.sammy.interface import SammyFiles  # noqa: E402
 
 # Mock environment variables
 os.environ["NOVA_URL"] = "https://mock_nova_url"
