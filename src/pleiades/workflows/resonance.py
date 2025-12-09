@@ -298,6 +298,9 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
     use_natural_abundance = frontmatter.get("use_natural_abundance", True)
     enrichment = frontmatter.get("enrichment")
 
+    # Parse explicit isotopes list (Issue #206)
+    isotopes = frontmatter.get("isotopes")
+
     return ManifestData(
         name=frontmatter.get("name", "unknown"),
         description=frontmatter.get("description", ""),
@@ -311,6 +314,7 @@ def extract_manifest(dataset_path: str | Path) -> ManifestData | None:
         material_properties=material_props,
         use_natural_abundance=use_natural_abundance,
         enrichment=enrichment,
+        isotopes=isotopes,
         body=body,
         raw_frontmatter=frontmatter,
     )
@@ -475,12 +479,13 @@ def _get_isotope_composition(
 
     Determines the isotopes and their relative abundances based on:
     1. User-specified isotopes (highest priority) - equal weights
-    2. Manifest enrichment data - custom composition
-    3. Natural abundance from isotopes.info - data-driven lookup
+    2. Manifest isotopes list (Issue #206) - explicit subset with equal weights
+    3. Manifest enrichment data - custom composition
+    4. Natural abundance from isotopes.info - data-driven lookup
 
     Args:
         user_isotopes: User-specified list of isotopes (takes priority).
-        manifest: Parsed manifest data (may contain enrichment info).
+        manifest: Parsed manifest data (may contain isotopes list or enrichment info).
         primary_isotope: Primary isotope from manifest or detection.
             Valid formats: "Hf-177", "Hf-nat", "Hf"
 
@@ -499,7 +504,13 @@ def _get_isotope_composition(
         abundances = [1.0 / len(user_isotopes)] * len(user_isotopes)
         return user_isotopes, abundances
 
-    # Priority 2: Manifest enrichment data
+    # Priority 2: Manifest isotopes list with equal weights (Issue #206)
+    # Note: Empty list falls through to natural abundance lookup
+    if manifest and manifest.isotopes:
+        abundances = [1.0 / len(manifest.isotopes)] * len(manifest.isotopes)
+        return list(manifest.isotopes), abundances
+
+    # Priority 3: Manifest enrichment data
     # Use explicit iteration to ensure isotope-abundance pairing is correct
     if manifest and not manifest.use_natural_abundance and manifest.enrichment:
         items = list(manifest.enrichment.items())
@@ -507,7 +518,7 @@ def _get_isotope_composition(
         abundances = [abund for _, abund in items]
         return isotopes, abundances
 
-    # Priority 3: Natural abundance from isotopes.info
+    # Priority 4: Natural abundance from isotopes.info
     # Validate primary_isotope format before extraction
     if not primary_isotope or not primary_isotope.strip():
         raise ValueError("primary_isotope cannot be empty. Valid formats: 'Hf-177', 'Hf-nat', 'Hf'")

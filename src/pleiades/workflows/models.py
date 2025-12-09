@@ -211,6 +211,44 @@ class ManifestData(BaseModel):
         "Only used when use_natural_abundance=False.",
     )
 
+    # Explicit isotope list (Issue #206)
+    isotopes: list[str] | None = Field(
+        None,
+        description="Explicit list of isotopes to analyze (e.g., ['Hf-176', 'Hf-177']). "
+        "When set, only these isotopes are included regardless of natural abundance. "
+        "Takes priority over both enrichment and natural abundance lookup.",
+    )
+
+    @field_validator("isotopes")
+    @classmethod
+    def validate_isotopes(cls, v: list[str] | None) -> list[str] | None:
+        """Validate isotopes list contains valid isotope format strings.
+
+        Checks:
+        - All elements are strings
+        - All strings match isotope format (Element-MassNumber, e.g., 'Hf-177')
+        """
+        import re
+
+        if v is None:
+            return v
+
+        if not v:  # Empty list is valid
+            return v
+
+        # Validate each isotope in the list
+        isotope_pattern = re.compile(r"^[A-Z][a-z]?-\d+$")
+        for idx, isotope in enumerate(v):
+            if not isinstance(isotope, str):
+                raise ValueError(f"Invalid isotope at index {idx}: expected string, got {type(isotope).__name__}")
+            if not isotope_pattern.match(isotope):
+                raise ValueError(
+                    f"Invalid isotope format '{isotope}' at index {idx}. "
+                    f"Expected format: 'Element-MassNumber' (e.g., 'Hf-177', 'U-235')"
+                )
+
+        return v
+
     @field_validator("enrichment")
     @classmethod
     def validate_enrichment(cls, v: dict[str, float] | None) -> dict[str, float] | None:

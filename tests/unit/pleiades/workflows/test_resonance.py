@@ -4,8 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pleiades.workflows.models import WorkflowType
+from pleiades.workflows.models import ManifestData, WorkflowType
 from pleiades.workflows.resonance import (
+    _get_isotope_composition,
     extract_manifest,
     validate_dataset,
 )
@@ -629,3 +630,346 @@ class TestGetSammyRunner:
 
         assert working.exists()
         assert output.exists()
+
+
+class TestManifestDataIsotopesField:
+    """Tests for ManifestData.isotopes field (Issue #206)."""
+
+    def test_manifest_data_isotopes_field_accepts_valid_list(self):
+        """Valid isotope list should be accepted by ManifestData."""
+        manifest = ManifestData(
+            name="test",
+            description="Test manifest with isotopes list",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-176", "Hf-177", "Hf-178"],
+        )
+
+        assert manifest.isotopes == ["Hf-176", "Hf-177", "Hf-178"]
+
+    def test_manifest_data_isotopes_field_accepts_none(self):
+        """None should be valid for isotopes field (no filtering)."""
+        manifest = ManifestData(
+            name="test",
+            description="Test manifest without isotopes",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=None,
+        )
+
+        assert manifest.isotopes is None
+
+    def test_manifest_data_isotopes_field_accepts_empty_list(self):
+        """Empty list should be valid for isotopes field."""
+        manifest = ManifestData(
+            name="test",
+            description="Test manifest with empty isotopes list",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=[],
+        )
+
+        assert manifest.isotopes == []
+
+    def test_manifest_data_isotopes_field_rejects_invalid_isotope_format(self):
+        """Invalid isotope formats should be rejected with validation error."""
+        # Test lowercase element symbol
+        with pytest.raises(ValueError, match="Invalid isotope format"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                isotope="Hf-177",
+                isotopes=["hf-177", "Hf-178"],  # lowercase 'hf' is invalid
+            )
+
+        # Test completely invalid format
+        with pytest.raises(ValueError, match="Invalid isotope format"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                isotope="Hf-177",
+                isotopes=["Hf-177", "invalid"],
+            )
+
+        # Test missing hyphen
+        with pytest.raises(ValueError, match="Invalid isotope format"):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                isotope="Hf-177",
+                isotopes=["Hf177"],
+            )
+
+    def test_manifest_data_isotopes_field_rejects_non_string_elements(self):
+        """Non-string elements in isotopes list should be rejected."""
+        with pytest.raises(ValueError):
+            ManifestData(
+                name="test",
+                description="Test",
+                version="1.0.0",
+                created="2024-01-01T00:00:00Z",
+                isotope="Hf-177",
+                isotopes=[177, "Hf-177"],  # Integer is invalid
+            )
+
+
+class TestExtractManifestIsotopesList:
+    """Tests for extract_manifest parsing of isotopes list (Issue #206)."""
+
+    def test_extract_manifest_parses_isotopes_list(self, tmp_path):
+        """YAML with isotopes list should be parsed into ManifestData.isotopes."""
+        manifest_content = """---
+name: hf_subset
+description: Hafnium sample with specific isotopes
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: Hf-177
+isotopes:
+  - Hf-176
+  - Hf-177
+  - Hf-178
+---
+# Analysis Instructions
+
+Analyze only the specified isotopes.
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.isotopes == ["Hf-176", "Hf-177", "Hf-178"]
+        assert result.isotope == "Hf-177"
+
+    def test_extract_manifest_handles_missing_isotopes(self, tmp_path):
+        """YAML without isotopes field should result in ManifestData.isotopes=None."""
+        manifest_content = """---
+name: test
+description: Test without isotopes list
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: Au-197
+---
+Body content
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.isotopes is None
+        assert result.isotope == "Au-197"
+
+    def test_extract_manifest_handles_empty_isotopes_list(self, tmp_path):
+        """YAML with empty isotopes list should result in empty list."""
+        manifest_content = """---
+name: test
+description: Test with empty isotopes
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: Hf-177
+isotopes: []
+---
+Body content
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.isotopes == []
+
+    def test_extract_manifest_isotopes_list_with_enrichment(self, tmp_path):
+        """Manifest can have both isotopes list and enrichment (different purposes)."""
+        manifest_content = """---
+name: enriched_subset
+description: Enriched sample analyzing specific isotopes
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: U-235
+use_natural_abundance: false
+enrichment:
+  U-235: 0.90
+  U-238: 0.10
+isotopes:
+  - U-235
+---
+Body
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.isotopes == ["U-235"]
+        assert result.enrichment == {"U-235": 0.90, "U-238": 0.10}
+
+
+class TestGetIsotopeCompositionWithManifestIsotopes:
+    """Tests for _get_isotope_composition with manifest isotopes list (Issue #206)."""
+
+    def test_get_isotope_composition_manifest_isotopes_takes_priority_over_natural(self):
+        """When manifest has isotopes list (but no enrichment), use those with equal weights."""
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-176", "Hf-177", "Hf-178"],
+            use_natural_abundance=True,  # Natural abundance flag, but isotopes list takes priority
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="Hf-177",
+        )
+
+        # Should use manifest isotopes, not all natural Hf isotopes
+        assert isotopes == ["Hf-176", "Hf-177", "Hf-178"]
+        assert len(abundances) == 3
+        # Equal weights for all isotopes
+        assert all(abs(a - 1.0 / 3) < 0.001 for a in abundances)
+
+    def test_get_isotope_composition_user_isotopes_takes_priority_over_manifest_isotopes(self):
+        """User parameter should trump manifest isotopes list."""
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-176", "Hf-177", "Hf-178"],
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=["Hf-179", "Hf-180"],  # User overrides manifest
+            manifest=manifest,
+            primary_isotope="Hf-177",
+        )
+
+        # Should use user isotopes, not manifest isotopes
+        assert isotopes == ["Hf-179", "Hf-180"]
+        assert len(abundances) == 2
+        assert all(a == 0.5 for a in abundances)
+
+    def test_get_isotope_composition_isotopes_list_takes_priority_over_enrichment(self):
+        """When both isotopes list and enrichment are set, isotopes list takes priority (explicit subset selection).
+
+        The isotopes list is a more explicit declaration of which isotopes to include,
+        so it takes priority over enrichment which is about abundance values.
+        """
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="U-235",
+            isotopes=["U-235"],  # Manifest specifies ONLY U-235
+            use_natural_abundance=False,
+            enrichment={"U-235": 0.90, "U-238": 0.10},  # Enrichment has both, but isotopes list wins
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="U-235",
+        )
+
+        # Should use isotopes list (only U-235), not enrichment (both U-235 and U-238)
+        assert isotopes == ["U-235"]
+        assert len(abundances) == 1
+        assert abundances[0] == 1.0  # Equal weight for single isotope
+
+    def test_get_isotope_composition_manifest_isotopes_with_equal_weights(self):
+        """Verify that manifest isotopes get equal weights (1/n for n isotopes)."""
+        # Test with 2 isotopes
+        manifest_2 = ManifestData(
+            name="test2",
+            description="Test with 2 isotopes",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-177", "Hf-178"],
+        )
+
+        isotopes_2, abundances_2 = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest_2,
+            primary_isotope="Hf-177",
+        )
+
+        assert len(isotopes_2) == 2
+        assert all(abs(a - 0.5) < 0.001 for a in abundances_2)
+
+        # Test with 4 isotopes
+        manifest_4 = ManifestData(
+            name="test4",
+            description="Test with 4 isotopes",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-176", "Hf-177", "Hf-178", "Hf-179"],
+        )
+
+        isotopes_4, abundances_4 = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest_4,
+            primary_isotope="Hf-177",
+        )
+
+        assert len(isotopes_4) == 4
+        assert all(abs(a - 0.25) < 0.001 for a in abundances_4)
+
+    def test_get_isotope_composition_empty_manifest_isotopes_uses_natural(self):
+        """Empty manifest isotopes list should fall back to natural abundance."""
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=[],  # Empty list should be treated as "not specified"
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="Hf-177",
+        )
+
+        # Should fall back to natural abundance (all 6 Hf isotopes)
+        assert len(isotopes) == 6
+        assert "Hf-174" in isotopes
+        assert "Hf-180" in isotopes
+        assert abs(sum(abundances) - 1.0) < 0.01
+
+    def test_get_isotope_composition_manifest_isotopes_without_enrichment_flag(self):
+        """Manifest isotopes should work regardless of use_natural_abundance flag."""
+        # Test with use_natural_abundance=False but no enrichment dict
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            isotopes=["Hf-177", "Hf-178"],
+            use_natural_abundance=False,  # Flag is False
+            enrichment=None,  # But no enrichment dict
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="Hf-177",
+        )
+
+        # Should use manifest isotopes since enrichment is None
+        assert isotopes == ["Hf-177", "Hf-178"]
+        assert all(abs(a - 0.5) < 0.001 for a in abundances)
