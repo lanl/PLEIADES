@@ -381,6 +381,211 @@ class TestAnalyzeResonance:
         assert "No fit results" in result.error_message
 
 
+class TestExtractManifestEnrichment:
+    """Tests for enrichment parsing in extract_manifest (Issue #204)."""
+
+    def test_manifest_default_natural_abundance(self, tmp_path):
+        """Should default to use_natural_abundance=True."""
+        manifest_content = """---
+name: test
+description: Test
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: Hf-177
+---
+Body
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.use_natural_abundance is True
+        assert result.enrichment is None
+
+    def test_manifest_enriched_sample(self, tmp_path):
+        """Should parse enrichment for enriched samples."""
+        manifest_content = """---
+name: enriched_u235
+description: Enriched uranium sample
+version: "1.0.0"
+created: "2024-01-01T00:00:00Z"
+isotope: U-235
+use_natural_abundance: false
+enrichment:
+  U-235: 0.90
+  U-238: 0.10
+---
+Body
+"""
+        (tmp_path / "manifest_intermediate.md").write_text(manifest_content)
+
+        result = extract_manifest(tmp_path)
+        assert result is not None
+        assert result.use_natural_abundance is False
+        assert result.enrichment == {"U-235": 0.90, "U-238": 0.10}
+
+
+class TestGetIsotopeComposition:
+    """Tests for _get_isotope_composition helper (Issue #204)."""
+
+    def test_user_specified_isotopes_equal_weights(self):
+        """User-specified isotopes should get equal weights."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=["Hf-177", "Hf-178"],
+            manifest=None,
+            primary_isotope="Hf-177",
+        )
+
+        assert isotopes == ["Hf-177", "Hf-178"]
+        assert len(abundances) == 2
+        assert all(a == 0.5 for a in abundances)
+
+    def test_enriched_sample_uses_manifest_enrichment(self):
+        """Enriched samples should use manifest enrichment values."""
+        from pleiades.workflows.models import ManifestData
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="U-235",
+            use_natural_abundance=False,
+            enrichment={"U-235": 0.90, "U-238": 0.10},
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="U-235",
+        )
+
+        assert set(isotopes) == {"U-235", "U-238"}
+        # Find U-235's abundance
+        u235_idx = isotopes.index("U-235")
+        assert abs(abundances[u235_idx] - 0.90) < 0.001
+
+    def test_natural_abundance_from_isotope_manager(self):
+        """Natural abundance should come from IsotopeManager."""
+        from pleiades.workflows.models import ManifestData
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        manifest = ManifestData(
+            name="test",
+            description="Test",
+            version="1.0.0",
+            created="2024-01-01T00:00:00Z",
+            isotope="Hf-177",
+            use_natural_abundance=True,
+        )
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=manifest,
+            primary_isotope="Hf-177",
+        )
+
+        # Should return all 6 natural Hf isotopes
+        assert len(isotopes) == 6
+        assert "Hf-174" in isotopes
+        assert "Hf-180" in isotopes
+
+        # Abundances should sum to ~1.0
+        assert abs(sum(abundances) - 1.0) < 0.01
+
+        # Hf-180 should be most abundant (~35%)
+        hf180_idx = isotopes.index("Hf-180")
+        assert abundances[hf180_idx] > 0.30
+
+    def test_element_only_isotope_uses_natural_abundance(self):
+        """Element-only isotope (e.g., 'Hf') should use natural abundance."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=None,
+            primary_isotope="Hf",
+        )
+
+        # Should return all natural Hf isotopes
+        assert len(isotopes) == 6
+        assert abs(sum(abundances) - 1.0) < 0.01
+
+    def test_element_nat_suffix_uses_natural_abundance(self):
+        """Element-nat isotope (e.g., 'Hf-nat') should use natural abundance."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=None,
+            primary_isotope="Hf-nat",
+        )
+
+        # Should return all natural Hf isotopes
+        assert len(isotopes) == 6
+
+    def test_single_natural_isotope_element_100_percent_abundance(self):
+        """Elements with only one naturally occurring isotope should return that isotope with 100% abundance."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        isotopes, abundances = _get_isotope_composition(
+            user_isotopes=None,
+            manifest=None,
+            primary_isotope="Au-197",
+        )
+
+        # Gold has only one natural isotope (Au-197)
+        assert len(isotopes) == 1
+        assert isotopes[0] == "Au-197"
+        assert abundances[0] == 1.0
+
+    def test_unknown_element_raises_error(self):
+        """Unknown element should raise ValueError."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        with pytest.raises(ValueError, match="No natural isotopes found"):
+            _get_isotope_composition(
+                user_isotopes=None,
+                manifest=None,
+                primary_isotope="Xx-999",
+            )
+
+    def test_empty_primary_isotope_raises(self):
+        """Empty primary_isotope should raise ValueError."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            _get_isotope_composition(
+                user_isotopes=None,
+                manifest=None,
+                primary_isotope="",
+            )
+
+    def test_malformed_primary_isotope_raises(self):
+        """Malformed primary_isotope should raise ValueError."""
+        from pleiades.workflows.resonance import _get_isotope_composition
+
+        # Test various malformed formats
+        malformed_inputs = [
+            "Hf-",  # Trailing dash
+            "-177",  # Leading dash
+            "177-Hf",  # Reversed format
+            "hf177",  # Missing dash
+            "123",  # Just numbers
+        ]
+
+        for bad_input in malformed_inputs:
+            with pytest.raises(ValueError, match="Invalid primary_isotope format"):
+                _get_isotope_composition(
+                    user_isotopes=None,
+                    manifest=None,
+                    primary_isotope=bad_input,
+                )
+
+
 class TestGetSammyRunner:
     """Tests for _get_sammy_runner helper."""
 
