@@ -40,7 +40,7 @@ These fields have defaults if not specified:
 | `name` | string | `"unknown"` | Unique dataset identifier |
 | `description` | string | `""` | Human-readable description |
 | `version` | string | `"1.0.0"` | Manifest version (semver) |
-| `created` | string | `""` | ISO-8601 timestamp (e.g., `2024-06-15T10:30:45`) |
+| `created` | string | `""` | ISO-8601 timestamp (e.g., `2024-06-15T10:30:45Z`) |
 
 ### Experiment Metadata (Optional)
 

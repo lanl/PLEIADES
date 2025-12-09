@@ -128,7 +128,7 @@ from copy import deepcopy
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-_tool_registry: dict[str, dict[str, Any]] = {}
+_mcp_registry: dict[str, dict[str, Any]] = {}
 
 def mcp_tool(
     func: F | None = None,
@@ -143,10 +143,10 @@ def mcp_tool(
         tool_name = name or f.__name__
         tool_desc = description or (f.__doc__ or "").split("\n")[0]
 
-        if tool_name in _tool_registry:
+        if tool_name in _mcp_registry:
             raise ValueError(f"Tool '{tool_name}' already registered")
 
-        _tool_registry[tool_name] = {
+        _mcp_registry[tool_name] = {
             "name": tool_name,
             "description": tool_desc,
             "func": f,
@@ -160,16 +160,16 @@ def mcp_tool(
 
 def get_registered_tools() -> dict[str, dict[str, Any]]:
     """Return deep copy of tool registry."""
-    return deepcopy(_tool_registry)
+    return deepcopy(_mcp_registry)
 
 def clear_registry() -> None:
     """Clear all registered tools (for testing)."""
-    _tool_registry.clear()
+    _mcp_registry.clear()
 ```
 
 **Registry Scope Notes:**
 - The registry is **global** within your package. All modules importing from `yourpackage.mcp.decorators` share the same registry.
-- If multiple packages copy this pattern, each has its **own isolated registry** (different `_tool_registry` variables).
+- If multiple packages copy this pattern, each has its **own isolated registry** (different `_mcp_registry` variables).
 - `clear_registry()` removes ALL tools from your package's registry - use it in tests to ensure clean state between test cases.
 - Tools are registered at **import time** when Python executes the `@mcp_tool` decorator.
 
@@ -282,6 +282,8 @@ if MCP_AVAILABLE:
 
 ```python
 # src/yourpackage/mcp/__main__.py
+import sys
+
 def run() -> None:
     """Entry point for python -m yourpackage.mcp"""
     try:
@@ -289,10 +291,10 @@ def run() -> None:
         main()
     except ImportError as e:
         print(f"Error: {e}")
-        exit(1)
+        sys.exit(1)
     except KeyboardInterrupt:
         print("\nServer stopped.")
-        exit(0)
+        sys.exit(0)
 
 if __name__ == "__main__":
     run()
@@ -497,4 +499,4 @@ The minimal estimates above are for a basic implementation. Production code (lik
 
 - [MCP Protocol Specification](https://modelcontextprotocol.io/)
 - [FastMCP Documentation](https://gofastmcp.com/)
-- [PLEIADES MCP Implementation](https://github.com/lanl/PLEIADES/tree/feature/163-mcp-integration/src/pleiades/mcp)
+- [PLEIADES MCP Implementation](https://github.com/lanl/PLEIADES/tree/next/src/pleiades/mcp)
