@@ -186,7 +186,7 @@ def extract_resonance_manifest(dataset_path: str) -> dict:
     description="Perform neutron resonance analysis on a dataset using SAMMY.",
     parameter_descriptions={
         "dataset_path": "Path to the dataset directory containing resonance data.",
-        "backend": "SAMMY execution backend: 'auto', 'local', 'docker', or 'nova'.",
+        "backend": "SAMMY execution backend: 'auto', 'local', or 'docker'.",
         "isotopes": "List of isotopes to analyze (e.g., ['Hf-177', 'Hf-178']). If not specified, all natural isotopes for the element are used.",
     },
 )
