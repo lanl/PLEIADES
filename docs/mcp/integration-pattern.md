@@ -478,22 +478,19 @@ except Exception as e:
     return {"status": "error", "error": str(e)}
 ```
 
-## Estimated Code Size
+## Implementation Scope
 
-For a minimal MCP integration (simplified version of what PLEIADES uses):
+The MCP integration consists of a small number of focused modules:
 
-| Component | Lines of Code (Minimal) | Lines of Code (Full-featured) |
-|-----------|------------------------|------------------------------|
-| decorators.py | ~50 | ~250 (with validation, docs) |
-| server.py | ~40 | ~300 (with schema generation) |
-| tools.py | ~30 per tool | ~80 per tool (with serialization) |
-| __init__.py | ~20 | ~30 |
-| __main__.py | ~15 | ~25 |
-| **Total** | ~150 + 30/tool | ~600 + 80/tool |
+| Component | Purpose | Complexity |
+|-----------|---------|------------|
+| `decorators.py` | Registry-based `@mcp_tool` decorator | Low - minimal for basic use, grows with validation features |
+| `server.py` | FastMCP server setup and tool discovery | Low to Medium - depends on schema generation needs |
+| `tools.py` | MCP wrappers for workflow functions | Scales with number of tools |
+| `__init__.py` | Optional dependency check | Minimal |
+| `__main__.py` | Module entry point | Minimal |
 
-The minimal estimates above are for a basic implementation. Production code (like PLEIADES) typically includes additional features: comprehensive type validation, detailed JSON schema generation, robust error handling, and extensive documentation.
-
-> **Note**: These estimates exclude test code. A thorough test suite (unit tests for decorators, server, and tools; integration tests for end-to-end workflows) typically adds 200-500 additional lines depending on coverage requirements.
+A minimal implementation requires only the decorator and server modules. Production implementations (like PLEIADES) add comprehensive validation, detailed documentation, and robust error handling. Refer to the PLEIADES source code for current implementation details.
 
 ## References
 
