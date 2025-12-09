@@ -391,7 +391,7 @@ Use `parameter_descriptions` to provide AI-friendly documentation:
     description="Analyze neutron resonance data using SAMMY fitting",
     parameter_descriptions={
         "dataset_path": "Path to directory containing resonance data files",
-        "backend": "Execution backend: 'auto', 'local', 'docker', or 'nova'",
+        "backend": "Execution backend: 'auto', 'local', or 'docker'",
         "isotopes": "List of isotopes to analyze (e.g., ['Hf-177', 'Hf-178'])",
     },
 )
