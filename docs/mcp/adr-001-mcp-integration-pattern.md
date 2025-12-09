@@ -84,7 +84,7 @@ mcp = ["fastmcp>=2.12.0,<3"]
 - **Decoupling**: PLEIADES is fundamentally a library for SAMMY-based resonance analysis. MCP is a nice-to-have feature, not core functionality. A thin wrapper allows switching frameworks if needed—for example, when the official `mcp` package adopted FastMCP patterns, we avoided migration pain by already abstracting the dependency.
 - **Testability**: Tools can be tested without running an MCP server by calling the decorated functions directly.
 - **Registry pattern**: Enables auto-discovery and runtime introspection of available tools without importing FastMCP.
-- **Future flexibility**: If FastMCP 3.x introduces breaking changes or a better implementation emerges, only `server.py` (~50 lines) needs updating—all tool definitions remain unchanged.
+- **Future flexibility**: If FastMCP 3.x introduces breaking changes or a better implementation emerges, only the FastMCP adapter layer in `server.py` needs updating—all tool definitions remain unchanged.
 
 **Implementation** (actual pattern from `decorators.py`):
 ```python
@@ -163,7 +163,7 @@ See `docs/mcp/README.md` for deployment security guidance.
 
 ### Why Not a Shared Package?
 
-We considered extracting a `scientific-mcp` shared package (~100 lines) but decided against it:
+We considered extracting a `scientific-mcp` shared package but decided against it:
 
 - **Premature abstraction**: The pattern is still evolving; freezing it in a package would slow iteration.
 - **Maintenance burden**: Another package to version, release, and keep compatible.
@@ -179,7 +179,7 @@ This architecture supports the broader sMCP vision:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Layer 1: Physics Compiler (Future)                          │
-│   full_smcp_manifest (physics knowledge)                    │
+│   full_sMCP_manifest (physics knowledge)                    │
 │       ↓                                                     │
 │   Generated Code                                            │
 └─────────────────────────────────────────────────────────────┘
