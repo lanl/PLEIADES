@@ -49,13 +49,13 @@ R-matrix fitting with SAMMY remains the standard approach for extracting resonan
 
 # Key Features
 
-- Automated creation of SAMMY input files for neutron transmission fitting  
-- Batch execution management for large datasets  
-- Extraction of isotopic densities and material parameters from SAMMY outputs  
-- Support for energy-resolved neutron imaging workflows with millions of spectra  
-- Interfaces for managing ENDF-formatted nuclear data  
-- Configurable templates for reproducible and scalable analysis  
-- Python API suitable for scripting, interactive analysis, and integration with other tools  
+- Automated creation of SAMMY input files for neutron transmission fitting
+- Batch execution management for large datasets
+- Extraction of isotopic densities and material parameters from SAMMY outputs
+- Support for energy-resolved neutron imaging workflows with millions of spectra
+- Interfaces for managing ENDF-formatted nuclear data
+- Configurable templates for reproducible and scalable analysis
+- Python API suitable for scripting, interactive analysis, and integration with other tools
 
 # Acknowledgements
-Work was supported in part through the Nuclear Science User Facilities (NSUF), under DOE Idaho Operations Office Contract DE-AC07-05ID14517. 
+Work was supported in part through the Nuclear Science User Facilities (NSUF), under DOE Idaho Operations Office Contract DE-AC07-05ID14517. This research used resources at the Spallation Neutron Source, a U.S. Department of Energy Office of Science User Facility operated by Oak Ridge National Laboratory under Contract No. DE‑AC05‑00OR22725. Resonance imaging measurements were carried out on the VENUS instrument at the SNS.
