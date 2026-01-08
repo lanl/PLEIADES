@@ -78,6 +78,39 @@ Once registered, Claude Code will automatically connect to the PLEIADES MCP serv
 - "Extract the manifest from this resonance data"
 - "Analyze the neutron resonance data using the Docker backend"
 
+### 4. Use with OpenAI Codex
+
+Codex CLI does not read `.mcp.json`. You must register MCP servers in the Codex MCP registry.
+
+```bash
+# Register the PLEIADES MCP server (stdio transport)
+codex mcp add pleiades -- /path/to/pixi run mcp-server
+
+```
+
+Here is an example
+
+```bash
+codex mcp add pleiades -- /home/user/.pixi/bin/pixi run mcp-server
+```
+
+Once registered then the MCP can be verified with the following:
+
+```bash
+# Verify registration
+codex mcp list
+
+# Start Codex in the project directory
+codex
+```
+
+In the Codex prompt, ask it to list tools or run an analysis:
+
+- "Use the pleiades MCP server and list its tools."
+- "Run analyze_resonance on ./datasets/hafnium with backend docker."
+
+> **Note**: Do not start the MCP server manually when using Codex. Codex will spawn the stdio server on first tool use.
+
 ## Workflow Overview
 
 The MCP tools orchestrate the following workflow:
@@ -310,6 +343,17 @@ sudo systemctl start docker
 1. Verify `.mcp.json` is in your project root
 2. Check the command path is correct
 3. Restart Claude Code after editing `.mcp.json`
+
+### Codex MCP server not found
+
+If Codex reports `unknown MCP server`:
+
+1. Codex CLI does not read `.mcp.json`; it uses its own MCP registry
+2. Verify the server is registered: `codex mcp list`
+3. Register it if missing: `codex mcp add pleiades -- /path/to/pixi run mcp-server`
+4. Restart Codex after adding the server
+5. Trigger a tool call; Codex lazy-starts MCP servers on first use
+6. Do not start the MCP server manually for stdio transport; Codex spawns it
 
 ## Related Documentation
 
