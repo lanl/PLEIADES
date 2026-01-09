@@ -8,7 +8,7 @@ Basic Workflow
 --------------
 
 PLEIADES uses a factory pattern to create SAMMY runners that abstract
-the execution backend (local, Docker, or NOVA).
+the execution backend (local or Docker; NOVA backend is currently paused).
 
 .. code-block:: python
 
@@ -86,7 +86,7 @@ which chooses the best available backend:
        working_dir=Path("./work"),
    )
 
-Backend priority: local (fastest) > docker (portable) > nova (remote).
+Backend priority: local (fastest) > docker (portable). NOVA backend is currently paused.
 
 Execution Pipeline
 ^^^^^^^^^^^^^^^^^^

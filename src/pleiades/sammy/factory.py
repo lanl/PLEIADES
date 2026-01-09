@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import warnings
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional, Union
@@ -186,6 +187,13 @@ class SammyFactory:
                 runner = DockerSammyRunner(config)
 
             elif backend == BackendType.NOVA:
+                # Warn users that NOVA backend is paused
+                warnings.warn(
+                    "NOVA backend support is currently paused. The NOVA API is under "
+                    "active development. Use local or docker backends for production work.",
+                    UserWarning,
+                    stacklevel=2,
+                )
                 # For NOVA, try environment variables if not in kwargs
                 url = kwargs.get("url") or os.environ.get("NOVA_URL")
                 api_key = kwargs.get("api_key") or os.environ.get("NOVA_API_KEY")

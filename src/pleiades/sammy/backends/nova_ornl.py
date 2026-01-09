@@ -1,5 +1,15 @@
 #!/usr/bin/env python
-"""NOVA web service backend implementation for SAMMY execution."""
+"""
+NOVA web service backend implementation for SAMMY execution.
+
+.. warning::
+    **NOVA backend support is currently paused.** The ORNL NOVA service API
+    is under active development, and PLEIADES integration is on hold until
+    the API stabilizes. Do not rely on this backend for production use.
+
+Status: PAUSED (as of January 2025)
+Tracking: https://github.com/lanl/PLEIADES/issues/98
+"""
 
 import os
 import zipfile

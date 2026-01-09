@@ -108,6 +108,14 @@ The Docker backend runs SAMMY in a container.
 NOVA Backend
 ------------
 
+.. warning::
+    **NOVA backend support is currently paused.** The ORNL NOVA service
+    API is under active development, and PLEIADES integration is on hold
+    until the API stabilizes. Do not rely on this backend for production
+    use at this time.
+
+    The information below is retained for reference when NOVA support resumes.
+
 The NOVA backend submits SAMMY jobs to a remote web service.
 
 **Requirements:**

@@ -37,8 +37,12 @@ Or from conda-forge:
 
    conda install -c conda-forge pleiades-neutron
 
-NOVA Backend (Optional)
-^^^^^^^^^^^^^^^^^^^^^^^
+NOVA Backend (Optional - Currently Paused)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+    NOVA backend support is currently paused while the NOVA API stabilizes.
+    The installation instructions below are retained for future use.
 
 To use the NOVA web service backend, install with the ``nova`` extra:
 
