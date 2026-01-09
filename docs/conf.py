@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
+    "sphinxcontrib.autodoc_pydantic",
 ]
 
 templates_path = []
@@ -72,3 +73,13 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 autodoc_member_order = "bysource"
+
+# -- Autodoc-pydantic settings ------------------------------------------------
+# https://autodoc-pydantic.readthedocs.io/en/stable/users/configuration.html
+
+autodoc_pydantic_model_show_json = False
+autodoc_pydantic_model_show_config_summary = False
+autodoc_pydantic_model_show_field_summary = True
+autodoc_pydantic_model_show_validator_summary = True
+autodoc_pydantic_field_show_constraints = True
+autodoc_pydantic_field_list_validators = True
