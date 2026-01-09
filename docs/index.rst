@@ -7,14 +7,22 @@ PLEIADES is a Python package for setting up, executing, and analyzing SAMMY runs
 for neutron resonance spectroscopy. If you are unfamiliar with SAMMY, please see
 the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
 
-.. note::
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting Started
 
-   This documentation is under active development. API reference and tutorials
-   will be added incrementally.
+   installation
+   quickstart
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Guides
+
+   guides/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference
 
    api/index
    tutorials/index
