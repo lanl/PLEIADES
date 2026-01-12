@@ -27,13 +27,4 @@ Additional modules and utilities:
    pleiades.core
    pleiades.experimental
    pleiades.results
-
-Package Index
--------------
-
-Complete package documentation:
-
-.. toctree::
-   :maxdepth: 1
-
-   pleiades
+   pleiades.post_install
