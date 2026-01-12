@@ -25,8 +25,6 @@ the `SAMMY website <https://code.ornl.gov/RNSD/SAMMY>`_.
    :caption: Reference
 
    api/index
-   tutorials/index
-   examples/index
 
 Indices and tables
 ==================
