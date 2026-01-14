@@ -49,7 +49,7 @@ Notes:
 
 Draft YAML schema (example)
 ---------------------------
-pleiades_version: 1
+pleiades_version: 2
 
 workspace:
   root: /path/to/working_dir
@@ -162,30 +162,28 @@ results_index:
 How this config is used
 -----------------------
 1) Load config.yaml into PleiadesConfig (workspace + nuclear + sammy + datasets + routines).
-2) Prepare workspace directories from workspace.* (create if missing).
-3) Resolve dataset inputs:
+2) Resolve dataset inputs:
    - raw_imaging: run normalization to produce transmission data, then export
      to data_dir/<routine_id>.dat (or .twenty).
    - sammy_dat/sammy_twenty: use sammy_data_file or input_files.data directly.
-4) Cache isotope data with NuclearDataManager:
-   - Use nuclear.data_cache_dir (workspace.endf_dir) and default_library.
-   - Download/cache ENDF data for isotopes referenced by fit_config.nuclear_params.
-5) Create a run record:
+3) Cache isotope data with NuclearDataManager
+   - if isotopic data is not already cached then download isotopic data using parameters referenced by fit_config.nuclear_params.
+4) Create a run record:
    - Append a new entry to runs with run_id, routine_id, dataset_id, and paths.
    - Capture runtime metadata (timestamps, user, host, software versions).
-6) Build SAMMY inputs:
+5) Build SAMMY inputs:
    - Construct FitConfig from fit_routines.<routine_id>.fit_config.
    - Write input.inp and params.par via InpManager and ParManager into the fit_dir.
-7) Execute SAMMY:
+6) Execute SAMMY:
    - Instantiate SammyRunner via SammyFactory using sammy.backend.
    - Run SAMMY with SammyFiles; collect output files in results_dir.
-8) Parse outputs:
+7) Parse outputs:
    - LptManager and LstManager create RunResults.
    - Serialize RunResults to JSON and store the path in runs[].results.
-9) Record provenance and reproducibility:
+8) Record provenance and reproducibility:
    - Persist config snapshot, SAMMY outputs, and run metadata together.
    - Store git commit, environment, and dependency versions for re-running.
-10) Optional iteration:
+9) Optional iteration:
    - If update_from_results is true, update FitConfig for the next run.
 
 ENDF integration
