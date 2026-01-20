@@ -27,6 +27,9 @@ class TestPleiadesConfig:
         assert "API" in config.nuclear_data_sources
         assert config.nuclear_data_sources["DIRECT"] == "https://www-nds.iaea.org/public/download-endf"
         assert config.nuclear_data_sources["API"] == "https://www-nds.iaea.org/exfor/servlet"
+        assert config.nuclear is not None
+        assert config.nuclear.data_cache_dir == expected_path
+        assert config.nuclear.sources == config.nuclear_data_sources
 
     def test_custom_initialization(self):
         """Test custom initialization of PleiadesConfig."""
@@ -37,13 +40,18 @@ class TestPleiadesConfig:
 
         assert config.nuclear_data_cache_dir == custom_path
         assert config.nuclear_data_sources == custom_sources
+        assert config.nuclear is not None
+        assert config.nuclear.data_cache_dir == custom_path
+        assert config.nuclear.sources == custom_sources
 
     def test_post_init_conversion(self):
-        """Test __post_init__ conversion of string paths to Path objects."""
+        """Test conversion of string paths to Path objects."""
         config = PleiadesConfig(nuclear_data_cache_dir="/test/string/path")
 
         assert isinstance(config.nuclear_data_cache_dir, Path)
         assert config.nuclear_data_cache_dir == Path("/test/string/path")
+        assert config.nuclear is not None
+        assert config.nuclear.data_cache_dir == Path("/test/string/path")
 
     def test_ensure_directories(self, monkeypatch):
         """Test directory creation functionality."""
@@ -105,6 +113,9 @@ class TestPleiadesConfig:
             # Verify loaded config matches original
             assert loaded_config.nuclear_data_cache_dir == temp_path
             assert loaded_config.nuclear_data_sources == custom_sources
+            assert loaded_config.nuclear is not None
+            assert loaded_config.nuclear.data_cache_dir == temp_path
+            assert loaded_config.nuclear.sources == custom_sources
 
     def test_load_nonexistent_file(self):
         """Test loading from nonexistent file returns default config."""
