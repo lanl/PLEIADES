@@ -20,20 +20,25 @@ def _expand_path(value: Optional[Any], workspace: Optional["WorkspaceConfig"] = 
 
     raw = str(value)
     if workspace is not None:
-        if workspace.root is not None:
-            raw = raw.replace("${workspace.root}", str(workspace.root))
-        if workspace.endf_dir is not None:
-            raw = raw.replace("${workspace.endf_dir}", str(workspace.endf_dir))
-        if workspace.fitting_dir is not None:
-            raw = raw.replace("${workspace.fitting_dir}", str(workspace.fitting_dir))
-        if workspace.results_dir is not None:
-            raw = raw.replace("${workspace.results_dir}", str(workspace.results_dir))
-        if workspace.data_dir is not None:
-            raw = raw.replace("${workspace.data_dir}", str(workspace.data_dir))
-        if workspace.image_dir is not None:
-            raw = raw.replace("${workspace.image_dir}", str(workspace.image_dir))
+        mapping = {
+            "${workspace.root}": workspace.root,
+            "${workspace.endf_dir}": workspace.endf_dir,
+            "${workspace.fitting_dir}": workspace.fitting_dir,
+            "${workspace.results_dir}": workspace.results_dir,
+            "${workspace.data_dir}": workspace.data_dir,
+            "${workspace.image_dir}": workspace.image_dir,
+        }
+        if raw in mapping:
+            replacement = mapping[raw]
+            if replacement is None or str(replacement) == raw:
+                return None
+        for token, path in mapping.items():
+            if path is not None:
+                raw = raw.replace(token, str(path))
 
     raw = os.path.expandvars(os.path.expanduser(raw))
+    if "${workspace." in raw:
+        return None
     return Path(raw)
 
 
@@ -117,6 +122,7 @@ class PleiadesConfig(BaseModel):
             self.nuclear_data_cache_dir = _expand_path(self.nuclear_data_cache_dir, self.workspace)
         else:
             self.nuclear_data_cache_dir = _expand_path(self.nuclear_data_cache_dir)
+            self.workspace = WorkspaceConfig(endf_dir=self.nuclear_data_cache_dir)
 
         if self.nuclear is None:
             self.nuclear = NuclearConfig(
@@ -138,6 +144,8 @@ class PleiadesConfig(BaseModel):
                 self.nuclear.sources = dict(self.nuclear_data_sources)
             else:
                 self.nuclear_data_sources = dict(self.nuclear.sources)
+        if self.workspace and self.workspace.endf_dir is None:
+            self.workspace.endf_dir = self.nuclear_data_cache_dir
         return self
 
     def ensure_directories(self):
