@@ -3,10 +3,13 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from pleiades.nuclear.models import DataRetrievalMethod, EndfLibrary, IsotopeParameters, nuclearParameters
+from pleiades.utils.helper import VaryFlag
 
 DEFAULT_NUCLEAR_SOURCES = {
     "DIRECT": "https://www-nds.iaea.org/public/download-endf",
@@ -72,7 +75,8 @@ class NuclearConfig(BaseModel):
 
     data_cache_dir: Optional[Path] = None
     sources: Dict[str, str] = Field(default_factory=lambda: dict(DEFAULT_NUCLEAR_SOURCES))
-    default_library: Optional[str] = None
+    default_library: Optional[EndfLibrary] = None
+    isotopes: List["IsotopeConfig"] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _expand_paths(self) -> "NuclearConfig":
@@ -144,9 +148,118 @@ class PleiadesConfig(BaseModel):
                 self.nuclear.sources = dict(self.nuclear_data_sources)
             else:
                 self.nuclear_data_sources = dict(self.nuclear.sources)
+        if self.nuclear.default_library is None:
+            self.nuclear.default_library = EndfLibrary.ENDF_B_VIII_0
         if self.workspace and self.workspace.endf_dir is None:
             self.workspace.endf_dir = self.nuclear_data_cache_dir
+
+        default_library = self.nuclear.default_library or EndfLibrary.ENDF_B_VIII_0
+        self.nuclear.isotopes = [
+            IsotopeConfig(**entry) if isinstance(entry, dict) else entry for entry in self.nuclear.isotopes
+        ]
+        for entry in self.nuclear.isotopes:
+            if entry.endf_library is None:
+                entry.endf_library = default_library
+
+        for routine in self.fit_routines.values():
+            routine_nuclear = routine.get("nuclear") or {}
+            routine_isotopes = routine_nuclear.get("isotopes")
+            if routine_isotopes is None:
+                continue
+            updated: List[IsotopeConfig] = []
+            for entry in routine_isotopes:
+                if isinstance(entry, dict):
+                    entry = IsotopeConfig(**entry)
+                if entry.endf_library is None:
+                    entry.endf_library = default_library
+                updated.append(entry)
+            routine_nuclear["isotopes"] = updated
+            routine["nuclear"] = routine_nuclear
+
         return self
+
+    def build_nuclear_params(self, routine_id: str) -> nuclearParameters:
+        """Build nuclearParameters from configured isotope entries."""
+        routine = self.fit_routines.get(routine_id, {})
+        routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
+        isotope_entries = routine_isotopes if routine_isotopes is not None else self.nuclear.isotopes
+        if not isotope_entries:
+            raise ValueError("No isotopes configured. Set fit_routines.<id>.nuclear.isotopes or nuclear.isotopes.")
+        from pleiades.nuclear.isotopes.manager import IsotopeManager
+
+        manager = IsotopeManager()
+        isotopes: List[IsotopeParameters] = []
+
+        default_library = self.nuclear.default_library or EndfLibrary.ENDF_B_VIII_0
+
+        for entry in isotope_entries:
+            if isinstance(entry, dict):
+                entry = IsotopeConfig(**entry)
+
+            isotope_params = manager.get_isotope_parameters_from_isotope_string(entry.isotope)
+            if isotope_params is None:
+                raise ValueError(f"Isotope not found: {entry.isotope}")
+
+            isotope_params.abundance = entry.abundance
+            isotope_params.uncertainty = entry.uncertainty
+            isotope_params.vary_abundance = entry.vary_abundance
+            isotope_params.endf_library = entry.endf_library or default_library
+
+            isotopes.append(isotope_params)
+
+        return nuclearParameters(isotopes=isotopes)
+
+    def ensure_endf_cache(
+        self,
+        routine_id: Optional[str] = None,
+        method: DataRetrievalMethod = DataRetrievalMethod.DIRECT,
+        output_dir: Optional[Path] = None,
+        use_cache: bool = True,
+    ) -> List[Path]:
+        """Ensure ENDF cache files exist for configured isotopes."""
+        if routine_id:
+            routine = self.fit_routines.get(routine_id, {})
+            routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
+            isotope_entries = routine_isotopes if routine_isotopes is not None else self.nuclear.isotopes
+        else:
+            isotope_entries = self.nuclear.isotopes
+
+        if not isotope_entries:
+            raise ValueError("No isotopes configured. Set fit_routines.<id>.nuclear.isotopes or nuclear.isotopes.")
+
+        from pleiades.nuclear.manager import NuclearDataManager
+
+        output_dir = (
+            Path(output_dir)
+            if output_dir is not None
+            else (
+                self.workspace.endf_dir if self.workspace and self.workspace.endf_dir else self.nuclear_data_cache_dir
+            )
+        )
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        set_config(self)
+        manager = NuclearDataManager()
+        default_library = self.nuclear.default_library or EndfLibrary.ENDF_B_VIII_0
+
+        outputs: List[Path] = []
+        for entry in isotope_entries:
+            if isinstance(entry, dict):
+                entry = IsotopeConfig(**entry)
+            isotope_info = manager.isotope_manager.get_isotope_info(entry.isotope)
+            if isotope_info is None:
+                raise ValueError(f"Isotope not found: {entry.isotope}")
+            library = entry.endf_library or default_library
+            output_path = manager.download_endf_resonance_file(
+                isotope=isotope_info,
+                library=library,
+                output_dir=str(output_dir),
+                method=method,
+                use_cache=use_cache,
+            )
+            outputs.append(output_path)
+
+        return outputs
 
     def ensure_directories(self):
         """Ensure all configured directories exist."""
@@ -218,6 +331,21 @@ class PleiadesConfig(BaseModel):
     def from_dict(cls, config_dict: Dict[str, Any]) -> "PleiadesConfig":
         """Build a configuration from a dictionary."""
         return cls.model_validate(config_dict or {})
+
+
+class IsotopeConfig(BaseModel):
+    """Configuration for a single isotope entry."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    isotope: str
+    abundance: Optional[float] = None
+    uncertainty: Optional[float] = None
+    vary_abundance: Optional[VaryFlag] = None
+    endf_library: Optional[EndfLibrary] = None
+
+
+NuclearConfig.model_rebuild()
 
 
 # Global configuration instance
