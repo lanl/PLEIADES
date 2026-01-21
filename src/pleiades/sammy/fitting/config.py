@@ -28,6 +28,16 @@ class FitConfig(BaseModel):
     max_wall_time: Optional[float] = Field(default=None, description="Maximum wall time allowed")
     max_memory: Optional[float] = Field(default=None, description="Maximum memory allowed")
     max_disk: Optional[float] = Field(default=None, description="Maximum disk space allowed")
+    iptdop: Optional[int] = Field(
+        default=None, description="Grid enhancement for Doppler broadening (Card Set 2 IPTDOP)"
+    )
+    iptwid: Optional[int] = Field(default=None, description="Grid enhancement for resonance tails (Card Set 2 IPTWID)")
+    ixxchn: Optional[int] = Field(default=None, description="Special channel skip or ENDF ZA (Card Set 2 IXXCHN)")
+    ndigit: Optional[int] = Field(default=None, description="Digits for compact covariance output (Card Set 2 NDIGIT)")
+    idropp: Optional[int] = Field(
+        default=None, description="Percent threshold for zeroing covariances (Card Set 2 IDROPP)"
+    )
+    matnum: Optional[int] = Field(default=None, description="ENDF material number (Card Set 2 MATNUM)")
 
     nuclear_params: nuclearParameters = Field(
         default_factory=nuclearParameters, description="Nuclear parameters used in SAMMY calculations"
