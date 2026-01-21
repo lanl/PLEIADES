@@ -213,6 +213,14 @@ class PleiadesConfig(BaseModel):
         self.fit_routines = new_fit_routines
         return self
 
+    @model_validator(mode="after")
+    def _require_fit_routines(self, info) -> "PleiadesConfig":
+        """Require fit_routines when loading from a user config."""
+        if info.context and info.context.get("require_fit_routines"):
+            if not self.fit_routines:
+                raise ValueError("fit_routines must be defined in the config file")
+        return self
+
     def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
         """Build nuclearParameters from configured isotope entries."""
         isotope_entries = None
@@ -420,7 +428,7 @@ class PleiadesConfig(BaseModel):
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "PleiadesConfig":
         """Build a configuration from a dictionary."""
-        return cls.model_validate(config_dict or {})
+        return cls.model_validate(config_dict or {}, context={"require_fit_routines": True})
 
 
 class IsotopeConfig(BaseModel):
