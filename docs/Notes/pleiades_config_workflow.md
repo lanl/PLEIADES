@@ -145,20 +145,20 @@ runs:
     routine_id: example_fit
     dataset_id: example_dataset
     created_at: "2026-01-14T12:00:00Z"
-    fit_dir: ${workspace.fitting_dir}/${routine_id}
-    results_dir: ${workspace.fitting_dir}/${routine_id}/results_dir
+    fit_dir: ${workspace.fitting_dir}/example_fit
+    results_dir: ${workspace.fitting_dir}/example_fit/results_dir
     input_files:
-      inp: ${workspace.fitting_dir}/${routine_id}/input.inp
-      par: ${workspace.fitting_dir}/${routine_id}/params.par
-      data: ${workspace.data_dir}/${routine_id}.dat
+      inp: ${workspace.fitting_dir}/example_fit/input.inp
+      par: ${workspace.fitting_dir}/example_fit/params.par
+      data: ${workspace.data_dir}/example_fit.dat
     output_files:
-      lpt: ${workspace.fitting_dir}/${routine_id}/results_dir/SAMMY.LPT
-      lst: ${workspace.fitting_dir}/${routine_id}/results_dir/SAMMY.LST
-      sammy_par: ${workspace.fitting_dir}/${routine_id}/results_dir/SAMMY.PAR
+      lpt: ${workspace.fitting_dir}/example_fit/results_dir/SAMMY.LPT
+      lst: ${workspace.fitting_dir}/example_fit/results_dir/SAMMY.LST
+      sammy_par: ${workspace.fitting_dir}/example_fit/results_dir/SAMMY.PAR
     sammy_execution:
       backend: local
       success: false
-      console_output: ${workspace.fitting_dir}/${routine_id}/results_dir/sammy_console.txt
+      console_output: ${workspace.fitting_dir}/example_fit/results_dir/sammy_console.txt
     results:
       run_results_path: ${workspace.results_dir}/run_results_001.json
       summary:
