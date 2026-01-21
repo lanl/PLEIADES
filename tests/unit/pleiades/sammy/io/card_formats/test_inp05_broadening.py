@@ -58,25 +58,25 @@ def test_parse_minimal_line(minimal_line):
 
 def test_parse_empty_line():
     """Test that empty line raises ValueError."""
-    with pytest.raises(ValueError, match="No valid Card 3 line"):
+    with pytest.raises(ValueError, match="No valid Card 5 line"):
         Card05.from_lines([""])
 
 
 def test_parse_no_lines():
     """Test that empty list raises ValueError."""
-    with pytest.raises(ValueError, match="No valid Card 3 line"):
+    with pytest.raises(ValueError, match="No valid Card 5 line"):
         Card05.from_lines([])
 
 
 def test_parse_insufficient_fields():
     """Test that line with only one field raises ValueError."""
-    with pytest.raises(ValueError, match="Card 3 line must have at least 2 fields"):
+    with pytest.raises(ValueError, match="Card 5 line must have at least 2 fields"):
         Card05.from_lines(["300.0"])
 
 
 def test_parse_invalid_format():
     """Test that invalid numeric format raises ValueError."""
-    with pytest.raises(ValueError, match="Failed to parse Card 3 line"):
+    with pytest.raises(ValueError, match="Failed to parse Card 5 line"):
         Card05.from_lines(["InvalidData MoreInvalidData"])
 
 
