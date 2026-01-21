@@ -1,8 +1,8 @@
-"""Unit tests for SAMMY INP file - Card 3 (physical constants) class."""
+"""Unit tests for SAMMY INP file - Card 5 (broadening constants) class."""
 
 import pytest
 
-from pleiades.sammy.io.card_formats.inp03_constants import Card03, PhysicalConstants
+from pleiades.sammy.io.card_formats.inp05_broadening import Card05, PhysicalConstants
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def minimal_line():
 
 def test_parse_ex012_line(ex012_line):
     """Test parsing ex012 physical constants line."""
-    constants = Card03.from_lines(ex012_line)
+    constants = Card05.from_lines(ex012_line)
 
     assert pytest.approx(constants.temperature, rel=1e-3) == 300.0
     assert pytest.approx(constants.flight_path_length, rel=1e-4) == 200.0
@@ -36,7 +36,7 @@ def test_parse_ex012_line(ex012_line):
 
 def test_parse_venus_default_line(venus_default_line):
     """Test parsing VENUS default configuration."""
-    constants = Card03.from_lines(venus_default_line)
+    constants = Card05.from_lines(venus_default_line)
 
     assert pytest.approx(constants.temperature, rel=1e-3) == 293.6
     assert pytest.approx(constants.flight_path_length, rel=1e-3) == 25.0
@@ -47,7 +47,7 @@ def test_parse_venus_default_line(venus_default_line):
 
 def test_parse_minimal_line(minimal_line):
     """Test parsing minimal valid line (only TEMP and FPL)."""
-    constants = Card03.from_lines(minimal_line)
+    constants = Card05.from_lines(minimal_line)
 
     assert pytest.approx(constants.temperature, rel=1e-3) == 300.0
     assert pytest.approx(constants.flight_path_length, rel=1e-3) == 25.0
@@ -59,25 +59,25 @@ def test_parse_minimal_line(minimal_line):
 def test_parse_empty_line():
     """Test that empty line raises ValueError."""
     with pytest.raises(ValueError, match="No valid Card 3 line"):
-        Card03.from_lines([""])
+        Card05.from_lines([""])
 
 
 def test_parse_no_lines():
     """Test that empty list raises ValueError."""
     with pytest.raises(ValueError, match="No valid Card 3 line"):
-        Card03.from_lines([])
+        Card05.from_lines([])
 
 
 def test_parse_insufficient_fields():
     """Test that line with only one field raises ValueError."""
     with pytest.raises(ValueError, match="Card 3 line must have at least 2 fields"):
-        Card03.from_lines(["300.0"])
+        Card05.from_lines(["300.0"])
 
 
 def test_parse_invalid_format():
     """Test that invalid numeric format raises ValueError."""
     with pytest.raises(ValueError, match="Failed to parse Card 3 line"):
-        Card03.from_lines(["InvalidData MoreInvalidData"])
+        Card05.from_lines(["InvalidData MoreInvalidData"])
 
 
 def test_to_lines_ex012():
@@ -86,7 +86,7 @@ def test_to_lines_ex012():
         temperature=300.0, flight_path_length=200.0, delta_l=0.182233, delta_g=0.0, delta_e=0.002518
     )
 
-    lines = Card03.to_lines(constants)
+    lines = Card05.to_lines(constants)
 
     assert len(lines) == 1
     assert "300.0" in lines[0]
@@ -100,7 +100,7 @@ def test_to_lines_venus_default():
     """Test generating VENUS default line."""
     constants = PhysicalConstants(temperature=293.6, flight_path_length=25.0, delta_l=0.0, delta_g=0.0, delta_e=0.0)
 
-    lines = Card03.to_lines(constants)
+    lines = Card05.to_lines(constants)
 
     assert len(lines) == 1
     assert "293.6" in lines[0]
@@ -112,7 +112,7 @@ def test_to_lines_minimal():
     """Test generating minimal line with defaults."""
     constants = PhysicalConstants(temperature=300.0, flight_path_length=25.0)
 
-    lines = Card03.to_lines(constants)
+    lines = Card05.to_lines(constants)
 
     assert len(lines) == 1
     assert "300.0" in lines[0]
@@ -121,10 +121,10 @@ def test_to_lines_minimal():
 
 def test_roundtrip_ex012(ex012_line):
     """Test parse and regenerate produces consistent result."""
-    constants = Card03.from_lines(ex012_line)
-    regenerated_lines = Card03.to_lines(constants)
+    constants = Card05.from_lines(ex012_line)
+    regenerated_lines = Card05.to_lines(constants)
 
-    reparsed_constants = Card03.from_lines(regenerated_lines)
+    reparsed_constants = Card05.from_lines(regenerated_lines)
 
     assert pytest.approx(reparsed_constants.temperature, rel=1e-3) == constants.temperature
     assert pytest.approx(reparsed_constants.flight_path_length, rel=1e-3) == constants.flight_path_length
@@ -172,7 +172,7 @@ def test_physical_constants_validation_negative_delta_e():
 def test_to_lines_invalid_input():
     """Test that to_lines rejects non-PhysicalConstants input."""
     with pytest.raises(ValueError, match="constants must be an instance of PhysicalConstants"):
-        Card03.to_lines("not a PhysicalConstants object")
+        Card05.to_lines("not a PhysicalConstants object")
 
 
 def test_default_values():
