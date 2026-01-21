@@ -2,8 +2,8 @@
 """
 Sample Density for SAMMY INP files.
 
-This module provides the Card03Density class for parsing and generating the sample
-density line in SAMMY input files. This line appears after the physical constants
+This module provides the Card07Density class for parsing and generating the sample
+density line in SAMMY input files. This line appears after the broadening constants
 and defines the material density and number density.
 
 Format specification (Sample Density):
@@ -36,7 +36,7 @@ class SampleDensity(BaseModel):
     number_density: float = Field(..., description="Number density (atoms/barn-cm)", gt=0)
 
 
-class Card03Density(BaseModel):
+class Card07Density(BaseModel):
     """
     Class representing sample density line in SAMMY INP files.
 
