@@ -3,7 +3,7 @@
 sammy <<EOF
 ex027.inp
 ex027.endf
-ex027a.dat
+ex027.dat
 
 EOF
 mv -f SAM* results/
