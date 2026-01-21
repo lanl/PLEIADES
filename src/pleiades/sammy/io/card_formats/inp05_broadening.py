@@ -73,14 +73,14 @@ class Card05(BaseModel):
         line = lines[0].strip()
         fields = line.split()
 
-        if len(fields) < 2:
-            message = f"Card 5 line must have at least 2 fields (TEMP, FPL), got {len(fields)}"
+        if len(fields) < 1:
+            message = f"Card 5 line must have at least 1 field (TEMP), got {len(fields)}"
             logger.error(message)
             raise ValueError(message)
 
         try:
             temperature = float(fields[0])
-            flight_path_length = float(fields[1])
+            flight_path_length = float(fields[1]) if len(fields) > 1 else 25.0
             delta_l = float(fields[2]) if len(fields) > 2 else 0.0
             delta_g = float(fields[3]) if len(fields) > 3 else 0.0
             delta_e = float(fields[4]) if len(fields) > 4 else 0.0
