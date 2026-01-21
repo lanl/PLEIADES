@@ -186,21 +186,31 @@ class PleiadesConfig(BaseModel):
             if entry.endf_library is None:
                 entry.endf_library = default_library
 
-        for routine in self.fit_routines.values():
-            routine_nuclear = routine.get("nuclear") or {}
-            routine_isotopes = routine_nuclear.get("isotopes")
-            if routine_isotopes is None:
-                continue
-            updated: List[IsotopeConfig] = []
-            for entry in routine_isotopes:
-                if isinstance(entry, dict):
-                    entry = IsotopeConfig(**entry)
-                if entry.endf_library is None:
-                    entry.endf_library = default_library
-                updated.append(entry)
-            routine_nuclear["isotopes"] = updated
-            routine["nuclear"] = routine_nuclear
+        # Normalize isotope configuration inside fit_routines without mutating
+        # the original routine dictionaries in-place.
+        new_fit_routines: Dict[str, Dict[str, Any]] = {}
+        for routine_id, routine in self.fit_routines.items():
+            # Work on shallow copies to avoid surprising side effects for callers
+            # that may hold references to the original routine dictionaries.
+            new_routine: Dict[str, Any] = dict(routine)
+            routine_nuclear_src = routine.get("nuclear") or {}
+            routine_nuclear: Dict[str, Any] = dict(routine_nuclear_src)
 
+            routine_isotopes = routine_nuclear.get("isotopes")
+            if routine_isotopes is not None:
+                updated: List[IsotopeConfig] = []
+                for entry in routine_isotopes:
+                    if isinstance(entry, dict):
+                        entry = IsotopeConfig(**entry)
+                    if entry.endf_library is None:
+                        entry.endf_library = default_library
+                    updated.append(entry)
+                routine_nuclear["isotopes"] = updated
+                new_routine["nuclear"] = routine_nuclear
+
+            new_fit_routines[routine_id] = new_routine
+
+        self.fit_routines = new_fit_routines
         return self
 
     def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
