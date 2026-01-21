@@ -178,11 +178,16 @@ class PleiadesConfig(BaseModel):
 
         return self
 
-    def build_nuclear_params(self, routine_id: str) -> nuclearParameters:
+    def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
         """Build nuclearParameters from configured isotope entries."""
-        routine = self.fit_routines.get(routine_id, {})
-        routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
-        isotope_entries = routine_isotopes if routine_isotopes is not None else self.nuclear.isotopes
+        isotope_entries = None
+        if routine_id:
+            routine = self.fit_routines.get(routine_id, {})
+            routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
+            if routine_isotopes:
+                isotope_entries = routine_isotopes
+        if isotope_entries is None:
+            isotope_entries = self.nuclear.isotopes
         if not isotope_entries:
             raise ValueError("No isotopes configured. Set fit_routines.<id>.nuclear.isotopes or nuclear.isotopes.")
         from pleiades.nuclear.isotopes.manager import IsotopeManager
@@ -208,6 +213,14 @@ class PleiadesConfig(BaseModel):
             isotopes.append(isotope_params)
 
         return nuclearParameters(isotopes=isotopes)
+
+    def populate_fit_config_isotopes(self, fit_config: Any, routine_id: Optional[str] = None) -> Any:
+        """Populate fit_config.nuclear_params.isotopes from config if missing."""
+        if not hasattr(fit_config, "nuclear_params"):
+            raise ValueError("fit_config must have a nuclear_params attribute")
+        if not fit_config.nuclear_params.isotopes:
+            fit_config.nuclear_params = self.build_nuclear_params(routine_id)
+        return fit_config
 
     def ensure_endf_cache(
         self,
@@ -275,6 +288,48 @@ class PleiadesConfig(BaseModel):
             ):
                 if path is not None:
                     path.mkdir(parents=True, exist_ok=True)
+
+    def create_routine_dirs(
+        self,
+        base_routine_ids: Optional[List[str]] = None,
+        timestamp: Optional[str] = None,
+    ) -> List[Dict[str, Path]]:
+        """Create timestamped routine directories under workspace.fitting_dir."""
+        if not self.workspace or not self.workspace.fitting_dir:
+            raise ValueError("workspace.fitting_dir is required to create routine directories")
+
+        routine_ids = base_routine_ids or list(self.fit_routines.keys())
+        if not routine_ids:
+            raise ValueError("No fit_routines defined to create routine directories")
+
+        if timestamp is None:
+            from datetime import datetime, timezone
+
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+        created: List[Dict[str, Path]] = []
+        fitting_dir = self.workspace.fitting_dir
+
+        for base_routine_id in routine_ids:
+            routine_id = f"{base_routine_id}_{timestamp}"
+            fit_dir = fitting_dir / routine_id
+            results_dir = fit_dir / "results_dir"
+
+            fit_dir.mkdir(parents=True, exist_ok=True)
+            results_dir.mkdir(parents=True, exist_ok=True)
+
+            created.append(
+                {
+                    "routine_id": routine_id,
+                    "fit_dir": fit_dir,
+                    "results_dir": results_dir,
+                }
+            )
+
+        if self.workspace.results_dir:
+            self.workspace.results_dir.mkdir(parents=True, exist_ok=True)
+
+        return created
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to a dictionary."""
