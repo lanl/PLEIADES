@@ -31,15 +31,40 @@ def _expand_path(value: Optional[Any], workspace: Optional["WorkspaceConfig"] = 
             "${workspace.data_dir}": workspace.data_dir,
             "${workspace.image_dir}": workspace.image_dir,
         }
+
+        # Handle the simple case where the value is exactly one workspace token.
+        # If the replacement is None or does not actually change the value,
+        # treat this as an unresolved or self-referential path and return None.
         if raw in mapping:
             replacement = mapping[raw]
-            if replacement is None or str(replacement) == raw:
+            if replacement is None:
                 return None
-        for token, path in mapping.items():
-            if path is not None:
-                raw = raw.replace(token, str(path))
+            replacement_str = str(replacement)
+            if replacement_str == raw:
+                return None
+            raw = replacement_str
+
+        # Perform iterative substitution of workspace tokens, tracking which
+        # tokens have already been expanded to detect circular references,
+        # including multi-level indirections (e.g., A -> B -> C -> A).
+        visited_tokens = set()
+        changed = True
+        while changed:
+            changed = False
+            for token, path in mapping.items():
+                if path is None:
+                    continue
+                if token in raw:
+                    if token in visited_tokens:
+                        # Circular reference detected (token reappeared after expansion).
+                        return None
+                    visited_tokens.add(token)
+                    raw = raw.replace(token, str(path))
+                    changed = True
 
     raw = os.path.expandvars(os.path.expanduser(raw))
+    # If any workspace tokens remain at this point, the path could not be
+    # resolved (possibly due to an indirect circular reference); return None.
     if "${workspace." in raw:
         return None
     return Path(raw)
@@ -161,21 +186,31 @@ class PleiadesConfig(BaseModel):
             if entry.endf_library is None:
                 entry.endf_library = default_library
 
-        for routine in self.fit_routines.values():
-            routine_nuclear = routine.get("nuclear") or {}
-            routine_isotopes = routine_nuclear.get("isotopes")
-            if routine_isotopes is None:
-                continue
-            updated: List[IsotopeConfig] = []
-            for entry in routine_isotopes:
-                if isinstance(entry, dict):
-                    entry = IsotopeConfig(**entry)
-                if entry.endf_library is None:
-                    entry.endf_library = default_library
-                updated.append(entry)
-            routine_nuclear["isotopes"] = updated
-            routine["nuclear"] = routine_nuclear
+        # Normalize isotope configuration inside fit_routines without mutating
+        # the original routine dictionaries in-place.
+        new_fit_routines: Dict[str, Dict[str, Any]] = {}
+        for routine_id, routine in self.fit_routines.items():
+            # Work on shallow copies to avoid surprising side effects for callers
+            # that may hold references to the original routine dictionaries.
+            new_routine: Dict[str, Any] = dict(routine)
+            routine_nuclear_src = routine.get("nuclear") or {}
+            routine_nuclear: Dict[str, Any] = dict(routine_nuclear_src)
 
+            routine_isotopes = routine_nuclear.get("isotopes")
+            if routine_isotopes is not None:
+                updated: List[IsotopeConfig] = []
+                for entry in routine_isotopes:
+                    if isinstance(entry, dict):
+                        entry = IsotopeConfig(**entry)
+                    if entry.endf_library is None:
+                        entry.endf_library = default_library
+                    updated.append(entry)
+                routine_nuclear["isotopes"] = updated
+                new_routine["nuclear"] = routine_nuclear
+
+            new_fit_routines[routine_id] = new_routine
+
+        self.fit_routines = new_fit_routines
         return self
 
     def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
