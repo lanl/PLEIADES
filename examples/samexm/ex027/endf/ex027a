@@ -1,9 +1,0 @@
-#!/bin/bash
-
-sammy <<EOF
-ex027a.inp
-ex027a.endf
-ex027a.dat
-
-EOF
-mv -f SAM* results/
