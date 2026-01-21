@@ -20,7 +20,7 @@ def venus_default_line():
 @pytest.fixture
 def minimal_line():
     """Minimal valid example with only required fields."""
-    return ["300.0 25.0"]
+    return ["300.0"]
 
 
 def test_parse_ex012_line(ex012_line):
@@ -46,7 +46,7 @@ def test_parse_venus_default_line(venus_default_line):
 
 
 def test_parse_minimal_line(minimal_line):
-    """Test parsing minimal valid line (only TEMP and FPL)."""
+    """Test parsing minimal valid line (TEMP only)."""
     constants = Card05.from_lines(minimal_line)
 
     assert pytest.approx(constants.temperature, rel=1e-3) == 300.0
@@ -66,12 +66,6 @@ def test_parse_no_lines():
     """Test that empty list raises ValueError."""
     with pytest.raises(ValueError, match="No valid Card 5 line"):
         Card05.from_lines([])
-
-
-def test_parse_insufficient_fields():
-    """Test that line with only one field raises ValueError."""
-    with pytest.raises(ValueError, match="Card 5 line must have at least 2 fields"):
-        Card05.from_lines(["300.0"])
 
 
 def test_parse_invalid_format():
