@@ -91,7 +91,11 @@ class TestPleiadesConfig:
             temp_path = Path(tmpdir) / "nuclear_data"
             custom_sources = {"TEST": "https://test.com"}
 
-            config = PleiadesConfig(nuclear_data_cache_dir=temp_path, nuclear_data_sources=custom_sources)
+            config = PleiadesConfig(
+                nuclear_data_cache_dir=temp_path,
+                nuclear_data_sources=custom_sources,
+                fit_routines={"example_fit": {"dataset_id": "example_dataset"}},
+            )
 
             # Save to temp file
             save_path = Path(tmpdir) / "config.yaml"
