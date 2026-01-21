@@ -60,11 +60,18 @@ workspace:
   image_dir: ${workspace.root}/image_dir
 
 nuclear:
-  data_cache_dir: ${workspace.endf_dir}
   sources:
     DIRECT: https://www-nds.iaea.org/public/download-endf
     API: https://www-nds.iaea.org/exfor/servlet
   default_library: ENDF-B-VIII.0
+  isotopes:
+    - isotope: "U-235"
+      abundance: 0.0072
+      vary_abundance: 0
+      endf_library: ENDF-B-VIII.0
+    - isotope: "U-238"
+      abundance: 0.9928
+      vary_abundance: 0
 
 sammy:
   backend: local  # local | docker | nova
@@ -111,6 +118,15 @@ fit_routines:
     dataset_id: example_dataset
     mode: fitting  # fitting | endf_extraction | multi_isotope
     update_from_results: false
+    nuclear:
+      isotopes:
+        - isotope: "U-235"
+          abundance: 0.0072
+          vary_abundance: 0
+          endf_library: ENDF-B-VIII.0
+        - isotope: "U-238"
+          abundance: 0.9928
+          vary_abundance: 0
     fit_config:
       fit_title: "SAMMY Fit"
       tolerance: null
@@ -124,11 +140,6 @@ fit_routines:
       physics_params: {}         # pleiades.experimental.models.PhysicsParameters
       data_params: {}            # pleiades.sammy.data.options.SammyData
       options_and_routines: {}   # pleiades.sammy.fitting.options.FitOptions
-    io:
-      input_title: null
-      input_file: null
-      parameter_file: null
-
 runs:
   - run_id: run_001
     routine_id: example_fit
@@ -166,8 +177,10 @@ How this config is used
    - raw_imaging: run normalization to produce transmission data, then export
      to data_dir/<routine_id>.dat (or .twenty).
    - sammy_dat/sammy_twenty: use sammy_data_file or input_files.data directly.
-3) Cache isotope data with NuclearDataManager
-   - if isotopic data is not already cached then download isotopic data using parameters referenced by fit_config.nuclear_params.
+3) Cache isotope data with NuclearDataManager:
+   - Use fit_routines.<id>.nuclear.isotopes, or fall back to nuclear.isotopes.
+   - If isotopic data is not already cached, download using nuclear.data_cache_dir
+     (default: ~/.pleiades/nuclear_data) and default_library.
 4) Create a run record:
    - Append a new entry to runs with run_id, routine_id, dataset_id, and paths.
    - Capture runtime metadata (timestamps, user, host, software versions).
@@ -189,5 +202,6 @@ How this config is used
 ENDF integration
 ----------------
 - NuclearDataManager uses PleiadesConfig.nuclear_data_cache_dir as its cache root.
-- The YAML field nuclear.data_cache_dir should be mapped to that attribute so ENDF
-  downloads and cached files live under workspace.endf_dir.
+- If nuclear.data_cache_dir is omitted, it defaults to ~/.pleiades/nuclear_data.
+- When provided, nuclear.data_cache_dir overrides the default and can be placed
+  under workspace.endf_dir or any other location.
