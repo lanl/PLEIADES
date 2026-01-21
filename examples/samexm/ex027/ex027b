@@ -1,8 +1,8 @@
-#!/bin/csh
+#!/bin/bash
 
 sammy <<EOF
-ex027b.inp
-ex027b.par
+ex027.inp
+ex027.endf
 ex027a.dat
 
 EOF
