@@ -732,14 +732,14 @@ class InpManager:
 
         def is_numeric_line(line: str) -> bool:
             parts = line.split()
-            if len(parts) < 2:
+            if not parts:
                 return False
-            try:
-                float(parts[0])
-                float(parts[1])
-                return True
-            except ValueError:
-                return False
+            for part in parts:
+                try:
+                    float(part)
+                except ValueError:
+                    return False
+            return True
 
         def parse_reaction_type(line: str) -> Optional[DataTypeOptions]:
             candidate = line.strip().upper()
