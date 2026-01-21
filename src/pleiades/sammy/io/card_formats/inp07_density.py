@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 """
-Sample Density for SAMMY INP files.
+Card Set 7 (Sample Thickness) for SAMMY INP files.
 
-This module provides the Card07Density class for parsing and generating the sample
-density line in SAMMY input files. This line appears after the broadening constants
-and defines the material density and number density.
+This module provides the Card07 class for parsing and generating the Card Set 7
+line in SAMMY input files. This line appears after the broadening constants and
+defines the matching radius and sample thickness.
 
-Format specification (Sample Density):
+Format specification (Card Set 7):
     The line contains two floating-point values:
-    - Density: Material density (g/cm³)
-    - Number density: Number density (atoms/barn-cm)
+    - CRFN: Matching radius (F)
+    - THICK: Sample thickness (atoms/barn)
 
 Example:
        4.20000  0.347162
@@ -24,40 +24,31 @@ from pleiades.utils.logger import loguru_logger
 logger = loguru_logger.bind(name=__name__)
 
 
-class SampleDensity(BaseModel):
-    """Pydantic model for sample density parameters.
+class Card07Parameters(BaseModel):
+    """Pydantic model for Card Set 7 parameters."""
 
-    Attributes:
-        density: Material density in g/cm³
-        number_density: Number density in atoms/barn-cm
-    """
-
-    density: float = Field(..., description="Material density (g/cm³)", gt=0)
-    number_density: float = Field(..., description="Number density (atoms/barn-cm)", gt=0)
+    crfn: float = Field(..., description="Matching radius (F)", ge=0)
+    thick: float = Field(..., description="Sample thickness (atoms/barn)", ge=0)
 
 
-class Card07Density(BaseModel):
-    """
-    Class representing sample density line in SAMMY INP files.
-
-    This line defines the material density and number density for the sample.
-    """
+class Card07(BaseModel):
+    """Class representing Card Set 7 line in SAMMY INP files."""
 
     @classmethod
-    def from_lines(cls, lines: List[str]) -> SampleDensity:
-        """Parse sample density from density line.
+    def from_lines(cls, lines: List[str]) -> Card07Parameters:
+        """Parse Card Set 7 parameters from line.
 
         Args:
             lines: List of input lines (expects single line)
 
         Returns:
-            SampleDensity: Parsed sample density parameters
+            Card07Parameters: Parsed Card Set 7 parameters
 
         Raises:
             ValueError: If format is invalid or required values missing
         """
         if not lines or not lines[0].strip():
-            message = "No valid density line provided"
+            message = "No valid Card 7 line provided"
             logger.error(message)
             raise ValueError(message)
 
@@ -65,38 +56,38 @@ class Card07Density(BaseModel):
         fields = line.split()
 
         if len(fields) < 2:
-            message = f"Density line must have 2 fields (density, number_density), got {len(fields)}"
+            message = f"Card 7 line must have at least 2 fields (CRFN, THICK), got {len(fields)}"
             logger.error(message)
             raise ValueError(message)
 
         try:
-            density = float(fields[0])
-            number_density = float(fields[1])
+            crfn = float(fields[0])
+            thick = float(fields[1])
         except (ValueError, IndexError) as e:
-            message = f"Failed to parse density line: {e}"
+            message = f"Failed to parse Card 7 line: {e}"
             logger.error(message)
             raise ValueError(message)
 
-        return SampleDensity(
-            density=density,
-            number_density=number_density,
+        return Card07Parameters(
+            crfn=crfn,
+            thick=thick,
         )
 
     @classmethod
-    def to_lines(cls, sample_density: SampleDensity) -> List[str]:
-        """Convert sample density to formatted line.
+    def to_lines(cls, params: Card07Parameters) -> List[str]:
+        """Convert Card Set 7 parameters to formatted line.
 
         Args:
-            sample_density: SampleDensity object containing density data
+            params: Card07Parameters object containing CRFN/THICK values
 
         Returns:
             List containing single formatted line
         """
-        if not isinstance(sample_density, SampleDensity):
-            message = "sample_density must be an instance of SampleDensity"
+        if not isinstance(params, Card07Parameters):
+            message = "params must be an instance of Card07Parameters"
             logger.error(message)
             raise ValueError(message)
 
-        line = f"  {sample_density.density:8.6f} {sample_density.number_density:.6e}"
+        line = f"  {params.crfn:8.6f} {params.thick:.6e}"
 
         return [line]
