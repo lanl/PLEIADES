@@ -114,12 +114,14 @@ class TestPleiadesConfig:
             # Load config from saved file
             loaded_config = PleiadesConfig.load(save_path)
 
-            # Verify loaded config matches original
-            assert loaded_config.nuclear_data_cache_dir == temp_path
-            assert loaded_config.nuclear_data_sources == custom_sources
-            assert loaded_config.nuclear is not None
-            assert loaded_config.nuclear.data_cache_dir == temp_path
-            assert loaded_config.nuclear.sources == custom_sources
+        # Verify loaded config matches original
+        assert loaded_config.nuclear_data_cache_dir == temp_path
+        assert loaded_config.nuclear_data_sources == custom_sources
+        assert loaded_config.nuclear is not None
+        assert loaded_config.nuclear.data_cache_dir == temp_path
+        assert loaded_config.nuclear.sources == custom_sources
+        assert "example_fit" in loaded_config.fit_routines
+        assert loaded_config.fit_routines["example_fit"].dataset_id == "example_dataset"
 
     def test_load_nonexistent_file(self):
         """Test loading from nonexistent file returns default config."""
