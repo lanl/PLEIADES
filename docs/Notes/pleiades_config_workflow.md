@@ -118,15 +118,6 @@ fit_routines:
     dataset_id: example_dataset
     mode: fitting  # fitting | endf_extraction | multi_isotope
     update_from_results: false
-    nuclear:
-      isotopes:
-        - isotope: "U-235"
-          abundance: 0.0072
-          vary_abundance: 0
-          endf_library: ENDF-B-VIII.0
-        - isotope: "U-238"
-          abundance: 0.9928
-          vary_abundance: 0
     fit_config:
       fit_title: "SAMMY Fit"
       tolerance: null
@@ -178,7 +169,7 @@ How this config is used
      to data_dir/<routine_id>.dat (or .twenty).
    - sammy_dat/sammy_twenty: use sammy_data_file or input_files.data directly.
 3) Cache isotope data with NuclearDataManager:
-   - Use fit_routines.<id>.nuclear.isotopes, or fall back to nuclear.isotopes.
+   - Use nuclear.isotopes for FitConfig population.
    - If isotopic data is not already cached, download using nuclear.data_cache_dir
      (default: ~/.pleiades/nuclear_data) and default_library.
 4) Create a run record:
