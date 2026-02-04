@@ -2,6 +2,7 @@
 """Global configuration management for PLEIADES."""
 
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +10,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from pleiades.nuclear.models import DataRetrievalMethod, EndfLibrary, IsotopeParameters, nuclearParameters
+from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.helper import VaryFlag
 
 DEFAULT_NUCLEAR_SOURCES = {
@@ -94,7 +96,11 @@ class WorkspaceConfig(BaseModel):
 
 
 class NuclearConfig(BaseModel):
-    """Nuclear data configuration for PLEIADES."""
+    """Nuclear data configuration for PLEIADES.
+
+    This is the global/default nuclear configuration. Per-fit overrides live in
+    FitRoutineConfig.nuclear and are used when present.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -110,7 +116,11 @@ class NuclearConfig(BaseModel):
 
 
 class SammyConfig(BaseModel):
-    """SAMMY backend configuration for PLEIADES."""
+    """SAMMY backend configuration for PLEIADES.
+
+    This captures how to execute SAMMY (local, docker, nova) and the backend-specific
+    settings required to launch it.
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -120,8 +130,75 @@ class SammyConfig(BaseModel):
     nova: Dict[str, Any] = Field(default_factory=dict)
 
 
+class DatasetMetadata(BaseModel):
+    """Metadata for a dataset entry to be used in DatasetConfig.
+
+    These fields are used to seed INP generation (energy bounds, element hints, etc.)
+    and can be extended without changing the core schema.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow", populate_by_name=True)
+
+    # Facility where the data was collected (e.g., LANSCE, SNS).
+    facility: Optional[str] = None
+    # Instrument or beamline identifier.
+    instrument: Optional[str] = None
+    # General timestamp for when the data was recorded (UTC recommended).
+    recorded_date: Optional[datetime] = Field(default=None, alias="RecordedDate")
+
+    # Energy bounds for the dataset (in eV).
+    min_energy_eV: Optional[float] = None
+    max_energy_eV: Optional[float] = None
+
+
+class DatasetConfig(BaseModel):
+    """Configuration for a dataset entry.
+
+    A dataset represents an input data file (e.g. transmission .dat/.twenty)
+    plus optional metadata for building a FitConfig/INP.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
+    # brief description of the dataset
+    description: Optional[str] = None
+
+    # Kind of data (e.g., transmission, capture)
+    data_kind: Optional[str] = None
+
+    # Path to the data file/files
+    path_to_data_files: Optional[Path] = None
+
+    # Metadata for the given dataset
+    metadata: Optional[DatasetMetadata] = None
+
+
+class FitRoutineConfig(BaseModel):
+    """Configuration for a single fit routine.
+
+    A routine defines how a specific fit should be run (dataset selection,
+    fit mode, and optional FitConfig overrides).
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+
+    dataset_id: Optional[str] = None
+    mode: Optional[str] = None
+    update_from_results: Optional[bool] = None
+    fit_config: Optional[FitConfig] = None
+
+
 class PleiadesConfig(BaseModel):
-    """Global configuration for PLEIADES."""
+    """Global configuration for PLEIADES.
+
+    High-level intent:
+    - workspace: where PLEIADES writes files
+    - nuclear: global isotope defaults and ENDF cache
+    - sammy: how to execute SAMMY
+    - datasets: input data definitions
+    - fit_routines: per-run configurations (including FitConfig)
+    - runs/results_index: execution records and outputs
+    """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -131,8 +208,8 @@ class PleiadesConfig(BaseModel):
     nuclear: Optional[NuclearConfig] = None
     sammy: Optional[SammyConfig] = None
 
-    datasets: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-    fit_routines: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    datasets: Dict[str, DatasetConfig] = Field(default_factory=dict)
+    fit_routines: Dict[str, FitRoutineConfig] = Field(default_factory=dict)
     runs: list[Dict[str, Any]] = Field(default_factory=list)
     results_index: Dict[str, Any] = Field(default_factory=dict)
 
@@ -146,7 +223,11 @@ class PleiadesConfig(BaseModel):
 
     @model_validator(mode="after")
     def _normalize_config(self) -> "PleiadesConfig":
-        """Normalize paths and keep nuclear fields in sync."""
+        """Normalize paths and keep nuclear fields in sync.
+
+        This also normalizes routine-level isotope entries (fills defaults for
+        endf_library) so downstream code can rely on consistent types.
+        """
         if self.workspace:
             self.nuclear_data_cache_dir = _expand_path(self.nuclear_data_cache_dir, self.workspace)
         else:
@@ -186,29 +267,12 @@ class PleiadesConfig(BaseModel):
             if entry.endf_library is None:
                 entry.endf_library = default_library
 
-        # Normalize isotope configuration inside fit_routines without mutating
-        # the original routine dictionaries in-place.
-        new_fit_routines: Dict[str, Dict[str, Any]] = {}
+        # Normalize fit_routines into typed models.
+        new_fit_routines: Dict[str, FitRoutineConfig] = {}
         for routine_id, routine in self.fit_routines.items():
-            # Work on shallow copies to avoid surprising side effects for callers
-            # that may hold references to the original routine dictionaries.
-            new_routine: Dict[str, Any] = dict(routine)
-            routine_nuclear_src = routine.get("nuclear") or {}
-            routine_nuclear: Dict[str, Any] = dict(routine_nuclear_src)
-
-            routine_isotopes = routine_nuclear.get("isotopes")
-            if routine_isotopes is not None:
-                updated: List[IsotopeConfig] = []
-                for entry in routine_isotopes:
-                    if isinstance(entry, dict):
-                        entry = IsotopeConfig(**entry)
-                    if entry.endf_library is None:
-                        entry.endf_library = default_library
-                    updated.append(entry)
-                routine_nuclear["isotopes"] = updated
-                new_routine["nuclear"] = routine_nuclear
-
-            new_fit_routines[routine_id] = new_routine
+            if isinstance(routine, dict):
+                routine = FitRoutineConfig.model_validate(routine)
+            new_fit_routines[routine_id] = routine
 
         self.fit_routines = new_fit_routines
         return self
@@ -222,17 +286,14 @@ class PleiadesConfig(BaseModel):
         return self
 
     def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
-        """Build nuclearParameters from configured isotope entries."""
+        """Build nuclearParameters from configured isotope entries.
+
+        Use the global NuclearConfig.isotopes list.
+        """
         isotope_entries = None
-        if routine_id:
-            routine = self.fit_routines.get(routine_id, {})
-            routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
-            if routine_isotopes:
-                isotope_entries = routine_isotopes
-        if isotope_entries is None:
-            isotope_entries = self.nuclear.isotopes
+        isotope_entries = self.nuclear.isotopes
         if not isotope_entries:
-            raise ValueError("No isotopes configured. Set fit_routines.<id>.nuclear.isotopes or nuclear.isotopes.")
+            raise ValueError("No isotopes configured. Set nuclear.isotopes.")
         from pleiades.nuclear.isotopes.manager import IsotopeManager
 
         manager = IsotopeManager()
@@ -258,7 +319,11 @@ class PleiadesConfig(BaseModel):
         return nuclearParameters(isotopes=isotopes)
 
     def populate_fit_config_isotopes(self, fit_config: Any, routine_id: Optional[str] = None) -> Any:
-        """Populate fit_config.nuclear_params.isotopes from config if missing."""
+        """Populate fit_config.nuclear_params.isotopes from config if missing.
+
+        This is the bridge that ensures a FitConfig has isotopes before INP/PAR
+        generation or SAMMY execution.
+        """
         if not hasattr(fit_config, "nuclear_params"):
             raise ValueError("fit_config must have a nuclear_params attribute")
         if not fit_config.nuclear_params.isotopes:
@@ -273,15 +338,10 @@ class PleiadesConfig(BaseModel):
         use_cache: bool = True,
     ) -> List[Path]:
         """Ensure ENDF cache files exist for configured isotopes."""
-        if routine_id:
-            routine = self.fit_routines.get(routine_id, {})
-            routine_isotopes = (routine.get("nuclear") or {}).get("isotopes")
-            isotope_entries = routine_isotopes if routine_isotopes is not None else self.nuclear.isotopes
-        else:
-            isotope_entries = self.nuclear.isotopes
+        isotope_entries = self.nuclear.isotopes
 
         if not isotope_entries:
-            raise ValueError("No isotopes configured. Set fit_routines.<id>.nuclear.isotopes or nuclear.isotopes.")
+            raise ValueError("No isotopes configured. Set nuclear.isotopes.")
 
         from pleiades.nuclear.manager import NuclearDataManager
 
