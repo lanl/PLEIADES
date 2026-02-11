@@ -75,7 +75,28 @@ This complexity presents a barrier for new users and can inhibit adoption beyond
 As a result, many groups build local scripts to generate inputs, manage repeated fit cycles, and parse outputs for downstream analysis, often resulting in workflows that are difficult to reuse, audit, and scale to large imaging datasets.
 
 `PLEIADES` enables SAMMY to be used in the larger-scale and more complex workflows encountered in neutron resonance imaging.
-It keeps the underlying physics calculations in SAMMY unchanged while providing SAMMY-aware automation (format-validated input templating, batch execution across many spectra, and structured result extraction), making SAMMY-based fitting practical for per-pixel or per-region resonance analysis and integration into imaging pipelines.
+Rather than re-implementing R-matrix physics, `PLEIADES` streamlines SAMMY usage by providing a SAMMY-aware workflow layer that standardizes common modes of analysis (e.g., single-spectrum studies, iterative refinement, and high-throughput per-region or per-pixel fitting).
+It reduces user burden by handling many routine decisions and bookkeeping steps “behind the scenes,” including format-validated input templating, consistent file and run management, and structured extraction of fit outputs into analysis-ready data products.
+This approach preserves SAMMY’s trusted modeling capabilities while improving usability, reproducibility, and scalability for imaging datasets where manual trial-and-error workflows and ad hoc parsing scripts do not translate to millions of spectra.
+
+
+## Software Design
+
+`PLEIADES` is designed as a *workflow and data-management layer* around SAMMY rather than a re-implementation of R-matrix physics.
+The primary design goal is to make SAMMY-based resonance analysis reproducible and scalable (from a single spectrum to large imaging datasets) while keeping expert-level control available when needed.
+
+### Design principles and trade-offs
+
+- **Preserve SAMMY as the fitting engine.**
+  `PLEIADES` delegates cross section construction and Bayesian parameter estimation to SAMMY. The trade-off is that analysis remains constrained by SAMMY’s file-based interfaces and run-time characteristics, which `PLEIADES` mitigates through automation and structured inputs and outputs.
+
+- **Standardize common analysis modes with override points.**
+  The library provides high-level, SAMMY-aware workflows (e.g., single-spectrum fits, iterative refinement loops, and high-throughput region/pixel processing) that encode routine choices such as input structure, run directory layout, and output harvesting.
+  Advanced users can still customize templates, fitting controls, and run options when deviating from defaults is scientifically necessary.
+
+- **Emphasize validation and provenance to prevent runtime errors**
+  SAMMY inputs are generated from pydantic models with format and option checks to reduce any SAMMY run-time failures and to make analysis reproducible and auditable if needed.
+
 
 ## TODO sections
 
@@ -85,7 +106,7 @@ Your paper must include the following required sections:
 ✅ Summary: A description of the high-level functionality and purpose of the software for a diverse, non-specialist audience.
 ✅ Statement of need: A section that clearly illustrates the research purpose of the software and places it in the context of related work. This should clearly state what problems the software is designed to solve, who the target audience is, and its relation to other work.
 ✅ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
-⁉️ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
+✅ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
 ⁉️ Research Impact Statement: Evidence of realized impact (publications, external use, integrations) or credible near-term significance (benchmarks, reproducible materials, community-readiness signals). The evidence should be compelling and specific, not aspirational.
 ⁉️ AI usage disclosure: Transparent disclosure of any use of generative AI in the software creation, documentation, or paper authoring. If no AI tools were used, state this explicitly. If AI tools were used, describe how they were used and how the quality and correctness of AI-generated content was verified.
 ```
