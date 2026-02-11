@@ -110,7 +110,7 @@ datasets:
       transmission_files: []
       energy_units: eV
       cross_section_units: barn
-    sammy_data_file: ${workspace.data_dir}/example_fit.dat
+    path_to_data_files: ${workspace.data_dir}/example_fit.dat
     metadata: {}
 
 fit_routines:
@@ -167,7 +167,7 @@ How this config is used
 2) Resolve dataset inputs:
    - raw_imaging: run normalization to produce transmission data, then export
      to data_dir/<routine_id>.dat (or .twenty).
-   - sammy_dat/sammy_twenty: use sammy_data_file or input_files.data directly.
+   - sammy_dat/sammy_twenty: use path_to_data_files or input_files.data directly.
 3) Cache isotope data with NuclearDataManager:
    - Use nuclear.isotopes for FitConfig population.
    - If isotopic data is not already cached, download using nuclear.data_cache_dir
