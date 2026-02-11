@@ -61,6 +61,22 @@ Existing workflow tools do not integrate with SAMMY or handle the conventions of
 `PLEIADES` provides SAMMY-aware automation, scaling, and data handling designed specifically for transmission analysis and energy-resolved neutron imaging.
 This allows faster, reproducible, and more accessible workflows across a wide range of applications.
 
+## State of the Field
+
+Neutron resonance imaging produces large collections of energy-resolved transmission spectra, but imaging-specific analysis software remains relatively limited.
+To our knowledge, TRINIDI is currently the only dedicated open-source code that enables fast isotopic reconstructions from time-of-flight neutron resonance imaging data [@Trinidi2024].
+TRINIDI’s approach leverages tabulated neutron total cross sections, which is efficient for high-throughput inference but does not allow direct adjustment of the underlying cross section model through resonance-parameter variation.
+
+In contrast, SAMMY is widely used for neutron resonance transmission analysis and provides a comprehensive suite of R-matrix fitting capabilities [@Larson2008; @Dorothea2022].
+SAMMY constructs cross sections from user-specified resonance parameters and updates those parameters through Bayesian fitting [@Larson2008], enabling physics-informed refinement when resonance parameters, sample conditions, or model assumptions must be varied and validated against measured transmission data.
+Although SAMMY is widely adopted, its primary user interface is a command-line workflow based on fixed-width input files and text-based outputs.
+The software exposes a large number of modeling options and control parameters that must be specified explicitly, and its outputs can be difficult to interpret without substantial domain expertise.
+This complexity presents a barrier for new users and can inhibit adoption beyond the specialist nuclear data and resonance analysis community.
+As a result, many groups build local scripts to generate inputs, manage repeated fit cycles, and parse outputs for downstream analysis, often resulting in workflows that are difficult to reuse, audit, and scale to large imaging datasets.
+
+`PLEIADES` enables SAMMY to be used in the larger-scale and more complex workflows encountered in neutron resonance imaging.
+It keeps the underlying physics calculations in SAMMY unchanged while providing SAMMY-aware automation (format-validated input templating, batch execution across many spectra, and structured result extraction), making SAMMY-based fitting practical for per-pixel or per-region resonance analysis and integration into imaging pipelines.
+
 ## TODO sections
 
 ```bash
@@ -68,7 +84,7 @@ Your paper must include the following required sections:
 
 ✅ Summary: A description of the high-level functionality and purpose of the software for a diverse, non-specialist audience.
 ✅ Statement of need: A section that clearly illustrates the research purpose of the software and places it in the context of related work. This should clearly state what problems the software is designed to solve, who the target audience is, and its relation to other work.
-⁉️ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
+✅ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
 ⁉️ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
 ⁉️ Research Impact Statement: Evidence of realized impact (publications, external use, integrations) or credible near-term significance (benchmarks, reproducible materials, community-readiness signals). The evidence should be compelling and specific, not aspirational.
 ⁉️ AI usage disclosure: Transparent disclosure of any use of generative AI in the software creation, documentation, or paper authoring. If no AI tools were used, state this explicitly. If AI tools were used, describe how they were used and how the quality and correctness of AI-generated content was verified.
