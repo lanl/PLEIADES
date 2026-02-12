@@ -97,6 +97,14 @@ The primary design goal is to make SAMMY-based resonance analysis reproducible a
 - **Emphasize validation and provenance to prevent runtime errors**
   SAMMY inputs are generated from pydantic models with format and option checks to reduce any SAMMY run-time failures and to make analysis reproducible and auditable if needed.
 
+## Research Impact Statement
+
+`PLEIADES` has already demonstrated research impact through use in published neutron resonance imaging work: an earlier public release archived on Zenodo [@pleiades_zenodo] was used to support the analysis reported in @Hirsh2025b.
+Beyond this initial publication, `PLEIADES` is being adopted as the primary resonance-analysis workflow for user programs at major neutron imaging instruments, including the VENUS beamline at the Spallation Neutron Source [@Bilheux2023] and the HIPPO and ERNI beamlines at the Los Alamos Neutron Science Center (LANSCE) [@Nelson2018].
+By automating SAMMY input generation, run management, and structured extraction of fit results, `PLEIADES` reduces manual iteration and error-prone parsing steps that commonly dominate resonance fitting workflows.
+This directly shortens the acquisition-to-publication timeline for neutron resonance imaging measurements by enabling higher-throughput, more reproducible analysis across large collections of datasets at multiple facilities.
+
+
 
 ## TODO sections
 
