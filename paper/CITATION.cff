@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
   - family-names: Long
-    given-names: Alexander M. 
+    given-names: Alexander M.
     orcid: https://orcid.org/0000-0003-4300-9454
   - family-names: Zhang
     given-names: Chen
