@@ -26,7 +26,7 @@ affiliations:
    index: 2
  - name: Oak Ridge National Laboratory, Oak Ridge, TN 37830, USA
    index: 3
-date: 07 Jan 2026
+date: 12 February 2026
 bibliography: paper.bib
 
 ---
@@ -47,7 +47,7 @@ The software generates input files, manages batch execution, and extracts isotop
 By consolidating repetitive steps into a single, scriptable interface, `PLEIADES` reduces manual effort and enables large-scale analysis of neutron transmission data.
 The package supports both expert users and researchers who are not specialists in nuclear reaction theory.
 
-`PLEIADES` has been used in recent neutron imaging publications [@Hirsh2025a; @Hirsh2025b] and is the primary resonance analysis tool for the VENUS beamline at the Spallation Neutron Source [@Bilheux2023] and the ENRI/FP5 instrument at the Los Alamos Neutron Science Center [@Nelson2018].
+`PLEIADES` has been used in recent neutron imaging publications [@Hirsh2025a; @Hirsh2025b] and is the primary resonance analysis tool for the VENUS beamline at the Spallation Neutron Source [@Bilheux2023] and the ERNI instrument at the Los Alamos Neutron Science Center [@Nelson2018].
 The source code is archived on Zenodo [@pleiades_zenodo].
 
 ## Statement of Need
@@ -124,8 +124,6 @@ The authors take full responsibility for the final software and manuscript conte
 
 ## Author Contributions
 
-[NOTE]: Please add as needed here!
-
 - **Alexander M. Long (AML):** Conceptualization; Software; Methodology; Validation; Writing – original draft; Writing – review & editing;
 - **Chen Zhang (CZ):** Conceptualization; Software; Methodology; Validation; Writing – original draft; Writing – review & editing;
 - **Jean-Christophe Bilheux (JCB):**  Software; Methodology; Validation;
@@ -136,16 +134,3 @@ The authors take full responsibility for the final software and manuscript conte
 Work was supported in part through the Nuclear Science User Facilities (NSUF), under DOE Idaho Operations Office Contract DE-AC07-05ID14517.
 This research used resources at the Spallation Neutron Source, a U.S. Department of Energy Office of Science User Facility operated by Oak Ridge National Laboratory under Contract No. DE‑AC05‑00OR22725.
 Resonance imaging measurements were carried out on the VENUS instrument at the SNS.
-
-## TODO sections
-
-```bash
-Your paper must include the following required sections:
-
-✅ Summary: A description of the high-level functionality and purpose of the software for a diverse, non-specialist audience.
-✅ Statement of need: A section that clearly illustrates the research purpose of the software and places it in the context of related work. This should clearly state what problems the software is designed to solve, who the target audience is, and its relation to other work.
-✅ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
-✅ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
-✅ Research Impact Statement: Evidence of realized impact (publications, external use, integrations) or credible near-term significance (benchmarks, reproducible materials, community-readiness signals). The evidence should be compelling and specific, not aspirational.
-✅ AI usage disclosure: Transparent disclosure of any use of generative AI in the software creation, documentation, or paper authoring. If no AI tools were used, state this explicitly. If AI tools were used, describe how they were used and how the quality and correctness of AI-generated content was verified.
-```
