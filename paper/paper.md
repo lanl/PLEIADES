@@ -104,20 +104,13 @@ Beyond this initial publication, `PLEIADES` is being adopted as the primary reso
 By automating SAMMY input generation, run management, and structured extraction of fit results, `PLEIADES` reduces manual iteration and error-prone parsing steps that commonly dominate resonance fitting workflows.
 This directly shortens the acquisition-to-publication timeline for neutron resonance imaging measurements by enabling higher-throughput, more reproducible analysis across large collections of datasets at multiple facilities.
 
+## AI usage disclosure
+Generative AI tools were used during development of `PLEIADES` and in preparation of parts of this manuscript.
+Specifically, we used large language model assistants (including ChatGPT, Claude, and Gemini) for code drafting, refactoring suggestions, and documentation/text editing, and we used GitHub Copilot to assist with code review (e.g., pull-request feedback) and small code completions.
 
-
-## TODO sections
-
-```bash
-Your paper must include the following required sections:
-
-✅ Summary: A description of the high-level functionality and purpose of the software for a diverse, non-specialist audience.
-✅ Statement of need: A section that clearly illustrates the research purpose of the software and places it in the context of related work. This should clearly state what problems the software is designed to solve, who the target audience is, and its relation to other work.
-✅ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
-✅ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
-⁉️ Research Impact Statement: Evidence of realized impact (publications, external use, integrations) or credible near-term significance (benchmarks, reproducible materials, community-readiness signals). The evidence should be compelling and specific, not aspirational.
-⁉️ AI usage disclosure: Transparent disclosure of any use of generative AI in the software creation, documentation, or paper authoring. If no AI tools were used, state this explicitly. If AI tools were used, describe how they were used and how the quality and correctness of AI-generated content was verified.
-```
+All AI-suggested code and text was reviewed, edited, and approved by the authors.
+Code changes were validated using the project’s unit tests, and SAMMY functionality was additionally verified by running against the suite of publicly available SAMMY example problems to confirm that generated inputs and parsed outputs were consistent with expected behavior.
+The authors take full responsibility for the final software and manuscript contents.
 
 ## Key Features
 
@@ -129,12 +122,30 @@ Your paper must include the following required sections:
 - Configurable templates for reproducible and scalable analysis
 - Python API suitable for scripting, interactive analysis, and integration with other tools
 
-## Author Contributions [TODO]
+## Author Contributions
 
-## AI usage disclosure [TODO]
+[NOTE]: Please add as needed here!
+
+- **Alexander M. Long (AML):** Conceptualization; Software; Methodology; Validation; Writing – original draft; Writing – review & editing;
+- **Chen Zhang (CZ):** Conceptualization; Software; Methodology; Validation; Writing – original draft; Writing – review & editing;
+- **Jean-Christophe Bilheux (JCB):**  Software; Methodology; Validation;
+- **Tsviki Y. Hirsh (TYH):** Conceptualization; Software; Methodology;
 
 ## Acknowledgements
 
 Work was supported in part through the Nuclear Science User Facilities (NSUF), under DOE Idaho Operations Office Contract DE-AC07-05ID14517.
 This research used resources at the Spallation Neutron Source, a U.S. Department of Energy Office of Science User Facility operated by Oak Ridge National Laboratory under Contract No. DE‑AC05‑00OR22725.
 Resonance imaging measurements were carried out on the VENUS instrument at the SNS.
+
+## TODO sections
+
+```bash
+Your paper must include the following required sections:
+
+✅ Summary: A description of the high-level functionality and purpose of the software for a diverse, non-specialist audience.
+✅ Statement of need: A section that clearly illustrates the research purpose of the software and places it in the context of related work. This should clearly state what problems the software is designed to solve, who the target audience is, and its relation to other work.
+✅ State of the field: A description of how this software compares to other commonly-used packages in the research area. If related tools exist, provide a clear “build vs. contribute” justification explaining your unique scholarly contribution and why existing alternatives are insufficient.
+✅ Software Design: An explanation of the trade-offs you weighed, the design/architecture you chose, and why it matters for your research application. This should demonstrate meaningful design thinking beyond a superficial code structure description.
+✅ Research Impact Statement: Evidence of realized impact (publications, external use, integrations) or credible near-term significance (benchmarks, reproducible materials, community-readiness signals). The evidence should be compelling and specific, not aspirational.
+✅ AI usage disclosure: Transparent disclosure of any use of generative AI in the software creation, documentation, or paper authoring. If no AI tools were used, state this explicitly. If AI tools were used, describe how they were used and how the quality and correctness of AI-generated content was verified.
+```
