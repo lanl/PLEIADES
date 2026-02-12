@@ -197,7 +197,6 @@ class SammyFactory:
                 # NOVA backend is currently disabled
                 if not _NOVA_AVAILABLE or NovaSammyRunner is None:
                     raise BackendNotAvailableError("NOVA backend is disabled - nova-galaxy package is unstable")
-
                 # For NOVA, try environment variables if not in kwargs
                 url = kwargs.get("url") or os.environ.get("NOVA_URL")
                 api_key = kwargs.get("api_key") or os.environ.get("NOVA_API_KEY")

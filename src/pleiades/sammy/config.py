@@ -80,7 +80,13 @@ class DockerSammyConfig(BaseSammyConfig):
 
 @dataclass
 class NovaSammyConfig(BaseSammyConfig):
-    """Configuration for NOVA web service SAMMY execution."""
+    """Configuration for NOVA web service SAMMY execution.
+
+    .. warning::
+        NOVA backend support is currently paused. The NOVA API is under
+        active development. See :mod:`pleiades.sammy.backends.nova_ornl`
+        for details.
+    """
 
     url: str
     api_key: str
