@@ -311,6 +311,13 @@ class BatchFittingOrchestrator:
                         error_message=f"Executor exception: {str(e)}",
                         chi_squared=None,
                     )
+                    iterations_since_checkpoint += 1
+
+                    # Checkpoint at intervals (even for exceptions, to maintain consistent timing)
+                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
+                        logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
+                        iterations_since_checkpoint = 0
 
         # Final checkpoint
         if checkpoint_file:
