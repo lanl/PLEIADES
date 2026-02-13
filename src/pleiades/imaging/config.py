@@ -7,7 +7,7 @@ including material properties and imaging parameters.
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from pleiades.nuclear.isotopes.manager import IsotopeManager
 
@@ -54,6 +54,13 @@ class ImagingConfig(BaseModel):
     # Temperature
     temperature_K: float = Field(293.6, gt=0, description="Sample temperature in Kelvin")
 
+    @model_validator(mode="after")
+    def validate_energy_range(self) -> "ImagingConfig":
+        """Ensure min_energy_eV < max_energy_eV."""
+        if self.min_energy_eV >= self.max_energy_eV:
+            raise ValueError(f"min_energy_eV ({self.min_energy_eV}) must be < max_energy_eV ({self.max_energy_eV})")
+        return self
+
     def get_material_properties(self) -> dict:
         """Get material properties dict for InpManager.
 
@@ -97,6 +104,15 @@ class ImagingConfig(BaseModel):
                 raise ValueError(
                     f"custom_abundances length {len(self.custom_abundances)} != isotopes length {len(self.isotopes)}"
                 )
+            # Validate abundance sum (allow slightly > 1.0 for rounding, but flag obvious errors)
+            abundance_sum = sum(self.custom_abundances)
+            if abundance_sum > 1.01:  # 1% tolerance for rounding errors
+                raise ValueError(
+                    f"custom_abundances sum to {abundance_sum:.4f} > 1.0 (physically meaningless). "
+                    "Abundances represent fractions and must sum to ≤ 1.0."
+                )
+            if any(a < 0 for a in self.custom_abundances):
+                raise ValueError("custom_abundances must be non-negative")
             return self.custom_abundances
         else:
             raise ValueError("Must specify custom_abundances if natural_abundances=False")

@@ -9,14 +9,13 @@ and comprehensive validation.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-if TYPE_CHECKING:
-    from pleiades.sammy.results.models import FitResults
+from pleiades.sammy.results.models import FitResults
 
 
 class PixelSpectrum(BaseModel):
@@ -49,6 +48,42 @@ class PixelSpectrum(BaseModel):
         """Ensure arrays are 1D."""
         if v.ndim != 1:
             raise ValueError(f"{info.field_name} must be 1D array, got {v.ndim}D")
+        return v
+
+    @field_validator("energy")
+    @classmethod
+    def validate_energy_positive(cls, v: np.ndarray) -> np.ndarray:
+        """Ensure energy values are positive."""
+        if len(v) == 0:
+            raise ValueError("energy array cannot be empty")
+        if np.any(v <= 0):
+            raise ValueError(f"energy values must be positive, got min={v.min()}")
+        if np.any(~np.isfinite(v)):
+            raise ValueError("energy array contains NaN or Inf")
+        return v
+
+    @field_validator("transmission")
+    @classmethod
+    def validate_transmission_range(cls, v: np.ndarray) -> np.ndarray:
+        """Ensure transmission values are in [0, 1]."""
+        if len(v) == 0:
+            raise ValueError("transmission array cannot be empty")
+        if np.any((v < 0) | (v > 1)):
+            raise ValueError(f"transmission must be in [0, 1], got range=[{v.min()}, {v.max()}]")
+        if np.any(~np.isfinite(v)):
+            raise ValueError("transmission array contains NaN or Inf")
+        return v
+
+    @field_validator("uncertainty")
+    @classmethod
+    def validate_uncertainty_positive(cls, v: np.ndarray) -> np.ndarray:
+        """Ensure uncertainty values are positive."""
+        if len(v) == 0:
+            raise ValueError("uncertainty array cannot be empty")
+        if np.any(v <= 0):
+            raise ValueError(f"uncertainty values must be positive, got min={v.min()}")
+        if np.any(~np.isfinite(v)):
+            raise ValueError("uncertainty array contains NaN or Inf")
         return v
 
     def model_post_init(self, __context: Any) -> None:
@@ -161,6 +196,13 @@ class PixelFitResult(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     chi_squared: Optional[float] = Field(None, description="Chi-squared from fit")
 
+    def model_post_init(self, __context: Any) -> None:
+        """Validate consistency between success status and fit_results."""
+        if self.success and self.fit_results is None:
+            raise ValueError("If success=True, fit_results must be provided (cannot be None)")
+        if not self.success and self.fit_results is not None:
+            raise ValueError("If success=False, fit_results should be None")
+
     def get_abundances(self) -> List[float]:
         """Extract isotope abundances from fit results.
 
@@ -215,6 +257,16 @@ class Imaging2DResults(BaseModel):
         if v.ndim != 2:
             raise ValueError(f"{info.field_name} must be 2D (height, width), got {v.ndim}D")
         return v
+
+    def model_post_init(self, __context: Any) -> None:
+        """Validate consistency between isotope_names and abundance_maps."""
+        n_isotopes_names = len(self.isotope_names)
+        n_isotopes_maps = self.abundance_maps.shape[0]
+        if n_isotopes_names != n_isotopes_maps:
+            raise ValueError(
+                f"isotope_names length ({n_isotopes_names}) must match "
+                f"abundance_maps first dimension ({n_isotopes_maps})"
+            )
 
     def save_hdf5(self, filepath: Path) -> None:
         """Save results to HDF5 file with comprehensive metadata.

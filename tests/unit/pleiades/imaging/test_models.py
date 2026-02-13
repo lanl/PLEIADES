@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pleiades.imaging.models import HyperspectralData, PixelSpectrum
+from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
 
 
 class TestPixelSpectrum:
@@ -130,3 +130,75 @@ class TestHyperspectralData:
 
         assert hyperspectral.uncertainty is not None
         assert hyperspectral.uncertainty.shape == hyperspectral.data.shape
+
+
+class TestPixelFitResult:
+    """Test PixelFitResult model."""
+
+    def test_create_pixel_fit_result_without_fit_results(self):
+        """Test creating PixelFitResult with fit_results=None (runtime type resolution)."""
+        # This test verifies that FitResults type annotation is resolvable at runtime
+        # Previously failed with PydanticUserError due to TYPE_CHECKING-only import
+        pixel_result = PixelFitResult(row=10, col=20, fit_results=None, success=False, error_message="Test failed")
+
+        assert pixel_result.row == 10
+        assert pixel_result.col == 20
+        assert pixel_result.fit_results is None
+        assert pixel_result.success is False
+        assert pixel_result.error_message == "Test failed"
+        assert pixel_result.chi_squared is None
+
+    def test_create_pixel_fit_result_failed(self):
+        """Test creating failed PixelFitResult (success=False with no fit_results)."""
+        pixel_result = PixelFitResult(row=5, col=15, fit_results=None, success=False, chi_squared=None)
+
+        assert pixel_result.row == 5
+        assert pixel_result.col == 15
+        assert pixel_result.success is False
+        assert pixel_result.chi_squared is None
+        assert pixel_result.get_abundances() == []
+
+    def test_create_pixel_fit_result_validation(self):
+        """Test PixelFitResult validates success/fit_results consistency."""
+        # success=True requires fit_results
+        with pytest.raises(ValueError, match="success=True, fit_results must be provided"):
+            PixelFitResult(row=0, col=0, fit_results=None, success=True)
+
+        # success=False requires fit_results=None
+        # (We can't test with real FitResults without complex setup, so just verify the validation exists)
+
+
+class TestImaging2DResults:
+    """Test Imaging2DResults model."""
+
+    def test_create_imaging_2d_results(self):
+        """Test creating Imaging2DResults with PixelFitResult list (runtime type resolution)."""
+        # Create source hyperspectral data
+        source_data = HyperspectralData(
+            data=np.random.uniform(0.5, 1.0, (10, 2, 2)),
+            energy=np.linspace(1, 10, 10),
+            source_file=Path("/tmp/test.tif"),
+        )
+
+        # Create pixel results (all failed for simplicity - testing runtime type resolution, not success)
+        pixel_results = [
+            PixelFitResult(row=0, col=0, fit_results=None, success=False, error_message="Test"),
+            PixelFitResult(row=0, col=1, fit_results=None, success=False, error_message="Test"),
+            PixelFitResult(row=1, col=0, fit_results=None, success=False, error_message="Test"),
+        ]
+
+        # Create imaging results
+        imaging_results = Imaging2DResults(
+            isotope_names=["Ta-181"],
+            abundance_maps=np.random.uniform(0.9, 1.0, (1, 2, 2)),
+            chi_squared_map=np.array([[np.nan, np.nan], [np.nan, np.nan]]),
+            success_mask=np.array([[False, False], [False, False]]),
+            pixel_results=pixel_results,
+            source_hyperspectral=source_data,
+        )
+
+        assert imaging_results.isotope_names == ["Ta-181"]
+        assert imaging_results.abundance_maps.shape == (1, 2, 2)
+        assert len(imaging_results.pixel_results) == 3
+        assert imaging_results.pixel_results[0].row == 0
+        assert imaging_results.pixel_results[0].col == 0
