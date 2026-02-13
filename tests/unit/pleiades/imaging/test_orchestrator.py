@@ -2,6 +2,7 @@
 
 import pickle
 import tempfile
+from concurrent.futures import Future
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -469,6 +470,90 @@ class TestBatchFittingOrchestrator:
         with pytest.raises(ValueError, match="Cannot resume without checkpoint_file"):
             orchestrator.fit_pixels([test_pixel], resume=True, checkpoint_file=None)
 
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_stages_shared_inputs_once(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+    ):
+        """Test ENDF/JSON inputs are staged once and reused across submitted pixels."""
+        pixels = [
+            PixelSpectrum(
+                row=i,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+            for i in range(2)
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock executor to avoid subprocesses while preserving Future/as_completed behavior
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        submitted_shared_json = []
+        submitted_shared_endf = []
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            submitted_shared_json.append(shared_json)
+            submitted_shared_endf.append(shared_endf)
+            mock_fit_results = MagicMock(spec=FitResults)
+            future = Future()
+            future.set_result(
+                PixelFitResult(
+                    row=pixel.row,
+                    col=pixel.col,
+                    fit_results=mock_fit_results,
+                    success=True,
+                    error_message=None,
+                    chi_squared=1.0,
+                )
+            )
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=2
+        )
+        results = orchestrator.fit_pixels(pixels)
+
+        assert len(results) == 2
+        assert all(r.success for r in results)
+        mock_json_instance.create_json_config.assert_called_once()
+        assert len(submitted_shared_json) == 2
+        assert submitted_shared_json[0] == submitted_shared_json[1]
+        assert submitted_shared_endf[0] == submitted_shared_endf[1]
+
+    def test_fit_pixels_rejects_duplicate_coordinates(self, imaging_config, mock_sammy_executable, test_pixel):
+        """Test duplicate pixel coordinates are rejected to avoid result overwrite."""
+        duplicate_pixel = PixelSpectrum(
+            row=test_pixel.row,
+            col=test_pixel.col,
+            energy=test_pixel.energy.copy(),
+            transmission=test_pixel.transmission.copy(),
+            uncertainty=test_pixel.uncertainty.copy(),
+        )
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Duplicate pixel coordinates detected"):
+            orchestrator.fit_pixels([test_pixel, duplicate_pixel])
+
     def test_load_checkpoint_min_energy_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
         """Test loading checkpoint with mismatched min_energy raises error."""
         # Create checkpoint with different min_energy
@@ -682,6 +767,61 @@ class TestFitPixelWorker:
         assert "SAMMY execution failed" in result.error_message
         assert result.chi_squared is None
         mock_runner.validate_config.assert_called_once()
+
+    @patch("pleiades.imaging.orchestrator.ResultsManager")
+    @patch("pleiades.imaging.orchestrator.LocalSammyRunner")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    def test_fit_pixel_worker_uses_shared_inputs(
+        self, mock_json_mgr, mock_runner_cls, mock_results_mgr_cls, imaging_config
+    ):
+        """Test worker uses shared staged JSON/ENDF inputs without restaging."""
+        pixel = PixelSpectrum(
+            row=7,
+            col=8,
+            energy=np.linspace(1, 100, 50),
+            transmission=np.random.uniform(0.5, 1.0, 50),
+            uncertainty=np.full(50, 0.01),
+        )
+
+        mock_runner = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.error_message = None
+        mock_runner.execute_sammy.return_value = mock_result
+        mock_runner_cls.return_value = mock_runner
+
+        mock_fit_result = MagicMock(spec=FitResults)
+        mock_chi_sq = ChiSquaredResults(chi_squared=2.345, dof=50, reduced_chi_squared=0.047)
+        mock_fit_result.get_chi_squared_results.return_value = mock_chi_sq
+        mock_results_mgr = MagicMock()
+        mock_results_mgr.run_results.fit_results = [mock_fit_result]
+        mock_results_mgr_cls.return_value = mock_results_mgr
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            sammy_exe = temp_path / "sammy"
+            sammy_exe.touch()
+
+            shared_dir = temp_path / "shared"
+            shared_dir.mkdir()
+            shared_json = shared_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            (shared_dir / "073-Ta-181.B-VIII.0.par").write_text("ENDF", encoding="utf-8")
+
+            result = _fit_pixel_worker(
+                pixel,
+                imaging_config,
+                sammy_exe,
+                shared_json_config=shared_json,
+                shared_endf_directory=shared_dir,
+            )
+
+        assert result.success is True
+        assert result.chi_squared == 2.345
+        mock_json_mgr.assert_not_called()
+        prepared_files = mock_runner.prepare_environment.call_args.args[0]
+        assert prepared_files.json_config_file == shared_json
+        assert prepared_files.endf_directory == shared_dir
 
     @patch("pleiades.imaging.orchestrator.JsonManager")
     def test_fit_pixel_worker_exception_handling(self, mock_json_mgr, imaging_config):

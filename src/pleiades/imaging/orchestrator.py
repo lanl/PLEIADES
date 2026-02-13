@@ -46,6 +46,8 @@ def _fit_pixel_worker(
     imaging_config: ImagingConfig,
     sammy_executable: Path,
     resolution_file: Optional[Path] = None,
+    shared_json_config: Optional[Path] = None,
+    shared_endf_directory: Optional[Path] = None,
 ) -> PixelFitResult:
     """Worker function to fit a single pixel using SAMMY.
 
@@ -62,6 +64,8 @@ def _fit_pixel_worker(
         imaging_config: Configuration with isotopes and material properties
         sammy_executable: Path to SAMMY binary
         resolution_file: Optional path to resolution function file
+        shared_json_config: Optional pre-staged JSON config path (shared across workers)
+        shared_endf_directory: Optional pre-staged ENDF directory (shared across workers)
 
     Returns:
         PixelFitResult with fitted abundances and chi-squared, or failure info
@@ -78,12 +82,24 @@ def _fit_pixel_worker(
             twenty_file = temp_path / "pixel.twenty"
             convert_csv_to_sammy_twenty(csv_file, twenty_file)
 
-            # Step 3: Create JSON config (auto-retrieves ENDF)
-            json_manager = JsonManager()
-            abundances = imaging_config.get_abundances()
-            json_path = json_manager.create_json_config(
-                isotopes=imaging_config.isotopes, abundances=abundances, working_dir=temp_path
-            )
+            # Step 3: Resolve JSON config + ENDF staging
+            if shared_json_config is not None or shared_endf_directory is not None:
+                if shared_json_config is None or shared_endf_directory is None:
+                    raise ValueError("Both shared_json_config and shared_endf_directory must be provided together.")
+                if not shared_json_config.exists():
+                    raise FileNotFoundError(f"Shared JSON config not found: {shared_json_config}")
+                if not shared_endf_directory.exists():
+                    raise FileNotFoundError(f"Shared ENDF directory not found: {shared_endf_directory}")
+                json_path = shared_json_config
+                endf_directory = shared_endf_directory
+            else:
+                # Fallback mode for direct worker usage (tests/debug) without orchestrator pre-staging.
+                json_manager = JsonManager()
+                abundances = imaging_config.get_abundances()
+                json_path = json_manager.create_json_config(
+                    isotopes=imaging_config.isotopes, abundances=abundances, working_dir=temp_path
+                )
+                endf_directory = temp_path
 
             # Step 4: Create .inp file
             inp_file = temp_path / "sammy.inp"
@@ -97,7 +113,10 @@ def _fit_pixel_worker(
 
             # Step 5: Execute SAMMY
             files = SammyFilesMultiMode(
-                input_file=inp_file, json_config_file=json_path, data_file=twenty_file, endf_directory=temp_path
+                input_file=inp_file,
+                json_config_file=json_path,
+                data_file=twenty_file,
+                endf_directory=endf_directory,
             )
 
             config = LocalSammyConfig(
@@ -257,6 +276,17 @@ class BatchFittingOrchestrator:
         if resume and checkpoint_file is None:
             raise ValueError("Cannot resume without checkpoint_file. Specify checkpoint_file or set resume=False.")
 
+        # Ensure coordinates are unique to avoid result overwrite/corruption in keyed storage.
+        seen_coords = set()
+        for pixel in pixels:
+            coord = (pixel.row, pixel.col)
+            if coord in seen_coords:
+                raise ValueError(
+                    f"Duplicate pixel coordinates detected: {coord}. "
+                    "Each pixel in a batch must have a unique (row, col) coordinate."
+                )
+            seen_coords.add(coord)
+
         # Load checkpoint if resuming
         completed: Dict[Tuple[int, int], PixelFitResult] = {}
         if resume and checkpoint_file:
@@ -290,53 +320,63 @@ class BatchFittingOrchestrator:
         logger.info(f"Fitting {len(remaining_pixels)} pixels ({len(completed)} already completed)")
 
         # Execute remaining pixels in parallel
-        with ProcessPoolExecutor(max_workers=self.n_workers) as executor:
-            # Submit all jobs
-            future_to_pixel = {
-                executor.submit(
-                    _fit_pixel_worker, pixel, self.imaging_config, self.sammy_executable, self.resolution_file
-                ): pixel
-                for pixel in remaining_pixels
-            }
+        if remaining_pixels:
+            with tempfile.TemporaryDirectory(prefix="batch_shared_") as shared_workspace_dir:
+                shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
-            # Collect results with progress tracking
-            iterations_since_checkpoint = 0
-            for future in as_completed(future_to_pixel):
-                pixel = future_to_pixel[future]
-                try:
-                    result = future.result()
-                    completed[(pixel.row, pixel.col)] = result
-                    iterations_since_checkpoint += 1
+                with ProcessPoolExecutor(max_workers=self.n_workers) as executor:
+                    # Submit all jobs
+                    future_to_pixel = {
+                        executor.submit(
+                            _fit_pixel_worker,
+                            pixel,
+                            self.imaging_config,
+                            self.sammy_executable,
+                            self.resolution_file,
+                            shared_json_path,
+                            shared_endf_dir,
+                        ): pixel
+                        for pixel in remaining_pixels
+                    }
 
-                    if result.success:
-                        chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                        logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
-                    else:
-                        logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+                    # Collect results with progress tracking
+                    iterations_since_checkpoint = 0
+                    for future in as_completed(future_to_pixel):
+                        pixel = future_to_pixel[future]
+                        try:
+                            result = future.result()
+                            completed[(pixel.row, pixel.col)] = result
+                            iterations_since_checkpoint += 1
 
-                    # Checkpoint at intervals (based on iterations, not total count, to maintain consistency)
-                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                        logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
-                        iterations_since_checkpoint = 0
+                            if result.success:
+                                chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
+                                logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                            else:
+                                logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
 
-                except Exception as e:
-                    logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
-                    completed[(pixel.row, pixel.col)] = PixelFitResult(
-                        row=pixel.row,
-                        col=pixel.col,
-                        fit_results=None,
-                        success=False,
-                        error_message=f"Executor exception: {str(e)}",
-                        chi_squared=None,
-                    )
-                    iterations_since_checkpoint += 1
+                            # Checkpoint at intervals (based on iterations, not total count, to maintain consistency)
+                            if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+                                self._save_checkpoint(checkpoint_file, completed, total_pixels)
+                                logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
+                                iterations_since_checkpoint = 0
 
-                    # Checkpoint at intervals (even for exceptions, to maintain consistent timing)
-                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                        logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
-                        iterations_since_checkpoint = 0
+                        except Exception as e:
+                            logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
+                            completed[(pixel.row, pixel.col)] = PixelFitResult(
+                                row=pixel.row,
+                                col=pixel.col,
+                                fit_results=None,
+                                success=False,
+                                error_message=f"Executor exception: {str(e)}",
+                                chi_squared=None,
+                            )
+                            iterations_since_checkpoint += 1
+
+                            # Checkpoint at intervals (even for exceptions, to maintain consistent timing)
+                            if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+                                self._save_checkpoint(checkpoint_file, completed, total_pixels)
+                                logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
+                                iterations_since_checkpoint = 0
 
         # Final checkpoint
         if checkpoint_file:
@@ -352,6 +392,18 @@ class BatchFittingOrchestrator:
         logger.info(f"Batch fitting complete: {n_success} success, {n_failed} failed")
 
         return results
+
+    def _prepare_shared_sammy_inputs(self, workspace_dir: Path) -> Tuple[Path, Path]:
+        """Stage JSON + ENDF inputs once per batch for worker reuse."""
+        shared_inputs_dir = workspace_dir / "shared_sammy_inputs"
+        json_manager = JsonManager()
+        abundances = self.imaging_config.get_abundances()
+        shared_json_path = json_manager.create_json_config(
+            isotopes=self.imaging_config.isotopes,
+            abundances=abundances,
+            working_dir=shared_inputs_dir,
+        )
+        return shared_json_path, shared_inputs_dir
 
     def _save_checkpoint(
         self, checkpoint_file: Path, completed: Dict[Tuple[int, int], PixelFitResult], total_pixels: int
