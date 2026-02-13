@@ -245,11 +245,16 @@ class BatchFittingOrchestrator:
 
         Raises:
             FileNotFoundError: If resume=True but checkpoint file doesn't exist
+            ValueError: If resume=True but checkpoint_file is None
         """
         # Handle empty pixel list
         if not pixels:
             logger.warning("fit_pixels called with empty pixel list")
             return []
+
+        # Validate resume request
+        if resume and checkpoint_file is None:
+            raise ValueError("Cannot resume without checkpoint_file. Specify checkpoint_file or set resume=False.")
 
         # Load checkpoint if resuming
         completed: Dict[Tuple[int, int], PixelFitResult] = {}
@@ -376,6 +381,28 @@ class BatchFittingOrchestrator:
         if checkpoint.config.temperature_K != self.imaging_config.temperature_K:
             raise ValueError(
                 f"Checkpoint temperature {checkpoint.config.temperature_K} K != current {self.imaging_config.temperature_K} K"
+            )
+
+        # Validate energy bounds (directly affect SAMMY fit inputs)
+        if checkpoint.config.min_energy_eV != self.imaging_config.min_energy_eV:
+            raise ValueError(
+                f"Checkpoint min_energy {checkpoint.config.min_energy_eV} eV != current {self.imaging_config.min_energy_eV} eV"
+            )
+
+        if checkpoint.config.max_energy_eV != self.imaging_config.max_energy_eV:
+            raise ValueError(
+                f"Checkpoint max_energy {checkpoint.config.max_energy_eV} eV != current {self.imaging_config.max_energy_eV} eV"
+            )
+
+        # Validate abundance settings (directly affect SAMMY fit inputs)
+        if checkpoint.config.natural_abundances != self.imaging_config.natural_abundances:
+            raise ValueError(
+                f"Checkpoint natural_abundances {checkpoint.config.natural_abundances} != current {self.imaging_config.natural_abundances}"
+            )
+
+        if checkpoint.config.custom_abundances != self.imaging_config.custom_abundances:
+            raise ValueError(
+                f"Checkpoint custom_abundances {checkpoint.config.custom_abundances} != current {self.imaging_config.custom_abundances}"
             )
 
         return checkpoint

@@ -419,6 +419,135 @@ class TestBatchFittingOrchestrator:
 
         assert len(results) == 0
 
+    def test_fit_pixels_resume_without_checkpoint(self, imaging_config, mock_sammy_executable, test_pixel):
+        """Test resume=True without checkpoint_file raises error."""
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Cannot resume without checkpoint_file"):
+            orchestrator.fit_pixels([test_pixel], resume=True, checkpoint_file=None)
+
+    def test_load_checkpoint_min_energy_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
+        """Test loading checkpoint with mismatched min_energy raises error."""
+        # Create checkpoint with different min_energy
+        different_config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            min_energy_eV=0.5,  # Different min_energy
+            max_energy_eV=100.0,
+        )
+
+        checkpoint = CheckpointData(completed_pixels={}, total_pixels=1, config=different_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Checkpoint min_energy .* eV != current"):
+            orchestrator._load_checkpoint(checkpoint_file)
+
+    def test_load_checkpoint_max_energy_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
+        """Test loading checkpoint with mismatched max_energy raises error."""
+        # Create checkpoint with different max_energy
+        different_config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            min_energy_eV=1.0,
+            max_energy_eV=200.0,  # Different max_energy
+        )
+
+        checkpoint = CheckpointData(completed_pixels={}, total_pixels=1, config=different_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Checkpoint max_energy .* eV != current"):
+            orchestrator._load_checkpoint(checkpoint_file)
+
+    def test_load_checkpoint_natural_abundances_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
+        """Test loading checkpoint with mismatched natural_abundances raises error."""
+        # Create checkpoint with different natural_abundances setting
+        different_config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            natural_abundances=False,  # Different abundance setting
+            custom_abundances=[1.0],
+        )
+
+        checkpoint = CheckpointData(completed_pixels={}, total_pixels=1, config=different_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Checkpoint natural_abundances .* != current"):
+            orchestrator._load_checkpoint(checkpoint_file)
+
+    def test_load_checkpoint_custom_abundances_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
+        """Test loading checkpoint with mismatched custom_abundances raises error."""
+        # Create checkpoint with different custom_abundances
+        different_config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            natural_abundances=False,
+            custom_abundances=[0.5],  # Different custom abundance
+        )
+
+        checkpoint = CheckpointData(completed_pixels={}, total_pixels=1, config=different_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        # Create orchestrator with matching natural_abundances=False but different custom_abundances
+        different_current_config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            natural_abundances=False,
+            custom_abundances=[1.0],  # Different value
+        )
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=different_current_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Checkpoint custom_abundances .* != current"):
+            orchestrator._load_checkpoint(checkpoint_file)
+
 
 class TestFitPixelWorker:
     """Test _fit_pixel_worker function."""
