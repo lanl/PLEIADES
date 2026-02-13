@@ -65,11 +65,19 @@ class PixelSpectrum(BaseModel):
     @field_validator("transmission")
     @classmethod
     def validate_transmission_range(cls, v: np.ndarray) -> np.ndarray:
-        """Ensure transmission values are in [0, 1]."""
+        """Ensure transmission values are physically reasonable.
+
+        Allows slight overshoot/undershoot (±5%) to accommodate real normalized
+        data with imperfect background subtraction or counting statistics.
+        """
         if len(v) == 0:
             raise ValueError("transmission array cannot be empty")
-        if np.any((v < 0) | (v > 1)):
-            raise ValueError(f"transmission must be in [0, 1], got range=[{v.min()}, {v.max()}]")
+        # Allow [-0.05, 1.05] tolerance for real-world normalization artifacts
+        if np.any((v < -0.05) | (v > 1.05)):
+            raise ValueError(
+                f"transmission must be in [-0.05, 1.05] (allowing normalization tolerance), "
+                f"got range=[{v.min()}, {v.max()}]"
+            )
         if np.any(~np.isfinite(v)):
             raise ValueError("transmission array contains NaN or Inf")
         return v
@@ -259,13 +267,32 @@ class Imaging2DResults(BaseModel):
         return v
 
     def model_post_init(self, __context: Any) -> None:
-        """Validate consistency between isotope_names and abundance_maps."""
+        """Validate consistency between isotope_names, abundance_maps, and spatial shapes."""
+        # Check isotope count consistency
         n_isotopes_names = len(self.isotope_names)
         n_isotopes_maps = self.abundance_maps.shape[0]
         if n_isotopes_names != n_isotopes_maps:
             raise ValueError(
                 f"isotope_names length ({n_isotopes_names}) must match "
                 f"abundance_maps first dimension ({n_isotopes_maps})"
+            )
+
+        # Check spatial shape consistency across all 2D/3D maps
+        _, height_abundance, width_abundance = self.abundance_maps.shape
+        height_chi2, width_chi2 = self.chi_squared_map.shape
+        height_mask, width_mask = self.success_mask.shape
+        _, height_source, width_source = self.source_hyperspectral.shape
+
+        if not (
+            height_abundance == height_chi2 == height_mask == height_source
+            and width_abundance == width_chi2 == width_mask == width_source
+        ):
+            raise ValueError(
+                f"Spatial shape mismatch: "
+                f"abundance_maps={height_abundance}×{width_abundance}, "
+                f"chi_squared_map={height_chi2}×{width_chi2}, "
+                f"success_mask={height_mask}×{width_mask}, "
+                f"source_hyperspectral={height_source}×{width_source}"
             )
 
     def save_hdf5(self, filepath: Path) -> None:

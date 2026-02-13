@@ -75,6 +75,40 @@ class TestPixelSpectrum:
         finally:
             csv_path.unlink()
 
+    def test_pixel_spectrum_transmission_tolerance(self):
+        """Test PixelSpectrum accepts slight overshoot/undershoot in transmission."""
+        energy = np.linspace(1, 100, 10)
+        uncertainty = np.full(10, 0.01)
+
+        # Should accept slight overshoot (up to 1.05)
+        transmission_overshoot = np.array([0.5, 0.8, 1.0, 1.02, 1.04, 0.9, 0.7, 0.85, 0.95, 1.03])
+        pixel_overshoot = PixelSpectrum(
+            row=0, col=0, energy=energy, transmission=transmission_overshoot, uncertainty=uncertainty
+        )
+        assert pixel_overshoot.row == 0
+
+        # Should accept slight undershoot (down to -0.05)
+        transmission_undershoot = np.array([0.5, 0.8, 1.0, -0.02, -0.04, 0.9, 0.7, 0.85, 0.95, 0.1])
+        pixel_undershoot = PixelSpectrum(
+            row=1, col=1, energy=energy, transmission=transmission_undershoot, uncertainty=uncertainty
+        )
+        assert pixel_undershoot.row == 1
+
+    def test_pixel_spectrum_transmission_out_of_tolerance(self):
+        """Test PixelSpectrum rejects transmission values outside tolerance."""
+        energy = np.linspace(1, 100, 10)
+        uncertainty = np.full(10, 0.01)
+
+        # Should reject overshoot > 1.05
+        transmission_too_high = np.array([0.5, 0.8, 1.0, 1.1, 0.9, 0.7, 0.85, 0.95, 1.0, 0.8])
+        with pytest.raises(ValueError, match="transmission must be in \\[-0.05, 1.05\\]"):
+            PixelSpectrum(row=0, col=0, energy=energy, transmission=transmission_too_high, uncertainty=uncertainty)
+
+        # Should reject undershoot < -0.05
+        transmission_too_low = np.array([0.5, 0.8, 1.0, -0.1, 0.9, 0.7, 0.85, 0.95, 1.0, 0.8])
+        with pytest.raises(ValueError, match="transmission must be in \\[-0.05, 1.05\\]"):
+            PixelSpectrum(row=0, col=0, energy=energy, transmission=transmission_too_low, uncertainty=uncertainty)
+
 
 class TestHyperspectralData:
     """Test HyperspectralData model."""
@@ -202,3 +236,80 @@ class TestImaging2DResults:
         assert len(imaging_results.pixel_results) == 3
         assert imaging_results.pixel_results[0].row == 0
         assert imaging_results.pixel_results[0].col == 0
+
+    def test_imaging_2d_results_spatial_shape_consistency(self):
+        """Test Imaging2DResults validates consistent spatial shapes."""
+        # Create source with shape (10, 4, 4)
+        source_data = HyperspectralData(
+            data=np.random.uniform(0.5, 1.0, (10, 4, 4)),
+            energy=np.linspace(1, 10, 10),
+            source_file=Path("/tmp/test.tif"),
+        )
+
+        # Valid case: all maps have matching (4, 4) spatial shape
+        valid_results = Imaging2DResults(
+            isotope_names=["Ta-181"],
+            abundance_maps=np.random.uniform(0.9, 1.0, (1, 4, 4)),
+            chi_squared_map=np.ones((4, 4)),
+            success_mask=np.ones((4, 4), dtype=bool),
+            pixel_results=[],
+            source_hyperspectral=source_data,
+        )
+        assert valid_results.abundance_maps.shape == (1, 4, 4)
+
+    def test_imaging_2d_results_spatial_shape_mismatch_chi_squared(self):
+        """Test Imaging2DResults rejects mismatched chi_squared_map shape."""
+        source_data = HyperspectralData(
+            data=np.random.uniform(0.5, 1.0, (10, 4, 4)),
+            energy=np.linspace(1, 10, 10),
+            source_file=Path("/tmp/test.tif"),
+        )
+
+        # chi_squared_map has wrong shape (3, 3) instead of (4, 4)
+        with pytest.raises(ValueError, match="Spatial shape mismatch"):
+            Imaging2DResults(
+                isotope_names=["Ta-181"],
+                abundance_maps=np.random.uniform(0.9, 1.0, (1, 4, 4)),
+                chi_squared_map=np.ones((3, 3)),  # Wrong shape
+                success_mask=np.ones((4, 4), dtype=bool),
+                pixel_results=[],
+                source_hyperspectral=source_data,
+            )
+
+    def test_imaging_2d_results_spatial_shape_mismatch_success_mask(self):
+        """Test Imaging2DResults rejects mismatched success_mask shape."""
+        source_data = HyperspectralData(
+            data=np.random.uniform(0.5, 1.0, (10, 4, 4)),
+            energy=np.linspace(1, 10, 10),
+            source_file=Path("/tmp/test.tif"),
+        )
+
+        # success_mask has wrong shape (4, 5) instead of (4, 4)
+        with pytest.raises(ValueError, match="Spatial shape mismatch"):
+            Imaging2DResults(
+                isotope_names=["Ta-181"],
+                abundance_maps=np.random.uniform(0.9, 1.0, (1, 4, 4)),
+                chi_squared_map=np.ones((4, 4)),
+                success_mask=np.ones((4, 5), dtype=bool),  # Wrong shape
+                pixel_results=[],
+                source_hyperspectral=source_data,
+            )
+
+    def test_imaging_2d_results_spatial_shape_mismatch_abundance_maps(self):
+        """Test Imaging2DResults rejects mismatched abundance_maps shape."""
+        source_data = HyperspectralData(
+            data=np.random.uniform(0.5, 1.0, (10, 4, 4)),
+            energy=np.linspace(1, 10, 10),
+            source_file=Path("/tmp/test.tif"),
+        )
+
+        # abundance_maps has wrong spatial shape (1, 3, 4) instead of (1, 4, 4)
+        with pytest.raises(ValueError, match="Spatial shape mismatch"):
+            Imaging2DResults(
+                isotope_names=["Ta-181"],
+                abundance_maps=np.random.uniform(0.9, 1.0, (1, 3, 4)),  # Wrong spatial shape
+                chi_squared_map=np.ones((4, 4)),
+                success_mask=np.ones((4, 4), dtype=bool),
+                pixel_results=[],
+                source_hyperspectral=source_data,
+            )
