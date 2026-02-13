@@ -214,3 +214,6 @@ _version.py
 
 # ignore any scratch spaces or temporary files
 .scratch/
+
+# Ignore local Claude Code instructions (user-specific)
+CLAUDE.md
