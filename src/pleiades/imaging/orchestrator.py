@@ -107,6 +107,7 @@ def _fit_pixel_worker(
             )
 
             runner = LocalSammyRunner(config)
+            runner.validate_config()
             runner.prepare_environment(files)
             result = runner.execute_sammy(files)
 
@@ -262,6 +263,24 @@ class BatchFittingOrchestrator:
             if not checkpoint_file.exists():
                 raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_file}")
             checkpoint = self._load_checkpoint(checkpoint_file)
+
+            # Checkpoint must be from the same batch shape to avoid mixing stale results.
+            if checkpoint.total_pixels != len(pixels):
+                raise ValueError(
+                    f"Checkpoint total_pixels={checkpoint.total_pixels} does not match current batch "
+                    f"size={len(pixels)}. Use a checkpoint created for this exact pixel batch."
+                )
+
+            current_coords = {(p.row, p.col) for p in pixels}
+            checkpoint_coords = set(checkpoint.completed_pixels.keys())
+            invalid_coords = checkpoint_coords - current_coords
+            if invalid_coords:
+                invalid_coord = sorted(invalid_coords)[0]
+                raise ValueError(
+                    f"Checkpoint contains pixel {invalid_coord} not present in current batch. "
+                    "Use a checkpoint created for this exact pixel batch."
+                )
+
             completed = checkpoint.completed_pixels
             logger.info(f"Resuming from checkpoint: {len(completed)}/{checkpoint.total_pixels} pixels completed")
 

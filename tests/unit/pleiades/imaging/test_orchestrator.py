@@ -284,6 +284,46 @@ class TestBatchFittingOrchestrator:
         with pytest.raises(FileNotFoundError, match="Checkpoint file not found"):
             orchestrator.fit_pixels([test_pixel], checkpoint_file=checkpoint_file, resume=True)
 
+    def test_fit_pixels_resume_total_pixels_mismatch(self, imaging_config, mock_sammy_executable, test_pixel, tmp_path):
+        """Test resume rejects checkpoint created for different batch size."""
+        checkpoint = CheckpointData(completed_pixels={}, total_pixels=2, config=imaging_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="total_pixels=.*does not match current batch size=.*"):
+            orchestrator.fit_pixels([test_pixel], checkpoint_file=checkpoint_file, resume=True)
+
+    def test_fit_pixels_resume_pixel_set_mismatch(self, imaging_config, mock_sammy_executable, test_pixel, tmp_path):
+        """Test resume rejects checkpoint containing pixels outside current batch."""
+        completed = {
+            (99, 99): PixelFitResult(
+                row=99,
+                col=99,
+                fit_results=None,
+                success=False,
+                error_message="Previous failed fit",
+                chi_squared=None,
+            )
+        }
+        checkpoint = CheckpointData(completed_pixels=completed, total_pixels=1, config=imaging_config)
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        with open(checkpoint_file, "wb") as f:
+            pickle.dump(checkpoint, f)
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        with pytest.raises(ValueError, match="Checkpoint contains pixel .* not present in current batch"):
+            orchestrator.fit_pixels([test_pixel], checkpoint_file=checkpoint_file, resume=True)
+
     def test_load_checkpoint_config_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
         """Test loading checkpoint with mismatched config raises error."""
         # Create checkpoint with different isotopes
@@ -601,6 +641,7 @@ class TestFitPixelWorker:
         assert result.success is True
         assert result.chi_squared == 1.234
         assert result.error_message is None
+        mock_runner.validate_config.assert_called_once()
 
     @patch("pleiades.imaging.orchestrator.LocalSammyRunner")
     @patch("pleiades.imaging.orchestrator.JsonManager")
@@ -640,6 +681,7 @@ class TestFitPixelWorker:
         assert result.success is False
         assert "SAMMY execution failed" in result.error_message
         assert result.chi_squared is None
+        mock_runner.validate_config.assert_called_once()
 
     @patch("pleiades.imaging.orchestrator.JsonManager")
     def test_fit_pixel_worker_exception_handling(self, mock_json_mgr, imaging_config):
