@@ -301,7 +301,8 @@ class TestLoaderIntegration:
 
     def test_load_lanl_ornl_example(self):
         """Test loading actual LANL-ORNL_example.tif if available."""
-        test_file = Path("/Users/8cz/github.com/lanl/PLEIADES/tests/data/pleiades_data/LANL-ORNL_example.tif")
+        # Resolve path relative to test file location (works on any machine/CI)
+        test_file = Path(__file__).parent.parent.parent.parent.parent / "tests/data/pleiades_data/LANL-ORNL_example.tif"
 
         if not test_file.exists():
             pytest.skip("LANL-ORNL_example.tif not available")

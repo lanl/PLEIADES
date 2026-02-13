@@ -5,6 +5,7 @@ This module provides tools for loading and managing hyperspectral neutron
 imaging data from multiple sources: TIFF files, directories, and NeXus/HDF5.
 """
 
+import re
 from pathlib import Path
 from typing import Iterator, Optional, Tuple, Union
 
@@ -16,6 +17,22 @@ from pleiades.imaging.models import HyperspectralData, PixelSpectrum
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
+
+
+def _natural_sort_key(path: Path) -> list:
+    """Generate natural sort key for numeric filenames.
+
+    Converts 'frame_2.tif' and 'frame_10.tif' to sort in numeric order.
+    Splits filename into text and numeric parts for proper ordering.
+
+    Args:
+        path: File path to generate sort key for
+
+    Returns:
+        List of alternating strings and integers for natural sorting
+    """
+    parts = re.split(r"(\d+)", path.name)
+    return [int(part) if part.isdigit() else part for part in parts]
 
 
 class HyperspectralLoader:
@@ -96,8 +113,8 @@ class HyperspectralLoader:
         if not directory.is_dir():
             raise ValueError(f"Path is not a directory: {directory}")
 
-        # Find matching files (sorted for deterministic order)
-        files = sorted(directory.glob(pattern))
+        # Find matching files (sorted with natural/numeric order for frame indices)
+        files = sorted(directory.glob(pattern), key=_natural_sort_key)
         if not files:
             raise ValueError(f"No files matching pattern '{pattern}' in {directory}")
 
@@ -317,8 +334,9 @@ class HyperspectralLoader:
         effective_counts = 1000.0
         uncertainty = np.sqrt(np.abs(data * (1 - data)) / effective_counts)
 
-        # Clip to reasonable range (min 0.1% relative uncertainty)
-        min_uncertainty = 0.001 * np.abs(data)
+        # Clip to reasonable range (min 0.1% relative uncertainty, but never zero)
+        # Use 1e-6 absolute floor to handle fully absorbed bins (transmission = 0)
+        min_uncertainty = np.maximum(0.001 * np.abs(data), 1e-6)
         uncertainty = np.maximum(uncertainty, min_uncertainty)
 
         return uncertainty.astype(np.float32)
