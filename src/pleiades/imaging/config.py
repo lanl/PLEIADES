@@ -9,6 +9,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from pleiades.nuclear.isotopes.manager import IsotopeManager
+
 
 class ImagingConfig(BaseModel):
     """Configuration for 2D resonance imaging workflow.
@@ -65,7 +67,7 @@ class ImagingConfig(BaseModel):
             "thickness_mm": self.thickness_mm,
             "atomic_mass_amu": self.atomic_mass_amu,
             "abundance": 1.0,  # Total abundance (will be split among isotopes)
-            "min_energy": self.min_energy_eV,
+            "min_energy_eV": self.min_energy_eV,
             "max_energy_eV": self.max_energy_eV,
             "temperature_K": self.temperature_K,
         }
@@ -74,11 +76,22 @@ class ImagingConfig(BaseModel):
         """Get abundance list for JsonManager.
 
         Returns:
-            List of abundance values for each isotope
+            List of abundance values for each isotope (as fractions, not percentages)
         """
         if self.natural_abundances:
-            # Use natural abundances (JsonManager will handle this)
-            return [1.0] * len(self.isotopes)
+            # Look up actual natural abundances from PLEIADES isotope database
+            isotope_manager = IsotopeManager()
+            abundances = []
+            for isotope_name in self.isotopes:
+                isotope_info = isotope_manager.get_isotope_info(isotope_name)
+                if isotope_info is None or isotope_info.abundance is None:
+                    raise ValueError(
+                        f"Natural abundance not found for {isotope_name}. "
+                        "Use custom_abundances instead or verify isotope name."
+                    )
+                # Convert from percent to fraction (isotopes.info stores as percent)
+                abundances.append(isotope_info.abundance / 100.0)
+            return abundances
         elif self.custom_abundances is not None:
             if len(self.custom_abundances) != len(self.isotopes):
                 raise ValueError(
