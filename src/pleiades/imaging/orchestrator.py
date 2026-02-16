@@ -58,8 +58,8 @@ class ProgressReporter:
     """Progress bar wrapper for batch pixel fitting using tqdm.
 
     Provides progress tracking with ETA estimation and success/failure counts.
-    Routes output through tqdm.write() to prevent garbled terminal output when
-    combined with logging.
+    Also exposes a write() helper that routes messages through tqdm.write() to
+    prevent garbled terminal output when combined with logging.
 
     Example:
         >>> with ProgressReporter(total_pixels=1000) as progress:
@@ -538,13 +538,12 @@ class BatchFittingOrchestrator:
                                     for f in future_to_pixel:
                                         if not f.done():
                                             f.cancel()
-                                    # Collect results from ALL non-cancelled futures we haven't
-                                    # processed yet. This includes both already-done futures and
-                                    # still-running futures (which we wait for). Without this,
-                                    # valid completed fits are lost and replaced with "interrupted"
-                                    # placeholders, producing incomplete checkpoints.
+                                    # Collect results from all non-cancelled futures we haven't
+                                    # processed yet that are already done. This avoids blocking
+                                    # shutdown on still-running futures while preserving completed
+                                    # fits for checkpointing.
                                     for f in future_to_pixel:
-                                        if f not in completed_futures and not f.cancelled():
+                                        if f not in completed_futures and not f.cancelled() and f.done():
                                             drain_pixel = future_to_pixel[f]
                                             try:
                                                 drain_result = f.result()

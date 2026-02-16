@@ -1300,10 +1300,10 @@ class TestFitPixelsProgressIntegration:
 
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
-    def test_fit_pixels_atomic_checkpoint_write(
+    def test_fit_pixels_checkpoint_is_valid_after_completion(
         self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
     ):
-        """Checkpoints are written atomically: write to .tmp file, then rename to final path."""
+        """fit_pixels() writes a valid, loadable checkpoint file after completion."""
         pixels = [
             PixelSpectrum(
                 row=0,
@@ -1346,35 +1346,21 @@ class TestFitPixelsProgressIntegration:
 
         mock_executor.submit.side_effect = submit_side_effect
 
-        checkpoint_file = tmp_path / "atomic_test.pkl"
+        checkpoint_file = tmp_path / "checkpoint_valid.pkl"
 
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        # Patch _save_checkpoint to observe the atomic write pattern
-        # We need to intercept the actual file operations
-        original_save = orchestrator._save_checkpoint
+        orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
 
-        tmp_files_created = []
-        renames_performed = []
-
-        def spy_save_checkpoint(ckpt_file, completed, total_pixels):
-            """Spy on _save_checkpoint to verify atomic write (tmp + rename)."""
-            # We intercept open() and os.replace/os.rename/Path.rename
-            # to detect the atomic write pattern
-            original_save(ckpt_file, completed, total_pixels)
-
-        # Instead of complex spy, verify the final checkpoint is valid
-        # and test _save_checkpoint directly for atomicity
-        results = orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
-
-        # The checkpoint file must exist and be loadable
+        # The checkpoint file must exist and be loadable with correct content
         assert checkpoint_file.exists()
         with open(checkpoint_file, "rb") as f:
             loaded = pickle.load(f)
         assert isinstance(loaded, CheckpointData)
         assert loaded.total_pixels == 1
+        assert (0, 0) in loaded.completed_pixels
 
     def test_save_checkpoint_atomic_write_uses_tmp_and_rename(self, imaging_config, mock_sammy_executable, tmp_path):
         """_save_checkpoint writes to a .tmp file then renames to final path (atomic)."""
