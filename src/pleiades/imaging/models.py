@@ -376,11 +376,15 @@ class Imaging2DResults(BaseModel):
             metadata: Dict[str, Any] = {}
             if "metadata" in f:
                 for key, value in f["metadata"].attrs.items():
-                    # Convert numpy scalars to Python types
-                    if hasattr(value, "item"):
-                        metadata[key] = value.item()
-                    elif isinstance(value, bytes):
+                    # Convert numpy scalars to Python types and decode bytes to str
+                    if isinstance(value, (bytes, np.bytes_)):
                         metadata[key] = value.decode("utf-8")
+                    elif hasattr(value, "item"):
+                        scalar = value.item()
+                        if isinstance(scalar, (bytes, np.bytes_)):
+                            metadata[key] = scalar.decode("utf-8")
+                        else:
+                            metadata[key] = scalar
                     else:
                         metadata[key] = value
 

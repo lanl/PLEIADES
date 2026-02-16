@@ -258,10 +258,10 @@ class TestResultsAggregator:
         result = aggregator.aggregate(pixel_results, source)
 
         # Success mask should be True/False in the correct positions
-        assert result.success_mask[0, 0] is np.True_
-        assert result.success_mask[0, 1] is np.False_
-        assert result.success_mask[1, 0] is np.True_
-        assert result.success_mask[1, 1] is np.False_
+        assert result.success_mask[0, 0]
+        assert not result.success_mask[0, 1]
+        assert result.success_mask[1, 0]
+        assert not result.success_mask[1, 1]
 
         # Failed pixels should have NaN abundance
         assert np.isnan(result.abundance_maps[0, 0, 1])
