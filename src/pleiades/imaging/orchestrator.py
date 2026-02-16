@@ -532,19 +532,22 @@ class BatchFittingOrchestrator:
                                 # Check shutdown AFTER processing the current future to avoid
                                 # dropping already-completed results (P1-03 review fix)
                                 if shutdown_handler.shutdown_requested:
-                                    logger.warning("Shutdown requested, draining completed futures...")
-                                    # Cancel futures that haven't started yet
+                                    logger.warning("Shutdown requested, collecting remaining results...")
+                                    # Cancel futures that haven't started yet. Running futures
+                                    # cannot be cancelled and will complete during executor shutdown.
                                     for f in future_to_pixel:
                                         if not f.done():
                                             f.cancel()
-                                    # Drain any futures that already completed before we cancelled.
-                                    # Without this, completed-but-not-yet-yielded results are lost
-                                    # and later reported as "interrupted" placeholders.
+                                    # Collect results from ALL non-cancelled futures we haven't
+                                    # processed yet. This includes both already-done futures and
+                                    # still-running futures (which we wait for). Without this,
+                                    # valid completed fits are lost and replaced with "interrupted"
+                                    # placeholders, producing incomplete checkpoints.
                                     for f in future_to_pixel:
-                                        if f.done() and not f.cancelled() and f not in completed_futures:
+                                        if f not in completed_futures and not f.cancelled():
                                             drain_pixel = future_to_pixel[f]
                                             try:
-                                                drain_result = f.result(timeout=0)
+                                                drain_result = f.result()
                                                 completed[(drain_pixel.row, drain_pixel.col)] = drain_result
                                                 progress.update(1)
                                                 if drain_result.success:
