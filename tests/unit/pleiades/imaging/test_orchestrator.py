@@ -1,17 +1,26 @@
 """Unit tests for pleiades.imaging.orchestrator."""
 
+import os
 import pickle
+import signal
 import tempfile
 from concurrent.futures import Future
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import numpy as np
 import pytest
 
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.models import PixelFitResult, PixelSpectrum
-from pleiades.imaging.orchestrator import BatchFittingOrchestrator, CheckpointData, _fit_pixel_worker
+from pleiades.imaging.orchestrator import (
+    BatchFittingOrchestrator,
+    CheckpointData,
+    GracefulShutdownHandler,
+    ProgressReporter,
+    _fit_pixel_worker,
+    _worker_initializer,
+)
 from pleiades.sammy.results.models import ChiSquaredResults, FitResults
 
 
@@ -347,7 +356,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint isotopes .* != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*isotopes"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_density_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -372,7 +381,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint density .* g/cm³ != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*density_g_cm3"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_thickness_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -397,7 +406,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint thickness .* mm != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*thickness_mm"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_atomic_mass_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -422,7 +431,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint atomic mass .* amu != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*atomic_mass_amu"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_temperature_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -448,7 +457,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint temperature .* K != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*temperature_K"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_fit_pixels_empty_list(self, imaging_config, mock_sammy_executable):
@@ -578,7 +587,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint min_energy .* eV != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*min_energy_eV"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_max_energy_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -605,7 +614,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint max_energy .* eV != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*max_energy_eV"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_natural_abundances_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -632,7 +641,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint natural_abundances .* != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*natural_abundances"):
             orchestrator._load_checkpoint(checkpoint_file)
 
     def test_load_checkpoint_custom_abundances_mismatch(self, imaging_config, mock_sammy_executable, tmp_path):
@@ -671,7 +680,7 @@ class TestBatchFittingOrchestrator:
             imaging_config=different_current_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        with pytest.raises(ValueError, match="Checkpoint custom_abundances .* != current"):
+        with pytest.raises(ValueError, match="Mismatched fields:.*custom_abundances"):
             orchestrator._load_checkpoint(checkpoint_file)
 
 
@@ -850,3 +859,610 @@ class TestFitPixelWorker:
         assert result.success is False
         assert "Exception:" in result.error_message
         assert result.chi_squared is None
+
+
+# =============================================================================
+# Tests for Issue #178: Progress tracking, graceful shutdown, and integration
+# =============================================================================
+
+
+class TestProgressReporter:
+    """Tests for ProgressReporter progress bar wrapper."""
+
+    def test_progress_reporter_init(self):
+        """ProgressReporter initializes with a total pixel count and creates a tqdm bar."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            reporter = ProgressReporter(total_pixels=100)
+
+            mock_tqdm.assert_called_once()
+            # Verify total was passed to tqdm
+            tqdm_call_kwargs = mock_tqdm.call_args
+            assert tqdm_call_kwargs.kwargs.get("total") == 100 or tqdm_call_kwargs.args == (100,), (
+                "tqdm must be created with total=100 (positional or keyword)"
+            )
+
+    def test_progress_reporter_update(self):
+        """Calling update(n) advances the progress bar by n steps."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            reporter = ProgressReporter(total_pixels=50)
+            reporter.update(1)
+            mock_bar.update.assert_called_with(1)
+
+            reporter.update(5)
+            mock_bar.update.assert_called_with(5)
+
+            assert mock_bar.update.call_count == 2
+
+    def test_progress_reporter_context_manager(self):
+        """ProgressReporter works as a context manager and auto-closes."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            with ProgressReporter(total_pixels=10) as reporter:
+                reporter.update(1)
+
+            # close() must be called on __exit__
+            mock_bar.close.assert_called_once()
+
+    def test_progress_reporter_write(self):
+        """write() outputs a message through tqdm to prevent garbled output."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            reporter = ProgressReporter(total_pixels=20)
+            reporter.write("Pixel (5, 10) SUCCESS")
+
+            mock_bar.write.assert_called_once_with("Pixel (5, 10) SUCCESS")
+
+    def test_progress_reporter_close(self):
+        """close() finalizes the progress bar."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            reporter = ProgressReporter(total_pixels=30)
+            reporter.close()
+
+            mock_bar.close.assert_called_once()
+
+    def test_progress_reporter_tracks_success_failure_in_postfix(self):
+        """ProgressReporter tracks success/failure counts displayed via tqdm postfix."""
+
+        with patch("pleiades.imaging.orchestrator.tqdm") as mock_tqdm:
+            mock_bar = MagicMock()
+            mock_tqdm.return_value = mock_bar
+
+            reporter = ProgressReporter(total_pixels=10)
+
+            # Track a success
+            reporter.record_success()
+            # Verify set_postfix was called and includes success info
+            postfix_calls = [c for c in mock_bar.method_calls if c[0] == "set_postfix"]
+            assert len(postfix_calls) >= 1, "set_postfix should be called after record_success"
+
+            # Track a failure
+            reporter.record_failure()
+            postfix_calls = [c for c in mock_bar.method_calls if c[0] == "set_postfix"]
+            assert len(postfix_calls) >= 2, "set_postfix should be called after record_failure"
+
+
+class TestGracefulShutdownHandler:
+    """Tests for GracefulShutdownHandler signal management."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_signal_handlers(self):
+        """Safety net: always restore original signal handlers even if a test fails."""
+        original_sigint = signal.getsignal(signal.SIGINT)
+        original_sigterm = signal.getsignal(signal.SIGTERM)
+        yield
+        signal.signal(signal.SIGINT, original_sigint)
+        signal.signal(signal.SIGTERM, original_sigterm)
+
+    def test_shutdown_handler_init(self):
+        """shutdown_requested starts as not set (False)."""
+
+        handler = GracefulShutdownHandler()
+        assert not handler.shutdown_requested, "shutdown_requested must be False on initialization"
+
+    def test_shutdown_handler_install_uninstall(self):
+        """install() registers custom signal handlers; uninstall() restores originals."""
+
+        # Save the original handlers before we start
+        original_sigint = signal.getsignal(signal.SIGINT)
+        original_sigterm = signal.getsignal(signal.SIGTERM)
+
+        handler = GracefulShutdownHandler()
+        handler.install()
+
+        # After install, signal handlers should be different from originals
+        current_sigint = signal.getsignal(signal.SIGINT)
+        current_sigterm = signal.getsignal(signal.SIGTERM)
+        assert current_sigint != original_sigint, "SIGINT handler should be changed after install()"
+        assert current_sigterm != original_sigterm, "SIGTERM handler should be changed after install()"
+
+        handler.uninstall()
+
+        # After uninstall, original handlers should be restored
+        restored_sigint = signal.getsignal(signal.SIGINT)
+        restored_sigterm = signal.getsignal(signal.SIGTERM)
+        assert restored_sigint == original_sigint, "SIGINT handler not restored after uninstall()"
+        assert restored_sigterm == original_sigterm, "SIGTERM handler not restored after uninstall()"
+
+    def test_shutdown_handler_context_manager(self):
+        """GracefulShutdownHandler works as a context manager (install on enter, uninstall on exit)."""
+
+        original_sigint = signal.getsignal(signal.SIGINT)
+
+        with GracefulShutdownHandler() as handler:
+            # Inside context, handler should be installed
+            assert signal.getsignal(signal.SIGINT) != original_sigint
+            assert not handler.shutdown_requested
+
+        # After context, original handler should be restored
+        assert signal.getsignal(signal.SIGINT) == original_sigint
+
+    def test_shutdown_handler_first_signal_sets_flag(self):
+        """First SIGINT sets shutdown_requested flag without killing the process."""
+
+        with GracefulShutdownHandler() as handler:
+            assert not handler.shutdown_requested
+
+            # Send SIGINT to ourselves (first signal = graceful)
+            os.kill(os.getpid(), signal.SIGINT)
+
+            assert handler.shutdown_requested, "shutdown_requested must be True after first SIGINT"
+
+    def test_shutdown_handler_second_signal_forces_exit(self):
+        """Second signal raises SystemExit or forces termination."""
+
+        with GracefulShutdownHandler() as handler:
+            # First signal: sets flag
+            os.kill(os.getpid(), signal.SIGINT)
+            assert handler.shutdown_requested
+
+            # Second signal: should force exit (SystemExit or KeyboardInterrupt)
+            with pytest.raises((SystemExit, KeyboardInterrupt)):
+                os.kill(os.getpid(), signal.SIGINT)
+
+    def test_shutdown_handler_sigterm(self):
+        """SIGTERM is handled the same as SIGINT (sets shutdown flag)."""
+
+        with GracefulShutdownHandler() as handler:
+            assert not handler.shutdown_requested
+
+            os.kill(os.getpid(), signal.SIGTERM)
+
+            assert handler.shutdown_requested, "shutdown_requested must be True after SIGTERM"
+
+
+class TestWorkerInitializer:
+    """Tests for _worker_initializer subprocess setup."""
+
+    def test_worker_initializer_ignores_sigint(self):
+        """After _worker_initializer(), SIGINT handler is SIG_IGN so children ignore Ctrl+C."""
+
+        # Save original handler
+        original_handler = signal.getsignal(signal.SIGINT)
+
+        try:
+            _worker_initializer()
+
+            current_handler = signal.getsignal(signal.SIGINT)
+            assert current_handler == signal.SIG_IGN, (
+                f"SIGINT handler should be SIG_IGN after _worker_initializer(), got {current_handler}"
+            )
+        finally:
+            # Restore original handler so test framework isn't broken
+            signal.signal(signal.SIGINT, original_handler)
+
+
+class TestFitPixelsProgressIntegration:
+    """Tests for fit_pixels() integration with ProgressReporter and GracefulShutdownHandler."""
+
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_uses_progress_reporter(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+    ):
+        """fit_pixels() creates and uses ProgressReporter for progress tracking."""
+        pixels = [
+            PixelSpectrum(
+                row=i,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+            for i in range(3)
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock executor
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            future = Future()
+            future.set_result(
+                PixelFitResult(
+                    row=pixel.row,
+                    col=pixel.col,
+                    fit_results=None,
+                    success=False,
+                    error_message="test",
+                    chi_squared=None,
+                )
+            )
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=2
+        )
+
+        with patch("pleiades.imaging.orchestrator.ProgressReporter") as mock_progress_cls:
+            mock_progress = MagicMock()
+            mock_progress.__enter__ = MagicMock(return_value=mock_progress)
+            mock_progress.__exit__ = MagicMock(return_value=False)
+            mock_progress_cls.return_value = mock_progress
+
+            results = orchestrator.fit_pixels(pixels)
+
+            # ProgressReporter must be created with the correct total
+            mock_progress_cls.assert_called_once_with(total_pixels=3)
+            # update() must be called once per pixel
+            assert mock_progress.update.call_count == 3
+
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_graceful_shutdown_saves_checkpoint(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
+    ):
+        """When a shutdown signal is received, completed futures are drained and checkpoint is saved.
+
+        Scenario: 5 pixels submitted. 2 processed in main loop before shutdown triggers.
+        1 additional future already completed (drained). 2 futures still pending (not resolved).
+        Checkpoint should contain exactly 3 pixels (2 from loop + 1 drained).
+        The 2 pending pixels should be reported as interrupted placeholders.
+        """
+        pixels = [
+            PixelSpectrum(
+                row=i,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+            for i in range(5)
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock executor: first 3 futures are pre-resolved, last 2 are pending (never resolved).
+        # This simulates real behavior where some workers finish before shutdown while others
+        # are still running.
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        futures_created = []
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            future = Future()
+            if pixel.row < 3:
+                # First 3 pixels complete immediately
+                future.set_result(
+                    PixelFitResult(
+                        row=pixel.row,
+                        col=pixel.col,
+                        fit_results=None,
+                        success=False,
+                        error_message="test",
+                        chi_squared=None,
+                    )
+                )
+            # Pixels 3 and 4 remain pending (never resolved) — simulates in-flight workers
+            futures_created.append(future)
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        checkpoint_file = tmp_path / "shutdown_checkpoint.pkl"
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=2
+        )
+
+        # Mock GracefulShutdownHandler to simulate shutdown after 2 pixels
+        with patch("pleiades.imaging.orchestrator.GracefulShutdownHandler") as mock_shutdown_cls:
+            mock_shutdown = MagicMock()
+            mock_shutdown.__enter__ = MagicMock(return_value=mock_shutdown)
+            mock_shutdown.__exit__ = MagicMock(return_value=False)
+
+            # Simulate: shutdown_requested is False for first 2, then True
+            shutdown_side_effect_values = [False, False, True, True, True, True, True, True]
+            type(mock_shutdown).shutdown_requested = PropertyMock(side_effect=shutdown_side_effect_values)
+            mock_shutdown_cls.return_value = mock_shutdown
+
+            results = orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
+
+        # A checkpoint should have been saved
+        assert checkpoint_file.exists(), "Checkpoint file must be saved when shutdown is signaled"
+
+        # Verify checkpoint contains exactly 3 pixels: 2 from main loop + 1 drained
+        with open(checkpoint_file, "rb") as f:
+            saved = pickle.load(f)
+        assert isinstance(saved, CheckpointData)
+        assert len(saved.completed_pixels) == 3, (
+            f"Expected 3 completed pixels (2 from loop + 1 drained), got {len(saved.completed_pixels)}"
+        )
+
+        # Verify the 2 pending pixels are reported as interrupted placeholders in results
+        interrupted = [r for r in results if r.error_message == "Batch fitting interrupted by shutdown signal"]
+        assert len(interrupted) == 2, f"Expected 2 interrupted placeholders, got {len(interrupted)}"
+
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_uses_worker_initializer(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+    ):
+        """ProcessPoolExecutor is created with initializer=_worker_initializer."""
+
+        pixels = [
+            PixelSpectrum(
+                row=0,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock executor
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            future = Future()
+            future.set_result(
+                PixelFitResult(
+                    row=pixel.row,
+                    col=pixel.col,
+                    fit_results=None,
+                    success=False,
+                    error_message="test",
+                    chi_squared=None,
+                )
+            )
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=2
+        )
+
+        results = orchestrator.fit_pixels(pixels)
+
+        # ProcessPoolExecutor must be created with initializer=_worker_initializer
+        mock_executor_cls.assert_called_once()
+        executor_call_kwargs = mock_executor_cls.call_args.kwargs
+        assert "initializer" in executor_call_kwargs, "ProcessPoolExecutor must be called with initializer kwarg"
+        assert executor_call_kwargs["initializer"] == _worker_initializer, (
+            "ProcessPoolExecutor initializer must be _worker_initializer"
+        )
+
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_checkpoint_is_valid_after_completion(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
+    ):
+        """fit_pixels() writes a valid, loadable checkpoint file after completion."""
+        pixels = [
+            PixelSpectrum(
+                row=0,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock executor
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            future = Future()
+            future.set_result(
+                PixelFitResult(
+                    row=pixel.row,
+                    col=pixel.col,
+                    fit_results=None,
+                    success=False,
+                    error_message="test",
+                    chi_squared=None,
+                )
+            )
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        checkpoint_file = tmp_path / "checkpoint_valid.pkl"
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
+
+        # The checkpoint file must exist and be loadable with correct content
+        assert checkpoint_file.exists()
+        with open(checkpoint_file, "rb") as f:
+            loaded = pickle.load(f)
+        assert isinstance(loaded, CheckpointData)
+        assert loaded.total_pixels == 1
+        assert (0, 0) in loaded.completed_pixels
+
+    def test_save_checkpoint_atomic_write_uses_tmp_and_rename(self, imaging_config, mock_sammy_executable, tmp_path):
+        """_save_checkpoint writes to a .tmp file then renames to final path (atomic)."""
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        checkpoint_file = tmp_path / "checkpoint.pkl"
+        completed = {
+            (0, 0): PixelFitResult(
+                row=0, col=0, fit_results=None, success=False, error_message="test", chi_squared=None
+            )
+        }
+
+        orchestrator._save_checkpoint(checkpoint_file, completed, total_pixels=1)
+
+        # After successful save: final file exists, .tmp file does NOT exist
+        assert checkpoint_file.exists(), "Final checkpoint file must exist"
+        assert not checkpoint_file.with_suffix(".tmp").exists(), ".tmp file must be cleaned up after atomic rename"
+
+        # Verify the file is a valid checkpoint
+        with open(checkpoint_file, "rb") as f:
+            loaded = pickle.load(f)
+        assert isinstance(loaded, CheckpointData)
+        assert loaded.total_pixels == 1
+
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_fit_pixels_cancels_futures_on_shutdown(
+        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
+    ):
+        """When shutdown is requested, remaining futures are cancelled."""
+        pixels = [
+            PixelSpectrum(
+                row=i,
+                col=0,
+                energy=np.linspace(1, 100, 50),
+                transmission=np.random.uniform(0.5, 1.0, 50),
+                uncertainty=np.full(50, 0.01),
+            )
+            for i in range(4)
+        ]
+
+        # Mock shared JSON staging
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Create futures - 2 completed, 2 pending (not set)
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+
+        futures = []
+
+        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+            future = Future()
+            if pixel.row < 2:
+                # These two complete
+                future.set_result(
+                    PixelFitResult(
+                        row=pixel.row,
+                        col=pixel.col,
+                        fit_results=None,
+                        success=False,
+                        error_message="test",
+                        chi_squared=None,
+                    )
+                )
+            # rows 2,3 stay pending (not set_result)
+            futures.append(future)
+            return future
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        checkpoint_file = tmp_path / "cancel_test.pkl"
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=2
+        )
+
+        # Mock GracefulShutdownHandler - shutdown after first pixel
+        with patch("pleiades.imaging.orchestrator.GracefulShutdownHandler") as mock_shutdown_cls:
+            mock_shutdown = MagicMock()
+            mock_shutdown.__enter__ = MagicMock(return_value=mock_shutdown)
+            mock_shutdown.__exit__ = MagicMock(return_value=False)
+            # Shutdown requested immediately
+            type(mock_shutdown).shutdown_requested = PropertyMock(return_value=True)
+            mock_shutdown_cls.return_value = mock_shutdown
+
+            results = orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
+
+        # Pending futures (rows 2,3 which never had set_result) should be cancelled
+        # Futures for rows 0,1 had set_result called → done, cancel() skipped
+        cancelled_futures = [f for f in futures if f.cancelled()]
+        assert len(cancelled_futures) == 2, f"Expected 2 cancelled futures (rows 2,3), got {len(cancelled_futures)}"
+
+        # Checkpoint must be saved with partial results
+        assert checkpoint_file.exists(), "Checkpoint must be saved when shutdown triggers partial completion"

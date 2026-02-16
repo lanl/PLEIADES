@@ -6,11 +6,15 @@ This module provides tools for managing large-scale SAMMY resonance fitting jobs
 """
 
 import pickle
+import signal
 import tempfile
+import threading
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+from tqdm import tqdm
 
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.models import PixelFitResult, PixelSpectrum
@@ -39,6 +43,133 @@ class CheckpointData:
     completed_pixels: Dict[Tuple[int, int], PixelFitResult]
     total_pixels: int
     config: ImagingConfig
+
+
+def _worker_initializer() -> None:
+    """Make child processes ignore SIGINT so only the parent process handles it.
+
+    Without this, Ctrl+C sends SIGINT to the entire process group. Each child gets
+    KeyboardInterrupt independently, causing BrokenProcessPool and preventing checkpoint saves.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+class ProgressReporter:
+    """Progress bar wrapper for batch pixel fitting using tqdm.
+
+    Provides progress tracking with ETA estimation and success/failure counts.
+    Also exposes a write() helper that routes messages through tqdm.write() to
+    prevent garbled terminal output when combined with logging.
+
+    Example:
+        >>> with ProgressReporter(total_pixels=1000) as progress:
+        ...     for result in results:
+        ...         progress.update(1)
+        ...         if result.success:
+        ...             progress.record_success()
+        ...         else:
+        ...             progress.record_failure()
+    """
+
+    def __init__(self, total_pixels: int):
+        self._bar = tqdm(total=total_pixels, desc="Fitting pixels", unit="px", smoothing=0.1)
+        self._successes = 0
+        self._failures = 0
+
+    def update(self, n: int = 1) -> None:
+        """Advance progress bar by n steps."""
+        self._bar.update(n)
+
+    def write(self, msg: str) -> None:
+        """Output a message through tqdm to prevent garbled output with progress bar."""
+        self._bar.write(msg)
+
+    def record_success(self) -> None:
+        """Record a successful pixel fit and update the postfix display."""
+        self._successes += 1
+        self._bar.set_postfix(ok=self._successes, fail=self._failures)
+
+    def record_failure(self) -> None:
+        """Record a failed pixel fit and update the postfix display."""
+        self._failures += 1
+        self._bar.set_postfix(ok=self._successes, fail=self._failures)
+
+    def close(self) -> None:
+        """Finalize and close the progress bar."""
+        self._bar.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+
+class GracefulShutdownHandler:
+    """Two-stage signal handler for graceful shutdown of batch fitting.
+
+    First SIGINT/SIGTERM: Sets shutdown flag, allows in-flight tasks to complete and checkpoint to save.
+    Second SIGINT/SIGTERM: Forces immediate exit via SystemExit.
+
+    Example:
+        >>> with GracefulShutdownHandler() as handler:
+        ...     while not handler.shutdown_requested:
+        ...         do_work()
+        ...     save_checkpoint()
+    """
+
+    def __init__(self):
+        self._shutdown_event = threading.Event()
+        self._original_handlers: Dict[int, object] = {}
+
+    @property
+    def shutdown_requested(self) -> bool:
+        """Whether a shutdown signal has been received."""
+        return self._shutdown_event.is_set()
+
+    def install(self) -> "GracefulShutdownHandler":
+        """Register signal handlers for SIGINT and SIGTERM.
+
+        Signal handlers can only be registered from the main thread. When called from
+        a non-main thread (e.g. GUI/service worker threads), signal registration is
+        skipped and shutdown_requested will never be set. This avoids a ValueError
+        regression for threaded callers of fit_pixels().
+        """
+        if threading.current_thread() is not threading.main_thread():
+            logger.warning("GracefulShutdownHandler: not on main thread, signal handlers not installed")
+            return self
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            self._original_handlers[sig] = signal.signal(sig, self._handler)
+        return self
+
+    def uninstall(self) -> None:
+        """Restore original signal handlers."""
+        for sig, handler in self._original_handlers.items():
+            signal.signal(sig, handler)
+        self._original_handlers.clear()
+
+    def _handler(self, signum, frame):
+        """Handle incoming signal with two-stage behavior.
+
+        First signal: sets shutdown flag, allows in-flight tasks to finish and checkpoint to save.
+        Second signal: raises SystemExit for immediate termination.
+
+        Note: Raising SystemExit from a signal handler during ProcessPoolExecutor shutdown may leave
+        orphaned worker processes. This is a known trade-off -- the second signal is an emergency exit.
+        """
+        if not self._shutdown_event.is_set():
+            self._shutdown_event.set()
+            logger.warning(f"Received {signal.Signals(signum).name}. Finishing current tasks, saving checkpoint...")
+            logger.warning("Press Ctrl+C again to force exit.")
+        else:
+            raise SystemExit(1)
+
+    def __enter__(self):
+        self.install()
+        return self
+
+    def __exit__(self, *args):
+        self.uninstall()
 
 
 def _fit_pixel_worker(
@@ -324,67 +455,129 @@ class BatchFittingOrchestrator:
             with tempfile.TemporaryDirectory(prefix="batch_shared_") as shared_workspace_dir:
                 shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
-                with ProcessPoolExecutor(max_workers=self.n_workers) as executor:
-                    # Submit all jobs
-                    future_to_pixel = {
-                        executor.submit(
-                            _fit_pixel_worker,
-                            pixel,
-                            self.imaging_config,
-                            self.sammy_executable,
-                            self.resolution_file,
-                            shared_json_path,
-                            shared_endf_dir,
-                        ): pixel
-                        for pixel in remaining_pixels
-                    }
+                with GracefulShutdownHandler() as shutdown_handler:
+                    with ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer) as executor:
+                        # Submit all jobs
+                        future_to_pixel = {
+                            executor.submit(
+                                _fit_pixel_worker,
+                                pixel,
+                                self.imaging_config,
+                                self.sammy_executable,
+                                self.resolution_file,
+                                shared_json_path,
+                                shared_endf_dir,
+                            ): pixel
+                            for pixel in remaining_pixels
+                        }
 
-                    # Collect results with progress tracking
-                    iterations_since_checkpoint = 0
-                    for future in as_completed(future_to_pixel):
-                        pixel = future_to_pixel[future]
-                        try:
-                            result = future.result()
-                            completed[(pixel.row, pixel.col)] = result
-                            iterations_since_checkpoint += 1
+                        # Collect results with progress tracking
+                        iterations_since_checkpoint = 0
+                        with ProgressReporter(total_pixels=len(remaining_pixels)) as progress:
+                            for future in as_completed(future_to_pixel):
+                                pixel = future_to_pixel[future]
+                                try:
+                                    result = future.result()
+                                    completed[(pixel.row, pixel.col)] = result
+                                    iterations_since_checkpoint += 1
+                                    progress.update(1)
 
-                            if result.success:
-                                chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                                logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
-                            else:
-                                logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+                                    if result.success:
+                                        progress.record_success()
+                                        chi_sq_str = (
+                                            f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
+                                        )
+                                        logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                                    else:
+                                        progress.record_failure()
+                                        logger.warning(
+                                            f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}"
+                                        )
 
-                            # Checkpoint at intervals (based on iterations, not total count, to maintain consistency)
-                            if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                                self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                                logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
-                                iterations_since_checkpoint = 0
+                                    # Checkpoint at intervals
+                                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+                                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
+                                        logger.info(
+                                            f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed"
+                                        )
+                                        iterations_since_checkpoint = 0
 
-                        except Exception as e:
-                            logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
-                            completed[(pixel.row, pixel.col)] = PixelFitResult(
-                                row=pixel.row,
-                                col=pixel.col,
-                                fit_results=None,
-                                success=False,
-                                error_message=f"Executor exception: {str(e)}",
-                                chi_squared=None,
-                            )
-                            iterations_since_checkpoint += 1
+                                except Exception as e:
+                                    logger.exception(
+                                        f"Exception collecting result for pixel ({pixel.row}, {pixel.col})"
+                                    )
+                                    completed[(pixel.row, pixel.col)] = PixelFitResult(
+                                        row=pixel.row,
+                                        col=pixel.col,
+                                        fit_results=None,
+                                        success=False,
+                                        error_message=f"Executor exception: {str(e)}",
+                                        chi_squared=None,
+                                    )
+                                    iterations_since_checkpoint += 1
+                                    progress.update(1)
+                                    progress.record_failure()
 
-                            # Checkpoint at intervals (even for exceptions, to maintain consistent timing)
-                            if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                                self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                                logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
-                                iterations_since_checkpoint = 0
+                                    # Checkpoint at intervals (even for exceptions)
+                                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+                                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
+                                        logger.info(
+                                            f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed"
+                                        )
+                                        iterations_since_checkpoint = 0
+
+                                # On shutdown: cancel pending futures and break immediately.
+                                # Running futures will complete during ProcessPoolExecutor.__exit__,
+                                # and their results are collected in the post-executor drain below.
+                                if shutdown_handler.shutdown_requested:
+                                    logger.warning("Shutdown requested, cancelling pending futures...")
+                                    for f in future_to_pixel:
+                                        if not f.done():
+                                            f.cancel()
+                                    break
+
+                    # Post-executor drain: ProcessPoolExecutor.__exit__ has now waited for
+                    # all running futures to finish. Collect any results not yet in `completed`
+                    # (futures that completed after shutdown but before executor exited).
+                    for f, pixel in future_to_pixel.items():
+                        coord = (pixel.row, pixel.col)
+                        if coord not in completed and f.done() and not f.cancelled():
+                            try:
+                                result = f.result()
+                                completed[coord] = result
+                            except Exception as e:
+                                completed[coord] = PixelFitResult(
+                                    row=pixel.row,
+                                    col=pixel.col,
+                                    fit_results=None,
+                                    success=False,
+                                    error_message=f"Executor exception: {str(e)}",
+                                    chi_squared=None,
+                                )
 
         # Final checkpoint
         if checkpoint_file:
             self._save_checkpoint(checkpoint_file, completed, total_pixels)
-            logger.info(f"Final checkpoint saved: {total_pixels}/{total_pixels} pixels completed")
+            logger.info(f"Final checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
 
         # Convert to ordered list matching input order
-        results = [completed[(p.row, p.col)] for p in pixels]
+        # For shutdown scenarios, fill missing pixels with failure placeholders
+        results = []
+        for p in pixels:
+            coord = (p.row, p.col)
+            if coord in completed:
+                results.append(completed[coord])
+            else:
+                results.append(
+                    PixelFitResult(
+                        row=p.row,
+                        col=p.col,
+                        fit_results=None,
+                        success=False,
+                        error_message="Batch fitting interrupted by shutdown signal",
+                        chi_squared=None,
+                    )
+                )
 
         # Summary statistics
         n_success = sum(1 for r in results if r.success)
@@ -408,7 +601,10 @@ class BatchFittingOrchestrator:
     def _save_checkpoint(
         self, checkpoint_file: Path, completed: Dict[Tuple[int, int], PixelFitResult], total_pixels: int
     ) -> None:
-        """Save checkpoint data to file.
+        """Save checkpoint data to file atomically.
+
+        Writes to a temporary .tmp file first, then atomically replaces the target file.
+        This prevents corrupted checkpoints if the process is interrupted mid-write.
 
         Args:
             checkpoint_file: Path to checkpoint file
@@ -416,8 +612,15 @@ class BatchFittingOrchestrator:
             total_pixels: Total number of pixels in batch
         """
         checkpoint = CheckpointData(completed_pixels=completed, total_pixels=total_pixels, config=self.imaging_config)
-        with open(checkpoint_file, "wb") as f:
-            pickle.dump(checkpoint, f)
+        tmp_file = checkpoint_file.with_suffix(".tmp")
+        try:
+            with open(tmp_file, "wb") as f:
+                pickle.dump(checkpoint, f)
+            tmp_file.replace(checkpoint_file)
+        except Exception:
+            if tmp_file.exists():
+                tmp_file.unlink()
+            raise
 
     def _load_checkpoint(self, checkpoint_file: Path) -> CheckpointData:
         """Load checkpoint data from file.
@@ -434,53 +637,20 @@ class BatchFittingOrchestrator:
         with open(checkpoint_file, "rb") as f:
             checkpoint = pickle.load(f)
 
-        # Validate config consistency - all physics parameters must match
-        # to ensure scientifically valid results when resuming
-        if checkpoint.config.isotopes != self.imaging_config.isotopes:
-            raise ValueError(
-                f"Checkpoint isotopes {checkpoint.config.isotopes} != current {self.imaging_config.isotopes}"
-            )
+        if not isinstance(checkpoint, CheckpointData):
+            raise ValueError(f"Invalid checkpoint file: expected CheckpointData, got {type(checkpoint).__name__}")
 
-        if checkpoint.config.density_g_cm3 != self.imaging_config.density_g_cm3:
-            raise ValueError(
-                f"Checkpoint density {checkpoint.config.density_g_cm3} g/cm³ != current {self.imaging_config.density_g_cm3} g/cm³"
-            )
-
-        if checkpoint.config.thickness_mm != self.imaging_config.thickness_mm:
-            raise ValueError(
-                f"Checkpoint thickness {checkpoint.config.thickness_mm} mm != current {self.imaging_config.thickness_mm} mm"
-            )
-
-        if checkpoint.config.atomic_mass_amu != self.imaging_config.atomic_mass_amu:
-            raise ValueError(
-                f"Checkpoint atomic mass {checkpoint.config.atomic_mass_amu} amu != current {self.imaging_config.atomic_mass_amu} amu"
-            )
-
-        if checkpoint.config.temperature_K != self.imaging_config.temperature_K:
-            raise ValueError(
-                f"Checkpoint temperature {checkpoint.config.temperature_K} K != current {self.imaging_config.temperature_K} K"
-            )
-
-        # Validate energy bounds (directly affect SAMMY fit inputs)
-        if checkpoint.config.min_energy_eV != self.imaging_config.min_energy_eV:
-            raise ValueError(
-                f"Checkpoint min_energy {checkpoint.config.min_energy_eV} eV != current {self.imaging_config.min_energy_eV} eV"
-            )
-
-        if checkpoint.config.max_energy_eV != self.imaging_config.max_energy_eV:
-            raise ValueError(
-                f"Checkpoint max_energy {checkpoint.config.max_energy_eV} eV != current {self.imaging_config.max_energy_eV} eV"
-            )
-
-        # Validate abundance settings (directly affect SAMMY fit inputs)
-        if checkpoint.config.natural_abundances != self.imaging_config.natural_abundances:
-            raise ValueError(
-                f"Checkpoint natural_abundances {checkpoint.config.natural_abundances} != current {self.imaging_config.natural_abundances}"
-            )
-
-        if checkpoint.config.custom_abundances != self.imaging_config.custom_abundances:
-            raise ValueError(
-                f"Checkpoint custom_abundances {checkpoint.config.custom_abundances} != current {self.imaging_config.custom_abundances}"
-            )
+        # Validate config consistency - all physics parameters must match to ensure
+        # scientifically valid results when resuming. Uses Pydantic model equality so
+        # new fields added to ImagingConfig are automatically caught.
+        if checkpoint.config != self.imaging_config:
+            checkpoint_dict = checkpoint.config.model_dump()
+            current_dict = self.imaging_config.model_dump()
+            mismatched = {
+                k: {"checkpoint": checkpoint_dict[k], "current": current_dict[k]}
+                for k in checkpoint_dict
+                if checkpoint_dict.get(k) != current_dict.get(k)
+            }
+            raise ValueError(f"Checkpoint config does not match current config. Mismatched fields: {mismatched}")
 
         return checkpoint
