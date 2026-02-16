@@ -473,7 +473,6 @@ class BatchFittingOrchestrator:
 
                         # Collect results with progress tracking
                         iterations_since_checkpoint = 0
-                        completed_futures: set = set()
                         with ProgressReporter(total_pixels=len(remaining_pixels)) as progress:
                             for future in as_completed(future_to_pixel):
                                 pixel = future_to_pixel[future]
@@ -527,44 +526,34 @@ class BatchFittingOrchestrator:
                                         )
                                         iterations_since_checkpoint = 0
 
-                                completed_futures.add(future)
-
-                                # Check shutdown AFTER processing the current future to avoid
-                                # dropping already-completed results (P1-03 review fix)
+                                # On shutdown: cancel pending futures and break immediately.
+                                # Running futures will complete during ProcessPoolExecutor.__exit__,
+                                # and their results are collected in the post-executor drain below.
                                 if shutdown_handler.shutdown_requested:
-                                    logger.warning("Shutdown requested, collecting remaining results...")
-                                    # Cancel futures that haven't started yet. Running futures
-                                    # cannot be cancelled and will complete during executor shutdown.
+                                    logger.warning("Shutdown requested, cancelling pending futures...")
                                     for f in future_to_pixel:
                                         if not f.done():
                                             f.cancel()
-                                    # Collect results from all non-cancelled futures we haven't
-                                    # processed yet that are already done. This avoids blocking
-                                    # shutdown on still-running futures while preserving completed
-                                    # fits for checkpointing.
-                                    for f in future_to_pixel:
-                                        if f not in completed_futures and not f.cancelled() and f.done():
-                                            drain_pixel = future_to_pixel[f]
-                                            try:
-                                                drain_result = f.result()
-                                                completed[(drain_pixel.row, drain_pixel.col)] = drain_result
-                                                progress.update(1)
-                                                if drain_result.success:
-                                                    progress.record_success()
-                                                else:
-                                                    progress.record_failure()
-                                            except Exception as e:
-                                                completed[(drain_pixel.row, drain_pixel.col)] = PixelFitResult(
-                                                    row=drain_pixel.row,
-                                                    col=drain_pixel.col,
-                                                    fit_results=None,
-                                                    success=False,
-                                                    error_message=f"Executor exception: {str(e)}",
-                                                    chi_squared=None,
-                                                )
-                                                progress.update(1)
-                                                progress.record_failure()
                                     break
+
+                    # Post-executor drain: ProcessPoolExecutor.__exit__ has now waited for
+                    # all running futures to finish. Collect any results not yet in `completed`
+                    # (futures that completed after shutdown but before executor exited).
+                    for f, pixel in future_to_pixel.items():
+                        coord = (pixel.row, pixel.col)
+                        if coord not in completed and f.done() and not f.cancelled():
+                            try:
+                                result = f.result()
+                                completed[coord] = result
+                            except Exception as e:
+                                completed[coord] = PixelFitResult(
+                                    row=pixel.row,
+                                    col=pixel.col,
+                                    fit_results=None,
+                                    success=False,
+                                    error_message=f"Executor exception: {str(e)}",
+                                    chi_squared=None,
+                                )
 
         # Final checkpoint
         if checkpoint_file:
