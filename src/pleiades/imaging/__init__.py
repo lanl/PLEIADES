@@ -19,6 +19,7 @@ Example:
     ...     pass
 """
 
+from pleiades.imaging.aggregator import ResultsAggregator
 from pleiades.imaging.loader import HyperspectralLoader
 from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
 
@@ -28,4 +29,5 @@ __all__ = [
     "PixelSpectrum",
     "PixelFitResult",
     "Imaging2DResults",
+    "ResultsAggregator",
 ]
