@@ -1143,7 +1143,13 @@ class TestFitPixelsProgressIntegration:
     def test_fit_pixels_graceful_shutdown_saves_checkpoint(
         self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
     ):
-        """When a shutdown signal is received during execution, a checkpoint is saved with partial results."""
+        """When a shutdown signal is received, completed futures are drained and checkpoint is saved.
+
+        Scenario: 5 pixels submitted. 2 processed in main loop before shutdown triggers.
+        1 additional future already completed (drained). 2 futures still pending (not resolved).
+        Checkpoint should contain exactly 3 pixels (2 from loop + 1 drained).
+        The 2 pending pixels should be reported as interrupted placeholders.
+        """
         pixels = [
             PixelSpectrum(
                 row=i,
@@ -1167,24 +1173,30 @@ class TestFitPixelsProgressIntegration:
         mock_json_instance.create_json_config.side_effect = create_json_side_effect
         mock_json_mgr.return_value = mock_json_instance
 
-        # Mock executor - only 2 out of 5 pixels complete before "shutdown"
+        # Mock executor: first 3 futures are pre-resolved, last 2 are pending (never resolved).
+        # This simulates real behavior where some workers finish before shutdown while others
+        # are still running.
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        completed_count = 0
+        futures_created = []
 
         def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
             future = Future()
-            future.set_result(
-                PixelFitResult(
-                    row=pixel.row,
-                    col=pixel.col,
-                    fit_results=None,
-                    success=False,
-                    error_message="test",
-                    chi_squared=None,
+            if pixel.row < 3:
+                # First 3 pixels complete immediately
+                future.set_result(
+                    PixelFitResult(
+                        row=pixel.row,
+                        col=pixel.col,
+                        fit_results=None,
+                        success=False,
+                        error_message="test",
+                        chi_squared=None,
+                    )
                 )
-            )
+            # Pixels 3 and 4 remain pending (never resolved) — simulates in-flight workers
+            futures_created.append(future)
             return future
 
         mock_executor.submit.side_effect = submit_side_effect
@@ -1201,23 +1213,27 @@ class TestFitPixelsProgressIntegration:
             mock_shutdown.__enter__ = MagicMock(return_value=mock_shutdown)
             mock_shutdown.__exit__ = MagicMock(return_value=False)
 
-            # Simulate: shutdown_requested is False initially, then True after 2 checks
+            # Simulate: shutdown_requested is False for first 2, then True
             shutdown_side_effect_values = [False, False, True, True, True, True, True, True]
             type(mock_shutdown).shutdown_requested = PropertyMock(side_effect=shutdown_side_effect_values)
             mock_shutdown_cls.return_value = mock_shutdown
 
             results = orchestrator.fit_pixels(pixels, checkpoint_file=checkpoint_file, checkpoint_interval=1)
 
-        # A checkpoint should have been saved (either partial or final)
+        # A checkpoint should have been saved
         assert checkpoint_file.exists(), "Checkpoint file must be saved when shutdown is signaled"
 
-        # Verify checkpoint contains partial results (not all 5 pixels)
+        # Verify checkpoint contains exactly 3 pixels: 2 from main loop + 1 drained
         with open(checkpoint_file, "rb") as f:
             saved = pickle.load(f)
         assert isinstance(saved, CheckpointData)
-        assert len(saved.completed_pixels) < 5, (
-            "Checkpoint should contain partial results when shutdown interrupted execution"
+        assert len(saved.completed_pixels) == 3, (
+            f"Expected 3 completed pixels (2 from loop + 1 drained), got {len(saved.completed_pixels)}"
         )
+
+        # Verify the 2 pending pixels are reported as interrupted placeholders in results
+        interrupted = [r for r in results if r.error_message == "Batch fitting interrupted by shutdown signal"]
+        assert len(interrupted) == 2, f"Expected 2 interrupted placeholders, got {len(interrupted)}"
 
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")

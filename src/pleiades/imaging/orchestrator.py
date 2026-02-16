@@ -128,7 +128,16 @@ class GracefulShutdownHandler:
         return self._shutdown_event.is_set()
 
     def install(self) -> "GracefulShutdownHandler":
-        """Register signal handlers for SIGINT and SIGTERM. Must be called from main thread."""
+        """Register signal handlers for SIGINT and SIGTERM.
+
+        Signal handlers can only be registered from the main thread. When called from
+        a non-main thread (e.g. GUI/service worker threads), signal registration is
+        skipped and shutdown_requested will never be set. This avoids a ValueError
+        regression for threaded callers of fit_pixels().
+        """
+        if threading.current_thread() is not threading.main_thread():
+            logger.warning("GracefulShutdownHandler: not on main thread, signal handlers not installed")
+            return self
         for sig in (signal.SIGINT, signal.SIGTERM):
             self._original_handlers[sig] = signal.signal(sig, self._handler)
         return self
@@ -464,6 +473,7 @@ class BatchFittingOrchestrator:
 
                         # Collect results with progress tracking
                         iterations_since_checkpoint = 0
+                        completed_futures: set = set()
                         with ProgressReporter(total_pixels=len(remaining_pixels)) as progress:
                             for future in as_completed(future_to_pixel):
                                 pixel = future_to_pixel[future]
@@ -517,13 +527,41 @@ class BatchFittingOrchestrator:
                                         )
                                         iterations_since_checkpoint = 0
 
+                                completed_futures.add(future)
+
                                 # Check shutdown AFTER processing the current future to avoid
                                 # dropping already-completed results (P1-03 review fix)
                                 if shutdown_handler.shutdown_requested:
-                                    logger.warning("Shutdown requested, cancelling remaining futures...")
+                                    logger.warning("Shutdown requested, draining completed futures...")
+                                    # Cancel futures that haven't started yet
                                     for f in future_to_pixel:
                                         if not f.done():
                                             f.cancel()
+                                    # Drain any futures that already completed before we cancelled.
+                                    # Without this, completed-but-not-yet-yielded results are lost
+                                    # and later reported as "interrupted" placeholders.
+                                    for f in future_to_pixel:
+                                        if f.done() and not f.cancelled() and f not in completed_futures:
+                                            drain_pixel = future_to_pixel[f]
+                                            try:
+                                                drain_result = f.result(timeout=0)
+                                                completed[(drain_pixel.row, drain_pixel.col)] = drain_result
+                                                progress.update(1)
+                                                if drain_result.success:
+                                                    progress.record_success()
+                                                else:
+                                                    progress.record_failure()
+                                            except Exception as e:
+                                                completed[(drain_pixel.row, drain_pixel.col)] = PixelFitResult(
+                                                    row=drain_pixel.row,
+                                                    col=drain_pixel.col,
+                                                    fit_results=None,
+                                                    success=False,
+                                                    error_message=f"Executor exception: {str(e)}",
+                                                    chi_squared=None,
+                                                )
+                                                progress.update(1)
+                                                progress.record_failure()
                                     break
 
         # Final checkpoint
