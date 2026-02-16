@@ -25,7 +25,8 @@ class ResultsAggregator:
 
     Args:
         isotope_names: List of isotope names (e.g., ["Ta-181", "W-182"]).
-            The order must match the isotope order in each pixel's fit results.
+            Abundances are mapped by name, so the order in each pixel's fit
+            results does not need to match this order.
         height: Image height in pixels.
         width: Image width in pixels.
 
@@ -71,12 +72,15 @@ class ResultsAggregator:
 
         Raises:
             ValueError: If pixel coordinates are out of bounds, duplicated,
-                or isotope count is inconsistent.
+                isotope names don't match, or isotope count is inconsistent.
         """
         abundance_maps = np.full((self._n_isotopes, self._height, self._width), np.nan, dtype=np.float64)
         chi_squared_map = np.full((self._height, self._width), np.nan, dtype=np.float64)
         success_mask = np.zeros((self._height, self._width), dtype=bool)
         seen_coords: set = set()
+
+        # Pre-build name→index mapping for O(1) lookup
+        name_to_index = {name: i for i, name in enumerate(self._isotope_names)}
 
         for pixel in pixel_results:
             row, col = pixel.row, pixel.col
@@ -92,16 +96,24 @@ class ResultsAggregator:
             seen_coords.add(coord)
 
             if pixel.success:
-                abundances = pixel.get_abundances()
+                isotopes = pixel.fit_results.nuclear_data.isotopes
 
-                if len(abundances) != self._n_isotopes:
+                if len(isotopes) != self._n_isotopes:
                     raise ValueError(
                         f"Isotope count mismatch at pixel ({row}, {col}): "
-                        f"expected {self._n_isotopes} abundances, got {len(abundances)}"
+                        f"expected {self._n_isotopes}, got {len(isotopes)}"
                     )
 
-                for i, abundance in enumerate(abundances):
-                    abundance_maps[i, row, col] = abundance
+                for isotope_param in isotopes:
+                    iso_name = isotope_param.isotope_information.name
+                    if iso_name not in name_to_index:
+                        pixel_names = [ip.isotope_information.name for ip in isotopes]
+                        raise ValueError(
+                            f"Isotope name mismatch at pixel ({row}, {col}): "
+                            f"pixel has {pixel_names}, expected {self._isotope_names}"
+                        )
+                    idx = name_to_index[iso_name]
+                    abundance_maps[idx, row, col] = isotope_param.abundance
 
                 if pixel.chi_squared is not None:
                     chi_squared_map[row, col] = pixel.chi_squared

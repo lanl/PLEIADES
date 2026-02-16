@@ -978,3 +978,49 @@ class TestResultsAggregatorValidation:
         aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
         with pytest.raises(ValueError, match="[Dd]uplicate.*\\(0, 0\\)"):
             aggregator.aggregate(pixel_results, source)
+
+    def test_reordered_isotopes_mapped_by_name(self):
+        """Isotopes arriving in different order should be mapped to correct map layers."""
+        height, width = 1, 1
+        # Aggregator expects Ta-181 first, W-182 second
+        isotope_names = ["Ta-181", "W-182"]
+        source = _make_hyperspectral(height, width)
+
+        # Build pixel with isotopes in REVERSED order: W-182 first, Ta-181 second
+        reversed_specs = [
+            {**TWO_ISOTOPE_SPECS[1], "abundance": 0.40},  # W-182
+            {**TWO_ISOTOPE_SPECS[0], "abundance": 0.60},  # Ta-181
+        ]
+        pixel_results = [_make_successful_pixel(0, 0, reversed_specs, chi_squared=1.0)]
+
+        aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
+        result = aggregator.aggregate(pixel_results, source)
+
+        # Ta-181 (index 0 in isotope_names) should have abundance 0.60
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 0], 0.60)
+        # W-182 (index 1 in isotope_names) should have abundance 0.40
+        np.testing.assert_allclose(result.abundance_maps[1, 0, 0], 0.40)
+
+    def test_isotope_name_mismatch_raises(self):
+        """Pixel with unexpected isotope name should raise ValueError."""
+        height, width = 2, 2
+        isotope_names = ["Ta-181", "W-182"]
+        source = _make_hyperspectral(height, width)
+
+        # Build pixel with Hf-180 instead of W-182
+        wrong_specs = [
+            {**TWO_ISOTOPE_SPECS[0], "abundance": 0.60},  # Ta-181 (correct)
+            {
+                "name": "Hf-180",
+                "atomic_number": 72,
+                "mass_number": 180,
+                "atomic_mass": 179.947,
+                "spin": 0.0,
+                "abundance": 0.40,
+            },
+        ]
+        pixel_results = [_make_successful_pixel(0, 0, wrong_specs, chi_squared=1.0)]
+
+        aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
+        with pytest.raises(ValueError, match="[Ii]sotope name mismatch"):
+            aggregator.aggregate(pixel_results, source)
