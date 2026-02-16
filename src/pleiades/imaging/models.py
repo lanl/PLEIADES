@@ -332,3 +332,64 @@ class Imaging2DResults(BaseModel):
             for key, value in self.metadata.items():
                 if isinstance(value, (str, int, float, bool)):
                     meta_group.attrs[key] = value
+
+    @classmethod
+    def load_hdf5(cls, filepath: Path, source_hyperspectral: "HyperspectralData") -> "Imaging2DResults":
+        """Load Imaging2DResults from an HDF5 file.
+
+        Reconstructs from the HDF5 structure produced by save_hdf5().
+        The source_hyperspectral must be provided because the full 3D
+        transmission data is not stored in the HDF5 file.
+
+        Args:
+            filepath: Path to HDF5 file produced by save_hdf5().
+            source_hyperspectral: Original HyperspectralData reference.
+
+        Returns:
+            Imaging2DResults with maps loaded from the file.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+            KeyError: If required datasets are missing.
+        """
+        import h5py
+
+        filepath = Path(filepath)
+        if not filepath.exists():
+            raise FileNotFoundError(f"HDF5 file not found: {filepath}")
+
+        with h5py.File(filepath, "r") as f:
+            abundance_maps = np.array(f["abundance_maps"])
+            chi_squared_map = np.array(f["chi_squared_map"])
+            success_mask = np.array(f["success_mask"], dtype=bool)
+
+            # Decode byte strings to Python str
+            raw_names = f["isotope_names"][:]
+            isotope_names = [name.decode("utf-8") if isinstance(name, bytes) else str(name) for name in raw_names]
+
+            # Optional fitted energy maps
+            fitted_energy_maps = None
+            if "fitted_energy_maps" in f:
+                fitted_energy_maps = np.array(f["fitted_energy_maps"])
+
+            # Metadata
+            metadata: Dict[str, Any] = {}
+            if "metadata" in f:
+                for key, value in f["metadata"].attrs.items():
+                    # Convert numpy scalars to Python types
+                    if hasattr(value, "item"):
+                        metadata[key] = value.item()
+                    elif isinstance(value, bytes):
+                        metadata[key] = value.decode("utf-8")
+                    else:
+                        metadata[key] = value
+
+        return cls(
+            abundance_maps=abundance_maps,
+            isotope_names=isotope_names,
+            fitted_energy_maps=fitted_energy_maps,
+            chi_squared_map=chi_squared_map,
+            success_mask=success_mask,
+            source_hyperspectral=source_hyperspectral,
+            metadata=metadata,
+        )
