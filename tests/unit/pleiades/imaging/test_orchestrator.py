@@ -510,7 +510,7 @@ class TestBatchFittingOrchestrator:
 
         # Mock executor to avoid subprocesses while preserving Future/as_completed behavior
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         submitted_shared_json = []
         submitted_shared_endf = []
@@ -1105,7 +1105,7 @@ class TestFitPixelsProgressIntegration:
 
         # Mock executor
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(
             fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
@@ -1181,7 +1181,7 @@ class TestFitPixelsProgressIntegration:
         # This simulates real behavior where some workers finish before shutdown while others
         # are still running.
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         futures_created = []
 
@@ -1272,7 +1272,7 @@ class TestFitPixelsProgressIntegration:
 
         # Mock executor
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(
             fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
@@ -1336,7 +1336,7 @@ class TestFitPixelsProgressIntegration:
 
         # Mock executor
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(
             fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
@@ -1428,7 +1428,7 @@ class TestFitPixelsProgressIntegration:
 
         # Create futures - 2 completed, 2 pending (not set)
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         futures = []
 

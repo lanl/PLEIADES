@@ -1,12 +1,9 @@
 """Unit tests for Issue #177: Backend abstraction, per-job timeout, and retry logic.
 
-These tests target NEW features being added to the BatchFittingOrchestrator:
+These tests validate the following BatchFittingOrchestrator features:
 1. Backend abstraction (_create_sammy_runner, backend= parameter)
 2. Per-job timeout (timeout_per_job parameter)
 3. Retry logic (max_retries parameter)
-
-Tests are written BEFORE implementation (TDD). They will FAIL until the features
-are implemented in pleiades.imaging.orchestrator.
 """
 
 import pickle
@@ -46,15 +43,6 @@ def imaging_config():
         min_energy_eV=1.0,
         max_energy_eV=100.0,
     )
-
-
-@pytest.fixture
-def test_pixel():
-    """Create test pixel spectrum."""
-    energy = np.linspace(1, 100, 50)
-    transmission = np.random.uniform(0.5, 1.0, 50)
-    uncertainty = transmission * 0.01
-    return PixelSpectrum(row=5, col=10, energy=energy, transmission=transmission, uncertainty=uncertainty)
 
 
 @pytest.fixture
@@ -336,7 +324,7 @@ class TestBackendAbstraction:
 
         # Mock executor: capture the arguments passed to submit()
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         submitted_kwargs = []
 
@@ -441,7 +429,7 @@ class TestPerJobTimeout:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(fn, *args, **kwargs):
             pixel = args[0]
@@ -475,7 +463,7 @@ class TestPerJobTimeout:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         # Create a mock future that simulates a running, timed-out job
         mock_future = MagicMock()
@@ -498,11 +486,12 @@ class TestPerJobTimeout:
         assert len(results) == 1
         assert results[0].success is False
 
+    @patch("pleiades.imaging.orchestrator.time")
     @patch("pleiades.imaging.orchestrator.wait")
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
     def test_timeout_error_message_contains_timed_out(
-        self, mock_executor_cls, mock_json_mgr, mock_wait, imaging_config, mock_sammy_executable
+        self, mock_executor_cls, mock_json_mgr, mock_wait, mock_time, imaging_config, mock_sammy_executable
     ):
         """Error message for timed-out pixels must contain 'timed out'."""
         pixels = [_make_pixel(0, 0)]
@@ -512,7 +501,7 @@ class TestPerJobTimeout:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         mock_future = MagicMock()
         mock_future.done.return_value = False
@@ -521,14 +510,20 @@ class TestPerJobTimeout:
 
         mock_executor.submit.return_value = mock_future
 
-        # wait() returns no completions → running future gets timed out
+        # wait() returns no completions → running future stays pending
         mock_wait.return_value = (set(), {mock_future})
+
+        # Simulate time passing so the per-job timeout path fires:
+        # Call 1 (before loop): 0.0
+        # Call 2 (after 1st wait): 1.0 → records start time = 1.0, elapsed = 0
+        # Call 3 (after 2nd wait): 3.0 → elapsed = 3.0 - 1.0 = 2.0 >= 0.5 → timeout!
+        mock_time.monotonic.side_effect = [0.0, 1.0, 3.0]
 
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
         )
 
-        results = orchestrator.fit_pixels(pixels, timeout_per_job=0.001)
+        results = orchestrator.fit_pixels(pixels, timeout_per_job=0.5)
 
         assert len(results) == 1
         assert results[0].success is False
@@ -549,7 +544,7 @@ class TestPerJobTimeout:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(fn, *args, **kwargs):
             pixel = args[0]
@@ -606,7 +601,7 @@ class TestPerJobTimeout:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         mock_future = MagicMock()
         mock_future.done.return_value = False
@@ -662,7 +657,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         submit_count = 0
 
@@ -700,7 +695,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         attempt_count = 0
 
@@ -741,7 +736,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         attempt_count = 0
 
@@ -779,7 +774,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         def submit_side_effect(fn, *args, **kwargs):
             pixel = args[0]
@@ -814,7 +809,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         submit_count = 0
 
@@ -866,7 +861,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         attempt_count = 0
 
@@ -909,7 +904,7 @@ class TestRetryLogic:
         mock_json_mgr.return_value = mock_json_instance
 
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         # Track per-pixel attempt counts
         pixel_attempts: Dict[int, int] = {}
@@ -958,7 +953,7 @@ class TestRetryLogic:
 
         # Each ProcessPoolExecutor() call returns a fresh mock executor
         mock_executor = MagicMock()
-        mock_executor_cls.return_value.__enter__.return_value = mock_executor
+        mock_executor_cls.return_value = mock_executor
 
         attempt_count = 0
 

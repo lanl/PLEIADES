@@ -9,6 +9,7 @@ import pickle
 import signal
 import tempfile
 import threading
+import time
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from pathlib import Path
@@ -64,9 +65,11 @@ def _create_sammy_runner(
 ):
     """Create a SAMMY runner for the specified backend without availability checks.
 
-    This is a lightweight factory used inside worker subprocesses. Availability
-    validation is done once at orchestrator init time, so workers skip the
-    expensive Docker/SAMMY probing that SammyFactory.create_runner() performs.
+    This is a lightweight factory used inside worker subprocesses. It does not
+    perform any backend availability or environment validation; such checks are
+    handled elsewhere (e.g., during orchestrator initialization for local
+    executables or within backend-specific setup like
+    ``DockerSammyRunner.prepare_environment()``).
 
     Args:
         backend: Backend type ("local" or "docker")
@@ -85,8 +88,9 @@ def _create_sammy_runner(
 
     if backend == "local":
         exe = sammy_executable or kwargs.get("sammy_executable")
-        if exe is not None:
-            exe = Path(exe)
+        if exe is None:
+            raise ValueError("sammy_executable is required for local backend (pass directly or via backend_kwargs)")
+        exe = Path(exe)
         config = LocalSammyConfig(
             sammy_executable=exe,
             working_dir=working_dir,
@@ -559,15 +563,19 @@ class BatchFittingOrchestrator:
                 with GracefulShutdownHandler() as shutdown_handler:
                     # Accumulate all future-to-pixel maps for post-executor drain
                     all_future_maps: List[Dict] = []
+                    # Track actual attempts per pixel for accurate retry annotation
+                    attempt_counts: Dict[Tuple[int, int], int] = {}
 
-                    with ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer) as executor:
-                        # Submit all jobs
+                    # Submit and collect the initial batch
+                    executor = ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer)
+                    try:
                         future_to_pixel = self._submit_pixels(
                             executor, remaining_pixels, shared_json_path, shared_endf_dir
                         )
                         all_future_maps.append(future_to_pixel)
+                        for p in remaining_pixels:
+                            attempt_counts[(p.row, p.col)] = 1
 
-                        # Collect results with progress tracking
                         self._collect_results(
                             future_to_pixel,
                             completed,
@@ -577,6 +585,14 @@ class BatchFittingOrchestrator:
                             shutdown_handler,
                             timeout_per_job,
                         )
+                    finally:
+                        # When timeout is enabled, use non-blocking shutdown to avoid
+                        # waiting for timed-out zombie workers. Without timeout, wait
+                        # normally for clean process cleanup.
+                        if timeout_per_job is not None:
+                            executor.shutdown(wait=False, cancel_futures=True)
+                        else:
+                            executor.shutdown(wait=True)
 
                     # Retry failed pixels.
                     # Each retry round uses a FRESH executor so that timed-out workers
@@ -594,13 +610,16 @@ class BatchFittingOrchestrator:
                             logger.info(
                                 f"Retry round {retry_round + 1}/{max_retries}: {len(failed_pixels)} pixels to retry"
                             )
-                            with ProcessPoolExecutor(
+                            retry_executor = ProcessPoolExecutor(
                                 max_workers=self.n_workers, initializer=_worker_initializer
-                            ) as retry_executor:
+                            )
+                            try:
                                 retry_futures = self._submit_pixels(
                                     retry_executor, failed_pixels, shared_json_path, shared_endf_dir
                                 )
                                 all_future_maps.append(retry_futures)
+                                for p in failed_pixels:
+                                    attempt_counts[(p.row, p.col)] = attempt_counts.get((p.row, p.col), 0) + 1
                                 self._collect_results(
                                     retry_futures,
                                     completed,
@@ -610,25 +629,30 @@ class BatchFittingOrchestrator:
                                     shutdown_handler,
                                     timeout_per_job,
                                 )
+                            finally:
+                                if timeout_per_job is not None:
+                                    retry_executor.shutdown(wait=False, cancel_futures=True)
+                                else:
+                                    retry_executor.shutdown(wait=True)
 
-                        # Annotate exhausted retries
+                        # Annotate exhausted retries with actual attempt count
                         for coord, result in completed.items():
                             if not result.success and coord in coord_to_pixel:
+                                actual_attempts = attempt_counts.get(coord, 1)
                                 completed[coord] = PixelFitResult(
                                     row=result.row,
                                     col=result.col,
                                     fit_results=None,
                                     success=False,
                                     error_message=(
-                                        f"Failed after {max_retries + 1} attempts (last error: {result.error_message})"
+                                        f"Failed after {actual_attempts} attempts (last error: {result.error_message})"
                                     ),
                                     chi_squared=None,
                                 )
 
-                    # Post-executor drain: ProcessPoolExecutor.__exit__ has waited for
-                    # all running futures to finish. Collect any results not yet in
-                    # `completed` (futures that completed after shutdown but before
-                    # executor exited). Drain ALL future maps (initial + retry rounds).
+                    # Post-executor drain: collect any results not yet in `completed`
+                    # (futures that completed after shutdown but before drain).
+                    # Drain ALL future maps (initial + retry rounds).
                     for ftmap in all_future_maps:
                         for f, pixel in ftmap.items():
                             coord = (pixel.row, pixel.col)
@@ -814,26 +838,33 @@ class BatchFittingOrchestrator:
         """Collect results using ``wait()`` with per-job timeout enforcement.
 
         Uses ``concurrent.futures.wait(FIRST_COMPLETED)`` in a loop to process
-        futures in completion order while enforcing a per-job deadline. Only
-        futures that are actively ``running()`` past the deadline are marked as
-        timed out. Queued futures that have not started yet are left alone --
-        they will run once a worker becomes available.
+        futures in completion order while enforcing a per-job deadline. Each
+        future's running start time is tracked: when a future is first observed
+        as ``running()``, its start time is recorded. A future is only marked as
+        timed out if it has been ``running()`` for longer than ``timeout_per_job``
+        seconds, regardless of whether other futures are completing concurrently.
 
-        If no progress is made (no futures complete and no running futures
-        remain to time out) for two consecutive timeout windows, all remaining
-        pending futures are cancelled as a safety net to prevent infinite loops.
+        Queued futures that have not started yet are left alone -- they will run
+        once a worker becomes available. If no progress is made (no futures
+        complete and no running futures remain to time out) for two consecutive
+        timeout windows, all remaining pending futures are cancelled as a safety
+        net to prevent infinite loops.
         """
         pending: Set[Future] = set(future_to_pixel.keys())
+        running_start_times: Dict[Future, float] = {}
         iterations_since_checkpoint = 0
         stall_rounds = 0
+        now = time.monotonic()
 
         with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
             while pending and not shutdown_handler.shutdown_requested:
                 # Wait for at least one future to complete, up to timeout_per_job
                 done, pending = wait(pending, timeout=timeout_per_job, return_when=FIRST_COMPLETED)
+                now = time.monotonic()
 
                 # Process completed futures
                 for future in done:
+                    running_start_times.pop(future, None)
                     pixel = future_to_pixel[future]
                     coord = (pixel.row, pixel.col)
                     try:
@@ -865,16 +896,20 @@ class BatchFittingOrchestrator:
                         checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
                     )
 
-                if done:
-                    stall_rounds = 0
-                    continue
+                # Record start times for newly-running futures
+                for f in pending:
+                    if f not in running_start_times and f.running():
+                        running_start_times[f] = now
 
-                # No futures completed within timeout window -- check for running stragglers
-                timed_out_futures = [f for f in pending if f.running()]
+                # Check for per-job timeout: any running future that has exceeded the deadline
+                timed_out_futures = [
+                    f for f in pending if f in running_start_times and (now - running_start_times[f]) >= timeout_per_job
+                ]
                 for future in timed_out_futures:
                     pixel = future_to_pixel[future]
                     coord = (pixel.row, pixel.col)
-                    logger.warning(f"Pixel ({pixel.row}, {pixel.col}) timed out after {timeout_per_job}s")
+                    elapsed = now - running_start_times[future]
+                    logger.warning(f"Pixel ({pixel.row}, {pixel.col}) timed out after {elapsed:.1f}s")
                     future.cancel()  # Best-effort; won't stop already-running process
                     completed[coord] = PixelFitResult(
                         row=pixel.row,
@@ -885,6 +920,7 @@ class BatchFittingOrchestrator:
                         chi_squared=None,
                     )
                     pending.discard(future)
+                    running_start_times.pop(future, None)
                     progress.update(1)
                     progress.record_failure()
                     iterations_since_checkpoint += 1
@@ -892,12 +928,12 @@ class BatchFittingOrchestrator:
                         checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
                     )
 
-                if timed_out_futures:
+                if done or timed_out_futures:
                     stall_rounds = 0
                     continue
 
-                # No completions and no running futures to time out.
-                # Remaining futures are queued but not started (workers are busy).
+                # No completions and no timeouts. Remaining futures are either queued
+                # (not started) or running but not yet past their deadline.
                 # Allow a grace period before bailing out.
                 stall_rounds += 1
                 if stall_rounds >= 2:
