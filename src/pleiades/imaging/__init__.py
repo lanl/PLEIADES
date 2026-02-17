@@ -20,6 +20,7 @@ Example:
 """
 
 from pleiades.imaging.aggregator import ResultsAggregator
+from pleiades.imaging.api import analyze_imaging
 from pleiades.imaging.generator import AbundanceMapGenerator
 from pleiades.imaging.loader import HyperspectralLoader
 from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
@@ -34,4 +35,5 @@ __all__ = [
     "PixelFitResult",
     "Imaging2DResults",
     "ResultsAggregator",
+    "analyze_imaging",
 ]
