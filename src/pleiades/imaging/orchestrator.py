@@ -9,10 +9,11 @@ import pickle
 import signal
 import tempfile
 import threading
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import time
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from tqdm import tqdm
 
@@ -187,7 +188,7 @@ def _fit_pixel_worker(
     2. Convert CSV to SAMMY .twenty format
     3. Create JSON config (auto-downloads ENDF files)
     4. Create .inp file
-    5. Execute SAMMY
+    5. Execute SAMMY via LocalSammyRunner
     6. Parse results
 
     Args:
@@ -255,7 +256,6 @@ def _fit_pixel_worker(
                 working_dir=temp_path / "sammy_working",
                 output_dir=temp_path / "sammy_output",
             )
-
             runner = LocalSammyRunner(config)
             runner.validate_config()
             runner.prepare_environment(files)
@@ -272,9 +272,6 @@ def _fit_pixel_worker(
                 )
 
             runner.collect_outputs(result)
-            # Note: Abstract interface expects cleanup(files), but all concrete implementations
-            # (LocalSammyRunner, DockerSammyRunner) use cleanup() without parameters.
-            # This is existing technical debt in PLEIADES backends.
             runner.cleanup()
 
             # Step 6: Parse results
@@ -332,17 +329,11 @@ class BatchFittingOrchestrator:
 
     Example:
         >>> config = ImagingConfig(
-        ...     isotopes=["Ta-181"],
-        ...     element="Ta",
-        ...     mass_number=181,
-        ...     density_g_cm3=16.6,
-        ...     thickness_mm=0.025,
-        ...     atomic_mass_amu=180.9479958
+        ...     isotopes=["Ta-181"], element="Ta", mass_number=181,
+        ...     density_g_cm3=16.6, thickness_mm=0.025, atomic_mass_amu=180.9479958
         ... )
         >>> orchestrator = BatchFittingOrchestrator(
-        ...     imaging_config=config,
-        ...     sammy_executable=Path("/path/to/sammy"),
-        ...     n_workers=4
+        ...     imaging_config=config, sammy_executable=Path("/path/to/sammy"), n_workers=4
         ... )
         >>> results = orchestrator.fit_pixels(pixel_list, checkpoint_file=Path("checkpoint.pkl"))
     """
@@ -365,6 +356,7 @@ class BatchFittingOrchestrator:
         Raises:
             FileNotFoundError: If SAMMY executable or resolution file doesn't exist
         """
+        sammy_executable = Path(sammy_executable)
         if not sammy_executable.exists():
             raise FileNotFoundError(f"SAMMY executable not found: {sammy_executable}")
 
@@ -382,6 +374,8 @@ class BatchFittingOrchestrator:
         checkpoint_file: Optional[Path] = None,
         checkpoint_interval: int = 10,
         resume: bool = False,
+        timeout_per_job: Optional[float] = None,
+        max_retries: int = 0,
     ) -> List[PixelFitResult]:
         """Fit all pixels using parallel SAMMY execution.
 
@@ -390,18 +384,39 @@ class BatchFittingOrchestrator:
             checkpoint_file: Optional path to save/load checkpoint
             checkpoint_interval: Save checkpoint every N completed pixels (default: 10)
             resume: If True, resume from existing checkpoint file
+            timeout_per_job: Maximum seconds per pixel job. None means no timeout.
+                When set, uses ``concurrent.futures.wait(FIRST_COMPLETED)`` to
+                process futures in completion order while enforcing a per-job
+                deadline. Only futures that are actively ``running()`` past the
+                deadline are marked as timed out -- queued futures that have not
+                started yet are left alone until a worker becomes available.
+                Already-running tasks cannot be killed by ``Future.cancel()``;
+                timed-out workers continue consuming resources until they finish.
+                When combined with ``max_retries``, each retry round uses a
+                fresh ``ProcessPoolExecutor`` so that timed-out zombie workers
+                do not starve retry submissions.
+            max_retries: Number of retry attempts for failed pixels (default: 0).
+                A value of 2 means each pixel can be attempted up to 3 times total.
 
         Returns:
             List of PixelFitResult for all pixels
 
         Raises:
             FileNotFoundError: If resume=True but checkpoint file doesn't exist
-            ValueError: If resume=True but checkpoint_file is None
+            ValueError: If resume=True but checkpoint_file is None, or invalid parameters
         """
         # Handle empty pixel list
         if not pixels:
             logger.warning("fit_pixels called with empty pixel list")
             return []
+
+        # Validate parameters
+        if timeout_per_job is not None and timeout_per_job <= 0:
+            raise ValueError(f"timeout_per_job must be positive, got {timeout_per_job}")
+        if max_retries < 0:
+            raise ValueError(f"max_retries must be non-negative, got {max_retries}")
+        if checkpoint_interval <= 0:
+            raise ValueError(f"checkpoint_interval must be positive, got {checkpoint_interval}")
 
         # Validate resume request
         if resume and checkpoint_file is None:
@@ -456,57 +471,107 @@ class BatchFittingOrchestrator:
                 shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
                 with GracefulShutdownHandler() as shutdown_handler:
-                    with ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer) as executor:
-                        # Submit all jobs
-                        future_to_pixel = {
-                            executor.submit(
-                                _fit_pixel_worker,
-                                pixel,
-                                self.imaging_config,
-                                self.sammy_executable,
-                                self.resolution_file,
-                                shared_json_path,
-                                shared_endf_dir,
-                            ): pixel
-                            for pixel in remaining_pixels
-                        }
+                    # Accumulate all future-to-pixel maps for post-executor drain
+                    all_future_maps: List[Dict] = []
+                    # Track actual attempts per pixel for accurate retry annotation
+                    attempt_counts: Dict[Tuple[int, int], int] = {}
 
-                        # Collect results with progress tracking
-                        iterations_since_checkpoint = 0
-                        with ProgressReporter(total_pixels=len(remaining_pixels)) as progress:
-                            for future in as_completed(future_to_pixel):
-                                pixel = future_to_pixel[future]
+                    # Submit and collect the initial batch
+                    executor = ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer)
+                    try:
+                        future_to_pixel = self._submit_pixels(
+                            executor, remaining_pixels, shared_json_path, shared_endf_dir
+                        )
+                        all_future_maps.append(future_to_pixel)
+                        for p in remaining_pixels:
+                            attempt_counts[(p.row, p.col)] = 1
+
+                        self._collect_results(
+                            future_to_pixel,
+                            completed,
+                            total_pixels,
+                            checkpoint_file,
+                            checkpoint_interval,
+                            shutdown_handler,
+                            timeout_per_job,
+                        )
+                    finally:
+                        # When timeout is enabled, use non-blocking shutdown to avoid
+                        # waiting for timed-out zombie workers. Without timeout, wait
+                        # normally for clean process cleanup.
+                        if timeout_per_job is not None:
+                            executor.shutdown(wait=False, cancel_futures=True)
+                        else:
+                            executor.shutdown(wait=True)
+
+                    # Retry failed pixels.
+                    # Each retry round uses a FRESH executor so that timed-out workers
+                    # from the previous round (which cannot be killed) do not occupy
+                    # worker slots and starve retry submissions.
+                    if max_retries > 0:
+                        coord_to_pixel = {(p.row, p.col): p for p in remaining_pixels}
+                        for retry_round in range(max_retries):
+                            if shutdown_handler.shutdown_requested:
+                                break
+                            failed_coords = [c for c, r in completed.items() if not r.success and c in coord_to_pixel]
+                            if not failed_coords:
+                                break
+                            failed_pixels = [coord_to_pixel[c] for c in failed_coords]
+                            logger.info(
+                                f"Retry round {retry_round + 1}/{max_retries}: {len(failed_pixels)} pixels to retry"
+                            )
+                            retry_executor = ProcessPoolExecutor(
+                                max_workers=self.n_workers, initializer=_worker_initializer
+                            )
+                            try:
+                                retry_futures = self._submit_pixels(
+                                    retry_executor, failed_pixels, shared_json_path, shared_endf_dir
+                                )
+                                all_future_maps.append(retry_futures)
+                                for p in failed_pixels:
+                                    attempt_counts[(p.row, p.col)] = attempt_counts.get((p.row, p.col), 0) + 1
+                                self._collect_results(
+                                    retry_futures,
+                                    completed,
+                                    total_pixels,
+                                    checkpoint_file,
+                                    checkpoint_interval,
+                                    shutdown_handler,
+                                    timeout_per_job,
+                                )
+                            finally:
+                                if timeout_per_job is not None:
+                                    retry_executor.shutdown(wait=False, cancel_futures=True)
+                                else:
+                                    retry_executor.shutdown(wait=True)
+
+                        # Annotate exhausted retries with actual attempt count
+                        for coord, result in completed.items():
+                            if not result.success and coord in coord_to_pixel:
+                                actual_attempts = attempt_counts.get(coord, 1)
+                                completed[coord] = PixelFitResult(
+                                    row=result.row,
+                                    col=result.col,
+                                    fit_results=None,
+                                    success=False,
+                                    error_message=(
+                                        f"Failed after {actual_attempts} attempts (last error: {result.error_message})"
+                                    ),
+                                    chi_squared=None,
+                                )
+
+                    # Post-executor drain: collect any results not yet in `completed`
+                    # (futures that completed after shutdown but before drain).
+                    # Drain ALL future maps (initial + retry rounds).
+                    for ftmap in all_future_maps:
+                        for f, pixel in ftmap.items():
+                            coord = (pixel.row, pixel.col)
+                            if coord not in completed and f.done() and not f.cancelled():
                                 try:
-                                    result = future.result()
-                                    completed[(pixel.row, pixel.col)] = result
-                                    iterations_since_checkpoint += 1
-                                    progress.update(1)
-
-                                    if result.success:
-                                        progress.record_success()
-                                        chi_sq_str = (
-                                            f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                                        )
-                                        logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
-                                    else:
-                                        progress.record_failure()
-                                        logger.warning(
-                                            f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}"
-                                        )
-
-                                    # Checkpoint at intervals
-                                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                                        logger.info(
-                                            f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed"
-                                        )
-                                        iterations_since_checkpoint = 0
-
+                                    result = f.result()
+                                    completed[coord] = result
                                 except Exception as e:
-                                    logger.exception(
-                                        f"Exception collecting result for pixel ({pixel.row}, {pixel.col})"
-                                    )
-                                    completed[(pixel.row, pixel.col)] = PixelFitResult(
+                                    completed[coord] = PixelFitResult(
                                         row=pixel.row,
                                         col=pixel.col,
                                         fit_results=None,
@@ -514,46 +579,6 @@ class BatchFittingOrchestrator:
                                         error_message=f"Executor exception: {str(e)}",
                                         chi_squared=None,
                                     )
-                                    iterations_since_checkpoint += 1
-                                    progress.update(1)
-                                    progress.record_failure()
-
-                                    # Checkpoint at intervals (even for exceptions)
-                                    if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
-                                        self._save_checkpoint(checkpoint_file, completed, total_pixels)
-                                        logger.info(
-                                            f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed"
-                                        )
-                                        iterations_since_checkpoint = 0
-
-                                # On shutdown: cancel pending futures and break immediately.
-                                # Running futures will complete during ProcessPoolExecutor.__exit__,
-                                # and their results are collected in the post-executor drain below.
-                                if shutdown_handler.shutdown_requested:
-                                    logger.warning("Shutdown requested, cancelling pending futures...")
-                                    for f in future_to_pixel:
-                                        if not f.done():
-                                            f.cancel()
-                                    break
-
-                    # Post-executor drain: ProcessPoolExecutor.__exit__ has now waited for
-                    # all running futures to finish. Collect any results not yet in `completed`
-                    # (futures that completed after shutdown but before executor exited).
-                    for f, pixel in future_to_pixel.items():
-                        coord = (pixel.row, pixel.col)
-                        if coord not in completed and f.done() and not f.cancelled():
-                            try:
-                                result = f.result()
-                                completed[coord] = result
-                            except Exception as e:
-                                completed[coord] = PixelFitResult(
-                                    row=pixel.row,
-                                    col=pixel.col,
-                                    fit_results=None,
-                                    success=False,
-                                    error_message=f"Executor exception: {str(e)}",
-                                    chi_squared=None,
-                                )
 
         # Final checkpoint
         if checkpoint_file:
@@ -585,6 +610,276 @@ class BatchFittingOrchestrator:
         logger.info(f"Batch fitting complete: {n_success} success, {n_failed} failed")
 
         return results
+
+    def _submit_pixels(
+        self,
+        executor: ProcessPoolExecutor,
+        pixels: List[PixelSpectrum],
+        shared_json_path: Path,
+        shared_endf_dir: Path,
+    ) -> Dict[Future, PixelSpectrum]:
+        """Submit pixel fitting jobs to the executor."""
+        return {
+            executor.submit(
+                _fit_pixel_worker,
+                pixel,
+                self.imaging_config,
+                self.sammy_executable,
+                self.resolution_file,
+                shared_json_path,
+                shared_endf_dir,
+            ): pixel
+            for pixel in pixels
+        }
+
+    def _maybe_checkpoint(
+        self,
+        checkpoint_file: Optional[Path],
+        iterations_since_checkpoint: int,
+        checkpoint_interval: int,
+        completed: Dict[Tuple[int, int], PixelFitResult],
+        total_pixels: int,
+    ) -> int:
+        """Save checkpoint if enough iterations have passed since the last one.
+
+        Returns:
+            Updated iterations_since_checkpoint (reset to 0 if checkpoint saved).
+        """
+        if checkpoint_file and iterations_since_checkpoint >= checkpoint_interval:
+            self._save_checkpoint(checkpoint_file, completed, total_pixels)
+            logger.info(f"Checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
+            return 0
+        return iterations_since_checkpoint
+
+    def _collect_results(
+        self,
+        future_to_pixel: Dict[Future, PixelSpectrum],
+        completed: Dict[Tuple[int, int], PixelFitResult],
+        total_pixels: int,
+        checkpoint_file: Optional[Path],
+        checkpoint_interval: int,
+        shutdown_handler: GracefulShutdownHandler,
+        timeout_per_job: Optional[float],
+    ) -> None:
+        """Collect results from submitted futures with progress tracking.
+
+        When timeout_per_job is set, uses ``concurrent.futures.wait()`` with
+        ``FIRST_COMPLETED`` to process futures in completion order while
+        enforcing a per-job deadline. Only futures that are actively
+        ``running()`` past the deadline are marked as timed out -- queued
+        futures that have not started yet are **not** falsely timed out.
+
+        When no timeout, uses ``as_completed`` for efficient completion-order
+        collection.
+
+        Timed-out futures have ``cancel()`` called as a best-effort cleanup.
+        Note: ``ProcessPoolExecutor`` only cancels tasks that haven't started;
+        already-running tasks continue until they finish.
+        """
+        iterations_since_checkpoint = 0
+
+        if timeout_per_job is not None:
+            self._collect_results_with_timeout(
+                future_to_pixel,
+                completed,
+                total_pixels,
+                checkpoint_file,
+                checkpoint_interval,
+                shutdown_handler,
+                timeout_per_job,
+            )
+            return
+
+        with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
+            for future in as_completed(future_to_pixel):
+                pixel = future_to_pixel[future]
+                coord = (pixel.row, pixel.col)
+                try:
+                    result = future.result()
+                    completed[coord] = result
+                    progress.update(1)
+
+                    if result.success:
+                        progress.record_success()
+                        chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
+                        logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                    else:
+                        progress.record_failure()
+                        logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+
+                except Exception as e:
+                    logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
+                    completed[coord] = PixelFitResult(
+                        row=pixel.row,
+                        col=pixel.col,
+                        fit_results=None,
+                        success=False,
+                        error_message=f"Executor exception: {str(e)}",
+                        chi_squared=None,
+                    )
+                    progress.update(1)
+                    progress.record_failure()
+
+                iterations_since_checkpoint += 1
+                iterations_since_checkpoint = self._maybe_checkpoint(
+                    checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
+                )
+
+                # On shutdown: cancel pending futures and break immediately.
+                if shutdown_handler.shutdown_requested:
+                    logger.warning("Shutdown requested, cancelling pending futures...")
+                    for f in future_to_pixel:
+                        if not f.done():
+                            f.cancel()
+                    break
+
+    def _collect_results_with_timeout(
+        self,
+        future_to_pixel: Dict[Future, PixelSpectrum],
+        completed: Dict[Tuple[int, int], PixelFitResult],
+        total_pixels: int,
+        checkpoint_file: Optional[Path],
+        checkpoint_interval: int,
+        shutdown_handler: GracefulShutdownHandler,
+        timeout_per_job: float,
+    ) -> None:
+        """Collect results using ``wait()`` with per-job timeout enforcement.
+
+        Uses ``concurrent.futures.wait(FIRST_COMPLETED)`` in a loop to process
+        futures in completion order while enforcing a per-job deadline. Each
+        future's running start time is tracked: when a future is first observed
+        as ``running()``, its start time is recorded. A future is only marked as
+        timed out if it has been ``running()`` for longer than ``timeout_per_job``
+        seconds, regardless of whether other futures are completing concurrently.
+
+        Queued futures that have not started yet are left alone -- they will run
+        once a worker becomes available. If no progress is made (no futures
+        complete and no running futures remain to time out) for two consecutive
+        timeout windows, all remaining pending futures are cancelled as a safety
+        net to prevent infinite loops.
+        """
+        pending: Set[Future] = set(future_to_pixel.keys())
+        running_start_times: Dict[Future, float] = {}
+        iterations_since_checkpoint = 0
+        stall_rounds = 0
+        now = time.monotonic()
+
+        # Record start times for futures that are already running before
+        # the first wait() call, so their timeout clock starts immediately
+        # rather than being deferred by one timeout window.
+        for f in pending:
+            if f.running():
+                running_start_times[f] = now
+
+        with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
+            while pending and not shutdown_handler.shutdown_requested:
+                # Wait for at least one future to complete, up to timeout_per_job
+                done, pending = wait(pending, timeout=timeout_per_job, return_when=FIRST_COMPLETED)
+                now = time.monotonic()
+
+                # Process completed futures
+                for future in done:
+                    running_start_times.pop(future, None)
+                    pixel = future_to_pixel[future]
+                    coord = (pixel.row, pixel.col)
+                    try:
+                        result = future.result()
+                        completed[coord] = result
+                        progress.update(1)
+                        if result.success:
+                            progress.record_success()
+                            chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
+                            logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                        else:
+                            progress.record_failure()
+                            logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+                    except Exception as e:
+                        logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
+                        completed[coord] = PixelFitResult(
+                            row=pixel.row,
+                            col=pixel.col,
+                            fit_results=None,
+                            success=False,
+                            error_message=f"Executor exception: {str(e)}",
+                            chi_squared=None,
+                        )
+                        progress.update(1)
+                        progress.record_failure()
+
+                    iterations_since_checkpoint += 1
+                    iterations_since_checkpoint = self._maybe_checkpoint(
+                        checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
+                    )
+
+                # Record start times for newly-running futures
+                for f in pending:
+                    if f not in running_start_times and f.running():
+                        running_start_times[f] = now
+
+                # Check for per-job timeout: any running future that has exceeded the deadline
+                timed_out_futures = [
+                    f for f in pending if f in running_start_times and (now - running_start_times[f]) >= timeout_per_job
+                ]
+                for future in timed_out_futures:
+                    pixel = future_to_pixel[future]
+                    coord = (pixel.row, pixel.col)
+                    elapsed = now - running_start_times[future]
+                    logger.warning(f"Pixel ({pixel.row}, {pixel.col}) timed out after {elapsed:.1f}s")
+                    future.cancel()  # Best-effort; won't stop already-running process
+                    completed[coord] = PixelFitResult(
+                        row=pixel.row,
+                        col=pixel.col,
+                        fit_results=None,
+                        success=False,
+                        error_message=f"Pixel ({pixel.row}, {pixel.col}) timed out after {timeout_per_job}s",
+                        chi_squared=None,
+                    )
+                    pending.discard(future)
+                    running_start_times.pop(future, None)
+                    progress.update(1)
+                    progress.record_failure()
+                    iterations_since_checkpoint += 1
+                    iterations_since_checkpoint = self._maybe_checkpoint(
+                        checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
+                    )
+
+                if done or timed_out_futures:
+                    stall_rounds = 0
+                    continue
+
+                # No completions and no timeouts. Remaining futures are either queued
+                # (not started) or running but not yet past their deadline.
+                # Allow a grace period before bailing out.
+                stall_rounds += 1
+                if stall_rounds >= 2:
+                    logger.warning(
+                        f"No progress for {stall_rounds} timeout windows. "
+                        f"Cancelling {len(pending)} queued futures (workers occupied by timed-out tasks)."
+                    )
+                    for future in list(pending):
+                        pixel = future_to_pixel[future]
+                        coord = (pixel.row, pixel.col)
+                        future.cancel()
+                        completed[coord] = PixelFitResult(
+                            row=pixel.row,
+                            col=pixel.col,
+                            fit_results=None,
+                            success=False,
+                            error_message=(
+                                f"Pixel ({pixel.row}, {pixel.col}) cancelled: "
+                                f"workers occupied by timed-out tasks after {timeout_per_job}s"
+                            ),
+                            chi_squared=None,
+                        )
+                        progress.update(1)
+                        progress.record_failure()
+                    pending.clear()
+
+            # On shutdown: cancel remaining pending futures
+            if shutdown_handler.shutdown_requested and pending:
+                logger.warning("Shutdown requested, cancelling pending futures...")
+                for f in pending:
+                    f.cancel()
 
     def _prepare_shared_sammy_inputs(self, workspace_dir: Path) -> Tuple[Path, Path]:
         """Stage JSON + ENDF inputs once per batch for worker reuse."""
