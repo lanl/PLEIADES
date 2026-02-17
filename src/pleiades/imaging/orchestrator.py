@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.models import PixelFitResult, PixelSpectrum
-from pleiades.imaging.temp_manager import TempFileManager
+from pleiades.imaging.temp_manager import _BYTES_PER_GB, TempFileManager
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.config import LocalSammyConfig
 from pleiades.sammy.interface import SammyFilesMultiMode
@@ -183,13 +183,16 @@ def _check_worker_disk_space(
 ) -> Optional[str]:
     """Check disk space in a worker subprocess, replicating TempFileManager logic.
 
+    Uses ``_BYTES_PER_GB`` from ``temp_manager`` to stay consistent with the
+    parent-process disk checks.
+
     Returns None if space is sufficient, or an error message string if not.
     """
     import shutil
 
     try:
         usage = shutil.disk_usage(base_dir)
-        free_gb = usage.free / (1024**3)
+        free_gb = usage.free / _BYTES_PER_GB
         if free_gb < required_gb:
             return f"{free_gb:.2f} GB free, need at least {required_gb} GB"
         if initial_free_gb is not None and max_disk_usage_gb is not None:
@@ -246,6 +249,8 @@ def _fit_pixel_worker(
         PixelFitResult with fitted abundances and chi-squared, or failure info
     """
     if temp_base_dir is not None:
+        # Ensure base dir exists so shutil.disk_usage doesn't fail with FileNotFoundError
+        temp_base_dir.mkdir(parents=True, exist_ok=True)
         # Check disk space before creating workspace (replicates TempFileManager.check_disk_space)
         disk_err = _check_worker_disk_space(temp_base_dir, max_disk_usage_gb, initial_free_gb)
         if disk_err is not None:
@@ -260,6 +265,11 @@ def _fit_pixel_worker(
         # Include attempt_id in dir name so retries don't collide with timed-out zombie workers
         dir_name = f"pixel_{pixel.row}_{pixel.col}_a{attempt_id}"
         temp_path = temp_base_dir / dir_name
+        # Remove any stale workspace from a previous crashed run to avoid contamination
+        if temp_path.exists():
+            import shutil
+
+            shutil.rmtree(temp_path, ignore_errors=True)
         temp_path.mkdir(parents=True, exist_ok=True)
     else:
         temp_path = None  # Sentinel; set below in context manager
@@ -750,7 +760,7 @@ class BatchFittingOrchestrator:
         temp_base_dir = self.temp_manager.base_dir if self.temp_manager is not None else None
         cleanup_policy = self.temp_manager.cleanup_policy if self.temp_manager is not None else "immediate"
         max_disk_usage_gb = self.temp_manager.max_disk_usage_gb if self.temp_manager is not None else None
-        initial_free_gb = self.temp_manager._initial_free_gb if self.temp_manager is not None else None
+        initial_free_gb = self.temp_manager.initial_free_gb if self.temp_manager is not None else None
 
         return {
             executor.submit(

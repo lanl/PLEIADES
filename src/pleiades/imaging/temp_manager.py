@@ -102,7 +102,9 @@ class TempFileManager:
             raise ValueError(f"max_disk_usage_gb must be positive, got {max_disk_usage_gb}")
 
         if base_dir is None:
-            base_dir = Path(tempfile.gettempdir()) / "pleiades_imaging"
+            # Use a unique directory per manager instance to avoid cross-run
+            # collisions and stale directory reuse after crashes.
+            base_dir = Path(tempfile.mkdtemp(prefix="pleiades_imaging_"))
         self.base_dir = Path(base_dir)
         self.max_disk_usage_gb = max_disk_usage_gb
         self.cleanup_policy = cleanup_policy
@@ -137,6 +139,8 @@ class TempFileManager:
             raise ValueError("job_id must not be empty")
         if "/" in job_id or "\\" in job_id:
             raise ValueError(f"job_id must not contain path separators, got {job_id!r}")
+        if job_id in (".", "..") or Path(job_id).parts != (job_id,):
+            raise ValueError(f"job_id must be a single safe path component, got {job_id!r}")
 
         # Ensure base_dir exists before checking disk space
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -155,7 +159,10 @@ class TempFileManager:
             yield workspace
         finally:
             if self.cleanup_policy == "immediate":
-                shutil.rmtree(workspace, ignore_errors=True)
+                try:
+                    shutil.rmtree(workspace)
+                except Exception:
+                    logger.warning(f"Immediate cleanup failed for workspace: {workspace}")
                 with self._lock:
                     if workspace in self._active_workspaces:
                         self._active_workspaces.remove(workspace)
@@ -180,6 +187,8 @@ class TempFileManager:
         """
         if not name:
             raise ValueError("name must not be empty")
+        if name in (".", "..") or Path(name).parts != (name,):
+            raise ValueError(f"name must be a single safe path component, got {name!r}")
 
         workspace = self.base_dir / name
         workspace.mkdir(parents=True, exist_ok=True)
@@ -259,6 +268,14 @@ class TempFileManager:
             self._active_workspaces.clear()
 
         return count
+
+    @property
+    def initial_free_gb(self) -> Optional[float]:
+        """Free disk space (GB) recorded when the context manager was entered.
+
+        Returns None if the context manager has not been entered yet.
+        """
+        return self._initial_free_gb
 
     @property
     def active_workspaces(self) -> List[Path]:

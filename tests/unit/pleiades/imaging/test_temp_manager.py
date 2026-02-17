@@ -101,6 +101,29 @@ class TestInit:
         manager = TempFileManager(base_dir=tmp_path, max_disk_usage_gb=0.001, cleanup_policy="immediate")
         assert manager is not None
 
+    def test_default_base_dir_is_unique_per_instance(self):
+        """Each manager instance with default base_dir gets a unique directory."""
+        m1 = TempFileManager(base_dir=None, cleanup_policy="immediate")
+        m2 = TempFileManager(base_dir=None, cleanup_policy="immediate")
+        assert m1.base_dir != m2.base_dir
+        # Clean up the mkdtemp directories
+        import shutil
+
+        shutil.rmtree(m1.base_dir, ignore_errors=True)
+        shutil.rmtree(m2.base_dir, ignore_errors=True)
+
+    def test_initial_free_gb_none_before_context(self, tmp_path):
+        """initial_free_gb property is None before entering context."""
+        manager = TempFileManager(base_dir=tmp_path / "ws", cleanup_policy="immediate")
+        assert manager.initial_free_gb is None
+
+    def test_initial_free_gb_set_after_context_entry(self, tmp_path):
+        """initial_free_gb property is set to a float after entering context."""
+        manager = TempFileManager(base_dir=tmp_path / "ws", cleanup_policy="immediate")
+        with manager:
+            assert isinstance(manager.initial_free_gb, float)
+            assert manager.initial_free_gb > 0
+
 
 # ===========================================================================
 # TestJobWorkspace
@@ -392,9 +415,9 @@ class TestDiskMonitoring:
         manager = TempFileManager(base_dir=tmp_path / "ws", max_disk_usage_gb=1.0, cleanup_policy="immediate")
 
         with manager:
-            # At entry, _initial_free_gb was recorded from the real filesystem.
+            # At entry, initial_free_gb was recorded from the real filesystem.
             # Now mock disk_usage to simulate that 2 GB has been consumed since entry.
-            initial_free = manager._initial_free_gb
+            initial_free = manager.initial_free_gb
             assert initial_free is not None
 
             # Simulate: 2 GB consumed (more than the 1 GB limit)
@@ -590,6 +613,34 @@ class TestEdgeCases:
         with manager_immediate:
             with pytest.raises(ValueError, match="path separators"):
                 with manager_immediate.job_workspace("job/sub/path"):
+                    pass  # pragma: no cover
+
+    def test_job_id_dot_dot_rejected(self, manager_immediate):
+        """job_id '..' is rejected to prevent directory traversal."""
+        with manager_immediate:
+            with pytest.raises(ValueError, match="single safe path component"):
+                with manager_immediate.job_workspace(".."):
+                    pass  # pragma: no cover
+
+    def test_job_id_single_dot_rejected(self, manager_immediate):
+        """job_id '.' is rejected to prevent directory traversal."""
+        with manager_immediate:
+            with pytest.raises(ValueError, match="single safe path component"):
+                with manager_immediate.job_workspace("."):
+                    pass  # pragma: no cover
+
+    def test_shared_workspace_dot_dot_rejected(self, manager_immediate):
+        """shared_workspace name '..' is rejected to prevent directory traversal."""
+        with manager_immediate:
+            with pytest.raises(ValueError, match="single safe path component"):
+                with manager_immediate.shared_workspace(".."):
+                    pass  # pragma: no cover
+
+    def test_shared_workspace_single_dot_rejected(self, manager_immediate):
+        """shared_workspace name '.' is rejected to prevent directory traversal."""
+        with manager_immediate:
+            with pytest.raises(ValueError, match="single safe path component"):
+                with manager_immediate.shared_workspace("."):
                     pass  # pragma: no cover
 
     def test_very_long_job_id(self, manager_immediate):
@@ -1011,6 +1062,41 @@ class TestOrchestratorIntegration:
         assert paths[1].name == "pixel_1_1_a1"
         assert paths[2].name == "pixel_1_1_a2"
 
+    def test_worker_cleans_stale_workspace_before_reuse(self, tmp_path):
+        """Worker removes pre-existing stale workspace before creating a new one (C8)."""
+        from unittest.mock import MagicMock, patch
+
+        from pleiades.imaging.orchestrator import _fit_pixel_worker
+
+        pixel = _make_pixel(2, 4)
+        config = _make_imaging_config()
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+        base_dir = tmp_path / "managed_ws"
+        base_dir.mkdir()
+
+        # Pre-create a stale workspace with leftover data
+        stale_dir = base_dir / "pixel_2_4_a0"
+        stale_dir.mkdir()
+        stale_file = stale_dir / "old_output.dat"
+        stale_file.write_text("stale data from crashed run", encoding="utf-8")
+
+        mock_result = MagicMock()
+        mock_result.row = 2
+        mock_result.col = 4
+        mock_result.success = False
+        mock_result.error_message = "mock"
+
+        with patch("pleiades.imaging.orchestrator._fit_pixel_worker_impl") as mock_impl:
+            mock_impl.return_value = mock_result
+            _fit_pixel_worker(pixel, config, sammy_exe, temp_base_dir=base_dir, cleanup_policy="batch", attempt_id=0)
+
+            # The workspace should exist but the stale file should be gone
+            call_args = mock_impl.call_args[0]
+            temp_path_arg = call_args[6]
+            assert temp_path_arg.exists()
+            assert not (temp_path_arg / "old_output.dat").exists()
+
     def test_submit_pixels_passes_attempt_round_and_disk_params(self, tmp_path):
         """_submit_pixels passes attempt_round, max_disk_usage_gb, initial_free_gb (P1+P2)."""
         from concurrent.futures import ProcessPoolExecutor
@@ -1084,8 +1170,8 @@ class TestOrchestratorIntegration:
         config = _make_imaging_config()
         orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe, temp_manager=mgr)
 
-        # Before fit_pixels, _initial_free_gb should be None
-        assert mgr._initial_free_gb is None
+        # Before fit_pixels, initial_free_gb should be None
+        assert mgr.initial_free_gb is None
 
         pixel = _make_pixel(0, 0)
 
@@ -1115,9 +1201,9 @@ class TestOrchestratorIntegration:
                 mock_executor.submit.side_effect = submit_side_effect
                 orch.fit_pixels([pixel])
 
-        # After fit_pixels, _initial_free_gb should have been set by __enter__
-        # Note: __exit__ already ran, but _initial_free_gb persists on the object
-        assert mgr._initial_free_gb is not None
+        # After fit_pixels, initial_free_gb should have been set by __enter__
+        # Note: __exit__ already ran, but initial_free_gb persists on the object
+        assert mgr.initial_free_gb is not None
 
     def test_fit_pixels_cleans_up_batch_workspaces(self, tmp_path):
         """fit_pixels cleans up batch workspaces on exit for non-manual policies."""
