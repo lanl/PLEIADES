@@ -515,7 +515,9 @@ class TestBatchFittingOrchestrator:
         submitted_shared_json = []
         submitted_shared_endf = []
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             submitted_shared_json.append(shared_json)
             submitted_shared_endf.append(shared_endf)
             mock_fit_results = MagicMock(spec=FitResults)
@@ -1105,7 +1107,9 @@ class TestFitPixelsProgressIntegration:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             future = Future()
             future.set_result(
                 PixelFitResult(
@@ -1181,7 +1185,9 @@ class TestFitPixelsProgressIntegration:
 
         futures_created = []
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             future = Future()
             if pixel.row < 3:
                 # First 3 pixels complete immediately
@@ -1268,7 +1274,9 @@ class TestFitPixelsProgressIntegration:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             future = Future()
             future.set_result(
                 PixelFitResult(
@@ -1330,7 +1338,9 @@ class TestFitPixelsProgressIntegration:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             future = Future()
             future.set_result(
                 PixelFitResult(
@@ -1422,7 +1432,9 @@ class TestFitPixelsProgressIntegration:
 
         futures = []
 
-        def submit_side_effect(fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf):
+        def submit_side_effect(
+            fn, pixel, imaging_cfg, sammy_exe, resolution_file, shared_json, shared_endf, *args, **kwargs
+        ):
             future = Future()
             if pixel.row < 2:
                 # These two complete
