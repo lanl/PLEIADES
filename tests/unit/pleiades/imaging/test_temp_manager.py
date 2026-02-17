@@ -949,6 +949,217 @@ class TestOrchestratorIntegration:
             temp_path_arg = call_args[6]
             assert temp_path_arg is None
 
+    def test_worker_attempt_id_in_workspace_name(self, tmp_path):
+        """attempt_id is included in workspace directory name to prevent retry collisions (P1)."""
+        from unittest.mock import MagicMock, patch
+
+        from pleiades.imaging.orchestrator import _fit_pixel_worker
+
+        pixel = _make_pixel(5, 9)
+        config = _make_imaging_config()
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+        base_dir = tmp_path / "managed_ws"
+        base_dir.mkdir()
+
+        mock_result = MagicMock()
+        mock_result.row = 5
+        mock_result.col = 9
+        mock_result.success = False
+        mock_result.error_message = "mock"
+
+        with patch("pleiades.imaging.orchestrator._fit_pixel_worker_impl") as mock_impl:
+            mock_impl.return_value = mock_result
+            _fit_pixel_worker(pixel, config, sammy_exe, temp_base_dir=base_dir, cleanup_policy="batch", attempt_id=2)
+
+            call_args = mock_impl.call_args[0]
+            temp_path_arg = call_args[6]
+            assert temp_path_arg is not None
+            assert temp_path_arg.name == "pixel_5_9_a2"
+
+    def test_worker_different_attempts_get_different_dirs(self, tmp_path):
+        """Different attempt_id values produce different workspace directories (P1)."""
+        from unittest.mock import MagicMock, patch
+
+        from pleiades.imaging.orchestrator import _fit_pixel_worker
+
+        pixel = _make_pixel(1, 1)
+        config = _make_imaging_config()
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+        base_dir = tmp_path / "managed_ws"
+        base_dir.mkdir()
+
+        mock_result = MagicMock()
+        mock_result.row = 1
+        mock_result.col = 1
+        mock_result.success = False
+        mock_result.error_message = "mock"
+
+        paths = []
+        for attempt in range(3):
+            with patch("pleiades.imaging.orchestrator._fit_pixel_worker_impl") as mock_impl:
+                mock_impl.return_value = mock_result
+                _fit_pixel_worker(
+                    pixel, config, sammy_exe, temp_base_dir=base_dir, cleanup_policy="batch", attempt_id=attempt
+                )
+                paths.append(mock_impl.call_args[0][6])
+
+        # All three paths should be unique
+        assert len(set(str(p) for p in paths)) == 3
+        assert paths[0].name == "pixel_1_1_a0"
+        assert paths[1].name == "pixel_1_1_a1"
+        assert paths[2].name == "pixel_1_1_a2"
+
+    def test_submit_pixels_passes_attempt_round_and_disk_params(self, tmp_path):
+        """_submit_pixels passes attempt_round, max_disk_usage_gb, initial_free_gb (P1+P2)."""
+        from concurrent.futures import ProcessPoolExecutor
+        from unittest.mock import MagicMock
+
+        from pleiades.imaging.orchestrator import BatchFittingOrchestrator
+
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+
+        mgr = TempFileManager(base_dir=tmp_path / "ws", max_disk_usage_gb=25.0, cleanup_policy="batch")
+        config = _make_imaging_config()
+
+        orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe, temp_manager=mgr)
+
+        # Simulate entering the context manager to set _initial_free_gb
+        with mgr:
+            mock_executor = MagicMock(spec=ProcessPoolExecutor)
+            mock_future = MagicMock()
+            mock_executor.submit.return_value = mock_future
+
+            pixel = _make_pixel(0, 0)
+            orch._submit_pixels(mock_executor, [pixel], Path("/json"), Path("/endf"), attempt_round=3)
+
+            call_args = mock_executor.submit.call_args
+            args = call_args[0]
+            # args: (fn, pixel, config, exe, resolution, json, endf, base_dir, policy,
+            #        attempt_round, max_disk_usage_gb, initial_free_gb)
+            assert args[9] == 3  # attempt_round
+            assert args[10] == 25.0  # max_disk_usage_gb
+            assert isinstance(args[11], float)  # initial_free_gb (recorded from real disk)
+
+    def test_submit_pixels_without_temp_manager_passes_none_for_disk_params(self, tmp_path):
+        """Without temp_manager, disk params are None (P2)."""
+        from concurrent.futures import ProcessPoolExecutor
+        from unittest.mock import MagicMock
+
+        from pleiades.imaging.orchestrator import BatchFittingOrchestrator
+
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+
+        config = _make_imaging_config()
+        orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe)
+
+        mock_executor = MagicMock(spec=ProcessPoolExecutor)
+        mock_future = MagicMock()
+        mock_executor.submit.return_value = mock_future
+
+        pixel = _make_pixel(0, 0)
+        orch._submit_pixels(mock_executor, [pixel], Path("/json"), Path("/endf"))
+
+        call_args = mock_executor.submit.call_args
+        args = call_args[0]
+        assert args[9] == 0  # attempt_round defaults to 0
+        assert args[10] is None  # max_disk_usage_gb
+        assert args[11] is None  # initial_free_gb
+
+
+# ===========================================================================
+# TestCheckWorkerDiskSpace
+# ===========================================================================
+
+
+class TestCheckWorkerDiskSpace:
+    """Tests for _check_worker_disk_space function (P2: worker-side disk enforcement)."""
+
+    def test_returns_none_when_space_sufficient(self, tmp_path):
+        """Returns None (no error) when disk has enough space."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=50.0, initial_free_gb=100.0)
+        assert result is None
+
+    def test_returns_error_when_free_space_too_low(self, tmp_path):
+        """Returns error message when free space is below required_gb."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        mock_usage = _DiskUsage(total=100 * _BYTES_PER_GB, used=99 * _BYTES_PER_GB, free=0)
+        with patch("shutil.disk_usage", return_value=mock_usage):
+            result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=50.0, initial_free_gb=100.0)
+            assert result is not None
+            assert "free" in result
+
+    def test_returns_error_when_consumed_exceeds_limit(self, tmp_path):
+        """Returns error when consumed space exceeds max_disk_usage_gb."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        # Simulate: initial_free was 100 GB, now 90 GB free → consumed 10 GB, limit 5 GB
+        mock_usage = _DiskUsage(total=200 * _BYTES_PER_GB, used=110 * _BYTES_PER_GB, free=90 * _BYTES_PER_GB)
+        with patch("shutil.disk_usage", return_value=mock_usage):
+            result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=5.0, initial_free_gb=100.0, required_gb=0.1)
+            assert result is not None
+            assert "consumed" in result
+            assert "limit" in result
+
+    def test_returns_none_when_consumed_within_limit(self, tmp_path):
+        """Returns None when consumed space is within the limit."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        # Simulate: initial_free was 100 GB, now 97 GB free → consumed 3 GB, limit 5 GB
+        mock_usage = _DiskUsage(total=200 * _BYTES_PER_GB, used=103 * _BYTES_PER_GB, free=97 * _BYTES_PER_GB)
+        with patch("shutil.disk_usage", return_value=mock_usage):
+            result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=5.0, initial_free_gb=100.0, required_gb=0.1)
+            assert result is None
+
+    def test_skips_consumed_check_when_params_none(self, tmp_path):
+        """When max_disk_usage_gb or initial_free_gb is None, skips consumed-space check."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        # With None params, only the free-space check runs
+        result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=None, initial_free_gb=None)
+        assert result is None
+
+    def test_returns_error_on_disk_usage_exception(self):
+        """Returns error message when shutil.disk_usage raises an exception."""
+        from pleiades.imaging.orchestrator import _check_worker_disk_space
+
+        with patch("shutil.disk_usage", side_effect=OSError("disk gone")):
+            result = _check_worker_disk_space(Path("/nonexistent"), max_disk_usage_gb=50.0, initial_free_gb=100.0)
+            assert result is not None
+            assert "disk check failed" in result
+
+    def test_worker_returns_failure_on_disk_space_check(self, tmp_path):
+        """_fit_pixel_worker returns PixelFitResult(success=False) when disk check fails (P2)."""
+        from pleiades.imaging.orchestrator import _fit_pixel_worker
+
+        pixel = _make_pixel(2, 3)
+        config = _make_imaging_config()
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+        base_dir = tmp_path / "managed_ws"
+        base_dir.mkdir()
+
+        # Simulate disk full
+        mock_usage = _DiskUsage(total=100 * _BYTES_PER_GB, used=99 * _BYTES_PER_GB, free=0)
+        with patch("shutil.disk_usage", return_value=mock_usage):
+            result = _fit_pixel_worker(
+                pixel,
+                config,
+                sammy_exe,
+                temp_base_dir=base_dir,
+                cleanup_policy="batch",
+                max_disk_usage_gb=50.0,
+                initial_free_gb=100.0,
+            )
+            assert result.success is False
+            assert "Disk space check failed" in result.error_message
+
 
 # ---------------------------------------------------------------------------
 # Helpers for integration tests

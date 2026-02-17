@@ -174,6 +174,32 @@ class GracefulShutdownHandler:
         self.uninstall()
 
 
+def _check_worker_disk_space(
+    base_dir: Path,
+    max_disk_usage_gb: Optional[float],
+    initial_free_gb: Optional[float],
+    required_gb: float = 0.1,
+) -> Optional[str]:
+    """Check disk space in a worker subprocess, replicating TempFileManager logic.
+
+    Returns None if space is sufficient, or an error message string if not.
+    """
+    import shutil
+
+    try:
+        usage = shutil.disk_usage(base_dir)
+        free_gb = usage.free / (1024**3)
+        if free_gb < required_gb:
+            return f"{free_gb:.2f} GB free, need at least {required_gb} GB"
+        if initial_free_gb is not None and max_disk_usage_gb is not None:
+            consumed_gb = initial_free_gb - free_gb
+            if consumed_gb > max_disk_usage_gb:
+                return f"{consumed_gb:.2f} GB consumed, limit is {max_disk_usage_gb} GB"
+    except Exception as e:
+        return f"disk check failed: {e}"
+    return None
+
+
 def _fit_pixel_worker(
     pixel: PixelSpectrum,
     imaging_config: ImagingConfig,
@@ -183,6 +209,9 @@ def _fit_pixel_worker(
     shared_endf_directory: Optional[Path] = None,
     temp_base_dir: Optional[Path] = None,
     cleanup_policy: str = "immediate",
+    attempt_id: int = 0,
+    max_disk_usage_gb: Optional[float] = None,
+    initial_free_gb: Optional[float] = None,
 ) -> PixelFitResult:
     """Worker function to fit a single pixel using SAMMY.
 
@@ -204,12 +233,32 @@ def _fit_pixel_worker(
         temp_base_dir: Optional base directory for managed temp files. When provided,
             creates per-pixel workspaces under this directory instead of the system temp.
         cleanup_policy: Cleanup policy when using temp_base_dir ("immediate", "batch", "manual").
+        attempt_id: Attempt number for this pixel (0 = first attempt, 1+ = retries).
+            Used to create unique workspace directories so that timed-out zombie workers
+            from a previous attempt do not collide with retries.
+        max_disk_usage_gb: Maximum disk usage limit from TempFileManager. When set,
+            the worker checks disk space before creating the workspace.
+        initial_free_gb: Free space recorded at batch start, used with max_disk_usage_gb
+            to enforce the consumed-space limit.
 
     Returns:
         PixelFitResult with fitted abundances and chi-squared, or failure info
     """
     if temp_base_dir is not None:
-        temp_path = temp_base_dir / f"pixel_{pixel.row}_{pixel.col}"
+        # Check disk space before creating workspace (replicates TempFileManager.check_disk_space)
+        disk_err = _check_worker_disk_space(temp_base_dir, max_disk_usage_gb, initial_free_gb)
+        if disk_err is not None:
+            return PixelFitResult(
+                row=pixel.row,
+                col=pixel.col,
+                fit_results=None,
+                success=False,
+                error_message=f"Disk space check failed: {disk_err}",
+                chi_squared=None,
+            )
+        # Include attempt_id in dir name so retries don't collide with timed-out zombie workers
+        dir_name = f"pixel_{pixel.row}_{pixel.col}_a{attempt_id}"
+        temp_path = temp_base_dir / dir_name
         temp_path.mkdir(parents=True, exist_ok=True)
     else:
         temp_path = None  # Sentinel; set below in context manager
@@ -586,7 +635,11 @@ class BatchFittingOrchestrator:
                             )
                             try:
                                 retry_futures = self._submit_pixels(
-                                    retry_executor, failed_pixels, shared_json_path, shared_endf_dir
+                                    retry_executor,
+                                    failed_pixels,
+                                    shared_json_path,
+                                    shared_endf_dir,
+                                    attempt_round=retry_round + 1,
                                 )
                                 all_future_maps.append(retry_futures)
                                 for p in failed_pixels:
@@ -678,10 +731,22 @@ class BatchFittingOrchestrator:
         pixels: List[PixelSpectrum],
         shared_json_path: Path,
         shared_endf_dir: Path,
+        attempt_round: int = 0,
     ) -> Dict[Future, PixelSpectrum]:
-        """Submit pixel fitting jobs to the executor."""
+        """Submit pixel fitting jobs to the executor.
+
+        Args:
+            executor: ProcessPoolExecutor to submit jobs to.
+            pixels: List of PixelSpectrum to fit.
+            shared_json_path: Path to pre-staged JSON config.
+            shared_endf_dir: Path to pre-staged ENDF directory.
+            attempt_round: Attempt number (0 = first, 1+ = retries). Included in
+                workspace directory names to prevent collisions with timed-out workers.
+        """
         temp_base_dir = self.temp_manager.base_dir if self.temp_manager is not None else None
         cleanup_policy = self.temp_manager.cleanup_policy if self.temp_manager is not None else "immediate"
+        max_disk_usage_gb = self.temp_manager.max_disk_usage_gb if self.temp_manager is not None else None
+        initial_free_gb = self.temp_manager._initial_free_gb if self.temp_manager is not None else None
 
         return {
             executor.submit(
@@ -694,6 +759,9 @@ class BatchFittingOrchestrator:
                 shared_endf_dir,
                 temp_base_dir,
                 cleanup_policy,
+                attempt_round,
+                max_disk_usage_gb,
+                initial_free_gb,
             ): pixel
             for pixel in pixels
         }
