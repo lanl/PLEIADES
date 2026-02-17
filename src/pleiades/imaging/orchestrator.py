@@ -13,15 +13,14 @@ import time
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from tqdm import tqdm
 
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.models import PixelFitResult, PixelSpectrum
-from pleiades.sammy.backends.docker import DockerSammyRunner
 from pleiades.sammy.backends.local import LocalSammyRunner
-from pleiades.sammy.config import DockerSammyConfig, LocalSammyConfig
+from pleiades.sammy.config import LocalSammyConfig
 from pleiades.sammy.interface import SammyFilesMultiMode
 from pleiades.sammy.io.data_manager import convert_csv_to_sammy_twenty
 from pleiades.sammy.io.inp_manager import InpManager
@@ -54,61 +53,6 @@ def _worker_initializer() -> None:
     KeyboardInterrupt independently, causing BrokenProcessPool and preventing checkpoint saves.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def _create_sammy_runner(
-    backend: str,
-    working_dir: Path,
-    output_dir: Path,
-    sammy_executable: Optional[Path] = None,
-    backend_kwargs: Optional[Dict[str, Any]] = None,
-):
-    """Create a SAMMY runner for the specified backend without availability checks.
-
-    This is a lightweight factory used inside worker subprocesses. It does not
-    perform any backend availability or environment validation; such checks are
-    handled elsewhere (e.g., during orchestrator initialization for local
-    executables or within backend-specific setup like
-    ``DockerSammyRunner.prepare_environment()``).
-
-    Args:
-        backend: Backend type ("local" or "docker")
-        working_dir: Per-pixel working directory
-        output_dir: Per-pixel output directory
-        sammy_executable: Path to SAMMY binary (required for local backend)
-        backend_kwargs: Backend-specific options (e.g., image_name for Docker)
-
-    Returns:
-        A SammyRunner instance (LocalSammyRunner or DockerSammyRunner)
-
-    Raises:
-        ValueError: If backend is not "local" or "docker"
-    """
-    kwargs = backend_kwargs or {}
-
-    if backend == "local":
-        exe = sammy_executable or kwargs.get("sammy_executable")
-        if exe is None:
-            raise ValueError("sammy_executable is required for local backend (pass directly or via backend_kwargs)")
-        exe = Path(exe)
-        config = LocalSammyConfig(
-            sammy_executable=exe,
-            working_dir=working_dir,
-            output_dir=output_dir,
-        )
-        return LocalSammyRunner(config)
-
-    if backend == "docker":
-        config = DockerSammyConfig(
-            image_name=kwargs.get("image_name", "kedokudo/sammy-docker"),
-            working_dir=working_dir,
-            output_dir=output_dir,
-            container_working_dir=Path(kwargs.get("container_working_dir", "/sammy/work")),
-            container_data_dir=Path(kwargs.get("container_data_dir", "/sammy/data")),
-        )
-        return DockerSammyRunner(config)
-
-    raise ValueError(f"Unsupported backend: {backend}. Use 'local' or 'docker'.")
 
 
 class ProgressReporter:
@@ -232,12 +176,10 @@ class GracefulShutdownHandler:
 def _fit_pixel_worker(
     pixel: PixelSpectrum,
     imaging_config: ImagingConfig,
-    sammy_executable: Optional[Path] = None,
+    sammy_executable: Path,
     resolution_file: Optional[Path] = None,
     shared_json_config: Optional[Path] = None,
     shared_endf_directory: Optional[Path] = None,
-    backend: str = "local",
-    backend_kwargs: Optional[Dict[str, Any]] = None,
 ) -> PixelFitResult:
     """Worker function to fit a single pixel using SAMMY.
 
@@ -246,18 +188,16 @@ def _fit_pixel_worker(
     2. Convert CSV to SAMMY .twenty format
     3. Create JSON config (auto-downloads ENDF files)
     4. Create .inp file
-    5. Execute SAMMY via the configured backend
+    5. Execute SAMMY via LocalSammyRunner
     6. Parse results
 
     Args:
         pixel: PixelSpectrum to fit
         imaging_config: Configuration with isotopes and material properties
-        sammy_executable: Path to SAMMY binary (required for local backend)
+        sammy_executable: Path to SAMMY binary
         resolution_file: Optional path to resolution function file
         shared_json_config: Optional pre-staged JSON config path (shared across workers)
         shared_endf_directory: Optional pre-staged ENDF directory (shared across workers)
-        backend: Backend type ("local" or "docker")
-        backend_kwargs: Backend-specific options
 
     Returns:
         PixelFitResult with fitted abundances and chi-squared, or failure info
@@ -311,13 +251,12 @@ def _fit_pixel_worker(
                 endf_directory=endf_directory,
             )
 
-            runner = _create_sammy_runner(
-                backend=backend,
+            config = LocalSammyConfig(
+                sammy_executable=sammy_executable,
                 working_dir=temp_path / "sammy_working",
                 output_dir=temp_path / "sammy_output",
-                sammy_executable=sammy_executable,
-                backend_kwargs=backend_kwargs,
             )
+            runner = LocalSammyRunner(config)
             runner.validate_config()
             runner.prepare_environment(files)
             result = runner.execute_sammy(files)
@@ -333,9 +272,6 @@ def _fit_pixel_worker(
                 )
 
             runner.collect_outputs(result)
-            # Note: Abstract interface expects cleanup(files), but all concrete implementations
-            # (LocalSammyRunner, DockerSammyRunner) use cleanup() without parameters.
-            # This is existing technical debt in PLEIADES backends.
             runner.cleanup()
 
             # Step 6: Parse results
@@ -393,17 +329,11 @@ class BatchFittingOrchestrator:
 
     Example:
         >>> config = ImagingConfig(
-        ...     isotopes=["Ta-181"],
-        ...     element="Ta",
-        ...     mass_number=181,
-        ...     density_g_cm3=16.6,
-        ...     thickness_mm=0.025,
-        ...     atomic_mass_amu=180.9479958
+        ...     isotopes=["Ta-181"], element="Ta", mass_number=181,
+        ...     density_g_cm3=16.6, thickness_mm=0.025, atomic_mass_amu=180.9479958
         ... )
         >>> orchestrator = BatchFittingOrchestrator(
-        ...     imaging_config=config,
-        ...     sammy_executable=Path("/path/to/sammy"),
-        ...     n_workers=4
+        ...     imaging_config=config, sammy_executable=Path("/path/to/sammy"), n_workers=4
         ... )
         >>> results = orchestrator.fit_pixels(pixel_list, checkpoint_file=Path("checkpoint.pkl"))
     """
@@ -411,52 +341,32 @@ class BatchFittingOrchestrator:
     def __init__(
         self,
         imaging_config: ImagingConfig,
-        sammy_executable: Optional[Path] = None,
+        sammy_executable: Path,
         n_workers: int = 4,
         resolution_file: Optional[Path] = None,
-        backend: str = "local",
-        backend_kwargs: Optional[Dict[str, Any]] = None,
     ):
         """Initialize batch fitting orchestrator.
 
         Args:
             imaging_config: Configuration with isotopes and material properties
-            sammy_executable: Path to SAMMY binary (required for local backend,
-                can also be provided via backend_kwargs["sammy_executable"])
+            sammy_executable: Path to SAMMY binary
             n_workers: Number of parallel workers (default: 4)
             resolution_file: Optional path to resolution function file
-            backend: Backend type ("local" or "docker")
-            backend_kwargs: Backend-specific options (e.g., image_name for Docker,
-                sammy_executable for local)
 
         Raises:
             FileNotFoundError: If SAMMY executable or resolution file doesn't exist
-            ValueError: If backend is invalid or local backend has no executable
         """
-        if backend not in ("local", "docker"):
-            raise ValueError(f"Unsupported backend: {backend}. Use 'local' or 'docker'.")
-
-        # Resolve sammy_executable for local backend
-        if backend == "local":
-            resolved_exe = sammy_executable or (backend_kwargs or {}).get("sammy_executable")
-            if resolved_exe is None:
-                raise ValueError("sammy_executable is required for local backend (pass directly or via backend_kwargs)")
-            resolved_exe = Path(resolved_exe)
-            if not resolved_exe.exists():
-                raise FileNotFoundError(f"SAMMY executable not found: {resolved_exe}")
-            self.sammy_executable = resolved_exe
-        else:
-            # Docker backend doesn't need sammy_executable
-            self.sammy_executable = sammy_executable
+        sammy_executable = Path(sammy_executable)
+        if not sammy_executable.exists():
+            raise FileNotFoundError(f"SAMMY executable not found: {sammy_executable}")
 
         if resolution_file is not None and not resolution_file.exists():
             raise FileNotFoundError(f"Resolution file not found: {resolution_file}")
 
         self.imaging_config = imaging_config
+        self.sammy_executable = sammy_executable
         self.n_workers = n_workers
         self.resolution_file = resolution_file
-        self.backend = backend
-        self.backend_kwargs = backend_kwargs
 
     def fit_pixels(
         self,
@@ -718,8 +628,6 @@ class BatchFittingOrchestrator:
                 self.resolution_file,
                 shared_json_path,
                 shared_endf_dir,
-                self.backend,
-                self.backend_kwargs,
             ): pixel
             for pixel in pixels
         }
@@ -855,6 +763,13 @@ class BatchFittingOrchestrator:
         iterations_since_checkpoint = 0
         stall_rounds = 0
         now = time.monotonic()
+
+        # Record start times for futures that are already running before
+        # the first wait() call, so their timeout clock starts immediately
+        # rather than being deferred by one timeout window.
+        for f in pending:
+            if f.running():
+                running_start_times[f] = now
 
         with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
             while pending and not shutdown_handler.shutdown_requested:
