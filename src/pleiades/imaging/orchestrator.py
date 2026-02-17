@@ -5,6 +5,7 @@ This module provides tools for managing large-scale SAMMY resonance fitting jobs
 (262,144+ pixels for 512×512 images) with parallelism, checkpointing, and progress tracking.
 """
 
+import contextlib
 import pickle
 import signal
 import tempfile
@@ -571,13 +572,16 @@ class BatchFittingOrchestrator:
 
         # Execute remaining pixels in parallel
         if remaining_pixels:
-            # Use TempFileManager for shared workspace if provided, otherwise fall back
-            shared_ctx = (
-                self.temp_manager.shared_workspace("batch_shared")
-                if self.temp_manager is not None
-                else tempfile.TemporaryDirectory(prefix="batch_shared_")
-            )
-            with shared_ctx as shared_workspace_dir:
+            with contextlib.ExitStack() as exit_stack:
+                # Enter TempFileManager context first so _initial_free_gb is recorded
+                # (enables disk-cap enforcement in workers) and __exit__ runs cleanup
+                # for non-manual policies when the batch completes.
+                if self.temp_manager is not None:
+                    exit_stack.enter_context(self.temp_manager)
+                    shared_workspace_dir = exit_stack.enter_context(self.temp_manager.shared_workspace("batch_shared"))
+                else:
+                    shared_workspace_dir = exit_stack.enter_context(tempfile.TemporaryDirectory(prefix="batch_shared_"))
+
                 shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
                 with GracefulShutdownHandler() as shutdown_handler:

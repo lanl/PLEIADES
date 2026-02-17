@@ -1069,6 +1069,103 @@ class TestOrchestratorIntegration:
         assert args[10] is None  # max_disk_usage_gb
         assert args[11] is None  # initial_free_gb
 
+    def test_fit_pixels_enters_temp_manager_context(self, tmp_path):
+        """fit_pixels enters TempFileManager context so _initial_free_gb is set for disk cap."""
+        from concurrent.futures import Future
+        from unittest.mock import MagicMock, patch
+
+        from pleiades.imaging.models import PixelFitResult
+        from pleiades.imaging.orchestrator import BatchFittingOrchestrator
+
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+
+        mgr = TempFileManager(base_dir=tmp_path / "ws", max_disk_usage_gb=25.0, cleanup_policy="batch")
+        config = _make_imaging_config()
+        orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe, temp_manager=mgr)
+
+        # Before fit_pixels, _initial_free_gb should be None
+        assert mgr._initial_free_gb is None
+
+        pixel = _make_pixel(0, 0)
+
+        # Use real Future objects so as_completed works
+        def submit_side_effect(fn, px, *args, **kwargs):
+            future = Future()
+            future.set_result(
+                PixelFitResult(row=px.row, col=px.col, fit_results=None, success=False, error_message="mock")
+            )
+            return future
+
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+
+        with patch("pleiades.imaging.orchestrator.JsonManager") as mock_json_cls:
+            mock_json_cls.return_value = mock_json_instance
+            with patch("pleiades.imaging.orchestrator.ProcessPoolExecutor") as mock_pool_cls:
+                mock_executor = MagicMock()
+                mock_pool_cls.return_value = mock_executor
+                mock_executor.submit.side_effect = submit_side_effect
+                orch.fit_pixels([pixel])
+
+        # After fit_pixels, _initial_free_gb should have been set by __enter__
+        # Note: __exit__ already ran, but _initial_free_gb persists on the object
+        assert mgr._initial_free_gb is not None
+
+    def test_fit_pixels_cleans_up_batch_workspaces(self, tmp_path):
+        """fit_pixels cleans up batch workspaces on exit for non-manual policies."""
+        from concurrent.futures import Future
+        from unittest.mock import MagicMock, patch
+
+        from pleiades.imaging.models import PixelFitResult
+        from pleiades.imaging.orchestrator import BatchFittingOrchestrator
+
+        sammy_exe = tmp_path / "sammy"
+        sammy_exe.touch()
+
+        base_dir = tmp_path / "ws"
+        mgr = TempFileManager(base_dir=base_dir, max_disk_usage_gb=25.0, cleanup_policy="batch")
+        config = _make_imaging_config()
+        orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe, temp_manager=mgr)
+
+        pixel = _make_pixel(0, 0)
+
+        def submit_side_effect(fn, px, *args, **kwargs):
+            future = Future()
+            future.set_result(
+                PixelFitResult(row=px.row, col=px.col, fit_results=None, success=False, error_message="mock")
+            )
+            return future
+
+        mock_json_instance = MagicMock()
+
+        def create_json_side_effect(isotopes, abundances, working_dir):
+            working_dir.mkdir(parents=True, exist_ok=True)
+            shared_json = working_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            return shared_json
+
+        mock_json_instance.create_json_config.side_effect = create_json_side_effect
+
+        with patch("pleiades.imaging.orchestrator.JsonManager") as mock_json_cls:
+            mock_json_cls.return_value = mock_json_instance
+            with patch("pleiades.imaging.orchestrator.ProcessPoolExecutor") as mock_pool_cls:
+                mock_executor = MagicMock()
+                mock_pool_cls.return_value = mock_executor
+                mock_executor.submit.side_effect = submit_side_effect
+                orch.fit_pixels([pixel])
+
+        # After fit_pixels, base_dir should be cleaned up for batch policy
+        # (TempFileManager.__exit__ removes base_dir for non-manual policies)
+        assert not base_dir.exists()
+
 
 # ===========================================================================
 # TestCheckWorkerDiskSpace
