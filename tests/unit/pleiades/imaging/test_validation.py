@@ -18,17 +18,17 @@ generator, and visualizer objects.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Dict, List
-from unittest.mock import patch
-
 import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import pytest
-import tifffile
 
 matplotlib.use("Agg")
+
+from pathlib import Path  # noqa: E402
+from typing import Dict, List  # noqa: E402
+
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+import tifffile  # noqa: E402
 
 from pleiades.imaging.aggregator import ResultsAggregator  # noqa: E402
 from pleiades.imaging.generator import AbundanceMapGenerator  # noqa: E402
@@ -1356,26 +1356,18 @@ class TestEndToEndPipeline:
         mock_worker = self._make_mock_worker(ta_truth, w_truth)
         expected_results = [mock_worker(p, None, None) for p in pixels]
 
-        # Patch the orchestrator's fit_pixels method
-        with patch(
-            "pleiades.imaging.orchestrator.BatchFittingOrchestrator.fit_pixels",
-            return_value=expected_results,
-        ):
-            # Note: We cannot instantiate the real orchestrator without a real
-            # SAMMY executable, so we test the integration point by verifying
-            # that the mocked results flow correctly through aggregator + generator.
+        # Verify that mock worker results flow correctly through
+        # aggregator + generator (orchestrator requires real SAMMY executable,
+        # so we test the downstream pipeline directly).
+        aggregator = ResultsAggregator(isotope_names=["Ta-181", "W-182"], height=height, width=width)
+        result = aggregator.aggregate(expected_results, hyperspectral)
 
-            # Aggregator
-            aggregator = ResultsAggregator(isotope_names=["Ta-181", "W-182"], height=height, width=width)
-            result = aggregator.aggregate(expected_results, hyperspectral)
+        gen = AbundanceMapGenerator(result)
+        ta_map = gen.generate_map("Ta-181")
+        w_map = gen.generate_map("W-182")
 
-            # Generator
-            gen = AbundanceMapGenerator(result)
-            ta_map = gen.generate_map("Ta-181")
-            w_map = gen.generate_map("W-182")
-
-            np.testing.assert_allclose(ta_map, ta_truth, atol=TOLERANCE_ATOL)
-            np.testing.assert_allclose(w_map, w_truth, atol=TOLERANCE_ATOL)
+        np.testing.assert_allclose(ta_map, ta_truth, atol=TOLERANCE_ATOL)
+        np.testing.assert_allclose(w_map, w_truth, atol=TOLERANCE_ATOL)
 
     def test_pipeline_with_some_failed_pixels(self, synthetic_tiff_and_truth):
         """Pipeline handles a mix of successful and failed pixels correctly."""
