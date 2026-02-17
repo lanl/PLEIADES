@@ -461,10 +461,11 @@ class TestPerJobTimeout:
         assert len(results) == 1
         assert results[0].success is True
 
+    @patch("pleiades.imaging.orchestrator.wait")
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
     def test_timeout_marks_slow_pixel_as_failed(
-        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+        self, mock_executor_cls, mock_json_mgr, mock_wait, imaging_config, mock_sammy_executable
     ):
         """A pixel job exceeding timeout_per_job is marked success=False."""
         pixels = [_make_pixel(0, 0)]
@@ -476,23 +477,17 @@ class TestPerJobTimeout:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        # Simulate a timeout by having future.result() raise TimeoutError
-        # (this is the standard behavior when Future.result(timeout=X) times out)
-        def submit_side_effect(fn, *args, **kwargs):
-            future = Future()
-            # Leave future unresolved; the orchestrator should call future.result(timeout=...)
-            # and get a TimeoutError. We'll simulate this by setting a side_effect on result().
-            mock_future = MagicMock(spec=Future)
-            mock_future.done.return_value = True
-            mock_future.cancelled.return_value = False
+        # Create a mock future that simulates a running, timed-out job
+        mock_future = MagicMock()
+        mock_future.done.return_value = False
+        mock_future.cancelled.return_value = False
+        mock_future.running.return_value = True
 
-            # When result(timeout=...) is called, raise TimeoutError
-            from concurrent.futures import TimeoutError as FuturesTimeoutError
+        mock_executor.submit.return_value = mock_future
 
-            mock_future.result.side_effect = FuturesTimeoutError("timed out")
-            return mock_future
-
-        mock_executor.submit.side_effect = submit_side_effect
+        # Simulate wait() returning no completed futures (timeout expired),
+        # then the running future gets marked as timed out by _collect_results_with_timeout
+        mock_wait.return_value = (set(), {mock_future})
 
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
@@ -503,10 +498,11 @@ class TestPerJobTimeout:
         assert len(results) == 1
         assert results[0].success is False
 
+    @patch("pleiades.imaging.orchestrator.wait")
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
     def test_timeout_error_message_contains_timed_out(
-        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+        self, mock_executor_cls, mock_json_mgr, mock_wait, imaging_config, mock_sammy_executable
     ):
         """Error message for timed-out pixels must contain 'timed out'."""
         pixels = [_make_pixel(0, 0)]
@@ -518,16 +514,15 @@ class TestPerJobTimeout:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        def submit_side_effect(fn, *args, **kwargs):
-            from concurrent.futures import TimeoutError as FuturesTimeoutError
+        mock_future = MagicMock()
+        mock_future.done.return_value = False
+        mock_future.cancelled.return_value = False
+        mock_future.running.return_value = True
 
-            mock_future = MagicMock(spec=Future)
-            mock_future.done.return_value = True
-            mock_future.cancelled.return_value = False
-            mock_future.result.side_effect = FuturesTimeoutError("job exceeded time limit")
-            return mock_future
+        mock_executor.submit.return_value = mock_future
 
-        mock_executor.submit.side_effect = submit_side_effect
+        # wait() returns no completions → running future gets timed out
+        mock_wait.return_value = (set(), {mock_future})
 
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
@@ -597,10 +592,11 @@ class TestPerJobTimeout:
         with pytest.raises(ValueError, match="timeout"):
             orchestrator.fit_pixels(pixels, timeout_per_job=0.0)
 
+    @patch("pleiades.imaging.orchestrator.wait")
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
     def test_timeout_with_checkpoint(
-        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable, tmp_path
+        self, mock_executor_cls, mock_json_mgr, mock_wait, imaging_config, mock_sammy_executable, tmp_path
     ):
         """Timed-out results are saved in checkpoint files."""
         pixels = [_make_pixel(0, 0)]
@@ -612,16 +608,15 @@ class TestPerJobTimeout:
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
-        def submit_side_effect(fn, *args, **kwargs):
-            from concurrent.futures import TimeoutError as FuturesTimeoutError
+        mock_future = MagicMock()
+        mock_future.done.return_value = False
+        mock_future.cancelled.return_value = False
+        mock_future.running.return_value = True
 
-            mock_future = MagicMock(spec=Future)
-            mock_future.done.return_value = True
-            mock_future.cancelled.return_value = False
-            mock_future.result.side_effect = FuturesTimeoutError("timed out")
-            return mock_future
+        mock_executor.submit.return_value = mock_future
 
-        mock_executor.submit.side_effect = submit_side_effect
+        # wait() returns no completions → running future gets timed out
+        mock_wait.return_value = (set(), {mock_future})
 
         checkpoint_file = tmp_path / "timeout_checkpoint.pkl"
 
@@ -948,18 +943,20 @@ class TestRetryLogic:
         # All should ultimately succeed
         assert all(r.success for r in results)
 
+    @patch("pleiades.imaging.orchestrator.wait")
     @patch("pleiades.imaging.orchestrator.JsonManager")
     @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
     def test_retry_with_timeout_interaction(
-        self, mock_executor_cls, mock_json_mgr, imaging_config, mock_sammy_executable
+        self, mock_executor_cls, mock_json_mgr, mock_wait, imaging_config, mock_sammy_executable
     ):
-        """Pixel that times out on first attempt can succeed on retry."""
+        """Pixel that times out on first attempt can succeed on retry (fresh executor)."""
         pixels = [_make_pixel(0, 0)]
 
         mock_json_instance = MagicMock()
         mock_json_instance.create_json_config.side_effect = _mock_json_manager_side_effect
         mock_json_mgr.return_value = mock_json_instance
 
+        # Each ProcessPoolExecutor() call returns a fresh mock executor
         mock_executor = MagicMock()
         mock_executor_cls.return_value.__enter__.return_value = mock_executor
 
@@ -968,23 +965,36 @@ class TestRetryLogic:
         def submit_side_effect(fn, *args, **kwargs):
             nonlocal attempt_count
             attempt_count += 1
-            from concurrent.futures import TimeoutError as FuturesTimeoutError
-
             if attempt_count == 1:
-                # First attempt times out
-                mock_future = MagicMock(spec=Future)
-                mock_future.done.return_value = True
+                # First attempt: return a "running" mock that will be timed out
+                mock_future = MagicMock()
+                mock_future.done.return_value = False
                 mock_future.cancelled.return_value = False
-                mock_future.result.side_effect = FuturesTimeoutError("timed out")
+                mock_future.running.return_value = True
                 return mock_future
             else:
-                # Retry succeeds
+                # Retry: return a real completed future
                 pixel = args[0]
                 future = Future()
                 future.set_result(_make_success_result(pixel.row, pixel.col, chi_squared=2.0))
                 return future
 
         mock_executor.submit.side_effect = submit_side_effect
+
+        call_count = 0
+
+        def mock_wait_side_effect(fs, timeout=None, return_when=None):
+            nonlocal call_count
+            call_count += 1
+            fs_set = set(fs) if not isinstance(fs, set) else fs
+            if call_count == 1:
+                # First call (initial batch): no completions → triggers timeout
+                return (set(), fs_set)
+            else:
+                # Second call (retry batch): all done
+                return (fs_set, set())
+
+        mock_wait.side_effect = mock_wait_side_effect
 
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
