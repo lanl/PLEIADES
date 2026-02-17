@@ -5,6 +5,7 @@ This module provides tools for managing large-scale SAMMY resonance fitting jobs
 (262,144+ pixels for 512×512 images) with parallelism, checkpointing, and progress tracking.
 """
 
+import contextlib
 import pickle
 import signal
 import tempfile
@@ -19,6 +20,7 @@ from tqdm import tqdm
 
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.models import PixelFitResult, PixelSpectrum
+from pleiades.imaging.temp_manager import _BYTES_PER_GB, TempFileManager
 from pleiades.sammy.backends.local import LocalSammyRunner
 from pleiades.sammy.config import LocalSammyConfig
 from pleiades.sammy.interface import SammyFilesMultiMode
@@ -173,6 +175,35 @@ class GracefulShutdownHandler:
         self.uninstall()
 
 
+def _check_worker_disk_space(
+    base_dir: Path,
+    max_disk_usage_gb: Optional[float],
+    initial_free_gb: Optional[float],
+    required_gb: float = 0.1,
+) -> Optional[str]:
+    """Check disk space in a worker subprocess, replicating TempFileManager logic.
+
+    Uses ``_BYTES_PER_GB`` from ``temp_manager`` to stay consistent with the
+    parent-process disk checks.
+
+    Returns None if space is sufficient, or an error message string if not.
+    """
+    import shutil
+
+    try:
+        usage = shutil.disk_usage(base_dir)
+        free_gb = usage.free / _BYTES_PER_GB
+        if free_gb < required_gb:
+            return f"{free_gb:.2f} GB free, need at least {required_gb} GB"
+        if initial_free_gb is not None and max_disk_usage_gb is not None:
+            consumed_gb = initial_free_gb - free_gb
+            if consumed_gb > max_disk_usage_gb:
+                return f"{consumed_gb:.2f} GB consumed, limit is {max_disk_usage_gb} GB"
+    except Exception as e:
+        return f"disk check failed: {e}"
+    return None
+
+
 def _fit_pixel_worker(
     pixel: PixelSpectrum,
     imaging_config: ImagingConfig,
@@ -180,6 +211,11 @@ def _fit_pixel_worker(
     resolution_file: Optional[Path] = None,
     shared_json_config: Optional[Path] = None,
     shared_endf_directory: Optional[Path] = None,
+    temp_base_dir: Optional[Path] = None,
+    cleanup_policy: str = "immediate",
+    attempt_id: int = 0,
+    max_disk_usage_gb: Optional[float] = None,
+    initial_free_gb: Optional[float] = None,
 ) -> PixelFitResult:
     """Worker function to fit a single pixel using SAMMY.
 
@@ -198,124 +234,198 @@ def _fit_pixel_worker(
         resolution_file: Optional path to resolution function file
         shared_json_config: Optional pre-staged JSON config path (shared across workers)
         shared_endf_directory: Optional pre-staged ENDF directory (shared across workers)
+        temp_base_dir: Optional base directory for managed temp files. When provided,
+            creates per-pixel workspaces under this directory instead of the system temp.
+        cleanup_policy: Cleanup policy when using temp_base_dir ("immediate", "batch", "manual").
+        attempt_id: Attempt number for this pixel (0 = first attempt, 1+ = retries).
+            Used to create unique workspace directories so that timed-out zombie workers
+            from a previous attempt do not collide with retries.
+        max_disk_usage_gb: Maximum disk usage limit from TempFileManager. When set,
+            the worker checks disk space before creating the workspace.
+        initial_free_gb: Free space recorded at batch start, used with max_disk_usage_gb
+            to enforce the consumed-space limit.
 
     Returns:
         PixelFitResult with fitted abundances and chi-squared, or failure info
     """
-    with tempfile.TemporaryDirectory(prefix=f"pixel_{pixel.row}_{pixel.col}_") as temp_dir:
-        temp_path = Path(temp_dir)
-
-        try:
-            # Step 1: Export pixel to CSV
-            csv_file = temp_path / "pixel.txt"
-            pixel.to_csv(csv_file)
-
-            # Step 2: Convert to .twenty format
-            twenty_file = temp_path / "pixel.twenty"
-            convert_csv_to_sammy_twenty(csv_file, twenty_file)
-
-            # Step 3: Resolve JSON config + ENDF staging
-            if shared_json_config is not None or shared_endf_directory is not None:
-                if shared_json_config is None or shared_endf_directory is None:
-                    raise ValueError("Both shared_json_config and shared_endf_directory must be provided together.")
-                if not shared_json_config.exists():
-                    raise FileNotFoundError(f"Shared JSON config not found: {shared_json_config}")
-                if not shared_endf_directory.exists():
-                    raise FileNotFoundError(f"Shared ENDF directory not found: {shared_endf_directory}")
-                json_path = shared_json_config
-                endf_directory = shared_endf_directory
-            else:
-                # Fallback mode for direct worker usage (tests/debug) without orchestrator pre-staging.
-                json_manager = JsonManager()
-                abundances = imaging_config.get_abundances()
-                json_path = json_manager.create_json_config(
-                    isotopes=imaging_config.isotopes, abundances=abundances, working_dir=temp_path
-                )
-                endf_directory = temp_path
-
-            # Step 4: Create .inp file
-            inp_file = temp_path / "sammy.inp"
-            material_props = imaging_config.get_material_properties()
-            InpManager.create_multi_isotope_inp(
-                inp_file,
-                title=f"Pixel ({pixel.row}, {pixel.col}) resonance fitting",
-                material_properties=material_props,
-                resolution_file_path=resolution_file,
-            )
-
-            # Step 5: Execute SAMMY
-            files = SammyFilesMultiMode(
-                input_file=inp_file,
-                json_config_file=json_path,
-                data_file=twenty_file,
-                endf_directory=endf_directory,
-            )
-
-            config = LocalSammyConfig(
-                sammy_executable=sammy_executable,
-                working_dir=temp_path / "sammy_working",
-                output_dir=temp_path / "sammy_output",
-            )
-            runner = LocalSammyRunner(config)
-            runner.validate_config()
-            runner.prepare_environment(files)
-            result = runner.execute_sammy(files)
-
-            if not result.success:
-                return PixelFitResult(
-                    row=pixel.row,
-                    col=pixel.col,
-                    fit_results=None,
-                    success=False,
-                    error_message=f"SAMMY execution failed: {result.error_message}",
-                    chi_squared=None,
-                )
-
-            runner.collect_outputs(result)
-            runner.cleanup()
-
-            # Step 6: Parse results
-            lpt_file = temp_path / "sammy_output" / "SAMMY.LPT"
-            lst_file = temp_path / "sammy_output" / "SAMMY.LST"
-
-            results_manager = ResultsManager(lpt_file_path=lpt_file, lst_file_path=lst_file)
-
-            if not results_manager.run_results.fit_results:
-                return PixelFitResult(
-                    row=pixel.row,
-                    col=pixel.col,
-                    fit_results=None,
-                    success=False,
-                    error_message="No fit results found in SAMMY.LPT",
-                    chi_squared=None,
-                )
-
-            # Extract final fit results
-            final_fit = results_manager.run_results.fit_results[-1]
-            chi_sq = final_fit.get_chi_squared_results()
-
-            # Extract chi-squared value (can be None if fit failed to converge)
-            chi_squared_value = chi_sq.chi_squared if chi_sq is not None else None
-
-            return PixelFitResult(
-                row=pixel.row,
-                col=pixel.col,
-                fit_results=final_fit,
-                success=True,
-                error_message=None,
-                chi_squared=chi_squared_value,
-            )
-
-        except Exception as e:
-            logger.exception(f"Exception during pixel fitting at ({pixel.row}, {pixel.col})")
+    if temp_base_dir is not None:
+        # Ensure base dir exists so shutil.disk_usage doesn't fail with FileNotFoundError
+        temp_base_dir.mkdir(parents=True, exist_ok=True)
+        # Check disk space before creating workspace (replicates TempFileManager.check_disk_space)
+        disk_err = _check_worker_disk_space(temp_base_dir, max_disk_usage_gb, initial_free_gb)
+        if disk_err is not None:
             return PixelFitResult(
                 row=pixel.row,
                 col=pixel.col,
                 fit_results=None,
                 success=False,
-                error_message=f"Exception: {str(e)}",
+                error_message=f"Disk space check failed: {disk_err}",
                 chi_squared=None,
             )
+        # Include attempt_id in dir name so retries don't collide with timed-out zombie workers
+        dir_name = f"pixel_{pixel.row}_{pixel.col}_a{attempt_id}"
+        temp_path = temp_base_dir / dir_name
+        # Remove any stale workspace from a previous crashed run to avoid contamination
+        if temp_path.exists():
+            import shutil
+
+            shutil.rmtree(temp_path, ignore_errors=True)
+        temp_path.mkdir(parents=True, exist_ok=True)
+    else:
+        temp_path = None  # Sentinel; set below in context manager
+
+    return _fit_pixel_worker_impl(
+        pixel,
+        imaging_config,
+        sammy_executable,
+        resolution_file,
+        shared_json_config,
+        shared_endf_directory,
+        temp_path,
+        cleanup_policy,
+    )
+
+
+def _fit_pixel_worker_impl(
+    pixel: PixelSpectrum,
+    imaging_config: ImagingConfig,
+    sammy_executable: Path,
+    resolution_file: Optional[Path],
+    shared_json_config: Optional[Path],
+    shared_endf_directory: Optional[Path],
+    temp_path: Optional[Path],
+    cleanup_policy: str,
+) -> PixelFitResult:
+    """Inner implementation for _fit_pixel_worker.
+
+    Separated so that the managed-dir path and the tempfile.TemporaryDirectory fallback
+    share the same SAMMY workflow code without duplicating the try/except block.
+    """
+    import shutil
+
+    # If no managed temp_path was provided, fall back to a system temp directory
+    ctx = None
+    if temp_path is None:
+        ctx = tempfile.TemporaryDirectory(prefix=f"pixel_{pixel.row}_{pixel.col}_")
+        temp_path = Path(ctx.__enter__())
+
+    try:
+        # Step 1: Export pixel to CSV
+        csv_file = temp_path / "pixel.txt"
+        pixel.to_csv(csv_file)
+
+        # Step 2: Convert to .twenty format
+        twenty_file = temp_path / "pixel.twenty"
+        convert_csv_to_sammy_twenty(csv_file, twenty_file)
+
+        # Step 3: Resolve JSON config + ENDF staging
+        if shared_json_config is not None or shared_endf_directory is not None:
+            if shared_json_config is None or shared_endf_directory is None:
+                raise ValueError("Both shared_json_config and shared_endf_directory must be provided together.")
+            if not shared_json_config.exists():
+                raise FileNotFoundError(f"Shared JSON config not found: {shared_json_config}")
+            if not shared_endf_directory.exists():
+                raise FileNotFoundError(f"Shared ENDF directory not found: {shared_endf_directory}")
+            json_path = shared_json_config
+            endf_directory = shared_endf_directory
+        else:
+            # Fallback mode for direct worker usage (tests/debug) without orchestrator pre-staging.
+            json_manager = JsonManager()
+            abundances = imaging_config.get_abundances()
+            json_path = json_manager.create_json_config(
+                isotopes=imaging_config.isotopes, abundances=abundances, working_dir=temp_path
+            )
+            endf_directory = temp_path
+
+        # Step 4: Create .inp file
+        inp_file = temp_path / "sammy.inp"
+        material_props = imaging_config.get_material_properties()
+        InpManager.create_multi_isotope_inp(
+            inp_file,
+            title=f"Pixel ({pixel.row}, {pixel.col}) resonance fitting",
+            material_properties=material_props,
+            resolution_file_path=resolution_file,
+        )
+
+        # Step 5: Execute SAMMY
+        files = SammyFilesMultiMode(
+            input_file=inp_file,
+            json_config_file=json_path,
+            data_file=twenty_file,
+            endf_directory=endf_directory,
+        )
+
+        config = LocalSammyConfig(
+            sammy_executable=sammy_executable,
+            working_dir=temp_path / "sammy_working",
+            output_dir=temp_path / "sammy_output",
+        )
+        runner = LocalSammyRunner(config)
+        runner.validate_config()
+        runner.prepare_environment(files)
+        result = runner.execute_sammy(files)
+
+        if not result.success:
+            return PixelFitResult(
+                row=pixel.row,
+                col=pixel.col,
+                fit_results=None,
+                success=False,
+                error_message=f"SAMMY execution failed: {result.error_message}",
+                chi_squared=None,
+            )
+
+        runner.collect_outputs(result)
+        runner.cleanup()
+
+        # Step 6: Parse results
+        lpt_file = temp_path / "sammy_output" / "SAMMY.LPT"
+        lst_file = temp_path / "sammy_output" / "SAMMY.LST"
+
+        results_manager = ResultsManager(lpt_file_path=lpt_file, lst_file_path=lst_file)
+
+        if not results_manager.run_results.fit_results:
+            return PixelFitResult(
+                row=pixel.row,
+                col=pixel.col,
+                fit_results=None,
+                success=False,
+                error_message="No fit results found in SAMMY.LPT",
+                chi_squared=None,
+            )
+
+        # Extract final fit results
+        final_fit = results_manager.run_results.fit_results[-1]
+        chi_sq = final_fit.get_chi_squared_results()
+
+        # Extract chi-squared value (can be None if fit failed to converge)
+        chi_squared_value = chi_sq.chi_squared if chi_sq is not None else None
+
+        return PixelFitResult(
+            row=pixel.row,
+            col=pixel.col,
+            fit_results=final_fit,
+            success=True,
+            error_message=None,
+            chi_squared=chi_squared_value,
+        )
+
+    except Exception as e:
+        logger.exception(f"Exception during pixel fitting at ({pixel.row}, {pixel.col})")
+        return PixelFitResult(
+            row=pixel.row,
+            col=pixel.col,
+            fit_results=None,
+            success=False,
+            error_message=f"Exception: {str(e)}",
+            chi_squared=None,
+        )
+    finally:
+        # Clean up temp directory
+        if ctx is not None:
+            ctx.__exit__(None, None, None)
+        elif cleanup_policy == "immediate":
+            shutil.rmtree(temp_path, ignore_errors=True)
 
 
 class BatchFittingOrchestrator:
@@ -344,6 +454,7 @@ class BatchFittingOrchestrator:
         sammy_executable: Path,
         n_workers: int = 4,
         resolution_file: Optional[Path] = None,
+        temp_manager: Optional[TempFileManager] = None,
     ):
         """Initialize batch fitting orchestrator.
 
@@ -352,6 +463,9 @@ class BatchFittingOrchestrator:
             sammy_executable: Path to SAMMY binary
             n_workers: Number of parallel workers (default: 4)
             resolution_file: Optional path to resolution function file
+            temp_manager: Optional TempFileManager for controlling workspace
+                locations and cleanup policy. If None, uses system temp directory
+                with immediate cleanup (original behavior).
 
         Raises:
             FileNotFoundError: If SAMMY executable or resolution file doesn't exist
@@ -367,6 +481,7 @@ class BatchFittingOrchestrator:
         self.sammy_executable = sammy_executable
         self.n_workers = n_workers
         self.resolution_file = resolution_file
+        self.temp_manager = temp_manager
 
     def fit_pixels(
         self,
@@ -467,7 +582,16 @@ class BatchFittingOrchestrator:
 
         # Execute remaining pixels in parallel
         if remaining_pixels:
-            with tempfile.TemporaryDirectory(prefix="batch_shared_") as shared_workspace_dir:
+            with contextlib.ExitStack() as exit_stack:
+                # Enter TempFileManager context first so _initial_free_gb is recorded
+                # (enables disk-cap enforcement in workers) and __exit__ runs cleanup
+                # for non-manual policies when the batch completes.
+                if self.temp_manager is not None:
+                    exit_stack.enter_context(self.temp_manager)
+                    shared_workspace_dir = exit_stack.enter_context(self.temp_manager.shared_workspace("batch_shared"))
+                else:
+                    shared_workspace_dir = exit_stack.enter_context(tempfile.TemporaryDirectory(prefix="batch_shared_"))
+
                 shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
                 with GracefulShutdownHandler() as shutdown_handler:
@@ -525,7 +649,11 @@ class BatchFittingOrchestrator:
                             )
                             try:
                                 retry_futures = self._submit_pixels(
-                                    retry_executor, failed_pixels, shared_json_path, shared_endf_dir
+                                    retry_executor,
+                                    failed_pixels,
+                                    shared_json_path,
+                                    shared_endf_dir,
+                                    attempt_round=retry_round + 1,
                                 )
                                 all_future_maps.append(retry_futures)
                                 for p in failed_pixels:
@@ -617,8 +745,23 @@ class BatchFittingOrchestrator:
         pixels: List[PixelSpectrum],
         shared_json_path: Path,
         shared_endf_dir: Path,
+        attempt_round: int = 0,
     ) -> Dict[Future, PixelSpectrum]:
-        """Submit pixel fitting jobs to the executor."""
+        """Submit pixel fitting jobs to the executor.
+
+        Args:
+            executor: ProcessPoolExecutor to submit jobs to.
+            pixels: List of PixelSpectrum to fit.
+            shared_json_path: Path to pre-staged JSON config.
+            shared_endf_dir: Path to pre-staged ENDF directory.
+            attempt_round: Attempt number (0 = first, 1+ = retries). Included in
+                workspace directory names to prevent collisions with timed-out workers.
+        """
+        temp_base_dir = self.temp_manager.base_dir if self.temp_manager is not None else None
+        cleanup_policy = self.temp_manager.cleanup_policy if self.temp_manager is not None else "immediate"
+        max_disk_usage_gb = self.temp_manager.max_disk_usage_gb if self.temp_manager is not None else None
+        initial_free_gb = self.temp_manager.initial_free_gb if self.temp_manager is not None else None
+
         return {
             executor.submit(
                 _fit_pixel_worker,
@@ -628,6 +771,11 @@ class BatchFittingOrchestrator:
                 self.resolution_file,
                 shared_json_path,
                 shared_endf_dir,
+                temp_base_dir,
+                cleanup_policy,
+                attempt_round,
+                max_disk_usage_gb,
+                initial_free_gb,
             ): pixel
             for pixel in pixels
         }
