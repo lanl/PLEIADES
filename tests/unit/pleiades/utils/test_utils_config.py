@@ -328,9 +328,78 @@ class TestPleiadesConfig:
         with pytest.raises(ValueError, match="Isotope not found"):
             config.build_nuclear_params()
 
+    def test_build_nuclear_params_copies_retrieved_isotope_before_mutation(self, monkeypatch):
+        """Mutations should be applied to a copy, not to manager-owned isotope objects."""
+        shared_isotope_params = IsotopeParameters(
+            isotope_information=IsotopeInfo(
+                name="Ta-181",
+                element="Ta",
+                mass_number=181,
+                atomic_number=73,
+                mass_data=IsotopeMassData(atomic_mass=180.9479958),
+                spin=3.5,
+            )
+        )
+
+        class FakeIsotopeManager:
+            def get_isotope_parameters_from_isotope_string(self, isotope: str):
+                if isotope != "Ta-181":
+                    return None
+                return shared_isotope_params
+
+        monkeypatch.setattr("pleiades.nuclear.isotopes.manager.IsotopeManager", FakeIsotopeManager)
+
+        config = PleiadesConfig(
+            nuclear={"isotopes": [{"isotope": "Ta-181", "abundance": 0.8, "uncertainty": 0.05}]},
+            fit_routines={"fit_1": {"dataset_id": "dataset_1"}},
+        )
+
+        nuclear_params = config.build_nuclear_params()
+
+        assert len(nuclear_params.isotopes) == 1
+        built = nuclear_params.isotopes[0]
+        assert built is not shared_isotope_params
+        assert built.abundance == pytest.approx(0.8)
+        assert built.uncertainty == pytest.approx(0.05)
+        assert shared_isotope_params.abundance is None
+        assert shared_isotope_params.uncertainty is None
+
+    def test_build_nuclear_params_warns_on_duplicate_isotope_entries(self, monkeypatch):
+        """Duplicate isotope entries should emit a warning before validation fails."""
+        warnings_seen = []
+
+        class FakeIsotopeManager:
+            def get_isotope_parameters_from_isotope_string(self, isotope: str):
+                if isotope != "Ta-181":
+                    return None
+                return IsotopeParameters(
+                    isotope_information=IsotopeInfo(
+                        name="Ta-181",
+                        element="Ta",
+                        mass_number=181,
+                        atomic_number=73,
+                        mass_data=IsotopeMassData(atomic_mass=180.9479958),
+                        spin=3.5,
+                    )
+                )
+
+        monkeypatch.setattr("pleiades.nuclear.isotopes.manager.IsotopeManager", FakeIsotopeManager)
+        monkeypatch.setattr("pleiades.utils.config.logger.warning", lambda message: warnings_seen.append(message))
+
+        config = PleiadesConfig(
+            nuclear={"isotopes": [{"isotope": "Ta-181"}, {"isotope": "Ta-181"}]},
+            fit_routines={"fit_1": {"dataset_id": "dataset_1"}},
+        )
+
+        with pytest.raises(ValueError, match="Duplicate isotope names found"):
+            config.build_nuclear_params()
+
+        assert any("Duplicate isotope entry detected in config for 'Ta-181'" in message for message in warnings_seen)
+
     def test_ensure_endf_cache_downloads_to_workspace_endf_dir(self, monkeypatch, tmp_path):
         """ensure_endf_cache should call downloader for each isotope and return output paths."""
         calls = []
+        set_config_calls = {"count": 0}
 
         class FakeIsotopeManager:
             def get_isotope_info(self, isotope: str):
@@ -352,7 +421,10 @@ class TestPleiadesConfig:
                 )
                 return Path(output_dir) / f"{isotope.name}.endf"
 
-        monkeypatch.setattr("pleiades.utils.config.set_config", lambda cfg: None)
+        monkeypatch.setattr(
+            "pleiades.utils.config.set_config",
+            lambda cfg: set_config_calls.__setitem__("count", set_config_calls["count"] + 1),
+        )
         monkeypatch.setattr("pleiades.nuclear.manager.NuclearDataManager", FakeNuclearDataManager)
 
         config = PleiadesConfig(
@@ -375,6 +447,40 @@ class TestPleiadesConfig:
                 "use_cache": False,
             }
         ]
+        assert set_config_calls["count"] == 1
+
+    def test_ensure_endf_cache_can_skip_global_config_update(self, monkeypatch, tmp_path):
+        """ensure_endf_cache should not touch global config when update_config is False."""
+        set_config_calls = {"count": 0}
+
+        class FakeIsotopeManager:
+            def get_isotope_info(self, isotope: str):
+                return IsotopeInfo(name=isotope, element="Ta", mass_number=181, atomic_number=73)
+
+        class FakeNuclearDataManager:
+            def __init__(self):
+                self.isotope_manager = FakeIsotopeManager()
+
+            def download_endf_resonance_file(self, isotope, library, output_dir, method, use_cache):
+                return Path(output_dir) / f"{isotope.name}.endf"
+
+        monkeypatch.setattr(
+            "pleiades.utils.config.set_config",
+            lambda cfg: set_config_calls.__setitem__("count", set_config_calls["count"] + 1),
+        )
+        monkeypatch.setattr("pleiades.nuclear.manager.NuclearDataManager", FakeNuclearDataManager)
+
+        config = PleiadesConfig(
+            workspace={"root": tmp_path, "endf_dir": "${workspace.root}/endf_dir"},
+            nuclear={"isotopes": [{"isotope": "Ta-181"}]},
+            fit_routines={"fit_1": {"dataset_id": "dataset_1"}},
+        )
+
+        custom_endf_cache_dir = tmp_path / "custom_endf_cache_dir"
+        outputs = config.ensure_endf_cache(endf_cache_dir=custom_endf_cache_dir, update_config=False)
+
+        assert outputs == [custom_endf_cache_dir / "Ta-181.endf"]
+        assert set_config_calls["count"] == 0
 
     def test_create_routine_dirs_creates_fit_and_fit_results_dirs(self, tmp_path):
         """create_routine_dirs should create timestamped routine dirs and fit_results_dir."""

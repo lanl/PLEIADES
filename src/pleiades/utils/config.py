@@ -12,6 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pleiades.nuclear.models import DataRetrievalMethod, EndfLibrary, IsotopeParameters, nuclearParameters
 from pleiades.sammy.fitting.config import FitConfig
 from pleiades.utils.helper import VaryFlag
+from pleiades.utils.logger import loguru_logger
+
+logger = loguru_logger.bind(name=__name__)
 
 DEFAULT_NUCLEAR_SOURCES = {
     "DIRECT": "https://www-nds.iaea.org/public/download-endf",
@@ -133,12 +136,22 @@ class WorkspaceConfig(BaseModel):
         return self
 
     def _expand_root_path(self) -> None:
-        """Pass 1: expand only the workspace root path."""
+        """Pass 1: normalize only ``workspace.root``.
+
+        ``root`` is treated as the anchor for other workspace paths, so it must
+        be expanded before token-based expansion of dependent fields.
+        """
         self.root = _expand_path(self.root)
 
     def _expand_dependent_paths(self) -> None:
-        """Pass 2: expand workspace fields that may reference ``${workspace.*}`` tokens."""
+        """Pass 2: normalize fields that may reference ``${workspace.*}`` tokens.
+
+        This uses the already-expanded ``self.root`` (and any other resolved
+        workspace fields) as the substitution source.
+        """
         for field_name in ("endf_dir", "fitting_dir", "results_dir", "data_dir", "image_dir"):
+            # Resolve each field independently so unresolved/circular references
+            # in one field do not prevent expansion of the others.
             raw_value = getattr(self, field_name)
             setattr(self, field_name, _expand_path(raw_value, self))
 
@@ -336,7 +349,29 @@ class PleiadesConfig(BaseModel):
     def build_nuclear_params(self, routine_id: Optional[str] = None) -> nuclearParameters:
         """Build nuclearParameters from configured isotope entries.
 
-        Use the global NuclearConfig.isotopes list.
+        This method converts configuration-level isotope entries
+        (``self.nuclear.isotopes``) into concrete ``IsotopeParameters`` objects
+        used by SAMMY fit execution.
+
+        The implementation intentionally applies two safeguards:
+            1. Duplicate isotope identifiers are detected early and logged as
+               warnings so users can correct accidental duplicate entries in
+               configuration files.
+            2. Objects returned by ``IsotopeManager`` are deep-copied before
+               mutation (abundance, uncertainty, vary flag, library) to avoid
+               mutating shared/cached manager state across runs.
+
+        Args:
+            routine_id: Optional routine identifier. Currently unused but kept
+                for API compatibility with routine-aware workflows.
+
+        Returns:
+            ``nuclearParameters`` populated with per-isotope values from config.
+
+        Raises:
+            ValueError: If no isotopes are configured.
+            ValueError: If any isotope string cannot be resolved by
+                ``IsotopeManager``.
         """
         isotope_entries = None
         isotope_entries = self.nuclear.isotopes
@@ -346,22 +381,53 @@ class PleiadesConfig(BaseModel):
 
         manager = IsotopeManager()
         isotopes: List[IsotopeParameters] = []
+        seen_isotopes: set[str] = set()
+        retrieved_instance_ids: Dict[str, int] = {}
 
         default_library = self.nuclear.default_library or EndfLibrary.ENDF_B_VIII_0
 
         for entry in isotope_entries:
+            # Normalize plain dict entries into the typed isotope model.
             if isinstance(entry, dict):
                 entry = IsotopeConfig(**entry)
 
-            isotope_params = manager.get_isotope_parameters_from_isotope_string(entry.isotope)
-            if isotope_params is None:
+            # Warn on duplicate config entries before final nuclearParameters
+            # validation. Validation still rejects duplicate isotope names, but
+            # this warning points users to the root config issue sooner.
+            if entry.isotope in seen_isotopes:
+                logger.warning(
+                    f"Duplicate isotope entry detected in config for '{entry.isotope}'. "
+                    "This may trigger duplicate isotope validation errors."
+                )
+            else:
+                seen_isotopes.add(entry.isotope)
+
+            # Fetch baseline isotope parameters from the isotope manager.
+            retrieved_isotope_params = manager.get_isotope_parameters_from_isotope_string(entry.isotope)
+            if retrieved_isotope_params is None:
                 raise ValueError(f"Isotope not found: {entry.isotope}")
 
+            # If the manager returns the same object instance for repeated
+            # lookups, warn that we are about to isolate mutation via copying.
+            previous_instance_id = retrieved_instance_ids.get(entry.isotope)
+            current_instance_id = id(retrieved_isotope_params)
+            if previous_instance_id == current_instance_id:
+                logger.warning(
+                    f"IsotopeManager returned a reused IsotopeParameters instance for '{entry.isotope}'; "
+                    "applying changes to a deep copy to prevent shared-state mutation."
+                )
+            retrieved_instance_ids[entry.isotope] = current_instance_id
+
+            # Apply config-specific overrides on a deep copy to avoid mutating
+            # manager-owned/cached instances.
+            isotope_params = retrieved_isotope_params.model_copy(deep=True)
             isotope_params.abundance = entry.abundance
             isotope_params.uncertainty = entry.uncertainty
             isotope_params.vary_abundance = entry.vary_abundance
             isotope_params.endf_library = entry.endf_library or default_library
 
+            # Collect per-entry isotope params; nuclearParameters validates
+            # aggregate constraints (including duplicate isotope names).
             isotopes.append(isotope_params)
 
         return nuclearParameters(isotopes=isotopes)
@@ -382,10 +448,41 @@ class PleiadesConfig(BaseModel):
         self,
         routine_id: Optional[str] = None,
         method: DataRetrievalMethod = DataRetrievalMethod.DIRECT,
-        output_dir: Optional[Path] = None,
+        endf_cache_dir: Optional[Path] = None,
         use_cache: bool = True,
+        update_config: bool = True,
     ) -> List[Path]:
-        """Ensure ENDF cache files exist for configured isotopes."""
+        """Ensure ENDF cache files exist for configured isotopes.
+
+        This method validates configured isotopes, resolves a target output
+        directory, and delegates file retrieval to ``NuclearDataManager``.
+        For each isotope entry, it requests the resonance file and returns the
+        list of resulting file paths.
+
+        Args:
+            routine_id: Optional routine identifier (reserved for future routine-specific
+                behavior).
+            method: Nuclear data retrieval method.
+            endf_cache_dir: Optional override for the ENDF cache/output directory.
+            use_cache: If True, reuse existing cached artifacts when available.
+            update_config: If True, update module-global config via ``set_config(self)``
+                before constructing ``NuclearDataManager``.
+
+        Returns:
+            List of output paths, one per configured isotope, in the same order
+            as ``self.nuclear.isotopes``.
+
+        Raises:
+            ValueError: If no isotopes are configured.
+            ValueError: If an isotope identifier cannot be resolved by the
+                isotope manager.
+
+        Side Effects:
+            - Creates ``endf_cache_dir`` (or resolved default cache directory)
+              if it does not exist.
+            - Optionally updates module-global config state when
+              ``update_config=True``.
+        """
         isotope_entries = self.nuclear.isotopes
 
         if not isotope_entries:
@@ -393,16 +490,20 @@ class PleiadesConfig(BaseModel):
 
         from pleiades.nuclear.manager import NuclearDataManager
 
-        output_dir = (
-            Path(output_dir)
-            if output_dir is not None
+        endf_cache_dir = (
+            Path(endf_cache_dir)
+            if endf_cache_dir is not None
             else (
                 self.workspace.endf_dir if self.workspace and self.workspace.endf_dir else self.nuclear_data_cache_dir
             )
         )
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Ensure download destination exists before any retrieval calls.
+        endf_cache_dir.mkdir(parents=True, exist_ok=True)
 
-        set_config(self)
+        # Keep this side effect opt-in/explicit for callers that need global
+        # configuration state synchronized for downstream manager behavior.
+        if update_config:
+            set_config(self)
         manager = NuclearDataManager()
         default_library = self.nuclear.default_library or EndfLibrary.ENDF_B_VIII_0
 
@@ -410,14 +511,17 @@ class PleiadesConfig(BaseModel):
         for entry in isotope_entries:
             if isinstance(entry, dict):
                 entry = IsotopeConfig(**entry)
+            # Resolve isotope metadata used by the download manager.
             isotope_info = manager.isotope_manager.get_isotope_info(entry.isotope)
             if isotope_info is None:
                 raise ValueError(f"Isotope not found: {entry.isotope}")
+            # Apply per-isotope library override when present; otherwise use
+            # the config default library.
             library = entry.endf_library or default_library
             output_path = manager.download_endf_resonance_file(
                 isotope=isotope_info,
                 library=library,
-                output_dir=str(output_dir),
+                output_dir=str(endf_cache_dir),
                 method=method,
                 use_cache=use_cache,
             )
