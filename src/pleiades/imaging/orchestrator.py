@@ -397,16 +397,38 @@ def _fit_pixel_worker_impl(
         # Extract final fit results
         final_fit = results_manager.run_results.fit_results[-1]
 
-        # Inject isotope names from config into parsed results.
-        # The LPT parser extracts abundances and masses but not names;
-        # the names are known from the ImagingConfig and appear in order.
+        # Ensure nuclear_data.isotopes is populated.
+        #
+        # Problem: For single-isotope fits, SAMMY does not output the
+        # "Isotopic abundance and mass for each nuclide" section in the LPT.
+        # The LPT parser therefore returns an empty isotopes list, which
+        # causes the aggregator to fail with an isotope count mismatch.
+        #
+        # Fix: When the parser returns fewer isotopes than expected, build
+        # IsotopeParameters from the ImagingConfig so downstream code
+        # (aggregator, get_abundances) has the data it needs.
         nuclear = getattr(final_fit, "nuclear_data", None)
         if nuclear is not None:
             parsed_isotopes = getattr(nuclear, "isotopes", None) or []
+
             if len(parsed_isotopes) == len(imaging_config.isotopes):
+                # Multi-isotope case: LPT parsed isotopes, just inject names
                 for iso_param, iso_name in zip(parsed_isotopes, imaging_config.isotopes):
                     if iso_param.isotope_information is not None:
                         iso_param.isotope_information.name = iso_name
+            elif len(parsed_isotopes) == 0:
+                # Single-isotope case (or parser found nothing): build from config
+                from pleiades.nuclear.isotopes.models import IsotopeInfo
+                from pleiades.nuclear.models import IsotopeParameters
+
+                abundances = imaging_config.get_abundances()
+                for iso_name, abund in zip(imaging_config.isotopes, abundances):
+                    iso_info = IsotopeInfo.from_string(iso_name)
+                    iso_param = IsotopeParameters(
+                        isotope_information=iso_info,
+                        abundance=abund,
+                    )
+                    nuclear.isotopes.append(iso_param)
 
         chi_sq = final_fit.get_chi_squared_results()
 
