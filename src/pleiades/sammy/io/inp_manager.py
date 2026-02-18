@@ -10,6 +10,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, get_args, get_origin
 
+from pydantic import BaseModel, Field
+
 from pleiades.nuclear.isotopes.models import IsotopeInfo, IsotopeMassData
 from pleiades.nuclear.models import IsotopeParameters
 from pleiades.sammy.data.options import DataTypeOptions
@@ -33,6 +35,23 @@ DEFAULT_T0_VALUE = 0.86000000  # Time offset t₀ (μs)
 DEFAULT_T0_UNCERTAINTY = 0.00200000  # Uncertainty on t₀ (μs)
 DEFAULT_L0_VALUE = 1.0020000  # L₀ value (dimensionless)
 DEFAULT_L0_UNCERTAINTY = 2.00000e-5  # Uncertainty on L₀
+
+
+class InpDatasetMetadata(BaseModel):
+    """Optional typed dataset metadata used to seed INP generation.
+
+    These values are dataset-level hints and should only be used when the
+    corresponding value is not already provided in ``FitConfig``.
+    """
+
+    element: Optional[str] = Field(default=None, description="Element symbol (e.g. Au, Ta)")
+    mass_number: Optional[int] = Field(default=None, description="Mass number for isotope name composition")
+    atomic_mass_amu: Optional[float] = Field(default=None, description="Atomic mass (amu)")
+    min_energy_eV: Optional[float] = Field(default=None, description="Minimum fit energy (eV)")
+    max_energy_eV: Optional[float] = Field(default=None, description="Maximum fit energy (eV)")
+    temperature_K: Optional[float] = Field(default=None, description="Sample temperature (K)")
+    density_g_cm3: Optional[float] = Field(default=None, description="Material density (g/cm^3)")
+    thickness_mm: Optional[float] = Field(default=None, description="Sample thickness (mm)")
 
 
 class InpManager:
@@ -234,11 +253,14 @@ class InpManager:
 
     def _element_info_from_fit_config(self) -> ElementInfo:
         energy = self.fit_config.physics_params.energy_parameters
+        # Preserve legacy-safe defaults when FitConfig energy bounds are unset.
+        min_energy = energy.min_energy if energy.min_energy is not None and energy.min_energy > 0 else 0.001
+        max_energy = energy.max_energy if energy.max_energy is not None and energy.max_energy > 0 else 1000.0
         element_info = ElementInfo(
             element=self._element_name_from_fit_config(),
             atomic_weight=self._atomic_mass_from_fit_config(),
-            min_energy=energy.min_energy,
-            max_energy=energy.max_energy,
+            min_energy=min_energy,
+            max_energy=max_energy,
             nepnts=energy.number_of_energy_points,
             itmax=self.fit_config.max_iterations,
             icorr=self.fit_config.i_correlation,
@@ -317,96 +339,87 @@ class InpManager:
         lines = Card02.to_lines(element_info)
         return lines[0]
 
-    def generate_physical_constants_section(self, material_properties: Dict = None) -> str:
+    def _number_density_from_dataset_metadata(self, dataset_metadata: Optional[InpDatasetMetadata]) -> Optional[float]:
+        """Derive number density from typed dataset metadata.
+
+        Number density derivation is all-or-nothing: if any of the required
+        inputs are provided, all three must be present to avoid silently
+        generating inconsistent values.
         """
-        Generate the physical constants section for multi-isotope mode.
+        if dataset_metadata is None:
+            return None
+
+        density = dataset_metadata.density_g_cm3
+        thickness = dataset_metadata.thickness_mm
+        atomic_mass = dataset_metadata.atomic_mass_amu
+
+        has_any_density_input = any(value is not None for value in (density, thickness, atomic_mass))
+        if not has_any_density_input:
+            return None
+        if density is None or thickness is None or atomic_mass is None:
+            raise ValueError(
+                "dataset_metadata must include density_g_cm3, thickness_mm, and atomic_mass_amu to derive THICK"
+            )
+
+        from pleiades.utils.units import calculate_number_density
+
+        return calculate_number_density(density, thickness, atomic_mass)
+
+    def generate_physical_constants_section(self, dataset_metadata: Optional[InpDatasetMetadata] = None) -> str:
+        """
+        Generate Card Set 5 physical constants from FitConfig.
 
         Args:
-            material_properties: Dict with material properties
+            dataset_metadata: Optional typed metadata used only as a fallback
+                source for temperature when FitConfig does not define one.
 
         Returns:
             str: Physical constants line
         """
-        if material_properties is None and self.physical_constants:
-            material_properties = self.physical_constants
+        broadening = self.fit_config.physics_params.broadening_parameters
 
-        if material_properties is None and self._fit_config_provided:
-            broadening = self.fit_config.physics_params.broadening_parameters
-            material_properties = {
-                "temperature_K": broadening.temp,
-                "flight_path_m": broadening.dist,
-                "delta_l": broadening.deltal,
-                "delta_g": broadening.deltag,
-                "delta_e": broadening.deltae,
-            }
-            material_properties = {key: value for key, value in material_properties.items() if value is not None}
+        temperature = broadening.temp
+        if temperature is None and dataset_metadata is not None:
+            temperature = dataset_metadata.temperature_K
+        temperature = 293.6 if temperature is None else temperature
 
-        if material_properties:
-            temperature = material_properties.get("temperature_K")
-            if temperature is None:
-                temperature = material_properties.get("temperature")
-            if temperature is None:
-                temperature = 293.6
+        flight_path = broadening.dist
+        flight_path = 25.0 if flight_path is None else flight_path
 
-            flight_path = material_properties.get("flight_path_m")
-            if flight_path is None:
-                flight_path = material_properties.get("flight_path")
-            if flight_path is None:
-                flight_path = 25.0
+        delta_l = broadening.deltal
+        delta_l = 0.0 if delta_l is None else delta_l
+        delta_g = broadening.deltag
+        delta_g = 0.0 if delta_g is None else delta_g
+        delta_e = broadening.deltae
+        delta_e = 0.0 if delta_e is None else delta_e
 
-            delta_l = material_properties.get("delta_l", 0.0)
-            delta_g = material_properties.get("delta_g", 0.0)
-            delta_e = material_properties.get("delta_e", 0.0)
-
-            constants = PhysicalConstants(
-                temperature=temperature,
-                flight_path_length=flight_path,
-                delta_l=delta_l,
-                delta_g=delta_g,
-                delta_e=delta_e,
-            )
-        else:
-            constants = PhysicalConstants(
-                temperature=293.6,
-                flight_path_length=25.0,
-                delta_l=0.0,
-                delta_g=0.0,
-                delta_e=0.0,
-            )
+        constants = PhysicalConstants(
+            temperature=temperature,
+            flight_path_length=flight_path,
+            delta_l=delta_l,
+            delta_g=delta_g,
+            delta_e=delta_e,
+        )
 
         lines = Card05.to_lines(constants)
         return "\n" + lines[0]
 
-    def generate_card_7_section(self, material_properties: Dict = None) -> str:
+    def generate_card_7_section(self, dataset_metadata: Optional[InpDatasetMetadata] = None) -> str:
         """
-        Generate the Card Set 7 section (CRFN, THICK).
+        Generate Card Set 7 (CRFN, THICK) from FitConfig.
 
         Args:
-            material_properties: Dict with material properties
+            dataset_metadata: Optional typed metadata used to derive THICK when
+                broadening.thick is not already defined in FitConfig.
 
         Returns:
             str: Card Set 7 line or empty string if unavailable
         """
-        crfn = None
-        thick = None
-
-        if material_properties:
-            crfn = material_properties.get("crfn")
-            thick = material_properties.get("thick")
-
-            if thick is None:
-                density = material_properties.get("density_g_cm3")
-                thickness_mm = material_properties.get("thickness_mm")
-                atomic_mass = material_properties.get("atomic_mass_amu")
-                if density is not None and thickness_mm is not None and atomic_mass is not None:
-                    from pleiades.utils.units import calculate_number_density
-
-                    thick = calculate_number_density(density, thickness_mm, atomic_mass)
-
-        if crfn is None or thick is None:
-            broadening = self.fit_config.physics_params.broadening_parameters
-            crfn = broadening.crfn if crfn is None else crfn
-            thick = broadening.thick if thick is None else thick
+        broadening = self.fit_config.physics_params.broadening_parameters
+        crfn = broadening.crfn
+        thick = broadening.thick
+        if thick is None:
+            thick = self._number_density_from_dataset_metadata(dataset_metadata)
 
         if crfn is None or thick is None:
             return ""
@@ -426,7 +439,7 @@ class InpManager:
             return self.reaction_type
         return "transmission"
 
-    def generate_card_set_2_element_info(self, material_properties: Dict = None) -> str:
+    def generate_card_set_2_element_info(self, dataset_metadata: Optional[InpDatasetMetadata] = None) -> str:
         """
         Generate Card Set 2 (element information) according to SAMMY documentation.
 
@@ -434,103 +447,78 @@ class InpManager:
         according to SAMMY Card Set 2 specification.
 
         Args:
-            material_properties: Dict with material properties including element info
+            dataset_metadata: Optional typed metadata used to override selected
+                Card 2 values after reading defaults from FitConfig.
 
         Returns:
             str: Properly formatted Card Set 2 element information line
         """
-        if material_properties:
-            element = material_properties.get("element", "Au")
-            mass_number = material_properties.get("mass_number")
-            atomic_mass = material_properties.get("atomic_mass_amu", 196.966569)
-            min_energy = material_properties.get("min_energy_eV", 0.001)
-            max_energy = material_properties.get("max_energy_eV", 1000.0)
-
-            if mass_number is not None:
-                element_name = f"{element}{mass_number}"
-            else:
-                element_name = element
-
-            element_info = ElementInfo(
-                element=element_name,
-                atomic_weight=atomic_mass,
-                min_energy=min_energy,
-                max_energy=max_energy,
-                nepnts=material_properties.get("nepnts", material_properties.get("number_of_energy_points")),
-                itmax=material_properties.get("itmax", material_properties.get("max_iterations")),
-                icorr=material_properties.get("icorr", material_properties.get("i_correlation")),
-                nxtra=material_properties.get("nxtra", material_properties.get("number_of_extra_points")),
-                iptdop=material_properties.get("iptdop", self.fit_config.iptdop if self._fit_config_provided else None),
-                iptwid=material_properties.get("iptwid", self.fit_config.iptwid if self._fit_config_provided else None),
-                ixxchn=material_properties.get("ixxchn", self.fit_config.ixxchn if self._fit_config_provided else None),
-                ndigit=material_properties.get("ndigit", self.fit_config.ndigit if self._fit_config_provided else None),
-                idropp=material_properties.get("idropp", self.fit_config.idropp if self._fit_config_provided else None),
-                matnum=material_properties.get("matnum", self.fit_config.matnum if self._fit_config_provided else None),
-            )
-        elif self._fit_config_provided:
-            element_info = self._element_info_from_fit_config()
-        else:
-            element_info = ElementInfo(
-                element="Au197",
-                atomic_weight=196.96657,
-                min_energy=0.001,
-                max_energy=1000.0,
-            )
+        element_info = self._element_info_from_fit_config()
+        if dataset_metadata:
+            if dataset_metadata.element:
+                if dataset_metadata.mass_number is not None:
+                    element_info.element = f"{dataset_metadata.element}{dataset_metadata.mass_number}"
+                else:
+                    element_info.element = dataset_metadata.element
+            if dataset_metadata.atomic_mass_amu is not None:
+                element_info.atomic_weight = dataset_metadata.atomic_mass_amu
+            if dataset_metadata.min_energy_eV is not None:
+                element_info.min_energy = dataset_metadata.min_energy_eV
+            if dataset_metadata.max_energy_eV is not None:
+                element_info.max_energy = dataset_metadata.max_energy_eV
 
         lines = Card02.to_lines(element_info)
         return lines[0]
 
-    def generate_broadening_parameters_section(self, material_properties: Dict = None) -> str:
+    def generate_broadening_parameters_section(self, dataset_metadata: Optional[InpDatasetMetadata] = None) -> str:
         """
-        Generate broadening parameters section for multi-isotope mode.
+        Generate broadening parameters section from FitConfig.
 
         Args:
-            material_properties: Dict with material properties for calculations
+            dataset_metadata: Optional typed metadata used to fill temperature
+                and derive THICK when these are not defined in FitConfig.
 
         Returns:
             str: Broadening parameters section with required blank line before it
         """
-        if material_properties:
-            from pleiades.experimental.models import BroadeningParameters
-            from pleiades.sammy.fitting.config import FitConfig
-            from pleiades.sammy.io.card_formats.par04_broadening import Card04
-            from pleiades.utils.helper import VaryFlag
-            from pleiades.utils.units import calculate_number_density
+        from pleiades.sammy.fitting.config import FitConfig
+        from pleiades.sammy.io.card_formats.par04_broadening import Card04
+        from pleiades.utils.helper import VaryFlag
 
-            # Extract and validate material properties
-            density = material_properties.get("density_g_cm3")
-            thickness = material_properties.get("thickness_mm", 5.0)
-            atomic_mass = material_properties.get("atomic_mass_amu")
-            temperature = material_properties.get("temperature_K", 293.6)
+        broadening_params = self.fit_config.physics_params.broadening_parameters.model_copy(deep=True)
 
-            if density is None or atomic_mass is None:
-                raise ValueError("material_properties must contain 'density_g_cm3' and 'atomic_mass_amu'")
+        if (
+            broadening_params.temp is None
+            and dataset_metadata is not None
+            and dataset_metadata.temperature_K is not None
+        ):
+            broadening_params.temp = dataset_metadata.temperature_K
 
-            # Calculate number density
-            number_density = calculate_number_density(density, thickness, atomic_mass)
+        if broadening_params.thick is None:
+            derived_thick = self._number_density_from_dataset_metadata(dataset_metadata)
+            if derived_thick is not None:
+                broadening_params.thick = derived_thick
+                broadening_params.flag_thick = VaryFlag.YES
 
-            # Create FitConfig with broadening parameters using proper Card04
-            fit_config = FitConfig()
-
-            # Create BroadeningParameters object
-            broadening_params = BroadeningParameters(
-                crfn=8.0,  # Matching radius
-                temp=temperature,  # Temperature
-                thick=number_density,  # Calculated number density
-                deltal=0.0,  # Flight path spread
-                deltag=0.0,  # Gaussian resolution
-                deltae=0.0,  # Exponential resolution
-                flag_thick=VaryFlag.YES,  # Allow SAMMY to vary thickness
+        # Skip Card 4 generation when no primary broadening values exist.
+        has_primary_broadening_values = any(
+            value is not None
+            for value in (
+                broadening_params.crfn,
+                broadening_params.temp,
+                broadening_params.thick,
+                broadening_params.deltal,
+                broadening_params.deltag,
+                broadening_params.deltae,
             )
+        )
+        if not has_primary_broadening_values:
+            return ""
 
-            # Add to fit_config
-            fit_config.physics_params.broadening_parameters = broadening_params
-
-            # Generate proper Card04 output with required blank line before it
-            lines = [""] + Card04.to_lines(fit_config)  # Add blank line before broadening section
-            return "\n".join(lines)
-
-        return ""  # Return empty string when no broadening parameters
+        fit_config = FitConfig()
+        fit_config.physics_params.broadening_parameters = broadening_params
+        lines = [""] + Card04.to_lines(fit_config)
+        return "\n".join(lines)
 
     def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
         """
@@ -625,27 +613,32 @@ class InpManager:
         return "\n" + "\n".join(lines)
 
     def generate_multi_isotope_inp_content(
-        self, material_properties: Dict = None, resolution_file_path: Path = None
+        self,
+        dataset_metadata: Optional[InpDatasetMetadata] = None,
+        resolution_file_path: Path = None,
     ) -> str:
         """
         Generate complete multi-isotope INP content with parameter sections.
 
         Args:
-            material_properties: Dict with material properties for parameter calculations
+            dataset_metadata: Optional typed metadata with dataset-level hints
             resolution_file_path: Optional absolute path to resolution function file
 
         Returns:
             str: Complete multi-isotope INP file content
         """
+        broadening = self.fit_config.physics_params.broadening_parameters
+        flight_path_m = broadening.dist if broadening.dist is not None else 25.0
+
         sections = [
             self.generate_title_section(),
-            self.generate_card_set_2_element_info(material_properties),  # Use Card Set 2 for element info
+            self.generate_card_set_2_element_info(dataset_metadata),
             "\n".join(self.generate_commands()),
-            self.generate_physical_constants_section(material_properties),
-            self.generate_card_7_section(material_properties),
+            self.generate_physical_constants_section(dataset_metadata),
+            self.generate_card_7_section(dataset_metadata),
             self.generate_reaction_type_section(),
-            self.generate_broadening_parameters_section(material_properties),
-            self.generate_misc_parameters_section(),
+            self.generate_broadening_parameters_section(dataset_metadata),
+            self.generate_misc_parameters_section(flight_path_m=flight_path_m),
             self.generate_normalization_parameters_section(),
             self.generate_resolution_function_section(
                 str(resolution_file_path.resolve()) if resolution_file_path else None
@@ -945,7 +938,12 @@ class InpManager:
 
     @classmethod
     def create_multi_isotope_inp(
-        cls, output_path: Path, title: str = None, material_properties: Dict = None, resolution_file_path: Path = None
+        cls,
+        output_path: Path,
+        fit_config: FitConfig,
+        title: str = None,
+        dataset_metadata: Optional[InpDatasetMetadata] = None,
+        resolution_file_path: Path = None,
     ) -> Path:
         """
         Create input file for multi-isotope JSON mode fitting.
@@ -955,19 +953,29 @@ class InpManager:
 
         Args:
             output_path: Path to write the input file
+            fit_config: Typed fit configuration used as the source of INP values
             title: Optional title for the inp file
-            material_properties: Optional dict with material properties for parameter calculations
+            raise ValueError("fit_config is required and must be an instance of FitConfig")
+                values (for example, Card 2 overrides or THICK derivation inputs)
             resolution_file_path: Optional absolute path to resolution function file
 
         Returns:
             Path: Path to the created file
         """
+        if fit_config is None or not isinstance(fit_config, FitConfig):
+            raise ValueError("fit_config must be an instance of FitConfig")
+
         options = FitOptions.from_multi_isotope_config()
-        manager = cls(options, title=title or "Multi-isotope JSON mode fitting", reaction_type="transmission")
+        manager = cls(
+            options=options,
+            fit_config=fit_config,
+            title=title or "Multi-isotope JSON mode fitting",
+            reaction_type="transmission",
+        )
 
         # Use specialized multi-isotope content generation
         try:
-            content = manager.generate_multi_isotope_inp_content(material_properties, resolution_file_path)
+            content = manager.generate_multi_isotope_inp_content(dataset_metadata, resolution_file_path)
             output_path = Path(output_path)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 

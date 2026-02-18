@@ -16,7 +16,7 @@ from pleiades.sammy.fitting.config import FitConfig
 from pleiades.sammy.fitting.options import FitOptions
 from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
 from pleiades.sammy.io.card_formats.inp05_broadening import Card05, PhysicalConstants
-from pleiades.sammy.io.inp_manager import InpManager
+from pleiades.sammy.io.inp_manager import InpDatasetMetadata, InpManager
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def test_init_with_all_parameters():
     options = FitOptions()
     title = "Test Title"
     isotope_info = {"name": "Fe56", "mass": 55.934}
-    physical_constants = {"temperature": 300, "flight_path": 200}
+    physical_constants = {"temperature_K": 300, "flight_path_m": 200}
     reaction_type = "TRANSMISSION"
 
     inp_manager = InpManager(
@@ -251,6 +251,7 @@ def test_custom_inp_creation(temp_dir):
 def test_create_multi_isotope_inp(temp_dir):
     """Test creating input file for multi-isotope JSON mode using class method."""
     output_path = temp_dir / "multi_isotope.inp"
+    fit_config = FitConfig()
 
     with patch.object(FitOptions, "from_multi_isotope_config") as mock_from_multi:
         mock_options = MagicMock(spec=FitOptions)
@@ -264,7 +265,9 @@ def test_create_multi_isotope_inp(temp_dir):
         ]
         mock_from_multi.return_value = mock_options
 
-        result_path = InpManager.create_multi_isotope_inp(output_path, title="Multi-isotope test")
+        result_path = InpManager.create_multi_isotope_inp(
+            output_path, fit_config=fit_config, title="Multi-isotope test"
+        )
 
         assert result_path == output_path
         assert output_path.exists()
@@ -283,9 +286,12 @@ def test_create_multi_isotope_inp(temp_dir):
 def test_multi_isotope_config_integration(temp_dir):
     """Test multi-isotope configuration integration without mocking."""
     output_path = temp_dir / "multi_isotope_real.inp"
+    fit_config = FitConfig()
 
     # Test real implementation without mocking
-    result_path = InpManager.create_multi_isotope_inp(output_path, title="Real multi-isotope integration test")
+    result_path = InpManager.create_multi_isotope_inp(
+        output_path, fit_config=fit_config, title="Real multi-isotope integration test"
+    )
 
     assert result_path == output_path
     assert output_path.exists()
@@ -315,15 +321,24 @@ def test_multi_isotope_config_integration(temp_dir):
     )
 
 
-def test_multi_isotope_with_material_properties(temp_dir):
-    """Test multi-isotope INP generation with material properties."""
+def test_multi_isotope_with_dataset_metadata(temp_dir):
+    """Test multi-isotope INP generation with typed dataset metadata."""
     output_path = temp_dir / "multi_isotope_with_materials.inp"
+    fit_config = FitConfig()
+    fit_config.physics_params.broadening_parameters.crfn = 8.0
 
-    # Test with Hafnium material properties
-    material_props = {"density_g_cm3": 13.31, "thickness_mm": 5.0, "atomic_mass_amu": 178.49, "temperature_K": 293.6}
+    dataset_metadata = InpDatasetMetadata(
+        density_g_cm3=13.31,
+        thickness_mm=5.0,
+        atomic_mass_amu=178.49,
+        temperature_K=293.6,
+    )
 
     result_path = InpManager.create_multi_isotope_inp(
-        output_path, title="Hafnium multi-isotope test", material_properties=material_props
+        output_path,
+        fit_config=fit_config,
+        title="Hafnium multi-isotope test",
+        dataset_metadata=dataset_metadata,
     )
 
     assert result_path == output_path
@@ -342,15 +357,22 @@ def test_multi_isotope_with_material_properties(temp_dir):
     # No resolution function expected when no resolution_file_path provided
 
 
-def test_multi_isotope_missing_required_properties(temp_dir):
-    """Test multi-isotope INP generation with missing required properties."""
+def test_multi_isotope_missing_required_dataset_metadata_fields(temp_dir):
+    """Typed metadata should require all THICK derivation inputs when any are provided."""
     output_path = temp_dir / "multi_isotope_missing.inp"
+    fit_config = FitConfig()
 
-    # Missing required density
-    incomplete_props = {"thickness_mm": 5.0, "atomic_mass_amu": 178.49}
+    incomplete_metadata = InpDatasetMetadata(thickness_mm=5.0, atomic_mass_amu=178.49)
 
-    with pytest.raises(ValueError, match="must contain 'density_g_cm3' and 'atomic_mass_amu'"):
-        InpManager.create_multi_isotope_inp(output_path, title="Should fail", material_properties=incomplete_props)
+    with pytest.raises(
+        ValueError, match="dataset_metadata must include density_g_cm3, thickness_mm, and atomic_mass_amu"
+    ):
+        InpManager.create_multi_isotope_inp(
+            output_path,
+            fit_config=fit_config,
+            title="Should fail",
+            dataset_metadata=incomplete_metadata,
+        )
 
 
 def test_generate_physical_constants_section_uses_fit_config_dist():
@@ -372,6 +394,27 @@ def test_generate_physical_constants_section_uses_fit_config_dist():
     assert constants.delta_l == pytest.approx(0.2)
     assert constants.delta_g == pytest.approx(0.1)
     assert constants.delta_e == pytest.approx(0.01)
+
+
+def test_generate_physical_constants_section_uses_dataset_metadata_temperature_fallback():
+    """Card 5 generation should use dataset metadata temperature when FitConfig temp is unset."""
+    fit_config = FitConfig()
+    broadening = fit_config.physics_params.broadening_parameters
+    broadening.temp = None
+    broadening.dist = 40.0
+    broadening.deltal = 0.4
+    broadening.deltag = 0.3
+    broadening.deltae = 0.2
+
+    manager = InpManager(fit_config=fit_config)
+    section = manager.generate_physical_constants_section(dataset_metadata=InpDatasetMetadata(temperature_K=310.0))
+    constants = Card05.from_lines([section.strip()])
+
+    assert constants.temperature == pytest.approx(310.0)
+    assert constants.flight_path_length == pytest.approx(40.0)
+    assert constants.delta_l == pytest.approx(0.4)
+    assert constants.delta_g == pytest.approx(0.3)
+    assert constants.delta_e == pytest.approx(0.2)
 
 
 def test_read_inp_file_sets_broadening_dist_from_card5(temp_dir):
