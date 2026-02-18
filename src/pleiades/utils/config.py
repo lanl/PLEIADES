@@ -77,11 +77,23 @@ class WorkspaceConfig(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    # Working root directory for PLEIADES. This is the base path that other workspace-relative paths can reference.
     root: Optional[Path] = None
+
+    # Optional subdirectory for ENDF cache files. If not set, defaults to the same path as nuclear_data_cache_dir in NuclearConfig.
     endf_dir: Optional[Path] = None
+
+    # Optional subdirectory for fit routine working directories. Each routine gets its own subdirectory here with a specific routine_id name.
     fitting_dir: Optional[Path] = None
+
+    # Optional subdirectory for aggregate results across routines (e.g., combined CSVs, summary reports). This is separate from the per-routine fit_results_dir.
     results_dir: Optional[Path] = None
+
+    # Optional subdirectory for input data files (e.g., transmission .dat/.twenty). This is separate from the fitting and results directories.
+    # Each fit_routine sub directory should have a symlink to the relevant data files from this directory to avoid duplication.
     data_dir: Optional[Path] = None
+
+    # Optional subdirectory for generated images/plots. This is separate from the fitting and results directories.
     image_dir: Optional[Path] = None
 
     @model_validator(mode="after")
@@ -396,39 +408,68 @@ class PleiadesConfig(BaseModel):
         self,
         base_routine_ids: Optional[List[str]] = None,
         timestamp: Optional[str] = None,
-    ) -> List[Dict[str, Path]]:
-        """Create timestamped routine directories under workspace.fitting_dir."""
+    ) -> List[Dict[str, str | Path]]:
+        """Create per-routine fit directories and a per-fit results subdirectory.
+
+        Directory layout produced by this method:
+            <workspace.fitting_dir>/<routine_id>/
+            <workspace.fitting_dir>/<routine_id>/fit_results_dir/
+
+        Where ``routine_id`` is built as ``<base_routine_id>_<timestamp>``.
+
+        Args:
+            base_routine_ids: Optional list of base routine names. If omitted, all keys
+                from ``self.fit_routines`` are used.
+            timestamp: Optional UTC timestamp string to make routine directories unique.
+                If omitted, a timestamp in ``YYYYMMDDTHHMMSSZ`` format is generated.
+
+        Returns:
+            A list of dictionaries, one per created routine directory, each containing:
+            - ``routine_id`` (str): The final timestamped routine identifier.
+            - ``fit_dir`` (Path): The routine working directory under ``fitting_dir``.
+            - ``fit_results_dir`` (Path): Subdirectory for SAMMY outputs for that routine.
+
+        Raises:
+            ValueError: If ``workspace.fitting_dir`` is not configured.
+            ValueError: If no routine ids are available to create.
+        """
+        # The fitting root is required because each routine directory is created under it.
         if not self.workspace or not self.workspace.fitting_dir:
             raise ValueError("workspace.fitting_dir is required to create routine directories")
 
+        # If explicit routine ids are not provided, use configured fit routine keys.
         routine_ids = base_routine_ids or list(self.fit_routines.keys())
         if not routine_ids:
             raise ValueError("No fit_routines defined to create routine directories")
 
+        # Generate a UTC timestamp once so all routines created in this call share it.
         if timestamp is None:
             from datetime import datetime, timezone
 
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
-        created: List[Dict[str, Path]] = []
+        created: List[Dict[str, str | Path]] = []
         fitting_dir = self.workspace.fitting_dir
 
         for base_routine_id in routine_ids:
+            # Compose a run-unique routine id and derive both routine directories.
             routine_id = f"{base_routine_id}_{timestamp}"
             fit_dir = fitting_dir / routine_id
-            results_dir = fit_dir / "results_dir"
+            fit_results_dir = fit_dir / "fit_results_dir"
 
+            # Ensure both the routine root and its SAMMY output subdirectory exist.
             fit_dir.mkdir(parents=True, exist_ok=True)
-            results_dir.mkdir(parents=True, exist_ok=True)
+            fit_results_dir.mkdir(parents=True, exist_ok=True)
 
             created.append(
                 {
                     "routine_id": routine_id,
                     "fit_dir": fit_dir,
-                    "results_dir": results_dir,
+                    "fit_results_dir": fit_results_dir,
                 }
             )
 
+        # Ensure workspace-level aggregate results directory exists (if configured).
         if self.workspace.results_dir:
             self.workspace.results_dir.mkdir(parents=True, exist_ok=True)
 
