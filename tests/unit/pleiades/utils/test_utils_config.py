@@ -188,6 +188,21 @@ class TestPleiadesConfig:
         assert config.workspace.data_dir == tmp_path / "data_dir"
         assert config.workspace.image_dir == tmp_path / "image_dir"
 
+    def test_workspace_expands_root_first_then_dependent_tokens(self, tmp_path, monkeypatch):
+        """Dependent workspace tokens should resolve against expanded root values."""
+        monkeypatch.setenv("PLEIADES_WORK_ROOT", str(tmp_path))
+        config = PleiadesConfig(
+            workspace={
+                "root": "$PLEIADES_WORK_ROOT",
+                "fitting_dir": "${workspace.root}/fitting_dir",
+            },
+            fit_routines={"fit_1": {"dataset_id": "dataset_1"}},
+        )
+
+        assert config.workspace is not None
+        assert config.workspace.root == tmp_path
+        assert config.workspace.fitting_dir == tmp_path / "fitting_dir"
+
     def test_workspace_unresolved_token_results_in_none(self, tmp_path):
         """Unresolved workspace tokens should produce None after expansion."""
         config = PleiadesConfig(

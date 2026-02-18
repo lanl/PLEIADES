@@ -20,6 +20,23 @@ DEFAULT_NUCLEAR_SOURCES = {
 
 
 def _expand_path(value: Optional[Any], workspace: Optional["WorkspaceConfig"] = None) -> Optional[Path]:
+    """Expand a path-like value into an absolute/relative ``Path`` object.
+
+    Expansion behavior:
+    - Accepts ``Path`` or string-like inputs.
+    - Expands ``~`` and environment variables (e.g. ``$HOME``).
+    - When ``workspace`` is provided, replaces supported
+      ``${workspace.<field>}`` tokens.
+    - Returns ``None`` when tokens cannot be resolved or when a circular
+      token reference is detected.
+
+    Args:
+        value: Raw value from config (string/Path/None).
+        workspace: Workspace model used for token substitution.
+
+    Returns:
+        Expanded ``Path`` or ``None`` if unresolved.
+    """
     if value is None:
         return None
 
@@ -98,13 +115,32 @@ class WorkspaceConfig(BaseModel):
 
     @model_validator(mode="after")
     def _expand_paths(self) -> "WorkspaceConfig":
-        self.root = _expand_path(self.root)
-        self.endf_dir = _expand_path(self.endf_dir, self)
-        self.fitting_dir = _expand_path(self.fitting_dir, self)
-        self.results_dir = _expand_path(self.results_dir, self)
-        self.data_dir = _expand_path(self.data_dir, self)
-        self.image_dir = _expand_path(self.image_dir, self)
+        """Normalize workspace paths after model construction.
+
+        This is intentionally ordered in two phases:
+        1. Expand ``root`` first.
+        2. Expand all other fields that may reference ``${workspace.root}``
+           or other workspace tokens.
+
+        The explicit ordering keeps token substitution deterministic and makes
+        field dependencies easy to reason about during maintenance.
+        """
+        # Pass 1: resolve root so dependent fields can reference it.
+        self._expand_root_path()
+
+        # Pass 2: resolve fields that may contain workspace token references.
+        self._expand_dependent_paths()
         return self
+
+    def _expand_root_path(self) -> None:
+        """Pass 1: expand only the workspace root path."""
+        self.root = _expand_path(self.root)
+
+    def _expand_dependent_paths(self) -> None:
+        """Pass 2: expand workspace fields that may reference ``${workspace.*}`` tokens."""
+        for field_name in ("endf_dir", "fitting_dir", "results_dir", "data_dir", "image_dir"):
+            raw_value = getattr(self, field_name)
+            setattr(self, field_name, _expand_path(raw_value, self))
 
 
 class NuclearConfig(BaseModel):
