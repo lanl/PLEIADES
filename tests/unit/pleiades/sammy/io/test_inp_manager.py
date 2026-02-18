@@ -12,7 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from pleiades.sammy.fitting.config import FitConfig
 from pleiades.sammy.fitting.options import FitOptions
+from pleiades.sammy.io.card_formats.inp02_element import Card02, ElementInfo
+from pleiades.sammy.io.card_formats.inp05_broadening import Card05, PhysicalConstants
 from pleiades.sammy.io.inp_manager import InpManager
 
 
@@ -348,3 +351,49 @@ def test_multi_isotope_missing_required_properties(temp_dir):
 
     with pytest.raises(ValueError, match="must contain 'density_g_cm3' and 'atomic_mass_amu'"):
         InpManager.create_multi_isotope_inp(output_path, title="Should fail", material_properties=incomplete_props)
+
+
+def test_generate_physical_constants_section_uses_fit_config_dist():
+    """Card 5 generation should preserve fit_config broadening.dist as flight path."""
+    fit_config = FitConfig()
+    broadening = fit_config.physics_params.broadening_parameters
+    broadening.temp = 300.0
+    broadening.dist = 123.4
+    broadening.deltal = 0.2
+    broadening.deltag = 0.1
+    broadening.deltae = 0.01
+
+    manager = InpManager(fit_config=fit_config)
+    section = manager.generate_physical_constants_section()
+    constants = Card05.from_lines([section.strip()])
+
+    assert constants.temperature == pytest.approx(300.0)
+    assert constants.flight_path_length == pytest.approx(123.4)
+    assert constants.delta_l == pytest.approx(0.2)
+    assert constants.delta_g == pytest.approx(0.1)
+    assert constants.delta_e == pytest.approx(0.01)
+
+
+def test_read_inp_file_sets_broadening_dist_from_card5(temp_dir):
+    """Card 5 parsing should map flight path length back to broadening.dist."""
+    fit_config = FitConfig()
+    manager = InpManager(fit_config=fit_config)
+    output_path = temp_dir / "roundtrip_card5.inp"
+
+    card2_line = Card02.to_lines(ElementInfo(element="Au", atomic_weight=196.966569, min_energy=0.001, max_energy=1.0))[
+        0
+    ]
+    card5_line = Card05.to_lines(
+        PhysicalConstants(temperature=296.0, flight_path_length=48.5, delta_l=0.3, delta_g=0.2, delta_e=0.1)
+    )[0]
+
+    output_path.write_text(f"Card5 Parse Test\n{card2_line}\n{card5_line}\ntransmission\n")
+
+    loaded = manager.read_inp_file(output_path, fit_config=fit_config)
+    broadening = loaded.physics_params.broadening_parameters
+
+    assert broadening.temp == pytest.approx(296.0)
+    assert broadening.dist == pytest.approx(48.5)
+    assert broadening.deltal == pytest.approx(0.3)
+    assert broadening.deltag == pytest.approx(0.2)
+    assert broadening.deltae == pytest.approx(0.1)

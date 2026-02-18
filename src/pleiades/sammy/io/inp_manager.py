@@ -334,6 +334,7 @@ class InpManager:
             broadening = self.fit_config.physics_params.broadening_parameters
             material_properties = {
                 "temperature_K": broadening.temp,
+                "flight_path_m": broadening.dist,
                 "delta_l": broadening.deltal,
                 "delta_g": broadening.deltag,
                 "delta_e": broadening.deltae,
@@ -807,6 +808,7 @@ class InpManager:
                 constants = Card05.from_lines([lines[idx]])
                 broadening = self.fit_config.physics_params.broadening_parameters
                 broadening.temp = constants.temperature
+                broadening.dist = constants.flight_path_length
                 broadening.deltal = constants.delta_l
                 broadening.deltag = constants.delta_g
                 broadening.deltae = constants.delta_e
