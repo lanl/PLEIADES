@@ -74,14 +74,25 @@ class TestDockerSammyConfig:
         config = DockerSammyConfig(
             working_dir=temp_working_dir,
             output_dir=temp_working_dir / "output",
-            image_name="kedokudo/sammy-docker",
+            image_name="kedokudo/sammy-docker:1.0.0",
             container_working_dir=Path("/sammy/work"),
             container_data_dir=Path("/sammy/data"),
         )
-        assert config.image_name == "kedokudo/sammy-docker"
+        assert config.image_name == "kedokudo/sammy-docker:1.0.0"
         assert config.container_working_dir == Path("/sammy/work")
         assert config.container_data_dir == Path("/sammy/data")
         # call validate
+        assert config.validate()
+
+    def test_validate_digest_pinned_image_name(self, temp_working_dir):
+        """Should accept immutable digest-pinned image references."""
+        config = DockerSammyConfig(
+            working_dir=temp_working_dir,
+            output_dir=temp_working_dir / "output",
+            image_name="kedokudo/sammy-docker@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            container_working_dir=Path("/sammy/work"),
+            container_data_dir=Path("/sammy/data"),
+        )
         assert config.validate()
 
     def test_validate_empty_image_name(self, temp_working_dir):
@@ -97,12 +108,38 @@ class TestDockerSammyConfig:
             config.validate()
         assert "image name cannot be empty" in str(exc.value)
 
+    def test_validate_rejects_unpinned_image_name(self, temp_working_dir):
+        """Should reject image references with no tag and no digest."""
+        config = DockerSammyConfig(
+            working_dir=temp_working_dir,
+            output_dir=temp_working_dir / "output",
+            image_name="kedokudo/sammy-docker",
+            container_working_dir=Path("/sammy/work"),
+            container_data_dir=Path("/sammy/data"),
+        )
+        with pytest.raises(ConfigurationError) as exc:
+            config.validate()
+        assert "must be pinned to an immutable digest" in str(exc.value)
+
+    def test_validate_rejects_mutable_latest_tag(self, temp_working_dir):
+        """Should reject mutable tags such as :latest."""
+        config = DockerSammyConfig(
+            working_dir=temp_working_dir,
+            output_dir=temp_working_dir / "output",
+            image_name="kedokudo/sammy-docker:latest",
+            container_working_dir=Path("/sammy/work"),
+            container_data_dir=Path("/sammy/data"),
+        )
+        with pytest.raises(ConfigurationError) as exc:
+            config.validate()
+        assert "must be pinned to an immutable digest" in str(exc.value)
+
     def test_validate_relative_container_paths(self, temp_working_dir):
         """Should raise error for relative container paths."""
         config = DockerSammyConfig(
             working_dir=temp_working_dir,
             output_dir=temp_working_dir / "output",
-            image_name="kedokudo/sammy-docker",
+            image_name="kedokudo/sammy-docker:1.0.0",
             container_working_dir=Path("relative/path"),
             container_data_dir=Path("/sammy/data"),
         )
@@ -115,7 +152,7 @@ class TestDockerSammyConfig:
         config = DockerSammyConfig(
             working_dir=temp_working_dir,
             output_dir=temp_working_dir / "output",
-            image_name="kedokudo/sammy-docker",
+            image_name="kedokudo/sammy-docker:1.0.0",
             container_working_dir=Path("/sammy/work"),
             container_data_dir=Path("relative/path"),
         )
@@ -129,7 +166,7 @@ class TestDockerSammyConfig:
         config = DockerSammyConfig(
             working_dir=temp_working_dir,
             output_dir=temp_working_dir / "output",
-            image_name="kedokudo/sammy-docker",
+            image_name="kedokudo/sammy-docker:1.0.0",
             container_working_dir=same_path,
             container_data_dir=same_path,
         )

@@ -169,7 +169,9 @@ if __name__ == "__main__":
 
     try:
         # Create and validate config
-        config = DockerSammyConfig(image_name="kedokudo/sammy-docker", working_dir=working_dir, output_dir=output_dir)
+        config = DockerSammyConfig(
+            image_name="kedokudo/sammy-docker:1.0.0", working_dir=working_dir, output_dir=output_dir
+        )
         config.validate()
 
         # Create files container

@@ -46,6 +46,9 @@ Notes:
 - The data file for a run is keyed by routine_id: data_dir/<routine_id>.dat
 - endf_dir should map to PleiadesConfig.nuclear_data_cache_dir so NuclearDataManager
   uses it for ENDF caching.
+- For the docker backend, ``sammy.docker.image_name`` should be digest-pinned
+  (``repo/image@sha256:...``) or at least use an explicit non-mutable version
+  tag (for example ``repo/image:1.2.3``); unpinned or mutable tags are rejected.
 
 Draft YAML schema (example)
 ---------------------------
@@ -80,7 +83,8 @@ sammy:
     shell_path: /bin/bash
     env_vars: {}
   docker:
-    image_name: kedokudo/sammy-docker
+    # Use a pinned digest when possible; vetted version tags are acceptable fallback.
+    image_name: kedokudo/sammy-docker:1.0.0
     container_working_dir: /sammy/work
     container_data_dir: /sammy/data
   nova:
