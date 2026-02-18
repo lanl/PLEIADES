@@ -6,7 +6,6 @@ This module provides tools for managing large-scale SAMMY resonance fitting jobs
 """
 
 import contextlib
-import json
 import pickle
 import signal
 import tempfile
@@ -32,30 +31,6 @@ from pleiades.sammy.results.manager import ResultsManager
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
-
-
-def _enable_abundance_adjustment(json_path: Path) -> None:
-    """Set ``adjust`` to ``"true"`` for every isotope entry in a SAMMY JSON config.
-
-    By default, ``JsonManager.create_json_config`` sets ``adjust`` to ``"false"``
-    so SAMMY treats abundances as fixed.  For imaging, we need SAMMY to fit the
-    abundance of each isotope at every pixel.  This helper patches the JSON
-    in-place after creation.
-    """
-    with open(json_path) as f:
-        config = json.load(f)
-
-    global_keys = {"forceRMoore", "purgeSpinGroups", "fudge"}
-    for key, value in config.items():
-        if key in global_keys:
-            continue
-        if isinstance(value, list):
-            for entry in value:
-                if isinstance(entry, dict) and "adjust" in entry:
-                    entry["adjust"] = "true"
-
-    with open(json_path, "w") as f:
-        json.dump(config, f, indent=2)
 
 
 @dataclass
@@ -360,8 +335,6 @@ def _fit_pixel_worker_impl(
             json_path = json_manager.create_json_config(
                 isotopes=imaging_config.isotopes, abundances=abundances, working_dir=temp_path
             )
-            if json_path.exists():
-                _enable_abundance_adjustment(json_path)
             endf_directory = temp_path
 
         # Step 4: Create .inp file
@@ -1100,7 +1073,6 @@ class BatchFittingOrchestrator:
             abundances=abundances,
             working_dir=shared_inputs_dir,
         )
-        _enable_abundance_adjustment(shared_json_path)
         return shared_json_path, shared_inputs_dir
 
     def _save_checkpoint(
