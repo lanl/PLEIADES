@@ -54,6 +54,16 @@ class ImagingConfig(BaseModel):
     # Temperature
     temperature_K: float = Field(293.6, gt=0, description="Sample temperature in Kelvin")
 
+    # Fitting control
+    fit_abundances: bool = Field(
+        True,
+        description=(
+            "If True, SAMMY fits per-isotope abundances via a two-pass strategy "
+            "(JSON mode for ENDF extraction, then traditional mode with IFLISO=1). "
+            "If False, abundances are held fixed and only global thickness is fitted."
+        ),
+    )
+
     @model_validator(mode="after")
     def validate_energy_range(self) -> "ImagingConfig":
         """Ensure min_energy_eV < max_energy_eV."""

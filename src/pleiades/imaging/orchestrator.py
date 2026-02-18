@@ -353,6 +353,7 @@ def _fit_pixel_worker_impl(
             json_config_file=json_path,
             data_file=twenty_file,
             endf_directory=endf_directory,
+            fit_abundances=imaging_config.fit_abundances,
         )
 
         config = LocalSammyConfig(
