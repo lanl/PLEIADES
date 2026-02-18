@@ -619,6 +619,19 @@ class PleiadesConfig(BaseModel):
         """Convert configuration to a dictionary."""
         return self.model_dump(mode="json")
 
+    @classmethod
+    def _normalize_config_for_io(cls, config_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize config payload before save/load validation.
+
+        Enforces strict IO requirements so save/load behavior is consistent:
+        ``fit_routines`` must be present and non-empty.
+        """
+        normalized = dict(config_dict or {})
+        fit_routines = normalized.get("fit_routines")
+        if not fit_routines:
+            raise ValueError("fit_routines must be defined in the config file")
+        return normalized
+
     def save(self, path: Optional[Path] = None) -> Path:
         """
         Save configuration to a YAML file.
@@ -635,9 +648,11 @@ class PleiadesConfig(BaseModel):
         # Ensure directory exists
         path.parent.mkdir(parents=True, exist_ok=True)
 
+        normalized = self._normalize_config_for_io(self.to_dict())
+
         # Save config as YAML
         with open(path, "w") as f:
-            yaml.safe_dump(self.to_dict(), f, sort_keys=False)
+            yaml.safe_dump(normalized, f, sort_keys=False)
 
         return path
 
@@ -669,7 +684,8 @@ class PleiadesConfig(BaseModel):
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "PleiadesConfig":
         """Build a configuration from a dictionary."""
-        return cls.model_validate(config_dict or {}, context={"require_fit_routines": True})
+        normalized = cls._normalize_config_for_io(config_dict)
+        return cls.model_validate(normalized, context={"require_fit_routines": True})
 
 
 class IsotopeConfig(BaseModel):

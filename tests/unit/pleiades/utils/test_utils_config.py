@@ -232,9 +232,16 @@ class TestPleiadesConfig:
         assert config.fit_routines["fit_2"].dataset_id == "dataset_2"
 
     def test_from_dict_requires_fit_routines(self):
-        """Loading from user config should fail when fit_routines are missing."""
-        with pytest.raises(ValidationError, match="fit_routines must be defined"):
+        """Loading from user payload should fail when fit_routines are missing."""
+        with pytest.raises(ValueError, match="fit_routines must be defined"):
             PleiadesConfig.from_dict({"workspace": {"root": "/tmp/pleiades"}})
+
+    def test_save_requires_fit_routines(self, tmp_path):
+        """Saving config with empty fit_routines should fail."""
+        config = PleiadesConfig()
+        save_path = tmp_path / "config.yaml"
+        with pytest.raises(ValueError, match="fit_routines must be defined"):
+            config.save(save_path)
 
     def test_isotope_config_normalization_and_defaults(self):
         """Isotope dicts should normalize to IsotopeConfig with default library applied."""
