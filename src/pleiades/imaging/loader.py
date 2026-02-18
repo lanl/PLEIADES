@@ -341,20 +341,30 @@ class HyperspectralLoader:
 
         return uncertainty.astype(np.float32)
 
-    def iter_pixels(self, roi: Optional[Tuple[int, int, int, int]] = None) -> Iterator[PixelSpectrum]:
+    def iter_pixels(
+        self,
+        roi: Optional[Tuple[int, int, int, int]] = None,
+        stride: int = 1,
+    ) -> Iterator[PixelSpectrum]:
         """Iterate over pixel spectra.
 
         Args:
             roi: Optional ROI as (x1, y1, x2, y2). If None, iterate all pixels.
+            stride: Spatial stride for downsampled iteration.  ``stride=4``
+                yields every 4th pixel in both row and column directions,
+                reducing the pixel count by 16×.  Useful for quick previews
+                of large images.
 
         Yields:
             PixelSpectrum objects for each spatial pixel
 
         Raises:
-            ValueError: If load() not called first
+            ValueError: If load() not called first, or stride < 1
         """
         if self._hyperspectral is None:
             raise ValueError("Must call load() before iter_pixels()")
+        if stride < 1:
+            raise ValueError(f"stride must be >= 1, got {stride}")
 
         n_energy, height, width = self._hyperspectral.shape
 
@@ -367,10 +377,10 @@ class HyperspectralLoader:
             if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
                 raise ValueError(f"Invalid ROI {roi} for image shape (height={height}, width={width})")
 
-        logger.info(f"Iterating pixels in ROI: x=[{x1},{x2}), y=[{y1},{y2})")
+        logger.info(f"Iterating pixels in ROI: x=[{x1},{x2}), y=[{y1},{y2}), stride={stride}")
 
-        for row in range(y1, y2):
-            for col in range(x1, x2):
+        for row in range(y1, y2, stride):
+            for col in range(x1, x2, stride):
                 # Extract pixel spectrum
                 transmission = self._hyperspectral.data[:, row, col]
 

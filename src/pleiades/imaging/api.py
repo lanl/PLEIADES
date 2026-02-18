@@ -28,6 +28,7 @@ def analyze_imaging(
     energy: np.ndarray | None = None,
     n_workers: int = 4,
     roi: tuple[int, int, int, int] | None = None,
+    stride: int = 1,
     checkpoint_file: Path | None = None,
     checkpoint_interval: int = 10,
     resume: bool = False,
@@ -48,6 +49,9 @@ def analyze_imaging(
         energy: Energy axis in eV. If None, inferred from data.
         n_workers: Number of parallel SAMMY workers. Must be >= 1.
         roi: Region of interest as ``(x1, y1, x2, y2)``. If None, all pixels.
+        stride: Spatial stride for pixel iteration.  ``stride=4`` fits every
+            4th pixel in both directions (16x fewer pixels).  Unfitted pixels
+            appear as NaN in the output maps.
         checkpoint_file: Path to save/load checkpoint data.
         checkpoint_interval: Save checkpoint every N completed pixels. Must be >= 1.
         resume: If True, resume from an existing checkpoint file.
@@ -66,6 +70,8 @@ def analyze_imaging(
     # --- Input validation ---
     if n_workers < 1:
         raise ValueError(f"n_workers must be >= 1, got {n_workers}")
+    if stride < 1:
+        raise ValueError(f"stride must be >= 1, got {stride}")
     if checkpoint_interval < 1:
         raise ValueError(f"checkpoint_interval must be >= 1, got {checkpoint_interval}")
     if max_retries < 0:
@@ -90,7 +96,7 @@ def analyze_imaging(
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
 
     # --- 2. Extract pixels ---
-    pixels = list(loader.iter_pixels(roi=roi))
+    pixels = list(loader.iter_pixels(roi=roi, stride=stride))
     logger.info(f"Extracted {len(pixels)} pixels for fitting")
 
     # --- 3. Fit pixels ---
