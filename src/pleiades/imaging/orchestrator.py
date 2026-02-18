@@ -396,6 +396,18 @@ def _fit_pixel_worker_impl(
 
         # Extract final fit results
         final_fit = results_manager.run_results.fit_results[-1]
+
+        # Inject isotope names from config into parsed results.
+        # The LPT parser extracts abundances and masses but not names;
+        # the names are known from the ImagingConfig and appear in order.
+        nuclear = getattr(final_fit, "nuclear_data", None)
+        if nuclear is not None:
+            parsed_isotopes = getattr(nuclear, "isotopes", None) or []
+            if len(parsed_isotopes) == len(imaging_config.isotopes):
+                for iso_param, iso_name in zip(parsed_isotopes, imaging_config.isotopes):
+                    if iso_param.isotope_information is not None:
+                        iso_param.isotope_information.name = iso_name
+
         chi_sq = final_fit.get_chi_squared_results()
 
         # Extract chi-squared value (can be None if fit failed to converge)
