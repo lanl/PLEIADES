@@ -23,6 +23,12 @@ def minimal_line():
     return ["H           1.00794     0.001      10.0"]
 
 
+@pytest.fixture
+def full_line():
+    """Example with extended Card Set 2 fields."""
+    return ["U 238     238.050972   0.0000 100.0         0    0 0  0 0  0         0"]
+
+
 def test_parse_silicon_line(silicon_line):
     """Test parsing silicon element line."""
     element_info = Card02.from_lines(silicon_line)
@@ -51,6 +57,26 @@ def test_parse_minimal_line(minimal_line):
     assert pytest.approx(element_info.atomic_weight, rel=1e-5) == 1.00794
     assert pytest.approx(element_info.min_energy, rel=1e-3) == 0.001
     assert pytest.approx(element_info.max_energy, rel=1e-3) == 10.0
+
+
+def test_parse_full_line(full_line):
+    """Test parsing extended Card Set 2 line."""
+    element_info = Card02.from_lines(full_line)
+
+    assert element_info.element == "U 238"
+    assert pytest.approx(element_info.atomic_weight, rel=1e-6) == 238.050972
+    assert pytest.approx(element_info.min_energy, rel=1e-4) == 0.0
+    assert pytest.approx(element_info.max_energy, rel=1e-3) == 100.0
+    assert element_info.nepnts == 0
+    assert element_info.itmax == 0
+    assert element_info.icorr == 0
+    assert element_info.nxtra == 0
+    assert element_info.iptdop == 0
+    assert element_info.iptwid == 0
+    assert element_info.ixxchn == 0
+    assert element_info.ndigit is None
+    assert element_info.idropp is None
+    assert element_info.matnum is None
 
 
 def test_parse_empty_line():
@@ -108,6 +134,34 @@ def test_roundtrip_silicon(silicon_line):
     assert pytest.approx(reparsed_info.atomic_weight, rel=1e-5) == element_info.atomic_weight
     assert pytest.approx(reparsed_info.min_energy, rel=1e-3) == element_info.min_energy
     assert pytest.approx(reparsed_info.max_energy, rel=1e-3) == element_info.max_energy
+
+
+def test_to_lines_with_extras():
+    """Test generating line with extended Card Set 2 fields."""
+    element_info = ElementInfo(
+        element="U 238",
+        atomic_weight=238.050972,
+        min_energy=0.0,
+        max_energy=100.0,
+        nepnts=10001,
+        itmax=2,
+        icorr=50,
+        nxtra=0,
+        iptdop=9,
+        iptwid=5,
+        ixxchn=0,
+        ndigit=2,
+        idropp=2,
+        matnum=92238,
+    )
+
+    lines = Card02.to_lines(element_info)
+
+    assert len(lines) == 1
+    assert "10001" in lines[0]
+    assert "  2" in lines[0]
+    assert "50" in lines[0]
+    assert "92238" in lines[0]
 
 
 def test_element_info_validation_max_less_than_min():

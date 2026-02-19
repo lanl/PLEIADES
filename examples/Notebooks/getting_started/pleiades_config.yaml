@@ -1,0 +1,22 @@
+pleiades_version: 1
+
+workspace:
+  root: /tmp/pleiades_workspace
+  fitting_dir: ${workspace.root}/fitting_dir
+  results_dir: ${workspace.root}/results_dir
+  data_dir: ${workspace.root}/data_dir
+  image_dir: ${workspace.root}/image_dir
+
+nuclear:
+  isotopes:
+    - isotope: Ta-181
+      abundance: 0.016
+      vary_abundance: true
+  default_library: ENDF-B-VIII.0
+
+fit_routines:
+  example_fit:
+    dataset_id: example_dataset
+
+runs: []
+results_index: {}

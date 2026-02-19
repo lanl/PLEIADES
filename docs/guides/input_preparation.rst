@@ -69,24 +69,29 @@ INP File Generation
 The INP file controls SAMMY execution parameters. PLEIADES generates
 INP files through :class:`~pleiades.sammy.io.inp_manager.InpManager`.
 
-Material Properties
-^^^^^^^^^^^^^^^^^^^
+Dataset Metadata
+^^^^^^^^^^^^^^^^
 
-Define material properties as a dictionary:
+Define typed dataset metadata and fit configuration:
 
 .. code-block:: python
 
-   material_props = {
-       'element': 'Au',              # Element symbol
-       'mass_number': 197,           # Isotope mass number
-       'density_g_cm3': 19.32,       # Material density (g/cm³)
-       'thickness_mm': 0.025,        # Sample thickness (mm)
-       'atomic_mass_amu': 196.966569,  # Atomic mass (amu)
-       'abundance': 1.0,             # Isotopic abundance (0-1)
-       'min_energy': 1.0,            # Minimum energy (eV)
-       'max_energy_eV': 200.0,       # Maximum energy (eV)
-       'temperature_K': 293.6,       # Sample temperature (K)
-   }
+   from pleiades.sammy.fitting.config import FitConfig
+   from pleiades.sammy.io.inp_manager import InpDatasetMetadata
+
+   fit_config = FitConfig()
+   fit_config.physics_params.broadening_parameters.crfn = 8.0
+
+   dataset_metadata = InpDatasetMetadata(
+       element="Au",
+       mass_number=197,
+       density_g_cm3=19.32,
+       thickness_mm=0.025,
+       atomic_mass_amu=196.966569,
+       min_energy_eV=1.0,
+       max_energy_eV=200.0,
+       temperature_K=293.6,
+   )
 
 Creating the INP File
 ^^^^^^^^^^^^^^^^^^^^^
@@ -94,20 +99,21 @@ Creating the INP File
 .. code-block:: python
 
    from pathlib import Path
-   from pleiades.sammy.io.inp_manager import InpManager
+   from pleiades.sammy.fitting.config import FitConfig
+   from pleiades.sammy.io.inp_manager import InpDatasetMetadata, InpManager
 
-   # Material properties
-   material_props = {
-       'element': 'Au',
-       'mass_number': 197,
-       'density_g_cm3': 19.32,
-       'thickness_mm': 0.025,
-       'atomic_mass_amu': 196.966569,
-       'abundance': 1.0,
-       'min_energy': 1.0,
-       'max_energy_eV': 200.0,
-       'temperature_K': 293.6,
-   }
+   fit_config = FitConfig()
+   fit_config.physics_params.broadening_parameters.crfn = 8.0
+   dataset_metadata = InpDatasetMetadata(
+       element="Au",
+       mass_number=197,
+       density_g_cm3=19.32,
+       thickness_mm=0.025,
+       atomic_mass_amu=196.966569,
+       min_energy_eV=1.0,
+       max_energy_eV=200.0,
+       temperature_K=293.6,
+   )
 
    # Resolution function file (facility-specific)
    resolution_file = Path("/path/to/resolution_function.dat")
@@ -116,8 +122,9 @@ Creating the INP File
    inp_file = Path("./working/analysis.inp")
    InpManager.create_multi_isotope_inp(
        inp_file,
+       fit_config=fit_config,
        title="Au-197 neutron transmission analysis",
-       material_properties=material_props,
+       dataset_metadata=dataset_metadata,
        resolution_file_path=resolution_file,
    )
 
@@ -261,7 +268,8 @@ Putting it all together:
 .. code-block:: python
 
    from pathlib import Path
-   from pleiades.sammy.io.inp_manager import InpManager
+   from pleiades.sammy.fitting.config import FitConfig
+   from pleiades.sammy.io.inp_manager import InpDatasetMetadata, InpManager
    from pleiades.sammy.io.json_manager import JsonManager
    from pleiades.sammy.io.data_manager import convert_csv_to_sammy_twenty
    from pleiades.sammy.interface import SammyFilesMultiMode
@@ -289,24 +297,27 @@ Putting it all together:
        working_dir=str(working_dir),
    )
 
-   # 3. Create INP file
-   material_props = {
-       'element': 'Au',
-       'mass_number': 197,
-       'density_g_cm3': 19.32,
-       'thickness_mm': 0.025,
-       'atomic_mass_amu': 196.966569,
-       'abundance': 1.0,
-       'min_energy': 1.0,
-       'max_energy_eV': 200.0,
-       'temperature_K': 293.6,
-   }
+   # 3. Create INP file from FitConfig + typed metadata
+   fit_config = FitConfig()
+   fit_config.physics_params.broadening_parameters.crfn = 8.0
+
+   dataset_metadata = InpDatasetMetadata(
+       element="Au",
+       mass_number=197,
+       density_g_cm3=19.32,
+       thickness_mm=0.025,
+       atomic_mass_amu=196.966569,
+       min_energy_eV=1.0,
+       max_energy_eV=200.0,
+       temperature_K=293.6,
+   )
 
    inp_file = working_dir / "au_fitting.inp"
    InpManager.create_multi_isotope_inp(
        inp_file,
+       fit_config=fit_config,
        title="Au-197 analysis",
-       material_properties=material_props,
+       dataset_metadata=dataset_metadata,
        resolution_file_path=Path("/path/to/resolution.dat"),
    )
 

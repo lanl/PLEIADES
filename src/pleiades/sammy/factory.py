@@ -128,7 +128,9 @@ class SammyFactory:
                     sammy_executable: Path to SAMMY executable
                     shell_path: Path to shell
                 Docker backend:
-                    image_name: Docker image name
+                    image_name: Docker image name pinned by digest
+                        (repo/image@sha256:...) or explicit non-mutable version tag
+                        (repo/image:1.2.3)
                     container_working_dir: Working directory in container
                     container_data_dir: Data directory in container
                 NOVA backend:
@@ -187,7 +189,7 @@ class SammyFactory:
                 config = DockerSammyConfig(
                     working_dir=working_dir,
                     output_dir=output_dir,
-                    image_name=kwargs.get("image_name", "kedokudo/sammy-docker"),
+                    image_name=kwargs.get("image_name", "kedokudo/sammy-docker:1.0.0"),
                     container_working_dir=Path(kwargs.get("container_working_dir", "/sammy/work")),
                     container_data_dir=Path(kwargs.get("container_data_dir", "/sammy/data")),
                 )
@@ -248,7 +250,7 @@ class SammyFactory:
                 shell_path: /bin/bash
 
             docker:
-                image_name: kedokudo/sammy-docker
+                image_name: kedokudo/sammy-docker:1.0.0
                 container_working_dir: /sammy/work
                 container_data_dir: /sammy/data
 
@@ -354,7 +356,7 @@ class SammyFactory:
             >>> runner = SammyFactory.auto_select(
             ...     working_dir="/path/to/work",
             ...     preferred_backend="docker",
-            ...     image_name="custom/sammy:latest"
+            ...     image_name="custom/sammy:1.2.3"
             ... )
         """
         # Check available backends
@@ -419,7 +421,7 @@ local:
     shell_path: /bin/bash
 
 docker:
-    image_name: kedokudo/sammy-docker
+    image_name: kedokudo/sammy-docker:1.0.0
     container_working_dir: /sammy/work
     container_data_dir: /sammy/data
 

@@ -13,8 +13,8 @@ Submodules
    :maxdepth: 4
 
    pleiades.sammy.io.card_formats.inp02_element
-   pleiades.sammy.io.card_formats.inp03_constants
-   pleiades.sammy.io.card_formats.inp03_density
+   pleiades.sammy.io.card_formats.inp05_broadening
+   pleiades.sammy.io.card_formats.inp07_density
    pleiades.sammy.io.card_formats.inp04_particlepairs
    pleiades.sammy.io.card_formats.inp10_spingroups
    pleiades.sammy.io.card_formats.par01_resonances
