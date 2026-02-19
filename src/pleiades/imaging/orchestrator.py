@@ -400,36 +400,49 @@ def _fit_pixel_worker_impl(
 
         # Ensure nuclear_data.isotopes is populated.
         #
-        # Problem: For single-isotope fits, SAMMY does not output the
-        # "Isotopic abundance and mass for each nuclide" section in the LPT.
-        # The LPT parser therefore returns an empty isotopes list, which
-        # causes the aggregator to fail with an isotope count mismatch.
+        # For single-isotope fits, SAMMY does not output the "Isotopic
+        # abundance and mass for each nuclide" section in the LPT, so the
+        # parser legitimately returns an empty isotopes list.  In that case
+        # we populate from config with abundance=1.0.
         #
-        # Fix: When the parser returns fewer isotopes than expected, build
-        # IsotopeParameters from the ImagingConfig so downstream code
-        # (aggregator, get_abundances) has the data it needs.
+        # For multi-isotope fits, an empty parse result means the LPT
+        # format changed or parsing failed — that must be surfaced as a
+        # failure, not papered over with config defaults.
         nuclear = getattr(final_fit, "nuclear_data", None)
         if nuclear is not None:
             parsed_isotopes = getattr(nuclear, "isotopes", None) or []
+            n_config_isotopes = len(imaging_config.isotopes)
 
-            if len(parsed_isotopes) == len(imaging_config.isotopes):
-                # Multi-isotope case: LPT parsed isotopes, just inject names
+            if len(parsed_isotopes) == n_config_isotopes:
+                # LPT parsed the expected number of isotopes — just inject names
                 for iso_param, iso_name in zip(parsed_isotopes, imaging_config.isotopes):
                     if iso_param.isotope_information is not None:
                         iso_param.isotope_information.name = iso_name
-            elif len(parsed_isotopes) == 0:
-                # Single-isotope case (or parser found nothing): build from config
+            elif len(parsed_isotopes) == 0 and n_config_isotopes == 1:
+                # Single-isotope: SAMMY omits isotope section, populate from config
                 from pleiades.nuclear.isotopes.models import IsotopeInfo
                 from pleiades.nuclear.models import IsotopeParameters
 
-                abundances = imaging_config.get_abundances()
-                for iso_name, abund in zip(imaging_config.isotopes, abundances):
-                    iso_info = IsotopeInfo.from_string(iso_name)
-                    iso_param = IsotopeParameters(
-                        isotope_information=iso_info,
-                        abundance=abund,
-                    )
-                    nuclear.isotopes.append(iso_param)
+                iso_name = imaging_config.isotopes[0]
+                iso_info = IsotopeInfo.from_string(iso_name)
+                iso_param = IsotopeParameters(
+                    isotope_information=iso_info,
+                    abundance=1.0,
+                )
+                nuclear.isotopes.append(iso_param)
+            elif len(parsed_isotopes) == 0 and n_config_isotopes > 1:
+                # Multi-isotope but parser found nothing — this is a real failure
+                return PixelFitResult(
+                    row=pixel.row,
+                    col=pixel.col,
+                    fit_results=None,
+                    success=False,
+                    error_message=(
+                        f"LPT parser returned 0 isotopes but {n_config_isotopes} "
+                        f"were expected; isotope abundance data missing from SAMMY output"
+                    ),
+                    chi_squared=None,
+                )
 
         chi_sq = final_fit.get_chi_squared_results()
 

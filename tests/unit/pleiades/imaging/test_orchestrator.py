@@ -862,6 +862,75 @@ class TestFitPixelWorker:
         assert "Exception:" in result.error_message
         assert result.chi_squared is None
 
+    @patch("pleiades.imaging.orchestrator.ResultsManager")
+    @patch("pleiades.imaging.orchestrator.LocalSammyRunner")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    def test_fit_pixel_worker_multi_isotope_empty_parse_fails(
+        self, mock_json_mgr, mock_runner_cls, mock_results_mgr_cls
+    ):
+        """Multi-isotope fit with 0 parsed isotopes should fail, not synthesize from config.
+
+        Regression test: previously the worker silently populated abundances
+        from ImagingConfig defaults when the LPT parser returned nothing,
+        masking a parsing failure with scientifically incorrect data.
+        """
+        multi_config = ImagingConfig(
+            isotopes=["Ta-181", "U-235"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.9479958,
+            natural_abundances=False,
+            custom_abundances=[0.5, 0.5],
+            min_energy_eV=1.0,
+            max_energy_eV=100.0,
+        )
+
+        pixel = PixelSpectrum(
+            row=0,
+            col=0,
+            energy=np.linspace(1, 100, 50),
+            transmission=np.random.uniform(0.5, 1.0, 50),
+            uncertainty=np.full(50, 0.01),
+        )
+
+        # Mock JSON manager
+        mock_json_instance = MagicMock()
+        mock_json_instance.create_json_config.return_value = Path("/tmp/config.json")
+        mock_json_mgr.return_value = mock_json_instance
+
+        # Mock SAMMY runner (success)
+        mock_runner = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.error_message = None
+        mock_runner.execute_sammy.return_value = mock_result
+        mock_runner_cls.return_value = mock_runner
+
+        # Mock results with nuclear_data that has EMPTY isotopes list
+        from pleiades.nuclear.models import nuclearParameters
+
+        mock_fit_result = MagicMock(spec=FitResults)
+        mock_nuclear = nuclearParameters()  # real object, empty isotopes
+        mock_fit_result.nuclear_data = mock_nuclear
+        mock_chi_sq = ChiSquaredResults(chi_squared=1.5, dof=50, reduced_chi_squared=0.03)
+        mock_fit_result.get_chi_squared_results.return_value = mock_chi_sq
+
+        mock_results_mgr = MagicMock()
+        mock_results_mgr.run_results.fit_results = [mock_fit_result]
+        mock_results_mgr_cls.return_value = mock_results_mgr
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sammy_exe = Path(temp_dir) / "sammy"
+            sammy_exe.touch()
+
+            result = _fit_pixel_worker(pixel, multi_config, sammy_exe)
+
+        assert result.success is False
+        assert "0 isotopes" in result.error_message
+        assert "2 were expected" in result.error_message
+
 
 # =============================================================================
 # Tests for Issue #178: Progress tracking, graceful shutdown, and integration

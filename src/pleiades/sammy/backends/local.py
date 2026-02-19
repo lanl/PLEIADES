@@ -349,9 +349,11 @@ class LocalSammyRunner(SammyRunner):
                     if not success:
                         logger.error(f"SAMMY pass 2 (abundance) failed for {execution_id}")
                 else:
-                    logger.warning(
-                        "fit_abundances=True but SAMNDF.PAR/INP not found after pass 1; skipping abundance fitting pass"
+                    logger.error(
+                        "fit_abundances=True but SAMNDF.PAR/INP not found after pass 1; "
+                        "cannot perform abundance fitting"
                     )
+                    success = False
 
             end_time = datetime.now()
             logger.info(f"SAMMY execution completed for {execution_id} (success={success})")
