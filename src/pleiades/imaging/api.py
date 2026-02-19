@@ -103,37 +103,48 @@ def analyze_imaging(
     # --- Create default TempFileManager if none provided ---
     # Deferred until after loading succeeds so that early failures (missing
     # TIFF, bad config, etc.) don't leave an orphaned temp directory on disk.
-    if temp_manager is None:
+    # Wrapped in try/finally so the temp directory is removed if any
+    # subsequent step (orchestrator init, fit_pixels, etc.) raises before the
+    # manager's __exit__ gets a chance to run.
+    owns_temp_manager = temp_manager is None
+    if owns_temp_manager:
         temp_manager = TempFileManager()
 
-    # --- 2. Fit pixels (streamed from loader to orchestrator) ---
-    orchestrator = BatchFittingOrchestrator(
-        imaging_config=imaging_config,
-        sammy_executable=sammy_executable,
-        n_workers=n_workers,
-        resolution_file=resolution_file,
-        temp_manager=temp_manager,
-    )
-    pixel_results = orchestrator.fit_pixels(
-        lambda: loader.iter_pixels(roi=roi, stride=stride),
-        checkpoint_file=checkpoint_file,
-        checkpoint_interval=checkpoint_interval,
-        resume=resume,
-        timeout_per_job=timeout_per_job,
-        max_retries=max_retries,
-    )
+    try:
+        # --- 2. Fit pixels (streamed from loader to orchestrator) ---
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config,
+            sammy_executable=sammy_executable,
+            n_workers=n_workers,
+            resolution_file=resolution_file,
+            temp_manager=temp_manager,
+        )
+        pixel_results = orchestrator.fit_pixels(
+            lambda: loader.iter_pixels(roi=roi, stride=stride),
+            checkpoint_file=checkpoint_file,
+            checkpoint_interval=checkpoint_interval,
+            resume=resume,
+            timeout_per_job=timeout_per_job,
+            max_retries=max_retries,
+        )
 
-    # --- 4. Aggregate results ---
-    aggregator = ResultsAggregator(
-        isotope_names=imaging_config.isotopes,
-        height=height,
-        width=width,
-    )
-    results = aggregator.aggregate(pixel_results, hyperspectral)
+        # --- 4. Aggregate results ---
+        aggregator = ResultsAggregator(
+            isotope_names=imaging_config.isotopes,
+            height=height,
+            width=width,
+        )
+        results = aggregator.aggregate(pixel_results, hyperspectral)
 
-    # --- 5. Optionally save ---
-    if save_path is not None:
-        logger.info(f"Saving results to {save_path}")
-        results.save_hdf5(save_path)
+        # --- 5. Optionally save ---
+        if save_path is not None:
+            logger.info(f"Saving results to {save_path}")
+            results.save_hdf5(save_path)
 
-    return results
+        return results
+    except BaseException:
+        if owns_temp_manager:
+            import shutil
+
+            shutil.rmtree(temp_manager.base_dir, ignore_errors=True)
+        raise
