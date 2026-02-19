@@ -86,10 +86,6 @@ def analyze_imaging(
 
     source = Path(source)
 
-    # --- Create default TempFileManager if none provided ---
-    if temp_manager is None:
-        temp_manager = TempFileManager()
-
     # --- 1. Load hyperspectral data ---
     logger.info(f"Loading hyperspectral data from {source}")
     loader = HyperspectralLoader(source, energy=energy)
@@ -97,6 +93,12 @@ def analyze_imaging(
 
     _, height, width = hyperspectral.shape
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
+
+    # --- Create default TempFileManager if none provided ---
+    # Deferred until after loading succeeds so that early failures (missing
+    # TIFF, bad config, etc.) don't leave an orphaned temp directory on disk.
+    if temp_manager is None:
+        temp_manager = TempFileManager()
 
     # --- 2. Fit pixels (streamed from loader to orchestrator) ---
     orchestrator = BatchFittingOrchestrator(
