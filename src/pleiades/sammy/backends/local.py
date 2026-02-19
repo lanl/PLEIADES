@@ -81,6 +81,10 @@ def _move_broadening_inp_to_par(inp_file: Path, par_file: Path) -> None:
 
         filtered.append(line)
 
+    # Handle broadening block that runs to EOF without a trailing blank line
+    if in_broadening and current_section:
+        broadening_sections.append(current_section)
+
     # Write cleaned INP
     with open(inp_file, "w") as f:
         f.writelines(filtered)
@@ -120,6 +124,7 @@ def _enable_abundance_fitting_in_par(par_file: Path) -> None:
         lines = f.readlines()
 
     in_card10 = False
+    in_continuation = False
     modified = []
     isotopes_modified = 0
 
@@ -129,6 +134,7 @@ def _enable_abundance_fitting_in_par(par_file: Path) -> None:
         # Detect Card 10 header
         if upper.startswith("ISOTO") or upper.startswith("NUCLI"):
             in_card10 = True
+            in_continuation = False
             modified.append(line)
             continue
 
@@ -136,18 +142,32 @@ def _enable_abundance_fitting_in_par(par_file: Path) -> None:
             # Blank line terminates Card 10
             if not line.strip():
                 in_card10 = False
+                in_continuation = False
                 modified.append(line)
                 continue
 
-            # Skip continuation markers (e.g., "-1" for extended spin groups)
             stripped = line.strip()
+
+            # "-1" marks the start of a spin-group continuation block
             if stripped == "-1":
+                in_continuation = True
                 modified.append(line)
                 continue
 
-            # Isotope data lines have atomic mass in cols 1-10.
-            # Change IFLISO at columns 31-32 from " 0" to " 1".
-            if len(line) >= 32:
+            # Positively identify isotope data lines by atomic mass in cols 1-10.
+            # Atomic masses are floats >= 1.0; continuation lines contain only
+            # small integers for spin-group indices.
+            is_isotope_line = False
+            try:
+                mass = float(line[:10])
+                if mass >= 1.0:
+                    is_isotope_line = True
+                    in_continuation = False
+            except (ValueError, IndexError):
+                pass
+
+            # Only modify IFLISO (columns 31-32) on isotope data lines
+            if is_isotope_line and len(line) >= 32:
                 line = line[:30] + " 1" + line[32:]
                 isotopes_modified += 1
 

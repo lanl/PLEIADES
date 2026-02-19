@@ -372,6 +372,38 @@ class TestEnableAbundanceFittingInPar:
         assert lines[1][30:32] == " 1"
         assert lines[2].strip() == "-1"
 
+    def test_does_not_mutate_long_continuation_lines(self, tmp_path):
+        """Continuation lines after -1 must not have columns 31-32 overwritten.
+
+        Regression test: previously any non-blank line of length >= 32 inside
+        Card 10 had cols 31-32 set to ' 1', corrupting spin-group continuation
+        data that happened to be long enough.
+        """
+        # Build a continuation line that is >= 32 chars (spin groups 25-40)
+        continuation_data = "   25   26   27   28   29   30   31   32   33   34   35   36   37   38   39   40"
+        par_content = (
+            "ISOTOpic abundances and masses\n"
+            "180.94788   0.50000   0.02000 0 1 2 3 4 5 6 7 8 9101112131415161718192021222324\n"
+            "-1\n"
+            f"{continuation_data}\n"
+            "235.04393   0.50000   0.02000 0 41 42 43\n"
+            "\n"
+        )
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        # Isotope lines should have IFLISO set
+        assert lines[1][30:32] == " 1"
+        assert lines[4][30:32] == " 1"
+        # Continuation line must be UNCHANGED
+        assert lines[3] == continuation_data
+        # Only 2 isotopes modified, not the continuation line
+        assert result.count(" 1") >= 2  # at least the two IFLISO flags
+
     def test_no_card10_is_noop(self, tmp_path):
         """Should not crash when par file has no Card 10."""
         par_content = "NORMAlization and background are next\n 1.000000  0.000000  0.000000\n"
@@ -451,6 +483,34 @@ class TestMoveBroadeningInpToPar:
 
         par_result = par_file.read_text()
         assert "BROADENING PARAMETERS FOLLOW" in par_result
+
+    def test_broadening_block_at_eof(self, tmp_path):
+        """Should capture broadening block that terminates at EOF without trailing blank line.
+
+        Regression test: previously the parser only recorded a broadening
+        section when it saw a blank terminator line.  If SAMNDF.INP ended
+        immediately after the broadening data, the block was silently dropped.
+        """
+        inp_content = (
+            "Title\nBROADENING IS WANTED\nBROADENING PARAMETERS FOLLOW\n  8.000000293.600000  0.000139 0 0 1 0 0\n"
+        )
+        par_content = "ISOTOPIC ABUNDANCES\n"
+        inp_file = tmp_path / "test.inp"
+        par_file = tmp_path / "test.par"
+        inp_file.write_text(inp_content)
+        par_file.write_text(par_content)
+
+        _move_broadening_inp_to_par(inp_file, par_file)
+
+        # INP: broadening removed
+        inp_result = inp_file.read_text()
+        assert "BROADENING" not in inp_result.upper()
+        assert inp_result.strip() == "Title"
+
+        # PAR: broadening data appended
+        par_result = par_file.read_text()
+        assert "BROADENING PARAMETERS FOLLOW" in par_result
+        assert "8.000000293.600000" in par_result
 
     def test_no_broadening_is_noop(self, tmp_path):
         """Should not crash when no broadening in INP."""
