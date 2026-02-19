@@ -14,7 +14,7 @@ import time
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from tqdm import tqdm
 
@@ -533,7 +533,7 @@ class BatchFittingOrchestrator:
 
     def fit_pixels(
         self,
-        pixels: Iterable[PixelSpectrum],
+        pixels: "Union[Callable[[], Iterable[PixelSpectrum]], Iterable[PixelSpectrum]]",
         checkpoint_file: Optional[Path] = None,
         checkpoint_interval: int = 10,
         resume: bool = False,
@@ -543,7 +543,13 @@ class BatchFittingOrchestrator:
         """Fit all pixels using parallel SAMMY execution.
 
         Args:
-            pixels: Iterable of PixelSpectrum to fit (materialized internally)
+            pixels: Pixel source — either a callable (factory) that returns a
+                fresh ``Iterable[PixelSpectrum]`` each time it is called, or a
+                plain ``Iterable[PixelSpectrum]``.  When a factory is provided,
+                pixel data is **never** fully materialised in memory: a
+                lightweight first pass collects only ``(row, col)`` coordinates
+                for validation, and a second pass streams pixels directly to
+                the executor.
             checkpoint_file: Optional path to save/load checkpoint
             checkpoint_interval: Save checkpoint every N completed pixels (default: 10)
             resume: If True, resume from existing checkpoint file
@@ -568,12 +574,33 @@ class BatchFittingOrchestrator:
             FileNotFoundError: If resume=True but checkpoint file doesn't exist
             ValueError: If resume=True but checkpoint_file is None, or invalid parameters
         """
-        # Materialize iterable so we can get len(), check duplicates, etc.
-        pixels = list(pixels) if not isinstance(pixels, list) else pixels
+        # --- Normalise pixel source into a re-iterable factory ---
+        if callable(pixels):
+            pixel_factory = pixels
+        elif isinstance(pixels, list):
+            pixel_factory = lambda: iter(pixels)  # noqa: E731
+        else:
+            # One-shot iterable (generator, etc.) — must materialise once
+            _cached = list(pixels)
+            pixel_factory = lambda: iter(_cached)  # noqa: E731
 
-        # Handle empty pixel list
-        if not pixels:
-            logger.warning("fit_pixels called with empty pixel list")
+        # --- Lightweight first pass: collect (row, col) for validation ---
+        all_coords: List[Tuple[int, int]] = []
+        seen_coords: Set[Tuple[int, int]] = set()
+        for p in pixel_factory():
+            coord = (p.row, p.col)
+            if coord in seen_coords:
+                raise ValueError(
+                    f"Duplicate pixel coordinates detected: {coord}. "
+                    "Each pixel in a batch must have a unique (row, col) coordinate."
+                )
+            seen_coords.add(coord)
+            all_coords.append(coord)
+
+        total_pixels = len(all_coords)
+
+        if total_pixels == 0:
+            logger.warning("fit_pixels called with empty pixel source")
             return []
 
         # Validate parameters
@@ -588,17 +615,6 @@ class BatchFittingOrchestrator:
         if resume and checkpoint_file is None:
             raise ValueError("Cannot resume without checkpoint_file. Specify checkpoint_file or set resume=False.")
 
-        # Ensure coordinates are unique to avoid result overwrite/corruption in keyed storage.
-        seen_coords = set()
-        for pixel in pixels:
-            coord = (pixel.row, pixel.col)
-            if coord in seen_coords:
-                raise ValueError(
-                    f"Duplicate pixel coordinates detected: {coord}. "
-                    "Each pixel in a batch must have a unique (row, col) coordinate."
-                )
-            seen_coords.add(coord)
-
         # Load checkpoint if resuming
         completed: Dict[Tuple[int, int], PixelFitResult] = {}
         if resume and checkpoint_file:
@@ -607,15 +623,14 @@ class BatchFittingOrchestrator:
             checkpoint = self._load_checkpoint(checkpoint_file)
 
             # Checkpoint must be from the same batch shape to avoid mixing stale results.
-            if checkpoint.total_pixels != len(pixels):
+            if checkpoint.total_pixels != total_pixels:
                 raise ValueError(
                     f"Checkpoint total_pixels={checkpoint.total_pixels} does not match current batch "
-                    f"size={len(pixels)}. Use a checkpoint created for this exact pixel batch."
+                    f"size={total_pixels}. Use a checkpoint created for this exact pixel batch."
                 )
 
-            current_coords = {(p.row, p.col) for p in pixels}
             checkpoint_coords = set(checkpoint.completed_pixels.keys())
-            invalid_coords = checkpoint_coords - current_coords
+            invalid_coords = checkpoint_coords - seen_coords
             if invalid_coords:
                 invalid_coord = sorted(invalid_coords)[0]
                 raise ValueError(
@@ -626,13 +641,11 @@ class BatchFittingOrchestrator:
             completed = checkpoint.completed_pixels
             logger.info(f"Resuming from checkpoint: {len(completed)}/{checkpoint.total_pixels} pixels completed")
 
-        # Filter out already completed pixels
-        remaining_pixels = [p for p in pixels if (p.row, p.col) not in completed]
-        total_pixels = len(pixels)
-        logger.info(f"Fitting {len(remaining_pixels)} pixels ({len(completed)} already completed)")
+        remaining_coords = seen_coords - set(completed.keys())
+        logger.info(f"Fitting {len(remaining_coords)} pixels ({len(completed)} already completed)")
 
         # Execute remaining pixels in parallel
-        if remaining_pixels:
+        if remaining_coords:
             with contextlib.ExitStack() as exit_stack:
                 # Enter TempFileManager context first so _initial_free_gb is recorded
                 # (enables disk-cap enforcement in workers) and __exit__ runs cleanup
@@ -646,23 +659,25 @@ class BatchFittingOrchestrator:
                 shared_json_path, shared_endf_dir = self._prepare_shared_sammy_inputs(Path(shared_workspace_dir))
 
                 with GracefulShutdownHandler() as shutdown_handler:
-                    # Accumulate all future-to-pixel maps for post-executor drain
+                    # Accumulate all future-to-coord maps for post-executor drain
                     all_future_maps: List[Dict] = []
                     # Track actual attempts per pixel for accurate retry annotation
                     attempt_counts: Dict[Tuple[int, int], int] = {}
 
-                    # Submit and collect the initial batch
+                    # --- Second pass: stream pixels to executor (no list) ---
+                    remaining_iter = (p for p in pixel_factory() if (p.row, p.col) in remaining_coords)
+
                     executor = ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer)
                     try:
-                        future_to_pixel = self._submit_pixels(
-                            executor, remaining_pixels, shared_json_path, shared_endf_dir
+                        future_to_coord = self._submit_pixels(
+                            executor, remaining_iter, shared_json_path, shared_endf_dir
                         )
-                        all_future_maps.append(future_to_pixel)
-                        for p in remaining_pixels:
-                            attempt_counts[(p.row, p.col)] = 1
+                        all_future_maps.append(future_to_coord)
+                        for coord in future_to_coord.values():
+                            attempt_counts[coord] = 1
 
                         self._collect_results(
-                            future_to_pixel,
+                            future_to_coord,
                             completed,
                             total_pixels,
                             checkpoint_file,
@@ -684,31 +699,31 @@ class BatchFittingOrchestrator:
                     # from the previous round (which cannot be killed) do not occupy
                     # worker slots and starve retry submissions.
                     if max_retries > 0:
-                        coord_to_pixel = {(p.row, p.col): p for p in remaining_pixels}
                         for retry_round in range(max_retries):
                             if shutdown_handler.shutdown_requested:
                                 break
-                            failed_coords = [c for c, r in completed.items() if not r.success and c in coord_to_pixel]
+                            failed_coords = {c for c, r in completed.items() if not r.success and c in remaining_coords}
                             if not failed_coords:
                                 break
-                            failed_pixels = [coord_to_pixel[c] for c in failed_coords]
                             logger.info(
-                                f"Retry round {retry_round + 1}/{max_retries}: {len(failed_pixels)} pixels to retry"
+                                f"Retry round {retry_round + 1}/{max_retries}: {len(failed_coords)} pixels to retry"
                             )
+                            # Re-iterate factory to get pixel data for failed coords only
+                            retry_iter = (p for p in pixel_factory() if (p.row, p.col) in failed_coords)
                             retry_executor = ProcessPoolExecutor(
                                 max_workers=self.n_workers, initializer=_worker_initializer
                             )
                             try:
                                 retry_futures = self._submit_pixels(
                                     retry_executor,
-                                    failed_pixels,
+                                    retry_iter,
                                     shared_json_path,
                                     shared_endf_dir,
                                     attempt_round=retry_round + 1,
                                 )
                                 all_future_maps.append(retry_futures)
-                                for p in failed_pixels:
-                                    attempt_counts[(p.row, p.col)] = attempt_counts.get((p.row, p.col), 0) + 1
+                                for coord in retry_futures.values():
+                                    attempt_counts[coord] = attempt_counts.get(coord, 0) + 1
                                 self._collect_results(
                                     retry_futures,
                                     completed,
@@ -726,7 +741,7 @@ class BatchFittingOrchestrator:
 
                         # Annotate exhausted retries with actual attempt count
                         for coord, result in completed.items():
-                            if not result.success and coord in coord_to_pixel:
+                            if not result.success and coord in remaining_coords:
                                 actual_attempts = attempt_counts.get(coord, 1)
                                 completed[coord] = PixelFitResult(
                                     row=result.row,
@@ -743,16 +758,16 @@ class BatchFittingOrchestrator:
                     # (futures that completed after shutdown but before drain).
                     # Drain ALL future maps (initial + retry rounds).
                     for ftmap in all_future_maps:
-                        for f, pixel in ftmap.items():
-                            coord = (pixel.row, pixel.col)
+                        for f, coord in ftmap.items():
                             if coord not in completed and f.done() and not f.cancelled():
                                 try:
                                     result = f.result()
                                     completed[coord] = result
                                 except Exception as e:
+                                    row, col = coord
                                     completed[coord] = PixelFitResult(
-                                        row=pixel.row,
-                                        col=pixel.col,
+                                        row=row,
+                                        col=col,
                                         fit_results=None,
                                         success=False,
                                         error_message=f"Executor exception: {str(e)}",
@@ -764,18 +779,18 @@ class BatchFittingOrchestrator:
             self._save_checkpoint(checkpoint_file, completed, total_pixels)
             logger.info(f"Final checkpoint saved: {len(completed)}/{total_pixels} pixels completed")
 
-        # Convert to ordered list matching input order
+        # Convert to ordered list matching input coord order
         # For shutdown scenarios, fill missing pixels with failure placeholders
         results = []
-        for p in pixels:
-            coord = (p.row, p.col)
+        for coord in all_coords:
             if coord in completed:
                 results.append(completed[coord])
             else:
+                row, col = coord
                 results.append(
                     PixelFitResult(
-                        row=p.row,
-                        col=p.col,
+                        row=row,
+                        col=col,
                         fit_results=None,
                         success=False,
                         error_message="Batch fitting interrupted by shutdown signal",
@@ -793,16 +808,21 @@ class BatchFittingOrchestrator:
     def _submit_pixels(
         self,
         executor: ProcessPoolExecutor,
-        pixels: List[PixelSpectrum],
+        pixels: Iterable[PixelSpectrum],
         shared_json_path: Path,
         shared_endf_dir: Path,
         attempt_round: int = 0,
-    ) -> Dict[Future, PixelSpectrum]:
+    ) -> Dict[Future, Tuple[int, int]]:
         """Submit pixel fitting jobs to the executor.
+
+        Each pixel is pickled and sent to a worker on submission; the returned
+        dict maps futures to lightweight ``(row, col)`` coordinate tuples so
+        that the caller never needs to keep the heavy ``PixelSpectrum`` objects
+        in memory.
 
         Args:
             executor: ProcessPoolExecutor to submit jobs to.
-            pixels: List of PixelSpectrum to fit.
+            pixels: Iterable of PixelSpectrum to fit (consumed once).
             shared_json_path: Path to pre-staged JSON config.
             shared_endf_dir: Path to pre-staged ENDF directory.
             attempt_round: Attempt number (0 = first, 1+ = retries). Included in
@@ -827,7 +847,7 @@ class BatchFittingOrchestrator:
                 attempt_round,
                 max_disk_usage_gb,
                 initial_free_gb,
-            ): pixel
+            ): (pixel.row, pixel.col)
             for pixel in pixels
         }
 
@@ -852,7 +872,7 @@ class BatchFittingOrchestrator:
 
     def _collect_results(
         self,
-        future_to_pixel: Dict[Future, PixelSpectrum],
+        future_to_coord: Dict[Future, Tuple[int, int]],
         completed: Dict[Tuple[int, int], PixelFitResult],
         total_pixels: int,
         checkpoint_file: Optional[Path],
@@ -879,7 +899,7 @@ class BatchFittingOrchestrator:
 
         if timeout_per_job is not None:
             self._collect_results_with_timeout(
-                future_to_pixel,
+                future_to_coord,
                 completed,
                 total_pixels,
                 checkpoint_file,
@@ -889,10 +909,10 @@ class BatchFittingOrchestrator:
             )
             return
 
-        with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
-            for future in as_completed(future_to_pixel):
-                pixel = future_to_pixel[future]
-                coord = (pixel.row, pixel.col)
+        with ProgressReporter(total_pixels=len(future_to_coord)) as progress:
+            for future in as_completed(future_to_coord):
+                coord = future_to_coord[future]
+                row, col = coord
                 try:
                     result = future.result()
                     completed[coord] = result
@@ -901,16 +921,16 @@ class BatchFittingOrchestrator:
                     if result.success:
                         progress.record_success()
                         chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                        logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                        logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                     else:
                         progress.record_failure()
-                        logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+                        logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
 
                 except Exception as e:
-                    logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
+                    logger.exception(f"Exception collecting result for pixel ({row}, {col})")
                     completed[coord] = PixelFitResult(
-                        row=pixel.row,
-                        col=pixel.col,
+                        row=row,
+                        col=col,
                         fit_results=None,
                         success=False,
                         error_message=f"Executor exception: {str(e)}",
@@ -927,14 +947,14 @@ class BatchFittingOrchestrator:
                 # On shutdown: cancel pending futures and break immediately.
                 if shutdown_handler.shutdown_requested:
                     logger.warning("Shutdown requested, cancelling pending futures...")
-                    for f in future_to_pixel:
+                    for f in future_to_coord:
                         if not f.done():
                             f.cancel()
                     break
 
     def _collect_results_with_timeout(
         self,
-        future_to_pixel: Dict[Future, PixelSpectrum],
+        future_to_coord: Dict[Future, Tuple[int, int]],
         completed: Dict[Tuple[int, int], PixelFitResult],
         total_pixels: int,
         checkpoint_file: Optional[Path],
@@ -957,7 +977,7 @@ class BatchFittingOrchestrator:
         timeout windows, all remaining pending futures are cancelled as a safety
         net to prevent infinite loops.
         """
-        pending: Set[Future] = set(future_to_pixel.keys())
+        pending: Set[Future] = set(future_to_coord.keys())
         running_start_times: Dict[Future, float] = {}
         iterations_since_checkpoint = 0
         stall_rounds = 0
@@ -970,7 +990,7 @@ class BatchFittingOrchestrator:
             if f.running():
                 running_start_times[f] = now
 
-        with ProgressReporter(total_pixels=len(future_to_pixel)) as progress:
+        with ProgressReporter(total_pixels=len(future_to_coord)) as progress:
             while pending and not shutdown_handler.shutdown_requested:
                 # Wait for at least one future to complete, up to timeout_per_job
                 done, pending = wait(pending, timeout=timeout_per_job, return_when=FIRST_COMPLETED)
@@ -979,8 +999,8 @@ class BatchFittingOrchestrator:
                 # Process completed futures
                 for future in done:
                     running_start_times.pop(future, None)
-                    pixel = future_to_pixel[future]
-                    coord = (pixel.row, pixel.col)
+                    coord = future_to_coord[future]
+                    row, col = coord
                     try:
                         result = future.result()
                         completed[coord] = result
@@ -988,15 +1008,15 @@ class BatchFittingOrchestrator:
                         if result.success:
                             progress.record_success()
                             chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                            logger.info(f"Pixel ({pixel.row}, {pixel.col}) SUCCESS: χ² = {chi_sq_str}")
+                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                         else:
                             progress.record_failure()
-                            logger.warning(f"Pixel ({pixel.row}, {pixel.col}) FAILED: {result.error_message}")
+                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
                     except Exception as e:
-                        logger.exception(f"Exception collecting result for pixel ({pixel.row}, {pixel.col})")
+                        logger.exception(f"Exception collecting result for pixel ({row}, {col})")
                         completed[coord] = PixelFitResult(
-                            row=pixel.row,
-                            col=pixel.col,
+                            row=row,
+                            col=col,
                             fit_results=None,
                             success=False,
                             error_message=f"Executor exception: {str(e)}",
@@ -1020,17 +1040,17 @@ class BatchFittingOrchestrator:
                     f for f in pending if f in running_start_times and (now - running_start_times[f]) >= timeout_per_job
                 ]
                 for future in timed_out_futures:
-                    pixel = future_to_pixel[future]
-                    coord = (pixel.row, pixel.col)
+                    coord = future_to_coord[future]
+                    row, col = coord
                     elapsed = now - running_start_times[future]
-                    logger.warning(f"Pixel ({pixel.row}, {pixel.col}) timed out after {elapsed:.1f}s")
+                    logger.warning(f"Pixel ({row}, {col}) timed out after {elapsed:.1f}s")
                     future.cancel()  # Best-effort; won't stop already-running process
                     completed[coord] = PixelFitResult(
-                        row=pixel.row,
-                        col=pixel.col,
+                        row=row,
+                        col=col,
                         fit_results=None,
                         success=False,
-                        error_message=f"Pixel ({pixel.row}, {pixel.col}) timed out after {timeout_per_job}s",
+                        error_message=f"Pixel ({row}, {col}) timed out after {timeout_per_job}s",
                         chi_squared=None,
                     )
                     pending.discard(future)
@@ -1056,16 +1076,16 @@ class BatchFittingOrchestrator:
                         f"Cancelling {len(pending)} queued futures (workers occupied by timed-out tasks)."
                     )
                     for future in list(pending):
-                        pixel = future_to_pixel[future]
-                        coord = (pixel.row, pixel.col)
+                        coord = future_to_coord[future]
+                        row, col = coord
                         future.cancel()
                         completed[coord] = PixelFitResult(
-                            row=pixel.row,
-                            col=pixel.col,
+                            row=row,
+                            col=col,
                             fit_results=None,
                             success=False,
                             error_message=(
-                                f"Pixel ({pixel.row}, {pixel.col}) cancelled: "
+                                f"Pixel ({row}, {col}) cancelled: "
                                 f"workers occupied by timed-out tasks after {timeout_per_job}s"
                             ),
                             chi_squared=None,

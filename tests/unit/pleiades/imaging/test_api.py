@@ -200,11 +200,16 @@ class TestAnalyzeImagingBasic:
         # Verify loader was constructed and called
         MockLoader.assert_called_once()
         loader_instance.load.assert_called_once()
-        loader_instance.iter_pixels.assert_called_once()
 
         # Verify orchestrator was constructed and called
         MockOrchestrator.assert_called_once()
         orch_instance.fit_pixels.assert_called_once()
+
+        # fit_pixels receives a callable (pixel factory); invoking it calls iter_pixels
+        pixel_factory = orch_instance.fit_pixels.call_args[0][0]
+        assert callable(pixel_factory)
+        list(pixel_factory())  # invoke to trigger iter_pixels
+        loader_instance.iter_pixels.assert_called()
 
         # Verify aggregator was constructed and called
         MockAggregator.assert_called_once()
@@ -779,6 +784,10 @@ class TestAnalyzeImagingROI:
             roi=roi,
         )
 
+        # Invoke the factory to trigger iter_pixels
+        pixel_factory = orch_instance.fit_pixels.call_args[0][0]
+        list(pixel_factory())
+
         iter_call = loader_instance.iter_pixels.call_args
         assert iter_call[1].get("roi") == roi or (iter_call[0] and iter_call[0][0] == roi)
 
@@ -816,6 +825,10 @@ class TestAnalyzeImagingROI:
             imaging_config=mock_imaging_config,
             sammy_executable=mock_sammy_executable,
         )
+
+        # Invoke the factory to trigger iter_pixels
+        pixel_factory = orch_instance.fit_pixels.call_args[0][0]
+        list(pixel_factory())
 
         iter_call = loader_instance.iter_pixels.call_args
         # roi should be None (default)
@@ -860,13 +873,13 @@ class TestAnalyzeImagingROI:
             sammy_executable=mock_sammy_executable,
         )
 
-        # fit_pixels receives the iterator from iter_pixels (streamed, not pre-materialized)
+        # fit_pixels receives a callable (pixel factory)
         fit_call = orch_instance.fit_pixels.call_args
-        pixels_arg = fit_call[0][0] if fit_call[0] else fit_call[1]["pixels"]
-        # Materialize so we can check content
-        pixels_list = list(pixels_arg)
+        pixel_factory = fit_call[0][0] if fit_call[0] else fit_call[1]["pixels"]
+        assert callable(pixel_factory)
+        # Invoke factory to get pixels and verify content
+        pixels_list = list(pixel_factory())
         assert len(pixels_list) == len(sample_pixels)
-        # Verify the pixel objects are the same
         for actual, expected in zip(pixels_list, sample_pixels):
             assert actual.row == expected.row
             assert actual.col == expected.col
@@ -1673,7 +1686,12 @@ class TestAnalyzeImagingPipelineOrder:
         )[1]
 
         orch_instance = MockOrchestrator.return_value
-        orch_instance.fit_pixels.return_value = sample_pixel_results
+
+        def fit_pixels_side_effect(pixel_factory, **kwargs):
+            list(pixel_factory())  # invoke factory to trigger iter_pixels
+            return sample_pixel_results
+
+        orch_instance.fit_pixels.side_effect = fit_pixels_side_effect
 
         agg_instance = MockAggregator.return_value
         agg_instance.aggregate.return_value = mock_imaging_2d_results
@@ -1758,9 +1776,13 @@ class TestAnalyzeImagingPipelineOrder:
         )[1]
 
         orch_instance = MockOrchestrator.return_value
-        orch_instance.fit_pixels.side_effect = lambda *a, **kw: (call_order.append("fit_pixels"), sample_pixel_results)[
-            1
-        ]
+
+        def fit_pixels_side_effect(pixel_factory, **kwargs):
+            list(pixel_factory())  # invoke factory → appends "iter_pixels"
+            call_order.append("fit_pixels")
+            return sample_pixel_results
+
+        orch_instance.fit_pixels.side_effect = fit_pixels_side_effect
 
         mock_results = MagicMock(spec=Imaging2DResults)
         mock_results.save_hdf5.side_effect = lambda p: call_order.append("save_hdf5")
@@ -1931,7 +1953,12 @@ class TestAnalyzeImagingEdgeCases:
         loader_instance.iter_pixels.return_value = iter(sample_pixels)
 
         orch_instance = MockOrchestrator.return_value
-        orch_instance.fit_pixels.return_value = sample_pixel_results
+
+        def fit_pixels_side_effect(pixel_factory, **kwargs):
+            list(pixel_factory())  # invoke factory to trigger iter_pixels
+            return sample_pixel_results
+
+        orch_instance.fit_pixels.side_effect = fit_pixels_side_effect
 
         mock_results = MagicMock(spec=Imaging2DResults)
         agg_instance = MockAggregator.return_value

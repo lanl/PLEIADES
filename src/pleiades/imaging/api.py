@@ -107,7 +107,7 @@ def analyze_imaging(
         temp_manager=temp_manager,
     )
     pixel_results = orchestrator.fit_pixels(
-        loader.iter_pixels(roi=roi, stride=stride),
+        lambda: loader.iter_pixels(roi=roi, stride=stride),
         checkpoint_file=checkpoint_file,
         checkpoint_interval=checkpoint_interval,
         resume=resume,
