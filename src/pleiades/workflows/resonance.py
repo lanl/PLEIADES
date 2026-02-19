@@ -810,9 +810,10 @@ def _execute_full_workflow(
 
     from pleiades.processing import Facility
     from pleiades.processing.normalization import normalization
+    from pleiades.sammy.fitting.config import FitConfig
     from pleiades.sammy.interface import SammyFilesMultiMode
     from pleiades.sammy.io.data_manager import convert_csv_to_sammy_twenty
-    from pleiades.sammy.io.inp_manager import InpManager
+    from pleiades.sammy.io.inp_manager import InpDatasetMetadata, InpManager
     from pleiades.sammy.io.json_manager import JsonManager
     from pleiades.sammy.results.manager import ResultsManager
 
@@ -1008,17 +1009,27 @@ def _execute_full_workflow(
         # Use floor + 0.5 for consistent rounding (avoids banker's rounding)
         mass_number = int(math.floor(mass_number + 0.5))
 
-        material_props = {
-            "element": element,
-            "mass_number": mass_number,
-            "density_g_cm3": density,
-            "atomic_mass_amu": atomic_mass,
-            "abundance": 1.0,
-            "thickness_mm": 0.05,  # Will be fitted by SAMMY
-            "temperature_K": temperature,
-            "min_energy": 1.0,
-            "max_energy_eV": 200.0,
-        }
+        # Build FitConfig from workflow variables
+        fit_config = FitConfig(
+            fit_title=f"{primary_isotope} resonance analysis",
+        )
+        for iso_str in analysis_isotopes:
+            fit_config.append_isotope_from_string(iso_str)
+        fit_config.physics_params.energy_parameters.min_energy = 1.0
+        fit_config.physics_params.energy_parameters.max_energy = 200.0
+        fit_config.physics_params.broadening_parameters.temp = temperature
+
+        # Build dataset metadata for INP generation
+        dataset_metadata = InpDatasetMetadata(
+            element=element,
+            mass_number=mass_number,
+            atomic_mass_amu=atomic_mass,
+            min_energy_eV=1.0,
+            max_energy_eV=200.0,
+            temperature_K=temperature,
+            density_g_cm3=density,
+            thickness_mm=0.05,
+        )
 
         # Get resolution file path if available
         resolution_file_path = _get_resolution_file_path(dataset_path)
@@ -1026,8 +1037,9 @@ def _execute_full_workflow(
         inp_file = working_dir / "fitting.inp"
         InpManager.create_multi_isotope_inp(
             inp_file,
+            fit_config=fit_config,
             title=f"{primary_isotope} resonance analysis",
-            material_properties=material_props,
+            dataset_metadata=dataset_metadata,
             resolution_file_path=resolution_file_path,
         )
         workflow_steps["inp_generation"] = "completed"
