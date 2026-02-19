@@ -190,13 +190,12 @@ def validate_dataset(dataset_path: str | Path) -> ValidationResult:
                 )
 
     # Determine recommended workflow
-    # Prefer simplified workflow when both are available since full workflow
-    # is not yet implemented (see #201)
+    # Prefer full workflow when both are available so imaging data is used
     recommended = None
-    if can_run_simplified:
-        recommended = WorkflowType.SIMPLIFIED
-    elif can_run_full:
+    if can_run_full:
         recommended = WorkflowType.FULL
+    elif can_run_simplified:
+        recommended = WorkflowType.SIMPLIFIED
 
     # Dataset is valid if there are no errors
     has_errors = any(i.severity == "error" for i in issues)
@@ -401,12 +400,11 @@ def analyze_resonance(
         workflow_steps["validation"] = "completed"
 
         # Determine workflow type
-        # Prefer simplified workflow when both are available since full workflow
-        # is not yet implemented (see #201) - matches validate_dataset logic
-        if validation.can_run_simplified_workflow:
-            workflow_type = WorkflowType.SIMPLIFIED
-        elif validation.can_run_full_workflow:
+        # Prefer full workflow when both imaging and SAMMY data exist
+        if validation.can_run_full_workflow:
             workflow_type = WorkflowType.FULL
+        elif validation.can_run_simplified_workflow:
+            workflow_type = WorkflowType.SIMPLIFIED
         else:
             return ResonanceResult(
                 success=False,
@@ -426,10 +424,10 @@ def analyze_resonance(
             has_sammy_files = False
         has_imaging_data = (dataset_path / "raw").exists() and (dataset_path / "open_beam").exists()
 
-        if has_sammy_files:
-            workflow_type = WorkflowType.SIMPLIFIED
-        elif has_imaging_data:
+        if has_imaging_data:
             workflow_type = WorkflowType.FULL
+        elif has_sammy_files:
+            workflow_type = WorkflowType.SIMPLIFIED
         else:
             # Neither workflow is available - return clear error
             return ResonanceResult(
@@ -451,6 +449,20 @@ def analyze_resonance(
 
     # Execute appropriate workflow
     if workflow_type == WorkflowType.SIMPLIFIED:
+        if isotopes:
+            logger.warning("isotopes parameter is not supported for simplified workflow datasets")
+            primary_for_error = isotopes[0]
+            return ResonanceResult(
+                success=False,
+                workflow_type=WorkflowType.SIMPLIFIED,
+                primary_isotope=primary_for_error,
+                error_message=(
+                    "isotopes parameter is only supported when imaging data is available so SAMMY inputs "
+                    "can be regenerated. Remove the parameter or provide raw/open_beam data."
+                ),
+                error_step="parameter_validation",
+                workflow_steps=workflow_steps,
+            )
         return _execute_simplified_workflow(
             dataset_path=dataset_path,
             primary_isotope=primary_isotope,

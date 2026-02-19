@@ -1,5 +1,6 @@
 """Tests for pleiades.workflows.resonance module."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -119,7 +120,7 @@ created: "2024-01-01T00:00:00Z"
         assert result.has_manifest
 
     def test_both_workflow_types_available(self, tmp_path):
-        """Dataset with both imaging data and SAMMY files should prefer simplified."""
+        """Dataset with both imaging data and SAMMY files should prefer full workflow."""
         # Create imaging data
         (tmp_path / "raw").mkdir()
         (tmp_path / "open_beam").mkdir()
@@ -135,8 +136,7 @@ created: "2024-01-01T00:00:00Z"
         assert result.valid
         assert result.can_run_full_workflow
         assert result.can_run_simplified_workflow
-        # Should prefer simplified since full is not yet implemented
-        assert result.recommended_workflow == WorkflowType.SIMPLIFIED
+        assert result.recommended_workflow == WorkflowType.FULL
 
 
 class TestExtractManifest:
@@ -342,6 +342,58 @@ class TestAnalyzeResonance:
         # The normalization step should fail because there are no TIFF files
         assert result.error_step == "normalization"
         assert "Normalization failed" in result.error_message or "No files found" in result.error_message
+
+    @patch("pleiades.workflows.resonance._execute_full_workflow")
+    @patch("pleiades.workflows.resonance.extract_manifest", return_value=None)
+    @patch("pleiades.workflows.resonance.validate_dataset")
+    def test_analyze_prefers_full_workflow_when_both_available(
+        self,
+        mock_validate,
+        _mock_extract_manifest,
+        mock_execute_full_workflow,
+        tmp_path,
+    ):
+        """When both workflows are valid, analyze_resonance should run the full workflow."""
+        from pleiades.workflows.resonance import analyze_resonance
+
+        mock_validate.return_value = SimpleNamespace(
+            valid=True,
+            can_run_full_workflow=True,
+            can_run_simplified_workflow=True,
+        )
+        sentinel = MagicMock()
+        mock_execute_full_workflow.return_value = sentinel
+
+        result = analyze_resonance(tmp_path)
+
+        mock_execute_full_workflow.assert_called_once()
+        assert result is sentinel
+
+    @patch("pleiades.workflows.resonance._execute_simplified_workflow")
+    @patch("pleiades.workflows.resonance.extract_manifest", return_value=None)
+    @patch("pleiades.workflows.resonance.validate_dataset")
+    def test_analyze_rejects_isotopes_in_simplified_workflow(
+        self,
+        mock_validate,
+        _mock_extract_manifest,
+        mock_execute_simplified_workflow,
+        tmp_path,
+    ):
+        """Supplying isotopes for simplified workflow should return a parameter error."""
+        from pleiades.workflows.resonance import analyze_resonance
+
+        mock_validate.return_value = SimpleNamespace(
+            valid=True,
+            can_run_full_workflow=False,
+            can_run_simplified_workflow=True,
+        )
+
+        result = analyze_resonance(tmp_path, isotopes=["Hf-177"])
+
+        assert not result.success
+        assert result.error_step == "parameter_validation"
+        assert "isotopes parameter" in result.error_message
+        mock_execute_simplified_workflow.assert_not_called()
 
     @patch("pleiades.sammy.results.manager.ResultsManager")
     @patch("pleiades.sammy.factory.SammyFactory")
