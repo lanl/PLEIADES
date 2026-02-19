@@ -831,8 +831,102 @@ class TestFitPixelWorker:
         assert result.chi_squared == 2.345
         mock_json_mgr.assert_not_called()
         prepared_files = mock_runner.prepare_environment.call_args.args[0]
-        assert prepared_files.json_config_file == shared_json
-        assert prepared_files.endf_directory == shared_dir
+        # Worker copies shared files locally so it is self-contained even if
+        # the shared workspace is torn down (e.g. after a timeout).
+        assert prepared_files.json_config_file.name == shared_json.name
+        assert prepared_files.json_config_file != shared_json  # local copy, not original
+        assert prepared_files.endf_directory.name == "endf_local"
+        assert prepared_files.endf_directory != shared_dir  # local copy, not original
+
+    @patch("pleiades.imaging.orchestrator.ResultsManager")
+    @patch("pleiades.imaging.orchestrator.LocalSammyRunner")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    def test_worker_endf_survives_shared_workspace_deletion(
+        self, mock_json_mgr, mock_runner_cls, mock_results_mgr_cls, imaging_config
+    ):
+        """Worker-local ENDF copies must survive shared workspace deletion.
+
+        Regression test: when timeout_per_job causes the main process to tear
+        down the shared workspace (ExitStack) while timed-out workers still
+        run, symlinks back into the shared directory would break with ENOENT.
+        The worker now copies ENDF files locally so it is self-contained.
+        """
+        pixel = PixelSpectrum(
+            row=0,
+            col=0,
+            energy=np.linspace(1, 100, 50),
+            transmission=np.random.uniform(0.5, 1.0, 50),
+            uncertainty=np.full(50, 0.01),
+        )
+
+        # Capture the SammyFilesMultiMode object passed to prepare_environment
+        captured_files = {}
+
+        def capture_prepare(files):
+            captured_files["endf_directory"] = files.endf_directory
+            captured_files["json_config_file"] = files.json_config_file
+
+        mock_runner = MagicMock()
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.error_message = None
+        mock_runner.execute_sammy.return_value = mock_result
+        mock_runner.prepare_environment.side_effect = capture_prepare
+        mock_runner_cls.return_value = mock_runner
+
+        mock_fit_result = MagicMock(spec=FitResults)
+        mock_chi_sq = ChiSquaredResults(chi_squared=1.0, dof=50, reduced_chi_squared=0.02)
+        mock_fit_result.get_chi_squared_results.return_value = mock_chi_sq
+        mock_results_mgr = MagicMock()
+        mock_results_mgr.run_results.fit_results = [mock_fit_result]
+        mock_results_mgr_cls.return_value = mock_results_mgr
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            sammy_exe = temp_path / "sammy"
+            sammy_exe.touch()
+
+            # Create a shared workspace that will be deleted mid-flight
+            shared_dir = temp_path / "shared"
+            shared_dir.mkdir()
+            shared_json = shared_dir / "config.json"
+            shared_json.write_text("{}", encoding="utf-8")
+            endf_file = shared_dir / "073-Ta-181.B-VIII.0.par"
+            endf_file.write_text("ENDF data", encoding="utf-8")
+
+            # Use temp_base_dir so the worker's workspace persists for assertions
+            # (cleanup_policy="manual" prevents auto-deletion)
+            worker_base = temp_path / "workers"
+            worker_base.mkdir()
+
+            _fit_pixel_worker(
+                pixel,
+                imaging_config,
+                sammy_exe,
+                shared_json_config=shared_json,
+                shared_endf_directory=shared_dir,
+                temp_base_dir=worker_base,
+                cleanup_policy="manual",
+            )
+
+            # Simulate ExitStack tearing down the shared workspace
+            import shutil
+
+            shutil.rmtree(shared_dir)
+            assert not shared_dir.exists()
+
+            # The worker's local copies must still exist
+            local_endf_dir = captured_files["endf_directory"]
+            assert local_endf_dir.exists(), "Local ENDF directory was deleted with shared workspace"
+            local_endf_names = {f.name for f in local_endf_dir.iterdir()}
+            # In production, shared_endf_directory == shared_inputs_dir which
+            # contains both ENDF .par files and the JSON config.
+            assert "073-Ta-181.B-VIII.0.par" in local_endf_names
+            endf_copy = local_endf_dir / "073-Ta-181.B-VIII.0.par"
+            assert endf_copy.read_text(encoding="utf-8") == "ENDF data"
+
+            local_json = captured_files["json_config_file"]
+            assert local_json.exists(), "Local JSON config was deleted with shared workspace"
 
     @patch("pleiades.imaging.orchestrator.JsonManager")
     def test_fit_pixel_worker_exception_handling(self, mock_json_mgr, imaging_config):

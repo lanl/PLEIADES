@@ -326,8 +326,22 @@ def _fit_pixel_worker_impl(
                 raise FileNotFoundError(f"Shared JSON config not found: {shared_json_config}")
             if not shared_endf_directory.exists():
                 raise FileNotFoundError(f"Shared ENDF directory not found: {shared_endf_directory}")
-            json_path = shared_json_config
-            endf_directory = shared_endf_directory
+
+            # Copy shared files into the worker's local temp directory so that
+            # timed-out workers remain self-contained after the shared workspace
+            # is torn down by the main process (SammyFilesMultiMode.move_to_working_dir
+            # would otherwise create symlinks back into the shared directory,
+            # breaking with ENOENT when that directory is deleted).
+            local_json_path = temp_path / shared_json_config.name
+            shutil.copy2(shared_json_config, local_json_path)
+            json_path = local_json_path
+
+            local_endf_dir = temp_path / "endf_local"
+            local_endf_dir.mkdir(exist_ok=True)
+            for endf_file in shared_endf_directory.iterdir():
+                if endf_file.is_file():
+                    shutil.copy2(endf_file, local_endf_dir / endf_file.name)
+            endf_directory = local_endf_dir
         else:
             # Fallback mode for direct worker usage (tests/debug) without orchestrator pre-staging.
             json_manager = JsonManager()
