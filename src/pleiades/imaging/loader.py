@@ -395,8 +395,8 @@ class HyperspectralLoader:
                     row=row,
                     col=col,
                     energy=self._hyperspectral.energy,
-                    transmission=transmission.copy(),
-                    uncertainty=uncertainty.copy(),
+                    transmission=transmission,
+                    uncertainty=uncertainty,
                     metadata={"source": str(self.source), "load_mode": self._load_mode},
                 )
 
@@ -430,8 +430,8 @@ class HyperspectralLoader:
         return PixelSpectrum(
             row=row,
             col=col,
-            energy=self._hyperspectral.energy.copy(),
-            transmission=transmission.copy(),
-            uncertainty=uncertainty.copy(),
+            energy=self._hyperspectral.energy,
+            transmission=transmission,
+            uncertainty=uncertainty,
             metadata={"source": str(self.source), "load_mode": self._load_mode},
         )
