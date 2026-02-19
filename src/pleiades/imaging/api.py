@@ -50,9 +50,15 @@ def analyze_imaging(
         energy: Energy axis in eV. If None, inferred from data.
         n_workers: Number of parallel SAMMY workers. Must be >= 1.
         roi: Region of interest as ``(x1, y1, x2, y2)``. If None, all pixels.
-        stride: Spatial stride for pixel iteration.  ``stride=4`` fits every
-            4th pixel in both directions (16x fewer pixels).  Unfitted pixels
-            appear as NaN in the output maps.
+        stride: Spatial stride for pixel iteration. ``stride=4`` fits every
+            4th pixel in both directions (about 16x fewer evaluated pixels),
+            but the returned abundance maps always have the full input
+            ``(height, width)`` shape. Pixels that are not evaluated are left
+            as NaN in the output maps. For an input of shape ``(H, W)``, only
+            roughly ``ceil(H / stride) * ceil(W / stride)`` locations contain
+            fitted values, so for large strides most entries may be NaN; when
+            visualizing or computing statistics, use NaN-aware methods or
+            masking as appropriate.
         resolution_file: Optional path to instrument resolution function file.
             Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.

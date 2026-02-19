@@ -50,7 +50,7 @@ def _move_broadening_inp_to_par(inp_file: Path, par_file: Path) -> None:
         par_file: Path to the SAMMY PAR file (broadening section appended).
     """
     # --- Step 1: Extract broadening sections from INP ---
-    with open(inp_file) as f:
+    with open(inp_file, encoding="utf-8") as f:
         lines = f.readlines()
 
     in_broadening = False
@@ -86,7 +86,7 @@ def _move_broadening_inp_to_par(inp_file: Path, par_file: Path) -> None:
         broadening_sections.append(current_section)
 
     # Write cleaned INP
-    with open(inp_file, "w") as f:
+    with open(inp_file, "w", encoding="utf-8") as f:
         f.writelines(filtered)
 
     logger.debug(
@@ -99,7 +99,7 @@ def _move_broadening_inp_to_par(inp_file: Path, par_file: Path) -> None:
         # Use the LAST section (contains fitted values from pass 1)
         fitted_section = broadening_sections[-1]
 
-        with open(par_file, "a") as f:
+        with open(par_file, "a", encoding="utf-8") as f:
             # Ensure we start on a new line
             f.write("\n")
             f.writelines(fitted_section)
@@ -120,7 +120,7 @@ def _enable_abundance_fitting_in_par(par_file: Path) -> None:
     Args:
         par_file: Path to the SAMMY parameter file to modify in-place.
     """
-    with open(par_file) as f:
+    with open(par_file, encoding="utf-8") as f:
         lines = f.readlines()
 
     in_card10 = False
@@ -175,7 +175,7 @@ def _enable_abundance_fitting_in_par(par_file: Path) -> None:
         else:
             modified.append(line)
 
-    with open(par_file, "w") as f:
+    with open(par_file, "w", encoding="utf-8") as f:
         f.writelines(modified)
 
     logger.debug(f"Enabled abundance fitting for {isotopes_modified} isotope(s) in {par_file.name}")
@@ -224,7 +224,7 @@ class LocalSammyRunner(SammyRunner):
 
         try:
             # Parse JSON to find referenced ENDF files
-            with open(files.json_config_file, "r") as f:
+            with open(files.json_config_file, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
             # Find isotope entries (lists in JSON) - keys are ENDF filenames
