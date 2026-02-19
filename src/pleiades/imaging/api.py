@@ -29,6 +29,7 @@ def analyze_imaging(
     n_workers: int = 4,
     roi: tuple[int, int, int, int] | None = None,
     stride: int = 1,
+    resolution_file: Path | None = None,
     checkpoint_file: Path | None = None,
     checkpoint_interval: int = 10,
     resume: bool = False,
@@ -52,6 +53,8 @@ def analyze_imaging(
         stride: Spatial stride for pixel iteration.  ``stride=4`` fits every
             4th pixel in both directions (16x fewer pixels).  Unfitted pixels
             appear as NaN in the output maps.
+        resolution_file: Optional path to instrument resolution function file.
+            Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.
         checkpoint_interval: Save checkpoint every N completed pixels. Must be >= 1.
         resume: If True, resume from an existing checkpoint file.
@@ -95,19 +98,16 @@ def analyze_imaging(
     _, height, width = hyperspectral.shape
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
 
-    # --- 2. Extract pixels ---
-    pixels = list(loader.iter_pixels(roi=roi, stride=stride))
-    logger.info(f"Extracted {len(pixels)} pixels for fitting")
-
-    # --- 3. Fit pixels ---
+    # --- 2. Fit pixels (streamed from loader to orchestrator) ---
     orchestrator = BatchFittingOrchestrator(
         imaging_config=imaging_config,
         sammy_executable=sammy_executable,
         n_workers=n_workers,
+        resolution_file=resolution_file,
         temp_manager=temp_manager,
     )
     pixel_results = orchestrator.fit_pixels(
-        pixels,
+        loader.iter_pixels(roi=roi, stride=stride),
         checkpoint_file=checkpoint_file,
         checkpoint_interval=checkpoint_interval,
         resume=resume,

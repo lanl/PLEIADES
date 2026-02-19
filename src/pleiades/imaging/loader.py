@@ -394,7 +394,7 @@ class HyperspectralLoader:
                 yield PixelSpectrum(
                     row=row,
                     col=col,
-                    energy=self._hyperspectral.energy.copy(),
+                    energy=self._hyperspectral.energy,
                     transmission=transmission.copy(),
                     uncertainty=uncertainty.copy(),
                     metadata={"source": str(self.source), "load_mode": self._load_mode},

@@ -14,7 +14,7 @@ import time
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from tqdm import tqdm
 
@@ -533,7 +533,7 @@ class BatchFittingOrchestrator:
 
     def fit_pixels(
         self,
-        pixels: List[PixelSpectrum],
+        pixels: Iterable[PixelSpectrum],
         checkpoint_file: Optional[Path] = None,
         checkpoint_interval: int = 10,
         resume: bool = False,
@@ -543,7 +543,7 @@ class BatchFittingOrchestrator:
         """Fit all pixels using parallel SAMMY execution.
 
         Args:
-            pixels: List of PixelSpectrum to fit
+            pixels: Iterable of PixelSpectrum to fit (materialized internally)
             checkpoint_file: Optional path to save/load checkpoint
             checkpoint_interval: Save checkpoint every N completed pixels (default: 10)
             resume: If True, resume from existing checkpoint file
@@ -568,6 +568,9 @@ class BatchFittingOrchestrator:
             FileNotFoundError: If resume=True but checkpoint file doesn't exist
             ValueError: If resume=True but checkpoint_file is None, or invalid parameters
         """
+        # Materialize iterable so we can get len(), check duplicates, etc.
+        pixels = list(pixels) if not isinstance(pixels, list) else pixels
+
         # Handle empty pixel list
         if not pixels:
             logger.warning("fit_pixels called with empty pixel list")

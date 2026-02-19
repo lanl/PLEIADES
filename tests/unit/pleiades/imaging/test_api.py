@@ -690,6 +690,49 @@ class TestAnalyzeImagingParameterPassing:
         elif len(orch_call[0]) > 2:
             assert orch_call[0][2] == 4
 
+    @patch("pleiades.imaging.api.ResultsAggregator")
+    @patch("pleiades.imaging.api.BatchFittingOrchestrator")
+    @patch("pleiades.imaging.api.HyperspectralLoader")
+    def test_resolution_file_passed_to_orchestrator(
+        self,
+        MockLoader,
+        MockOrchestrator,
+        MockAggregator,
+        mock_imaging_config,
+        mock_sammy_executable,
+        mock_source_path,
+        sample_pixels,
+        sample_pixel_results,
+        mock_hyperspectral_data,
+        mock_imaging_2d_results,
+        tmp_path,
+    ):
+        """Verify resolution_file is forwarded to BatchFittingOrchestrator."""
+        from pleiades.imaging.api import analyze_imaging
+
+        loader_instance = MockLoader.return_value
+        loader_instance.load.return_value = mock_hyperspectral_data
+        loader_instance.iter_pixels.return_value = iter(sample_pixels)
+
+        orch_instance = MockOrchestrator.return_value
+        orch_instance.fit_pixels.return_value = sample_pixel_results
+
+        agg_instance = MockAggregator.return_value
+        agg_instance.aggregate.return_value = mock_imaging_2d_results
+
+        res_file = tmp_path / "resolution.dat"
+        res_file.touch()
+
+        analyze_imaging(
+            source=mock_source_path,
+            imaging_config=mock_imaging_config,
+            sammy_executable=mock_sammy_executable,
+            resolution_file=res_file,
+        )
+
+        orch_call_kwargs = MockOrchestrator.call_args[1]
+        assert orch_call_kwargs["resolution_file"] == res_file
+
 
 # ---------------------------------------------------------------------------
 # TestAnalyzeImagingROI
@@ -817,12 +860,14 @@ class TestAnalyzeImagingROI:
             sammy_executable=mock_sammy_executable,
         )
 
-        # fit_pixels receives the pixel list (materialized from iter_pixels)
+        # fit_pixels receives the iterator from iter_pixels (streamed, not pre-materialized)
         fit_call = orch_instance.fit_pixels.call_args
         pixels_arg = fit_call[0][0] if fit_call[0] else fit_call[1]["pixels"]
-        assert len(pixels_arg) == len(sample_pixels)
+        # Materialize so we can check content
+        pixels_list = list(pixels_arg)
+        assert len(pixels_list) == len(sample_pixels)
         # Verify the pixel objects are the same
-        for actual, expected in zip(pixels_arg, sample_pixels):
+        for actual, expected in zip(pixels_list, sample_pixels):
             assert actual.row == expected.row
             assert actual.col == expected.col
 
