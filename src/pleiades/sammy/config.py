@@ -6,6 +6,7 @@ This module provides concrete configuration classes for each SAMMY backend type,
 inheriting from the base configuration defined in the interface module.
 """
 
+import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -48,6 +49,31 @@ class DockerSammyConfig(BaseSammyConfig):
     container_working_dir: Path = Path("/sammy/work")
     container_data_dir: Path = Path("/sammy/data")
 
+    _MUTABLE_TAGS = {"latest", "stable", "main", "master", "dev", "edge", "nightly"}
+
+    @staticmethod
+    def _is_digest_pinned_image_reference(image_name: str) -> bool:
+        """Return True if the image reference uses an immutable sha256 digest."""
+        return re.fullmatch(r".+@sha256:[0-9a-f]{64}", image_name) is not None
+
+    @classmethod
+    def _has_explicit_non_mutable_tag(cls, image_name: str) -> bool:
+        """Return True if the image reference has an explicit, non-mutable tag."""
+        # Docker tags are separated by ":" after the last "/" in the image reference.
+        last_slash = image_name.rfind("/")
+        last_colon = image_name.rfind(":")
+        if last_colon <= last_slash:
+            return False
+        tag = image_name[last_colon + 1 :].strip().lower()
+        if not tag:
+            return False
+        return tag not in cls._MUTABLE_TAGS
+
+    @classmethod
+    def _is_pinned_or_versioned_image_reference(cls, image_name: str) -> bool:
+        """Return True for digest-pinned references or explicit non-mutable tags."""
+        return cls._is_digest_pinned_image_reference(image_name) or cls._has_explicit_non_mutable_tag(image_name)
+
     def validate(self) -> bool:
         """
         Validate Docker SAMMY configuration.
@@ -64,6 +90,12 @@ class DockerSammyConfig(BaseSammyConfig):
         # Validate image name
         if not self.image_name:
             raise ConfigurationError("Docker image name cannot be empty")
+        if not self._is_pinned_or_versioned_image_reference(self.image_name):
+            raise ConfigurationError(
+                "Docker image name must be pinned to an immutable digest "
+                "(e.g. repo/image@sha256:<digest>) or use an explicit non-mutable version tag "
+                "(e.g. repo/image:1.2.3)."
+            )
 
         # Validate container paths are absolute
         if not self.container_working_dir.is_absolute():

@@ -67,7 +67,7 @@ def docker_config(temp_working_dir):
     config = DockerSammyConfig(
         working_dir=temp_working_dir,
         output_dir=temp_working_dir / "output",
-        image_name="kedokudo/sammy-docker",
+        image_name="kedokudo/sammy-docker:1.0.0",
         container_working_dir=Path("/sammy/work"),
         container_data_dir=Path("/sammy/data"),
     )
