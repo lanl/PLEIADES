@@ -353,11 +353,13 @@ def _fit_pixel_worker_impl(
 
         # Step 4: Create .inp file
         inp_file = temp_path / "sammy.inp"
-        material_props = imaging_config.get_material_properties()
+        fit_config = imaging_config.to_fit_config()
+        dataset_metadata = imaging_config.to_dataset_metadata()
         InpManager.create_multi_isotope_inp(
             inp_file,
+            fit_config=fit_config,
             title=f"Pixel ({pixel.row}, {pixel.col}) resonance fitting",
-            material_properties=material_props,
+            dataset_metadata=dataset_metadata,
             resolution_file_path=resolution_file,
         )
 
