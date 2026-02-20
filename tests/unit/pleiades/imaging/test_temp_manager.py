@@ -1265,7 +1265,10 @@ class TestCheckWorkerDiskSpace:
         """Returns None (no error) when disk has enough space."""
         from pleiades.imaging.orchestrator import _check_worker_disk_space
 
-        result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=50.0, initial_free_gb=100.0)
+        # Mock disk usage: 98 GB free out of 100 GB → consumed 2 GB, well within 50 GB limit
+        mock_usage = _DiskUsage(total=100 * _BYTES_PER_GB, used=2 * _BYTES_PER_GB, free=98 * _BYTES_PER_GB)
+        with patch("shutil.disk_usage", return_value=mock_usage):
+            result = _check_worker_disk_space(tmp_path, max_disk_usage_gb=50.0, initial_free_gb=100.0)
         assert result is None
 
     def test_returns_error_when_free_space_too_low(self, tmp_path):

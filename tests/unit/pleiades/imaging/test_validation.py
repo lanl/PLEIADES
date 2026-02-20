@@ -237,8 +237,12 @@ def _build_multi_isotope_ground_truth(
 ) -> tuple[np.ndarray, np.ndarray, List[PixelFitResult]]:
     """Build two-isotope ground truth with different spatial patterns.
 
-    Ta-181: left-to-right gradient (0.1 -> 0.9)
-    W-182:  top-to-bottom gradient (0.8 -> 0.2)
+    Ta-181: left-to-right gradient (raw 0.1 -> 0.9)
+    W-182:  top-to-bottom gradient (raw 0.8 -> 0.2)
+
+    The returned ground-truth maps are **normalised** (per-pixel sum = 1.0)
+    to match the post-hoc normalisation applied by ``ResultsAggregator``.
+    The pixel results carry the raw (unnormalised) abundances.
 
     Returns:
         (ta_truth, w_truth, pixel_results)
@@ -250,13 +254,14 @@ def _build_multi_isotope_ground_truth(
         for col in range(width):
             col_frac = col / max(width - 1, 1)
             row_frac = row / max(height - 1, 1)
-            ta_abundance = 0.1 + 0.8 * col_frac
-            w_abundance = 0.8 - 0.6 * row_frac
-            ta_truth[row, col] = ta_abundance
-            w_truth[row, col] = w_abundance
+            ta_raw = 0.1 + 0.8 * col_frac
+            w_raw = 0.8 - 0.6 * row_frac
+            total = ta_raw + w_raw
+            ta_truth[row, col] = ta_raw / total
+            w_truth[row, col] = w_raw / total
             specs = [
-                {**TA181_SPEC, "abundance": ta_abundance},
-                {**W182_SPEC, "abundance": w_abundance},
+                {**TA181_SPEC, "abundance": ta_raw},
+                {**W182_SPEC, "abundance": w_raw},
             ]
             pixel_results.append(_make_successful_pixel(row, col, specs, chi_squared=1.5))
     return ta_truth, w_truth, pixel_results
@@ -1137,15 +1142,20 @@ class TestEndToEndPipeline:
         tiff_path = tmp_path / "synthetic_test.tif"
         tifffile.imwrite(str(tiff_path), data)
 
-        # Ground truth abundance maps
+        # Ground truth abundance maps (normalized so Ta + W = 1.0 per pixel).
+        # The aggregator normalizes multi-isotope abundances, so ground truth
+        # must reflect that post-normalization state for assertions to pass.
         ta_truth = np.zeros((height, width), dtype=np.float64)
         w_truth = np.zeros((height, width), dtype=np.float64)
         for row in range(height):
             for col in range(width):
                 col_frac = col / max(width - 1, 1)
                 row_frac = row / max(height - 1, 1)
-                ta_truth[row, col] = 0.2 + 0.6 * col_frac
-                w_truth[row, col] = 0.7 - 0.4 * row_frac
+                ta_raw = 0.2 + 0.6 * col_frac
+                w_raw = 0.7 - 0.4 * row_frac
+                total = ta_raw + w_raw
+                ta_truth[row, col] = ta_raw / total
+                w_truth[row, col] = w_raw / total
 
         return tiff_path, energy, ta_truth, w_truth
 

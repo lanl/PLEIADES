@@ -143,7 +143,7 @@ class LptManager:
                         isotope_info = IsotopeInfo(atomic_number=int(round(mass)), mass_data=mass_data_info)
 
                         isotope = IsotopeParameters(
-                            isotope_infomation=isotope_info,
+                            isotope_information=isotope_info,
                             abundance=abundance,
                             spin_groups=spin_groups,
                             vary_abundance=vary_abundance,

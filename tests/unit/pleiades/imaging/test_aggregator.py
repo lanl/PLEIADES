@@ -462,7 +462,11 @@ class TestResultsAggregator:
     # 13. Correctness: verify specific abundance values at correct positions
     # -----------------------------------------------------------------------
     def test_abundance_values_at_correct_positions(self):
-        """Verify that each pixel's abundance ends up at the correct (row, col) in the map."""
+        """Verify that each pixel's abundance ends up at the correct (row, col) in the map.
+
+        Multi-isotope abundances are normalised to sum to 1.0, so expected
+        values must account for this.
+        """
         height, width = 3, 3
         isotope_names = ["Ta-181", "W-182"]
         source = _make_hyperspectral(height, width)
@@ -480,8 +484,10 @@ class TestResultsAggregator:
                     {**TWO_ISOTOPE_SPECS[1], "abundance": w_abundance},
                 ]
                 pixel_results.append(_make_successful_pixel(r, c, specs, chi_squared=1.0))
-                expected_ta[r, c] = ta_abundance
-                expected_w[r, c] = w_abundance
+                # Expected values after normalisation (abundances sum to 1.0)
+                total = ta_abundance + w_abundance
+                expected_ta[r, c] = ta_abundance / total
+                expected_w[r, c] = w_abundance / total
 
         aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
         result = aggregator.aggregate(pixel_results, source)
@@ -1000,6 +1006,98 @@ class TestResultsAggregatorValidation:
         np.testing.assert_allclose(result.abundance_maps[0, 0, 0], 0.60)
         # W-182 (index 1 in isotope_names) should have abundance 0.40
         np.testing.assert_allclose(result.abundance_maps[1, 0, 0], 0.40)
+
+    def test_multi_isotope_abundances_normalised_to_sum_one(self):
+        """Multi-isotope abundances that exceed 1.0 are normalised so they sum to 1.0 per pixel.
+
+        SAMMY fits abundance as an unconstrained parameter.  When the material
+        model uses a single element's properties for a multi-element alloy,
+        individual abundances can exceed 1.0.  The aggregator normalises
+        them so the ratio is preserved and values are physically interpretable.
+        """
+        height, width = 1, 2
+        isotope_names = ["Ta-181", "U-235"]
+        source = _make_hyperspectral(height, width)
+
+        u235_spec = {
+            "name": "U-235",
+            "atomic_number": 92,
+            "mass_number": 235,
+            "atomic_mass": 235.044,
+            "spin": 3.5,
+        }
+
+        # Pixel (0,0): Ta=0.35, U=1.52 (sum=1.87, both > 0, U > 1.0)
+        specs_0 = [
+            {**SINGLE_ISOTOPE_SPECS[0], "abundance": 0.35},
+            {**u235_spec, "abundance": 1.52},
+        ]
+        # Pixel (0,1): Ta=0.60, U=0.40 (sum=1.0, already normalised)
+        specs_1 = [
+            {**SINGLE_ISOTOPE_SPECS[0], "abundance": 0.60},
+            {**u235_spec, "abundance": 0.40},
+        ]
+        pixel_results = [
+            _make_successful_pixel(0, 0, specs_0, chi_squared=100.0),
+            _make_successful_pixel(0, 1, specs_1, chi_squared=2.0),
+        ]
+
+        aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
+        result = aggregator.aggregate(pixel_results, source)
+
+        # Pixel (0,0): normalised to Ta=0.35/1.87, U=1.52/1.87
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 0], 0.35 / 1.87, atol=1e-10)
+        np.testing.assert_allclose(result.abundance_maps[1, 0, 0], 1.52 / 1.87, atol=1e-10)
+        # Sum should be 1.0
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 0] + result.abundance_maps[1, 0, 0], 1.0, atol=1e-10)
+
+        # Pixel (0,1): already summed to 1.0, should be unchanged
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 1], 0.60, atol=1e-10)
+        np.testing.assert_allclose(result.abundance_maps[1, 0, 1], 0.40, atol=1e-10)
+
+    def test_single_isotope_abundance_not_normalised(self):
+        """Single-isotope abundances are NOT normalised (they carry absolute information)."""
+        height, width = 1, 2
+        isotope_names = ["Ta-181"]
+        source = _make_hyperspectral(height, width)
+
+        # Abundance = 0.85 (not 1.0) — this is meaningful (e.g. 85% enrichment)
+        specs = [{**SINGLE_ISOTOPE_SPECS[0], "abundance": 0.85}]
+        pixel_results = [
+            _make_successful_pixel(0, 0, specs, chi_squared=1.5),
+            _make_successful_pixel(0, 1, [{**SINGLE_ISOTOPE_SPECS[0], "abundance": 0.95}], chi_squared=1.0),
+        ]
+
+        aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
+        result = aggregator.aggregate(pixel_results, source)
+
+        # Raw values should be preserved, not normalised to 1.0
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 0], 0.85, atol=1e-10)
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 1], 0.95, atol=1e-10)
+
+    def test_normalisation_with_failed_pixels_leaves_nan(self):
+        """Normalisation only applies to successful pixels; failed pixels remain NaN."""
+        height, width = 1, 3
+        isotope_names = ["Ta-181", "W-182"]
+        source = _make_hyperspectral(height, width)
+
+        pixel_results = [
+            _make_successful_pixel(0, 0, TWO_ISOTOPE_SPECS, chi_squared=1.0),
+            _make_failed_pixel(0, 1),
+            _make_successful_pixel(0, 2, TWO_ISOTOPE_SPECS, chi_squared=2.0),
+        ]
+
+        aggregator = ResultsAggregator(isotope_names=isotope_names, height=height, width=width)
+        result = aggregator.aggregate(pixel_results, source)
+
+        # Successful pixels should be normalised (0.6+0.4=1.0, so unchanged)
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 0], 0.60, atol=1e-10)
+        np.testing.assert_allclose(result.abundance_maps[1, 0, 0], 0.40, atol=1e-10)
+        # Failed pixel should remain NaN
+        assert np.isnan(result.abundance_maps[0, 0, 1])
+        assert np.isnan(result.abundance_maps[1, 0, 1])
+        # Third pixel should also be normalised
+        np.testing.assert_allclose(result.abundance_maps[0, 0, 2], 0.60, atol=1e-10)
 
     def test_isotope_name_mismatch_raises(self):
         """Pixel with unexpected isotope name should raise ValueError."""

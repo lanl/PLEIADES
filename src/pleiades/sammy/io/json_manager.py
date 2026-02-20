@@ -30,7 +30,14 @@ class IsotopeEntry(BaseModel):
 
     mat: str = Field(description="MAT number as string (e.g., '7225')")
     abundance: str = Field(description="Isotopic abundance as string (e.g., '0.0016')")
-    adjust: str = Field(default="false", description="Whether to adjust abundance during fitting")
+    adjust: str = Field(
+        default="false",
+        description=(
+            "Whether SAMMY may modify the ENDF resonance parameters (cross-section values) "
+            "for this isotope during fitting. Must be 'false' for resonance imaging workflows "
+            "where ENDF values are trusted. Does NOT control isotopic abundance variation."
+        ),
+    )
     uncertainty: str = Field(default="0.02", description="Uncertainty in abundance")
 
     @field_validator("mat")
@@ -260,7 +267,7 @@ class JsonManager:
                 entry = IsotopeEntry(
                     mat=str(isotope_info.material_number),
                     abundance=str(abundance),
-                    # adjust and uncertainty use defaults ("false", "0.02")
+                    # adjust="false": do not modify ENDF cross-section values
                 )
 
                 # Use actual ENDF filename as JSON key (maintains traceability)
