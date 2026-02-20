@@ -5,7 +5,7 @@ import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 from uuid import uuid4
 
 from pleiades.sammy.config import LocalSammyConfig
@@ -325,6 +325,7 @@ class LocalSammyRunner(SammyRunner):
                 )
 
             # --- Pass 2 (abundance fitting) ---
+            error_message: Optional[str] = None
             if isinstance(files, SammyFilesMultiMode) and files.fit_abundances:
                 samndf_par = self.config.working_dir / "SAMNDF.PAR"
                 samndf_inp = self.config.working_dir / "SAMNDF.INP"
@@ -347,10 +348,15 @@ class LocalSammyRunner(SammyRunner):
                     console_output += "\n--- Pass 2 (abundance fitting) ---\n" + console_output_2
 
                     if not success:
+                        error_message = (
+                            f"SAMMY pass 2 (abundance fitting) failed "
+                            f"(return code={process2.returncode}). Check console output."
+                        )
                         logger.error(
                             f"SAMMY pass 2 (abundance) failed for {execution_id} (return code={process2.returncode})"
                         )
                 else:
+                    error_message = "SAMMY pass 2 (abundance fitting) failed: SAMNDF.PAR/INP not found after pass 1."
                     logger.error(
                         "fit_abundances=True but SAMNDF.PAR/INP not found after pass 1; "
                         "cannot perform abundance fitting"
@@ -366,12 +372,7 @@ class LocalSammyRunner(SammyRunner):
                 start_time=start_time,
                 end_time=end_time,
                 console_output=console_output,
-                error_message=None
-                if success
-                else (
-                    f"SAMMY pass 2 (abundance fitting) failed "
-                    f"(return code={process2.returncode}). Check console output."
-                ),
+                error_message=error_message,
             )
 
         except Exception as e:

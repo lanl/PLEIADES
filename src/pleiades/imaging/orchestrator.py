@@ -11,7 +11,7 @@ import signal
 import tempfile
 import threading
 import time
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, as_completed, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -685,8 +685,12 @@ class BatchFittingOrchestrator:
 
                     executor = ProcessPoolExecutor(max_workers=self.n_workers, initializer=_worker_initializer)
                     try:
-                        future_to_coord = self._submit_pixels(
-                            executor, remaining_iter, shared_json_path, shared_endf_dir
+                        future_to_coord, submit_fn = self._submit_pixels_bounded(
+                            executor,
+                            remaining_iter,
+                            shared_json_path,
+                            shared_endf_dir,
+                            max_in_flight=self.n_workers * 4,
                         )
                         all_future_maps.append(future_to_coord)
                         for coord in future_to_coord.values():
@@ -700,6 +704,8 @@ class BatchFittingOrchestrator:
                             checkpoint_interval,
                             shutdown_handler,
                             timeout_per_job,
+                            submit_fn=submit_fn,
+                            batch_size=len(remaining_coords),
                         )
                     finally:
                         # When timeout is enabled, use non-blocking shutdown to avoid
@@ -867,6 +873,83 @@ class BatchFittingOrchestrator:
             for pixel in pixels
         }
 
+    def _submit_pixels_bounded(
+        self,
+        executor: ProcessPoolExecutor,
+        pixels: Iterable[PixelSpectrum],
+        shared_json_path: Path,
+        shared_endf_dir: Path,
+        attempt_round: int = 0,
+        max_in_flight: Optional[int] = None,
+    ) -> Tuple[Dict[Future, Tuple[int, int]], Optional[Callable[[], Optional[Future]]]]:
+        """Submit an initial bounded window of pixels and return a submit_fn for the rest.
+
+        Unlike ``_submit_pixels`` (which eagerly queues every pixel), this method
+        submits at most ``max_in_flight`` futures upfront. The caller passes the
+        returned ``submit_fn`` to ``_collect_results`` so that one new future is
+        submitted for each future that completes, keeping in-flight memory bounded.
+
+        Args:
+            executor: ProcessPoolExecutor to submit jobs to.
+            pixels: Iterable of PixelSpectrum (consumed incrementally by submit_fn).
+            shared_json_path: Path to the pre-staged JSON config.
+            shared_endf_dir: Path to the pre-staged ENDF directory.
+            attempt_round: Attempt number (0 = first pass, 1+ = retries).
+            max_in_flight: Maximum futures to keep queued at once.
+                Defaults to ``n_workers * 4``.
+
+        Returns:
+            Tuple of (initial future_to_coord dict, submit_fn).
+            submit_fn returns the new Future on each call or None when exhausted.
+            future_to_coord is updated in-place by submit_fn as new pixels are submitted.
+        """
+        if max_in_flight is None:
+            max_in_flight = self.n_workers * 4
+
+        temp_base_dir = self.temp_manager.base_dir if self.temp_manager is not None else None
+        cleanup_policy = self.temp_manager.cleanup_policy if self.temp_manager is not None else "immediate"
+        max_disk_usage_gb = self.temp_manager.max_disk_usage_gb if self.temp_manager is not None else None
+        initial_free_gb = self.temp_manager.initial_free_gb if self.temp_manager is not None else None
+
+        future_to_coord: Dict[Future, Tuple[int, int]] = {}
+        pixels_iter = iter(pixels)
+        exhausted = False
+
+        def _do_submit(pixel: PixelSpectrum) -> Future:
+            future = executor.submit(
+                _fit_pixel_worker,
+                pixel,
+                self.imaging_config,
+                self.sammy_executable,
+                self.resolution_file,
+                shared_json_path,
+                shared_endf_dir,
+                temp_base_dir,
+                cleanup_policy,
+                attempt_round,
+                max_disk_usage_gb,
+                initial_free_gb,
+            )
+            future_to_coord[future] = (pixel.row, pixel.col)
+            return future
+
+        def submit_fn() -> Optional[Future]:
+            nonlocal exhausted
+            if exhausted:
+                return None
+            try:
+                return _do_submit(next(pixels_iter))
+            except StopIteration:
+                exhausted = True
+                return None
+
+        # Fill the initial window
+        while len(future_to_coord) < max_in_flight:
+            if submit_fn() is None:
+                break
+
+        return future_to_coord, (None if exhausted else submit_fn)
+
     def _maybe_checkpoint(
         self,
         checkpoint_file: Optional[Path],
@@ -895,6 +978,8 @@ class BatchFittingOrchestrator:
         checkpoint_interval: int,
         shutdown_handler: GracefulShutdownHandler,
         timeout_per_job: Optional[float],
+        submit_fn: Optional[Callable[[], Optional[Future]]] = None,
+        batch_size: Optional[int] = None,
     ) -> None:
         """Collect results from submitted futures with progress tracking.
 
@@ -904,8 +989,18 @@ class BatchFittingOrchestrator:
         ``running()`` past the deadline are marked as timed out -- queued
         futures that have not started yet are **not** falsely timed out.
 
-        When no timeout, uses ``as_completed`` for efficient completion-order
-        collection.
+        When no timeout, uses ``wait(FIRST_COMPLETED)`` with a mutable pending
+        set so that ``submit_fn`` can inject new futures as slots open up
+        (bounded in-flight submission).
+
+        Args:
+            submit_fn: Optional callable that submits the next pixel and
+                returns its Future, or None when the pixel stream is exhausted.
+                When provided, one new future is submitted for each completed
+                future, keeping the in-flight count bounded.
+            batch_size: Total pixels expected in this collection round, used
+                for the progress bar. Defaults to ``len(future_to_coord)``
+                (i.e. eager-submit compat).
 
         Timed-out futures have ``cancel()`` called as a best-effort cleanup.
         Note: ``ProcessPoolExecutor`` only cancels tasks that haven't started;
@@ -922,50 +1017,69 @@ class BatchFittingOrchestrator:
                 checkpoint_interval,
                 shutdown_handler,
                 timeout_per_job,
+                submit_fn=submit_fn,
+                batch_size=batch_size,
             )
             return
 
-        with ProgressReporter(total_pixels=len(future_to_coord)) as progress:
-            for future in as_completed(future_to_coord):
-                coord = future_to_coord[future]
-                row, col = coord
-                try:
-                    result = future.result()
-                    completed[coord] = result
-                    progress.update(1)
+        progress_total = batch_size if batch_size is not None else len(future_to_coord)
+        pending: Set[Future] = set(future_to_coord.keys())
+        with ProgressReporter(total_pixels=progress_total) as progress:
+            while pending:
+                done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                shutdown_triggered = False
+                for future in done:
+                    coord = future_to_coord[future]
+                    row, col = coord
+                    try:
+                        result = future.result()
+                        completed[coord] = result
+                        progress.update(1)
 
-                    if result.success:
-                        progress.record_success()
-                        chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                        logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
-                    else:
+                        if result.success:
+                            progress.record_success()
+                            chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
+                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
+                        else:
+                            progress.record_failure()
+                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
+
+                    except Exception as e:
+                        logger.exception(f"Exception collecting result for pixel ({row}, {col})")
+                        completed[coord] = PixelFitResult(
+                            row=row,
+                            col=col,
+                            fit_results=None,
+                            success=False,
+                            error_message=f"Executor exception: {str(e)}",
+                            chi_squared=None,
+                        )
+                        progress.update(1)
                         progress.record_failure()
-                        logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
 
-                except Exception as e:
-                    logger.exception(f"Exception collecting result for pixel ({row}, {col})")
-                    completed[coord] = PixelFitResult(
-                        row=row,
-                        col=col,
-                        fit_results=None,
-                        success=False,
-                        error_message=f"Executor exception: {str(e)}",
-                        chi_squared=None,
+                    # Bounded submission: refill one slot for each completed future.
+                    if submit_fn is not None:
+                        new_future = submit_fn()
+                        if new_future is not None:
+                            pending.add(new_future)
+
+                    iterations_since_checkpoint += 1
+                    iterations_since_checkpoint = self._maybe_checkpoint(
+                        checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
                     )
-                    progress.update(1)
-                    progress.record_failure()
 
-                iterations_since_checkpoint += 1
-                iterations_since_checkpoint = self._maybe_checkpoint(
-                    checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
-                )
+                    # On shutdown: cancel remaining pending futures and stop immediately.
+                    # Check inside the per-future loop so we react as soon as possible
+                    # rather than after draining the entire batch of completed futures.
+                    if shutdown_handler.shutdown_requested:
+                        logger.warning("Shutdown requested, cancelling pending futures...")
+                        for f in pending:
+                            if not f.done():
+                                f.cancel()
+                        shutdown_triggered = True
+                        break
 
-                # On shutdown: cancel pending futures and break immediately.
-                if shutdown_handler.shutdown_requested:
-                    logger.warning("Shutdown requested, cancelling pending futures...")
-                    for f in future_to_coord:
-                        if not f.done():
-                            f.cancel()
+                if shutdown_triggered:
                     break
 
     def _collect_results_with_timeout(
@@ -977,6 +1091,8 @@ class BatchFittingOrchestrator:
         checkpoint_interval: int,
         shutdown_handler: GracefulShutdownHandler,
         timeout_per_job: float,
+        submit_fn: Optional[Callable[[], Optional[Future]]] = None,
+        batch_size: Optional[int] = None,
     ) -> None:
         """Collect results using ``wait()`` with per-job timeout enforcement.
 
@@ -1006,7 +1122,8 @@ class BatchFittingOrchestrator:
             if f.running():
                 running_start_times[f] = now
 
-        with ProgressReporter(total_pixels=len(future_to_coord)) as progress:
+        progress_total = batch_size if batch_size is not None else len(future_to_coord)
+        with ProgressReporter(total_pixels=progress_total) as progress:
             while pending and not shutdown_handler.shutdown_requested:
                 # Wait for at least one future to complete, up to timeout_per_job
                 done, pending = wait(pending, timeout=timeout_per_job, return_when=FIRST_COMPLETED)
@@ -1040,6 +1157,12 @@ class BatchFittingOrchestrator:
                         )
                         progress.update(1)
                         progress.record_failure()
+
+                    # Bounded submission: refill one slot for each completed future.
+                    if submit_fn is not None:
+                        new_future = submit_fn()
+                        if new_future is not None:
+                            pending.add(new_future)
 
                     iterations_since_checkpoint += 1
                     iterations_since_checkpoint = self._maybe_checkpoint(
