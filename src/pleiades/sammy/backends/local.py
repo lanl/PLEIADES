@@ -347,7 +347,9 @@ class LocalSammyRunner(SammyRunner):
                     console_output += "\n--- Pass 2 (abundance fitting) ---\n" + console_output_2
 
                     if not success:
-                        logger.error(f"SAMMY pass 2 (abundance) failed for {execution_id}")
+                        logger.error(
+                            f"SAMMY pass 2 (abundance) failed for {execution_id} (return code={process2.returncode})"
+                        )
                 else:
                     logger.error(
                         "fit_abundances=True but SAMNDF.PAR/INP not found after pass 1; "
@@ -364,7 +366,12 @@ class LocalSammyRunner(SammyRunner):
                 start_time=start_time,
                 end_time=end_time,
                 console_output=console_output,
-                error_message=None if success else "SAMMY pass 2 (abundance fitting) failed. Check console output.",
+                error_message=None
+                if success
+                else (
+                    f"SAMMY pass 2 (abundance fitting) failed "
+                    f"(return code={process2.returncode}). Check console output."
+                ),
             )
 
         except Exception as e:

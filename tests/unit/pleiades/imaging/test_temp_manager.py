@@ -65,10 +65,13 @@ class TestInit:
         assert str(manager.base_dir).startswith(str(system_temp))
 
     def test_custom_base_dir(self, tmp_path):
-        """Custom base_dir is stored correctly."""
+        """When base_dir is provided, a dedicated subdirectory is created inside it."""
         custom_dir = tmp_path / "my_workspace"
         manager = TempFileManager(base_dir=custom_dir, cleanup_policy="immediate")
-        assert manager.base_dir == custom_dir
+        # base_dir is a manager-owned subdirectory *inside* the provided path,
+        # not the provided path itself, so cleanup never removes caller-owned dirs.
+        assert manager.base_dir.parent == custom_dir
+        assert manager.base_dir.name.startswith("pleiades_imaging_")
 
     def test_invalid_cleanup_policy_raises_value_error(self, tmp_path):
         """Invalid cleanup_policy string raises ValueError."""
@@ -382,12 +385,13 @@ class TestDiskMonitoring:
             assert info.limit_gb == 42.0
 
     def test_get_disk_usage_info_reports_base_dir(self, tmp_path):
-        """DiskUsageInfo.base_dir should reflect the manager's base_dir."""
+        """DiskUsageInfo.base_dir should reflect the manager's base_dir (subdirectory inside provided path)."""
         base = tmp_path / "ws"
         manager = TempFileManager(base_dir=base, max_disk_usage_gb=50.0, cleanup_policy="immediate")
         with manager:
             info = manager.get_disk_usage_info()
-            assert info.base_dir == base
+            assert info.base_dir == manager.base_dir
+            assert info.base_dir.parent == base
 
     def test_check_disk_space_does_not_raise(self, manager_immediate):
         """check_disk_space should never raise exceptions, only return bool."""
@@ -532,23 +536,24 @@ class TestContextManager:
             assert base.exists()
 
     def test_cleans_up_on_exit_immediate(self, tmp_path):
-        """__exit__ cleans up for immediate policy."""
+        """__exit__ removes the manager-owned subdirectory but not the caller-provided base."""
         base = tmp_path / "ws_immediate"
         manager = TempFileManager(base_dir=base, cleanup_policy="immediate")
+        owned_dir = manager.base_dir
 
         with manager:
             with manager.job_workspace("job_1") as ws:
                 (ws / "file.dat").write_text("data", encoding="utf-8")
-            # immediate cleanup already removed workspace
-            # but base_dir should be cleaned up on __exit__
 
-        # After __exit__, base_dir itself should be removed
-        assert not base.exists()
+        # After __exit__, the manager-owned subdirectory is removed but base survives.
+        assert not owned_dir.exists()
+        assert base.exists()
 
     def test_cleans_up_on_exit_batch(self, tmp_path):
-        """__exit__ cleans up for batch policy."""
+        """__exit__ removes the manager-owned subdirectory but not the caller-provided base."""
         base = tmp_path / "ws_batch"
         manager = TempFileManager(base_dir=base, cleanup_policy="batch")
+        owned_dir = manager.base_dir
 
         with manager:
             with manager.job_workspace("job_1") as ws:
@@ -556,8 +561,9 @@ class TestContextManager:
             # batch policy -- workspace persists during context
             assert workspace_path.exists()
 
-        # After __exit__, everything should be cleaned up
-        assert not base.exists()
+        # After __exit__, the manager-owned subdirectory (and workspaces) are removed.
+        assert not owned_dir.exists()
+        assert base.exists()
 
     def test_no_cleanup_on_exit_manual(self, tmp_path):
         """__exit__ does NOT clean up for manual policy."""
@@ -574,13 +580,15 @@ class TestContextManager:
         assert workspace_path.exists()
 
     def test_base_dir_removed_on_exit_non_manual(self, tmp_path):
-        """base_dir itself is removed on __exit__ for non-manual policies."""
+        """Manager-owned subdirectory is removed on __exit__ for non-manual policies; caller-provided base survives."""
         for policy in ("immediate", "batch"):
             base = tmp_path / f"ws_{policy}_remove"
             manager = TempFileManager(base_dir=base, cleanup_policy=policy)
+            owned_dir = manager.base_dir
             with manager:
-                assert base.exists()
-            assert not base.exists(), f"base_dir should be removed on __exit__ for {policy} policy"
+                assert owned_dir.exists()
+            assert not owned_dir.exists(), f"manager-owned dir should be removed on __exit__ for {policy} policy"
+            assert base.exists(), f"caller-provided base_dir should survive __exit__ for {policy} policy"
 
     def test_enter_returns_self(self, tmp_path):
         """__enter__ returns the manager instance itself."""
@@ -915,7 +923,7 @@ class TestOrchestratorIntegration:
         assert call_args is not None
         # positional args: (worker_fn, pixel, config, exe, resolution, json, endf, base_dir, policy)
         args = call_args[0]
-        assert args[7] == tmp_path / "ws"  # temp_base_dir
+        assert args[7] == mgr.base_dir  # manager-owned subdirectory, not the provided base path
         assert args[8] == "batch"  # cleanup_policy
 
     def test_submit_pixels_without_temp_manager_passes_none(self, tmp_path):
@@ -1218,6 +1226,7 @@ class TestOrchestratorIntegration:
 
         base_dir = tmp_path / "ws"
         mgr = TempFileManager(base_dir=base_dir, max_disk_usage_gb=25.0, cleanup_policy="batch")
+        owned_dir = mgr.base_dir  # manager-owned subdirectory inside base_dir
         config = _make_imaging_config()
         orch = BatchFittingOrchestrator(imaging_config=config, sammy_executable=sammy_exe, temp_manager=mgr)
 
@@ -1248,9 +1257,10 @@ class TestOrchestratorIntegration:
                 mock_executor.submit.side_effect = submit_side_effect
                 orch.fit_pixels([pixel])
 
-        # After fit_pixels, base_dir should be cleaned up for batch policy
-        # (TempFileManager.__exit__ removes base_dir for non-manual policies)
-        assert not base_dir.exists()
+        # After fit_pixels, the manager-owned subdirectory is removed for batch policy.
+        # The caller-provided base_dir itself is NOT removed (Copilot fix: avoid deleting caller dirs).
+        assert not owned_dir.exists()
+        assert base_dir.exists()
 
 
 # ===========================================================================

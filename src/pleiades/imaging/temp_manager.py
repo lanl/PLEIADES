@@ -104,8 +104,13 @@ class TempFileManager:
         if base_dir is None:
             # Use a unique directory per manager instance to avoid cross-run
             # collisions and stale directory reuse after crashes.
-            base_dir = Path(tempfile.mkdtemp(prefix="pleiades_imaging_"))
-        self.base_dir = Path(base_dir)
+            self.base_dir = Path(tempfile.mkdtemp(prefix="pleiades_imaging_"))
+        else:
+            # When a caller-provided base_dir is given, create a dedicated
+            # subdirectory inside it so that cleanup only removes the manager-owned
+            # directory, not the caller's directory itself.
+            Path(base_dir).mkdir(parents=True, exist_ok=True)
+            self.base_dir = Path(tempfile.mkdtemp(prefix="pleiades_imaging_", dir=str(base_dir)))
         self.max_disk_usage_gb = max_disk_usage_gb
         self.cleanup_policy = cleanup_policy
 
@@ -309,8 +314,9 @@ class TempFileManager:
         return self
 
     def __exit__(self, *args) -> None:
-        """Clean up on exit. For non-manual policies, remove all workspaces and base_dir."""
+        """Clean up on exit. For non-manual policies, remove the manager-owned base_dir."""
         if self.cleanup_policy != "manual":
-            self.cleanup_all()
+            # base_dir is always a manager-owned mkdtemp directory (even when the caller
+            # supplied a parent path), so it is safe to remove it unconditionally.
             if self.base_dir.exists():
                 shutil.rmtree(self.base_dir, ignore_errors=True)

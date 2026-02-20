@@ -315,7 +315,7 @@ class Imaging2DResults(BaseModel):
         with h5py.File(filepath, "w") as f:
             # Core results
             f.create_dataset("abundance_maps", data=self.abundance_maps, compression="gzip")
-            f.create_dataset("isotope_names", data=np.array(self.isotope_names, dtype="S"))
+            f.create_dataset("isotope_names", data=self.isotope_names, dtype=h5py.string_dtype(encoding="utf-8"))
             f.create_dataset("chi_squared_map", data=self.chi_squared_map, compression="gzip")
             f.create_dataset("success_mask", data=self.success_mask, compression="gzip")
 
