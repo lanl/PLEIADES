@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from pleiades.imaging.aggregator import ResultsAggregator
+from pleiades.imaging.binner import SpatialBinner
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.loader import HyperspectralLoader
 from pleiades.imaging.models import Imaging2DResults
@@ -30,6 +31,7 @@ def analyze_imaging(
     n_workers: int = 4,
     roi: tuple[int, int, int, int] | None = None,
     stride: int = 1,
+    bin_size: int = 1,
     resolution_file: Path | None = None,
     checkpoint_file: Path | None = None,
     checkpoint_interval: int = 10,
@@ -65,6 +67,10 @@ def analyze_imaging(
             fitted values, so for large strides most entries may be NaN; when
             visualizing or computing statistics, use NaN-aware methods or
             masking as appropriate.
+        bin_size: Spatial binning factor applied before fitting. ``bin_size=2``
+            averages 2×2 blocks of pixels before fitting and upscales results
+            back to the original resolution afterwards. Must be >= 1. Default
+            is 1 (no binning, fully backward-compatible).
         resolution_file: Optional path to instrument resolution function file.
             Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.
@@ -87,6 +93,8 @@ def analyze_imaging(
         raise ValueError(f"n_workers must be >= 1, got {n_workers}")
     if stride < 1:
         raise ValueError(f"stride must be >= 1, got {stride}")
+    if bin_size < 1:
+        raise ValueError(f"bin_size must be >= 1, got {bin_size}")
     if checkpoint_interval < 1:
         raise ValueError(f"checkpoint_interval must be >= 1, got {checkpoint_interval}")
     if max_retries < 0:
@@ -105,9 +113,18 @@ def analyze_imaging(
     else:
         loader = HyperspectralLoader(source, energy=energy)
     hyperspectral = loader.load()
+    original_hyperspectral = hyperspectral
 
     _, height, width = hyperspectral.shape
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
+
+    # --- 1b. Optional spatial binning ---
+    binner: SpatialBinner | None = None
+    if bin_size > 1:
+        binner = SpatialBinner(bin_size=bin_size)
+        hyperspectral = binner.bin_hyperspectral(hyperspectral)
+        _, height, width = hyperspectral.shape
+        logger.info(f"Binned image (bin_size={bin_size}): {height}x{width} pixels")
 
     # --- Create default TempFileManager if none provided ---
     # Deferred until after loading succeeds so that early failures (missing
@@ -144,6 +161,10 @@ def analyze_imaging(
             width=width,
         )
         results = aggregator.aggregate(pixel_results, hyperspectral)
+
+        # --- 4b. Unbin results to original resolution ---
+        if binner is not None:
+            results = binner.unbin_results(results, original_hyperspectral)
 
         # --- 5. Optionally save ---
         if save_path is not None:
