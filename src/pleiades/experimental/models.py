@@ -119,16 +119,18 @@ class BroadeningParameters(BaseModel):
     """
 
     # Main parameters
-    crfn: float = Field(default=None, description="Matching radius (F)")
     temp: float = Field(default=None, description="Effective temperature (K)")
+    dist: float = Field(default=None, description="Flight-path length (m)")
+    crfn: float = Field(default=None, description="Matching radius (F)")
     thick: float = Field(default=None, description="Sample thickness (atoms/barn)")
     deltal: float = Field(default=None, description="Spread in flight-path length (m)")
     deltag: float = Field(default=None, description="Gaussian resolution width (μs)")
     deltae: float = Field(default=None, description="e-folding width of exponential resolution (μs)")
 
     # Optional uncertainties for main parameters
-    d_crfn: Optional[float] = Field(None, description="Uncertainty on CRFN")
     d_temp: Optional[float] = Field(None, description="Uncertainty on TEMP")
+    d_dist: Optional[float] = Field(None, description="Uncertainty on DIST")
+    d_crfn: Optional[float] = Field(None, description="Uncertainty on CRFN")
     d_thick: Optional[float] = Field(None, description="Uncertainty on THICK")
     d_deltal: Optional[float] = Field(None, description="Uncertainty on DELTAL")
     d_deltag: Optional[float] = Field(None, description="Uncertainty on DELTAG")

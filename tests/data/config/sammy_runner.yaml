@@ -7,7 +7,7 @@ local:
   shell_path: /bin/bash
 
 docker:
-  image_name: kedokudo/sammy-docker
+  image_name: kedokudo/sammy-docker:1.0.0
   container_working_dir: /sammy/work
   container_data_dir: /sammy/data
 
