@@ -736,7 +736,7 @@ class BatchFittingOrchestrator:
                                 max_workers=self.n_workers, initializer=_worker_initializer
                             )
                             try:
-                                retry_futures = self._submit_pixels(
+                                retry_futures, retry_submit_fn = self._submit_pixels_bounded(
                                     retry_executor,
                                     retry_iter,
                                     shared_json_path,
@@ -744,7 +744,8 @@ class BatchFittingOrchestrator:
                                     attempt_round=retry_round + 1,
                                 )
                                 all_future_maps.append(retry_futures)
-                                for coord in retry_futures.values():
+                                # Count all failed coords (not just the initial in-flight window).
+                                for coord in failed_coords:
                                     attempt_counts[coord] = attempt_counts.get(coord, 0) + 1
                                 self._collect_results(
                                     retry_futures,
@@ -754,6 +755,8 @@ class BatchFittingOrchestrator:
                                     checkpoint_interval,
                                     shutdown_handler,
                                     timeout_per_job,
+                                    submit_fn=retry_submit_fn,
+                                    batch_size=len(failed_coords),
                                 )
                             finally:
                                 if timeout_per_job is not None:
