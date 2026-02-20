@@ -727,7 +727,7 @@ class BatchFittingOrchestrator:
                             failed_coords = {c for c, r in completed.items() if not r.success and c in remaining_coords}
                             if not failed_coords:
                                 break
-                            logger.info(
+                            logger.warning(
                                 f"Retry round {retry_round + 1}/{max_retries}: {len(failed_coords)} pixels to retry"
                             )
                             # Re-iterate factory to get pixel data for failed coords only
@@ -826,7 +826,7 @@ class BatchFittingOrchestrator:
         # Summary statistics
         n_success = sum(1 for r in results if r.success)
         n_failed = total_pixels - n_success
-        logger.info(f"Batch fitting complete: {n_success} success, {n_failed} failed")
+        logger.warning(f"Batch fitting complete: {n_success} success, {n_failed} failed")
 
         return results
 
