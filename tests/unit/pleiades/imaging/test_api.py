@@ -306,6 +306,55 @@ class TestAnalyzeImagingBasic:
     @patch("pleiades.imaging.api.ResultsAggregator")
     @patch("pleiades.imaging.api.BatchFittingOrchestrator")
     @patch("pleiades.imaging.api.HyperspectralLoader")
+    def test_directory_source_routes_to_from_directory(
+        self,
+        MockLoader,
+        MockOrchestrator,
+        MockAggregator,
+        mock_imaging_config,
+        mock_sammy_executable,
+        sample_pixels,
+        sample_pixel_results,
+        mock_hyperspectral_data,
+        mock_imaging_2d_results,
+        tmp_path,
+    ):
+        """When source is a directory, from_directory() must be used instead of __init__."""
+        from pleiades.imaging.api import analyze_imaging
+
+        # Arrange: source is a directory, not a file
+        source_dir = tmp_path / "frames"
+        source_dir.mkdir()
+
+        # from_directory is a classmethod on the mock; configure its return value
+        loader_instance = MagicMock()
+        loader_instance.load.return_value = mock_hyperspectral_data
+        loader_instance.iter_pixels.return_value = iter(sample_pixels)
+        MockLoader.from_directory.return_value = loader_instance
+
+        orch_instance = MockOrchestrator.return_value
+        orch_instance.fit_pixels.return_value = sample_pixel_results
+
+        agg_instance = MockAggregator.return_value
+        agg_instance.aggregate.return_value = mock_imaging_2d_results
+
+        # Act
+        result = analyze_imaging(
+            source=source_dir,
+            imaging_config=mock_imaging_config,
+            sammy_executable=mock_sammy_executable,
+            directory_pattern="*.tif",
+        )
+
+        # Assert: from_directory was called with the directory and pattern
+        MockLoader.from_directory.assert_called_once_with(source_dir, pattern="*.tif", energy=None)
+        # The constructor (__call__) must NOT have been used for the directory path
+        MockLoader.assert_not_called()
+        assert result is mock_imaging_2d_results
+
+    @patch("pleiades.imaging.api.ResultsAggregator")
+    @patch("pleiades.imaging.api.BatchFittingOrchestrator")
+    @patch("pleiades.imaging.api.HyperspectralLoader")
     def test_source_as_string_accepted(
         self,
         MockLoader,

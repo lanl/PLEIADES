@@ -26,6 +26,7 @@ def analyze_imaging(
     imaging_config: ImagingConfig,
     sammy_executable: Path,
     energy: np.ndarray | None = None,
+    directory_pattern: str = "*.tif",
     n_workers: int = 4,
     roi: tuple[int, int, int, int] | None = None,
     stride: int = 1,
@@ -44,10 +45,15 @@ def analyze_imaging(
     aggregates the results into 2D abundance maps.
 
     Args:
-        source: Path to hyperspectral TIFF file or directory.
+        source: Path to hyperspectral TIFF file or directory of TIFF files.
+            When a directory is given, all files matching ``directory_pattern``
+            are sorted and stacked into a single hyperspectral cube.
         imaging_config: Configuration with isotopes and material properties.
         sammy_executable: Path to the SAMMY binary.
         energy: Energy axis in eV. If None, inferred from data.
+        directory_pattern: Glob pattern used to find TIFF files when ``source``
+            is a directory (e.g. ``"*.tif"`` or ``"frame_*.tiff"``).
+            Ignored when ``source`` is a file.
         n_workers: Number of parallel SAMMY workers. Must be >= 1.
         roi: Region of interest as ``(x1, y1, x2, y2)``. If None, all pixels.
         stride: Spatial stride for pixel iteration. ``stride=4`` fits every
@@ -94,7 +100,10 @@ def analyze_imaging(
 
     # --- 1. Load hyperspectral data ---
     logger.info(f"Loading hyperspectral data from {source}")
-    loader = HyperspectralLoader(source, energy=energy)
+    if source.is_dir():
+        loader = HyperspectralLoader.from_directory(source, pattern=directory_pattern, energy=energy)
+    else:
+        loader = HyperspectralLoader(source, energy=energy)
     hyperspectral = loader.load()
 
     _, height, width = hyperspectral.shape
