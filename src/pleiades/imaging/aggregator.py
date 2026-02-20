@@ -122,6 +122,31 @@ class ResultsAggregator:
             # Failed pixels: NaN abundance/chi-squared and False success_mask
             # are already the initialized defaults; no action needed.
 
+        # --- Normalize multi-isotope abundances per pixel ---
+        #
+        # SAMMY's two-pass strategy (IFLISO=1) fits per-isotope abundance as
+        # an unconstrained free parameter.  The SAMMY input file (Card Set 2)
+        # describes the sample with a single element's atomic mass, density,
+        # and thickness.  When the sample is actually a multi-element alloy,
+        # SAMMY compensates for the mass/density mismatch by pushing
+        # individual abundances above 1.0.  For example, a Ta-181 + U-235
+        # sample modelled with Ta properties will yield f_U > 1.0 because
+        # U-235's atomic mass (235 amu) is 30% higher than Ta's (181 amu).
+        #
+        # The *ratio* between fitted abundances is still physically
+        # meaningful, so we rescale each pixel's abundances to sum to 1.0.
+        # This makes the values interpretable as isotopic fractions.
+        #
+        # Single-isotope fits are left untouched because the abundance
+        # carries absolute information (e.g. natural vs enriched) and there
+        # is nothing to normalise against.
+        if self._n_isotopes > 1:
+            abundance_sum = np.nansum(abundance_maps, axis=0)  # (height, width)
+            # Avoid division by zero for pixels where all abundances are NaN or 0
+            nonzero = abundance_sum > 0
+            for i in range(self._n_isotopes):
+                abundance_maps[i, nonzero] /= abundance_sum[nonzero]
+
         logger.info(
             f"Aggregated {len(pixel_results)} pixel results: "
             f"{np.sum(success_mask)} succeeded, {np.sum(~success_mask)} failed/missing"
