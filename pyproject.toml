@@ -19,16 +19,16 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "astropy",
+    "astropy>=7.2.0,<8",
     "matplotlib",
     "tifffile",
     "jupyterlab",
     "dxchange",
     "pyyaml",
-    "scikit-image",
+    "scikit-image>=0.26.0,<0.27",
     "pydantic",
     "loguru",
-    "tqdm",
+    "tqdm", "nova-galaxy",
 ]
 
 [project.optional-dependencies]
@@ -141,16 +141,16 @@ platforms = ["linux-64", "osx-arm64"]
 pleiades-neutron = { path = ".", editable = true, extras = ["nova"] }
 
 [tool.pixi.dependencies]
-numpy = ">=2.2.5,<3"
-scipy = ">=1.15.2,<2"
-pandas = ">=2.2.3,<3"
-matplotlib = ">=3.10.1,<4"
-jupyterlab = ">=4.4.1,<5"
-pyyaml = ">=6.0.2,<7"
-pydantic = ">=2.11.3,<3"
-loguru = ">=0.7.2,<0.8"
+numpy = ">=2.4.2,<3"
+scipy = ">=1.17.0,<2"
+pandas = ">=3.0.1,<4"
+matplotlib = ">=3.10.8,<4"
+jupyterlab = ">=4.5.4,<5"
+pyyaml = ">=6.0.3,<7"
+pydantic = ">=2.12.5,<3"
+loguru = ">=0.7.3,<0.8"
 dxchange = ">=0.1.8,<0.2"
-h5py = ">=3.13.0,<4"
+h5py = ">=3.15.1,<4"
 
 [tool.pixi.tasks]
 # PyPi packaging tasks
@@ -172,31 +172,31 @@ pre-commit-run = { cmd = "pre-commit run --all-files", description = "Run pre-co
 clean-all = { description = "Clean all build artifacts", depends-on = ["clean-pypi", "clean-docs", "clean-test"] }
 
 [tool.pixi.feature.test.dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-xdist = "*"
-pytest-repeat = "*"
+pytest = ">=9.0.2,<10"
+pytest-cov = ">=7.0.0,<8"
+pytest-xdist = ">=3.8.0,<4"
+pytest-repeat = ">=0.9.4,<0.10"
 
 [tool.pixi.feature.package.dependencies]
-python-build = "*"
-twine = ">=6.1.0,<7"
+python-build = ">=1.4.0,<2"
+twine = ">=6.2.0,<7"
 
 [tool.pixi.feature.developer.dependencies]
-pip = "*"
-versioningit = "*"
-pre-commit = "*"
-conda-tree = "*"
-ruff = "*"
-viztracer = ">=1.0.4,<2"
+pip = ">=26.0.1,<27"
+versioningit = ">=3.3.0,<4"
+pre-commit = ">=4.5.1,<5"
+conda-tree = ">=1.1.2,<2"
+ruff = ">=0.15.2,<0.16"
+viztracer = ">=1.1.1,<2"
 
 [tool.pixi.feature.docs.dependencies]
-sphinx = ">=8.2.1,<9"
-sphinx_rtd_theme = ">=3.0.1,<4"
+sphinx = ">=8.2.3,<9"
+sphinx_rtd_theme = ">=3.1.0,<4"
 
 [tool.pixi.feature.jupyter.dependencies]
-jupyterlab = "*"
-ipympl = "*"
-ipywidgets = "*"
+jupyterlab = ">=4.5.4,<5"
+ipympl = ">=0.10.0,<0.11"
+ipywidgets = ">=8.1.8,<9"
 
 [tool.pixi.environments]
 default = {features = ["test", "package", "docs", "developer"]}
