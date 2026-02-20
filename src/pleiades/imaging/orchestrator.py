@@ -1042,10 +1042,10 @@ class BatchFittingOrchestrator:
                         if result.success:
                             progress.record_success()
                             chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
+                            logger.debug(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                         else:
                             progress.record_failure()
-                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
+                            logger.debug(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
 
                     except Exception as e:
                         logger.exception(f"Exception collecting result for pixel ({row}, {col})")
@@ -1144,10 +1144,10 @@ class BatchFittingOrchestrator:
                         if result.success:
                             progress.record_success()
                             chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
+                            logger.debug(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                         else:
                             progress.record_failure()
-                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
+                            logger.debug(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
                     except Exception as e:
                         logger.exception(f"Exception collecting result for pixel ({row}, {col})")
                         completed[coord] = PixelFitResult(
@@ -1185,7 +1185,7 @@ class BatchFittingOrchestrator:
                     coord = future_to_coord[future]
                     row, col = coord
                     elapsed = now - running_start_times[future]
-                    logger.warning(f"Pixel ({row}, {col}) timed out after {elapsed:.1f}s")
+                    logger.debug(f"Pixel ({row}, {col}) timed out after {elapsed:.1f}s")
                     future.cancel()  # Best-effort; won't stop already-running process
                     completed[coord] = PixelFitResult(
                         row=row,
