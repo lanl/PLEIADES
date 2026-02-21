@@ -308,6 +308,15 @@ class TestEdgeCases:
         assert m1.snr_estimate == m2.snr_estimate
         assert m1.zero_fraction == m2.zero_fraction
 
+    def test_overshoot_above_one_gives_zero_resonance_depth(self):
+        """Transmission > 1.0 (baseline overshoot) should not produce negative depth or SNR."""
+        assessor = SparsityAssessor()
+        data = np.full((50, 8, 8), 1.05)
+        hs = _make_hyperspectral(data)
+        m = assessor.assess(hs)
+        assert m.resonance_depth == 0.0
+        assert m.snr_estimate >= 0.0
+
     def test_high_zero_fraction_degrades_to_l4(self):
         assessor = SparsityAssessor()
         rng = np.random.default_rng(1)

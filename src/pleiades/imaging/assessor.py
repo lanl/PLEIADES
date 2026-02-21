@@ -124,7 +124,7 @@ class SparsityAssessor:
         # spatial_mean_spectrum: shape (n_energy,)
         spatial_mean = np.mean(data, axis=(1, 2), dtype=np.float64)
         min_transmission = float(np.min(spatial_mean))
-        resonance_depth = 1.0 - min_transmission
+        resonance_depth = max(0.0, 1.0 - min_transmission)
 
         mad = float(np.median(np.abs(spatial_mean - np.median(spatial_mean))))
         noise_estimate = mad / 0.6745  # normalise MAD → Gaussian std equivalent
