@@ -19,7 +19,7 @@ class SpatialBinner:
     """Bin and unbin hyperspectral imaging data spatially.
 
     Averaging an N×N block of pixels improves SNR by a factor of N (noise
-    decreases as 1/sqrt(N²) relative to a single pixel).  The binned data
+    is reduced to 1/N of that of a single pixel).  The binned data
     can be processed by the normal fitting pipeline and then unbinned back
     to the original resolution.
 
@@ -50,8 +50,8 @@ class SpatialBinner:
         complete block are discarded (floor division).
 
         Uncertainty propagation:
-            ``σ_bin = σ_pixel / sqrt(bin_size²)`` — the per-bin uncertainty
-            decreases by ``1/bin_size`` assuming uncorrelated Gaussian noise.
+            ``σ_bin = sqrt(Σ σ_i²) / N`` where N = bin_size² — correct for
+            independent pixels with heterogeneous uncertainties.
 
         Args:
             hyperspectral: Dataset of shape ``(n_energy, H, W)``.

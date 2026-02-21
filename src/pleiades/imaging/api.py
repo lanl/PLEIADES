@@ -57,6 +57,7 @@ def _iter_hyperspectral_pixels(
                 energy=hyperspectral.energy,
                 transmission=transmission,
                 uncertainty=uncertainty,
+                metadata={"source": str(hyperspectral.source_file), "binned": True},
             )
 
 
