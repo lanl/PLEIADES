@@ -11,14 +11,54 @@ from pathlib import Path
 import numpy as np
 
 from pleiades.imaging.aggregator import ResultsAggregator
+from pleiades.imaging.binner import SpatialBinner
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.loader import HyperspectralLoader
-from pleiades.imaging.models import Imaging2DResults
+from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelSpectrum
 from pleiades.imaging.orchestrator import BatchFittingOrchestrator
 from pleiades.imaging.temp_manager import TempFileManager
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
+
+
+def _iter_hyperspectral_pixels(
+    hyperspectral: HyperspectralData,
+    roi: tuple[int, int, int, int] | None = None,
+    stride: int = 1,
+):
+    """Yield PixelSpectrum objects directly from a HyperspectralData cube.
+
+    Used when the loader's ``iter_pixels`` would read from the wrong
+    (unbinned) cube — e.g. after spatial binning.
+    """
+    n_energy, height, width = hyperspectral.shape
+
+    if roi is None:
+        x1, y1, x2, y2 = 0, 0, width, height
+    else:
+        x1, y1, x2, y2 = roi
+        # Allow x1 == x2 or y1 == y2 (empty ROI from edge-crop remapping)
+        # but reject reversed or out-of-bounds coordinates.
+        if not (0 <= x1 <= x2 <= width and 0 <= y1 <= y2 <= height):
+            raise ValueError(f"Invalid ROI {roi} for image shape (height={height}, width={width})")
+
+    for row in range(y1, y2, stride):
+        for col in range(x1, x2, stride):
+            transmission = hyperspectral.data[:, row, col]
+            if hyperspectral.uncertainty is not None:
+                uncertainty = hyperspectral.uncertainty[:, row, col]
+            else:
+                uncertainty = 0.01 * np.abs(transmission)
+
+            yield PixelSpectrum(
+                row=row,
+                col=col,
+                energy=hyperspectral.energy,
+                transmission=transmission,
+                uncertainty=uncertainty,
+                metadata={"source": str(hyperspectral.source_file), "binned": True},
+            )
 
 
 def analyze_imaging(
@@ -38,6 +78,8 @@ def analyze_imaging(
     max_retries: int = 0,
     temp_manager: TempFileManager | None = None,
     save_path: Path | None = None,
+    *,
+    bin_size: int = 1,
 ) -> Imaging2DResults:
     """Perform 2D resonance imaging analysis.
 
@@ -65,6 +107,10 @@ def analyze_imaging(
             fitted values, so for large strides most entries may be NaN; when
             visualizing or computing statistics, use NaN-aware methods or
             masking as appropriate.
+        bin_size: Spatial binning factor applied before fitting. ``bin_size=2``
+            averages 2×2 blocks of pixels before fitting and upscales results
+            back to the original resolution afterwards. Must be >= 1. Default
+            is 1 (no binning, fully backward-compatible).
         resolution_file: Optional path to instrument resolution function file.
             Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.
@@ -87,6 +133,8 @@ def analyze_imaging(
         raise ValueError(f"n_workers must be >= 1, got {n_workers}")
     if stride < 1:
         raise ValueError(f"stride must be >= 1, got {stride}")
+    if bin_size < 1:
+        raise ValueError(f"bin_size must be >= 1, got {bin_size}")
     if checkpoint_interval < 1:
         raise ValueError(f"checkpoint_interval must be >= 1, got {checkpoint_interval}")
     if max_retries < 0:
@@ -105,9 +153,24 @@ def analyze_imaging(
     else:
         loader = HyperspectralLoader(source, energy=energy)
     hyperspectral = loader.load()
+    original_hyperspectral = hyperspectral
 
     _, height, width = hyperspectral.shape
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
+
+    # Validate ROI against original image dimensions (before binning)
+    if roi is not None:
+        x1, y1, x2, y2 = roi
+        if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
+            raise ValueError(f"Invalid ROI {roi} for image shape (height={height}, width={width})")
+
+    # --- 1b. Optional spatial binning ---
+    binner: SpatialBinner | None = None
+    if bin_size > 1:
+        binner = SpatialBinner(bin_size=bin_size)
+        hyperspectral = binner.bin_hyperspectral(hyperspectral)
+        _, height, width = hyperspectral.shape
+        logger.info(f"Binned image (bin_size={bin_size}): {height}x{width} pixels")
 
     # --- Create default TempFileManager if none provided ---
     # Deferred until after loading succeeds so that early failures (missing
@@ -128,8 +191,37 @@ def analyze_imaging(
             resolution_file=resolution_file,
             temp_manager=temp_manager,
         )
+        # When binning is active, iterate over the binned hyperspectral
+        # instead of the loader's original unbinned cube, so that pixel
+        # coordinates match the binned (height, width) expected by the
+        # aggregator.
+        if binner is not None:
+            # Remap ROI from original coordinates to binned coordinates.
+            # Start coords use floor division; end coords use ceiling
+            # division to include any binned pixel overlapping the ROI.
+            # End coords are capped at binned dimensions because incomplete
+            # edge blocks were discarded during cropping.
+            # ROI was already validated against the original image above.
+            if roi is not None:
+                bs = bin_size
+                binned_roi: tuple[int, int, int, int] | None = (
+                    roi[0] // bs,
+                    roi[1] // bs,
+                    min(-(-roi[2] // bs), width),
+                    min(-(-roi[3] // bs), height),
+                )
+            else:
+                binned_roi = None
+
+            def pixel_factory():
+                return _iter_hyperspectral_pixels(hyperspectral, roi=binned_roi, stride=stride)
+        else:
+
+            def pixel_factory():
+                return loader.iter_pixels(roi=roi, stride=stride)
+
         pixel_results = orchestrator.fit_pixels(
-            lambda: loader.iter_pixels(roi=roi, stride=stride),
+            pixel_factory,
             checkpoint_file=checkpoint_file,
             checkpoint_interval=checkpoint_interval,
             resume=resume,
@@ -144,6 +236,26 @@ def analyze_imaging(
             width=width,
         )
         results = aggregator.aggregate(pixel_results, hyperspectral)
+
+        # --- 4b. Unbin results to original resolution ---
+        if binner is not None:
+            results = binner.unbin_results(results, original_hyperspectral)
+
+            # When ROI was expanded to align with bin boundaries, mask
+            # pixels outside the original ROI so fitted values don't
+            # leak beyond the requested region.
+            if roi is not None:
+                rx1, ry1, rx2, ry2 = roi
+                _, orig_h, orig_w = original_hyperspectral.shape
+                roi_mask = np.zeros((orig_h, orig_w), dtype=bool)
+                roi_mask[ry1:ry2, rx1:rx2] = True
+                outside = ~roi_mask
+
+                results.abundance_maps[:, outside] = np.nan
+                results.chi_squared_map[outside] = np.nan
+                results.success_mask[outside] = False
+                if results.fitted_energy_maps is not None:
+                    results.fitted_energy_maps[:, outside] = np.nan
 
         # --- 5. Optionally save ---
         if save_path is not None:
