@@ -270,22 +270,19 @@ class IsotopeManager:
                 for _ in range(36):
                     next(f)
                 for line in f:
-                    # AME2020 format: columns N Z A EL ... (whitespace-separated in first 25 chars)
-                    # Use exact field comparison to avoid substring false-matches
-                    # (e.g. mass 41 matching 241, or symbol appearing inside another word).
+                    # AME2020 format (whitespace-separated fields in first ~25 chars):
+                    #   parts[0] = page/index, parts[1] = N, parts[2] = Z,
+                    #   parts[3] = A (mass number), parts[4] = element symbol
                     parts = line[:25].split()
-                    if len(parts) < 4:
+                    if len(parts) < 5:
                         continue
                     try:
-                        a_field = int(parts[2])
+                        a_field = int(parts[3])
                     except ValueError:
                         continue
-                    symbol_field = parts[3]
+                    symbol_field = parts[4]
                     if symbol_field == element and a_field == mass_number:
-                        # Z is in columns 10-12 (1-based), i.e. indices 9:12
-                        z_str = line[9:12].strip()
-                        if z_str:
-                            return int(z_str)
+                        return int(parts[2])
         except Exception as e:
             logger.warning(f"Could not extract atomic number for {element}-{mass_number}: {e}")
         return None

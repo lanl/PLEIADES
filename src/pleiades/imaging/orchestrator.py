@@ -49,12 +49,25 @@ class CheckpointData:
 
 
 def _worker_initializer() -> None:
-    """Make child processes ignore SIGINT so only the parent process handles it.
+    """Configure child processes for batch fitting.
 
-    Without this, Ctrl+C sends SIGINT to the entire process group. Each child gets
-    KeyboardInterrupt independently, causing BrokenProcessPool and preventing checkpoint saves.
+    1. Ignore SIGINT so only the parent process handles Ctrl+C.
+       Without this, Ctrl+C sends SIGINT to the entire process group,
+       causing BrokenProcessPool and preventing checkpoint saves.
+
+    2. Remove all loguru handlers so worker-side log messages do not
+       flood the user's console.  With the ``spawn`` start method
+       (default on macOS Python 3.12+), each worker re-imports
+       ``logger.py`` and gets its own DEBUG-level stderr handler that
+       ignores the parent's ``configure_logger()`` call.  Worker
+       errors are captured in ``PixelFitResult.error_message``, so
+       no diagnostic information is lost.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    from pleiades.utils.logger import loguru_logger
+
+    loguru_logger.remove()
 
 
 class ProgressReporter:
@@ -727,7 +740,7 @@ class BatchFittingOrchestrator:
                             failed_coords = {c for c, r in completed.items() if not r.success and c in remaining_coords}
                             if not failed_coords:
                                 break
-                            logger.info(
+                            logger.warning(
                                 f"Retry round {retry_round + 1}/{max_retries}: {len(failed_coords)} pixels to retry"
                             )
                             # Re-iterate factory to get pixel data for failed coords only
@@ -826,7 +839,7 @@ class BatchFittingOrchestrator:
         # Summary statistics
         n_success = sum(1 for r in results if r.success)
         n_failed = total_pixels - n_success
-        logger.info(f"Batch fitting complete: {n_success} success, {n_failed} failed")
+        logger.warning(f"Batch fitting complete: {n_success} success, {n_failed} failed")
 
         return results
 
@@ -1042,10 +1055,10 @@ class BatchFittingOrchestrator:
                         if result.success:
                             progress.record_success()
                             chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
+                            logger.debug(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                         else:
                             progress.record_failure()
-                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
+                            logger.debug(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
 
                     except Exception as e:
                         logger.exception(f"Exception collecting result for pixel ({row}, {col})")
@@ -1144,10 +1157,10 @@ class BatchFittingOrchestrator:
                         if result.success:
                             progress.record_success()
                             chi_sq_str = f"{result.chi_squared:.4f}" if result.chi_squared is not None else "N/A"
-                            logger.info(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
+                            logger.debug(f"Pixel ({row}, {col}) SUCCESS: χ² = {chi_sq_str}")
                         else:
                             progress.record_failure()
-                            logger.warning(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
+                            logger.debug(f"Pixel ({row}, {col}) FAILED: {result.error_message}")
                     except Exception as e:
                         logger.exception(f"Exception collecting result for pixel ({row}, {col})")
                         completed[coord] = PixelFitResult(
@@ -1185,7 +1198,7 @@ class BatchFittingOrchestrator:
                     coord = future_to_coord[future]
                     row, col = coord
                     elapsed = now - running_start_times[future]
-                    logger.warning(f"Pixel ({row}, {col}) timed out after {elapsed:.1f}s")
+                    logger.debug(f"Pixel ({row}, {col}) timed out after {elapsed:.1f}s")
                     future.cancel()  # Best-effort; won't stop already-running process
                     completed[coord] = PixelFitResult(
                         row=row,
