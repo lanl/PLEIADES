@@ -240,6 +240,22 @@ def analyze_imaging(
         if binner is not None:
             results = binner.unbin_results(results, original_hyperspectral)
 
+            # When ROI was expanded to align with bin boundaries, mask
+            # pixels outside the original ROI so fitted values don't
+            # leak beyond the requested region.
+            if roi is not None:
+                rx1, ry1, rx2, ry2 = roi
+                _, orig_h, orig_w = original_hyperspectral.shape
+                roi_mask = np.zeros((orig_h, orig_w), dtype=bool)
+                roi_mask[ry1:ry2, rx1:rx2] = True
+                outside = ~roi_mask
+
+                results.abundance_maps[:, outside] = np.nan
+                results.chi_squared_map[outside] = np.nan
+                results.success_mask[outside] = False
+                if results.fitted_energy_maps is not None:
+                    results.fitted_energy_maps[:, outside] = np.nan
+
         # --- 5. Optionally save ---
         if save_path is not None:
             logger.info(f"Saving results to {save_path}")
