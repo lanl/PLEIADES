@@ -65,19 +65,26 @@ class SpatialBinner:
             return hyperspectral
 
         data = hyperspectral.data  # (n_e, H, W)
-        n_e = data.shape[0]
+        n_e, h_orig, w_orig = data.shape
         bs = self.bin_size
+
+        # Crop to exact multiples of bin_size so no zero-padding occurs
+        h_crop = (h_orig // bs) * bs
+        w_crop = (w_orig // bs) * bs
+        data = data[:, :h_crop, :w_crop]
 
         func = np.mean if self.method == "mean" else np.median
         # block_reduce over spatial axes (1, 2); axis 0 (energy) block = 1
         block_shape = (1, bs, bs)
         binned_data = block_reduce(data, block_size=block_shape, func=func)
 
-        # Uncertainty propagation
+        # Uncertainty propagation: σ_bin = sqrt(Σ σ_i²) / N for N = bs²
         binned_uncertainty = None
         if hyperspectral.uncertainty is not None:
-            binned_uncertainty = block_reduce(hyperspectral.uncertainty, block_size=block_shape, func=np.mean)
-            binned_uncertainty = binned_uncertainty / bs  # σ_bin = σ_pixel / sqrt(N²) = σ_pixel / N
+            unc_cropped = hyperspectral.uncertainty[:, :h_crop, :w_crop]
+            variance_sum = block_reduce(unc_cropped**2, block_size=block_shape, func=np.sum)
+            n_pixels = bs * bs
+            binned_uncertainty = np.sqrt(variance_sum) / n_pixels
 
         return HyperspectralData(
             data=binned_data,

@@ -186,6 +186,26 @@ class TestBinHyperspectral:
         binned = binner.bin_hyperspectral(hs)
         assert binned.source_file == hs.source_file
 
+    def test_non_divisible_dimensions_cropped(self):
+        """9×9 image with bin_size=2 should produce (4, 4), not (5, 5)."""
+        data = np.ones((5, 9, 9))
+        hs = _make_hyperspectral(data)
+        binner = SpatialBinner(bin_size=2)
+        binned = binner.bin_hyperspectral(hs)
+        assert binned.shape == (5, 4, 4)
+        # All ones → binned values should be exactly 1.0 (no zero-padding bias)
+        np.testing.assert_allclose(binned.data, 1.0)
+
+    def test_uncertainty_propagation_heterogeneous(self):
+        """Verify sqrt(sum(sigma_i^2))/N for non-uniform uncertainties."""
+        data = np.full((1, 2, 2), 0.5)
+        uncertainty = np.array([[[0.1, 0.2], [0.3, 0.4]]]).astype(np.float64)
+        hs = _make_hyperspectral(data, uncertainty=uncertainty)
+        binner = SpatialBinner(bin_size=2)
+        binned = binner.bin_hyperspectral(hs)
+        expected = np.sqrt(0.1**2 + 0.2**2 + 0.3**2 + 0.4**2) / 4
+        np.testing.assert_allclose(binned.uncertainty[0, 0, 0], expected, rtol=1e-10)
+
     def test_median_method_different_from_mean(self):
         data = np.random.uniform(0.2, 0.9, (5, 8, 8))
         hs = _make_hyperspectral(data)

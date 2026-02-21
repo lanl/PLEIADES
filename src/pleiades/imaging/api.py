@@ -14,12 +14,46 @@ from pleiades.imaging.aggregator import ResultsAggregator
 from pleiades.imaging.binner import SpatialBinner
 from pleiades.imaging.config import ImagingConfig
 from pleiades.imaging.loader import HyperspectralLoader
-from pleiades.imaging.models import Imaging2DResults
+from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelSpectrum
 from pleiades.imaging.orchestrator import BatchFittingOrchestrator
 from pleiades.imaging.temp_manager import TempFileManager
 from pleiades.utils.logger import loguru_logger
 
 logger = loguru_logger.bind(name=__name__)
+
+
+def _iter_hyperspectral_pixels(
+    hyperspectral: HyperspectralData,
+    roi: tuple[int, int, int, int] | None = None,
+    stride: int = 1,
+):
+    """Yield PixelSpectrum objects directly from a HyperspectralData cube.
+
+    Used when the loader's ``iter_pixels`` would read from the wrong
+    (unbinned) cube — e.g. after spatial binning.
+    """
+    n_energy, height, width = hyperspectral.shape
+
+    if roi is None:
+        x1, y1, x2, y2 = 0, 0, width, height
+    else:
+        x1, y1, x2, y2 = roi
+
+    for row in range(y1, y2, stride):
+        for col in range(x1, x2, stride):
+            transmission = hyperspectral.data[:, row, col]
+            if hyperspectral.uncertainty is not None:
+                uncertainty = hyperspectral.uncertainty[:, row, col]
+            else:
+                uncertainty = 0.01 * np.abs(transmission)
+
+            yield PixelSpectrum(
+                row=row,
+                col=col,
+                energy=hyperspectral.energy,
+                transmission=transmission,
+                uncertainty=uncertainty,
+            )
 
 
 def analyze_imaging(
@@ -145,8 +179,21 @@ def analyze_imaging(
             resolution_file=resolution_file,
             temp_manager=temp_manager,
         )
+        # When binning is active, iterate over the binned hyperspectral
+        # instead of the loader's original unbinned cube, so that pixel
+        # coordinates match the binned (height, width) expected by the
+        # aggregator.
+        if binner is not None:
+
+            def pixel_factory():
+                return _iter_hyperspectral_pixels(hyperspectral, roi=roi, stride=stride)
+        else:
+
+            def pixel_factory():
+                return loader.iter_pixels(roi=roi, stride=stride)
+
         pixel_results = orchestrator.fit_pixels(
-            lambda: loader.iter_pixels(roi=roi, stride=stride),
+            pixel_factory,
             checkpoint_file=checkpoint_file,
             checkpoint_interval=checkpoint_interval,
             resume=resume,
