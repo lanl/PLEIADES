@@ -128,7 +128,9 @@ class SparsityAssessor:
 
         mad = float(np.median(np.abs(spatial_mean - np.median(spatial_mean))))
         noise_estimate = mad / 0.6745  # normalise MAD → Gaussian std equivalent
-        if noise_estimate == 0.0:
+        if resonance_depth == 0.0:
+            snr_estimate = 0.0
+        elif noise_estimate == 0.0:
             snr_estimate = float("inf")
         else:
             snr_estimate = resonance_depth / noise_estimate
