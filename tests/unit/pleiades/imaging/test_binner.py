@@ -206,6 +206,14 @@ class TestBinHyperspectral:
         expected = np.sqrt(0.1**2 + 0.2**2 + 0.3**2 + 0.4**2) / 4
         np.testing.assert_allclose(binned.uncertainty[0, 0, 0], expected, rtol=1e-10)
 
+    def test_bin_size_larger_than_image_raises(self):
+        """bin_size > min(height, width) should raise ValueError."""
+        data = np.ones((5, 3, 3))
+        hs = _make_hyperspectral(data)
+        binner = SpatialBinner(bin_size=4)
+        with pytest.raises(ValueError, match="zero-sized"):
+            binner.bin_hyperspectral(hs)
+
     def test_median_method_different_from_mean(self):
         data = np.random.uniform(0.2, 0.9, (5, 8, 8))
         hs = _make_hyperspectral(data)
@@ -378,6 +386,30 @@ class TestUnbinResults:
         binner = SpatialBinner(bin_size=2)
         unbinned = binner.unbin_results(results, orig_hs)
         assert unbinned.pixel_results == pr
+
+    def test_success_mask_nan_padded_edges_are_false(self):
+        """NaN-padded edge pixels in success_mask must be False, not True."""
+        # Original 5×5, binned 2×2 → 2×2 binned result, unbin to 5×5
+        orig_hs = _make_hyperspectral(np.random.uniform(0.5, 0.9, (10, 5, 5)))
+        bin_hs = _make_hyperspectral(np.random.uniform(0.5, 0.9, (10, 2, 2)))
+        results = Imaging2DResults(
+            abundance_maps=np.full((1, 2, 2), 0.5),
+            isotope_names=["iso-0"],
+            chi_squared_map=np.ones((2, 2)),
+            success_mask=np.ones((2, 2), dtype=bool),
+            source_hyperspectral=bin_hs,
+            pixel_results=[],
+            metadata={},
+        )
+        binner = SpatialBinner(bin_size=2)
+        unbinned = binner.unbin_results(results, orig_hs)
+        # The 5th row and column are NaN-padded; success_mask should be False there
+        assert not unbinned.success_mask[4, 0]
+        assert not unbinned.success_mask[0, 4]
+        assert not unbinned.success_mask[4, 4]
+        # Fitted region should still be True
+        assert unbinned.success_mask[0, 0]
+        assert unbinned.success_mask[3, 3]
 
 
 # ---------------------------------------------------------------------------

@@ -71,6 +71,11 @@ class SpatialBinner:
         # Crop to exact multiples of bin_size so no zero-padding occurs
         h_crop = (h_orig // bs) * bs
         w_crop = (w_orig // bs) * bs
+        if h_crop == 0 or w_crop == 0:
+            raise ValueError(
+                f"bin_size={bs} produces a zero-sized binned image for input shape "
+                f"({h_orig}, {w_orig}); bin_size must be <= min(height, width)"
+            )
         data = data[:, :h_crop, :w_crop]
 
         func = np.mean if self.method == "mean" else np.median
@@ -164,9 +169,10 @@ class SpatialBinner:
         # Chi-squared map
         unbinned_chi2 = self.unbin_map(results.chi_squared_map, original_shape)
 
-        # Success mask (boolean)
+        # Success mask (boolean) — NaN-padded edges must become False, not
+        # True (bool(np.nan) is truthy), so replace NaN with 0 before casting.
         unbinned_success_float = self.unbin_map(results.success_mask.astype(np.float64), original_shape)
-        unbinned_success = unbinned_success_float.astype(bool)
+        unbinned_success = np.nan_to_num(unbinned_success_float, nan=0.0).astype(bool)
 
         # Fitted energy maps (optional)
         unbinned_energy_maps = None
