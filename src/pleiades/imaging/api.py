@@ -38,11 +38,8 @@ def _iter_hyperspectral_pixels(
         x1, y1, x2, y2 = 0, 0, width, height
     else:
         x1, y1, x2, y2 = roi
-        # Clamp to actual dimensions as a safety net
-        x1 = max(0, min(x1, width))
-        y1 = max(0, min(y1, height))
-        x2 = max(0, min(x2, width))
-        y2 = max(0, min(y2, height))
+        if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
+            raise ValueError(f"Invalid ROI {roi} for image shape (height={height}, width={width})")
 
     for row in range(y1, y2, stride):
         for col in range(x1, x2, stride):
