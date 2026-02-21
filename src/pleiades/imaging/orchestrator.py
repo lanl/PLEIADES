@@ -49,12 +49,25 @@ class CheckpointData:
 
 
 def _worker_initializer() -> None:
-    """Make child processes ignore SIGINT so only the parent process handles it.
+    """Configure child processes for batch fitting.
 
-    Without this, Ctrl+C sends SIGINT to the entire process group. Each child gets
-    KeyboardInterrupt independently, causing BrokenProcessPool and preventing checkpoint saves.
+    1. Ignore SIGINT so only the parent process handles Ctrl+C.
+       Without this, Ctrl+C sends SIGINT to the entire process group,
+       causing BrokenProcessPool and preventing checkpoint saves.
+
+    2. Remove all loguru handlers so worker-side log messages do not
+       flood the user's console.  With the ``spawn`` start method
+       (default on macOS Python 3.12+), each worker re-imports
+       ``logger.py`` and gets its own DEBUG-level stderr handler that
+       ignores the parent's ``configure_logger()`` call.  Worker
+       errors are captured in ``PixelFitResult.error_message``, so
+       no diagnostic information is lost.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    from pleiades.utils.logger import loguru_logger
+
+    loguru_logger.remove()
 
 
 class ProgressReporter:
