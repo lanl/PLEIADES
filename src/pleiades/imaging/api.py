@@ -38,6 +38,11 @@ def _iter_hyperspectral_pixels(
         x1, y1, x2, y2 = 0, 0, width, height
     else:
         x1, y1, x2, y2 = roi
+        # Clamp to actual dimensions as a safety net
+        x1 = max(0, min(x1, width))
+        y1 = max(0, min(y1, height))
+        x2 = max(0, min(x2, width))
+        y2 = max(0, min(y2, height))
 
     for row in range(y1, y2, stride):
         for col in range(x1, x2, stride):
@@ -184,9 +189,23 @@ def analyze_imaging(
         # coordinates match the binned (height, width) expected by the
         # aggregator.
         if binner is not None:
+            # Remap ROI from original coordinates to binned coordinates.
+            # Start coords use floor division; end coords use ceiling
+            # division (to include any binned pixel overlapping the ROI),
+            # clamped to the binned dimensions.
+            if roi is not None:
+                bs = bin_size
+                binned_roi: tuple[int, int, int, int] | None = (
+                    roi[0] // bs,
+                    roi[1] // bs,
+                    min(-(-roi[2] // bs), width),
+                    min(-(-roi[3] // bs), height),
+                )
+            else:
+                binned_roi = None
 
             def pixel_factory():
-                return _iter_hyperspectral_pixels(hyperspectral, roi=roi, stride=stride)
+                return _iter_hyperspectral_pixels(hyperspectral, roi=binned_roi, stride=stride)
         else:
 
             def pixel_factory():
