@@ -21,8 +21,9 @@ class SparsityMetrics:
 
     Attributes:
         mean_transmission: Spatial and spectral mean of the transmission cube.
-        min_transmission: Global minimum transmission value.
-        resonance_depth: ``1 - min_transmission`` (depth of the deepest dip).
+        min_transmission: Minimum of the spatial-mean transmission spectrum.
+        resonance_depth: ``1 - min_transmission`` (depth of the deepest dip
+            in the spatial-mean spectrum).
         snr_estimate: ``resonance_depth / noise_estimate`` where noise is the
             median absolute deviation across energy bins, normalised by 0.6745
             to convert MAD to an equivalent Gaussian standard deviation.
@@ -38,6 +39,9 @@ class SparsityMetrics:
     resonance_depth: float
     snr_estimate: float
     zero_fraction: float
+    # NOTE: min_transmission and resonance_depth are derived from the
+    # spatial-mean spectrum (not the global voxel minimum) so that the
+    # SNR estimate is self-consistent with the MAD noise estimate.
     severity_level: int
     severity_label: str
     recommendations: List[str] = field(default_factory=list)
@@ -110,17 +114,18 @@ class SparsityAssessor:
         Returns:
             ``SparsityMetrics`` with all fields populated.
         """
-        data = hyperspectral.data.astype(np.float64)
+        data = hyperspectral.data
 
         # --- Global scalar statistics ---
-        mean_transmission = float(np.mean(data))
-        min_transmission = float(np.min(data))
-        resonance_depth = 1.0 - min_transmission
+        mean_transmission = float(np.mean(data, dtype=np.float64))
         zero_fraction = float(np.mean(data < 0.01))
 
-        # --- Noise estimate via MAD of the spatial-mean spectrum ---
+        # --- Noise & signal from the spatial-mean spectrum ---
         # spatial_mean_spectrum: shape (n_energy,)
-        spatial_mean = data.mean(axis=(1, 2))
+        spatial_mean = np.mean(data, axis=(1, 2), dtype=np.float64)
+        min_transmission = float(np.min(spatial_mean))
+        resonance_depth = 1.0 - min_transmission
+
         mad = float(np.median(np.abs(spatial_mean - np.median(spatial_mean))))
         noise_estimate = mad / 0.6745  # normalise MAD → Gaussian std equivalent
         if noise_estimate == 0.0:
