@@ -131,8 +131,10 @@ class SpatialBinner:
         if uh >= h and uw >= w:
             return upscaled[:h, :w]
 
-        # Pad with NaN if the upscaled result is smaller than original
-        result = np.full((h, w), np.nan, dtype=upscaled.dtype)
+        # Pad with NaN if the upscaled result is smaller than original.
+        # Promote to float if needed so NaN is representable.
+        pad_dtype = upscaled.dtype if np.issubdtype(upscaled.dtype, np.floating) else np.float64
+        result = np.full((h, w), np.nan, dtype=pad_dtype)
         result[: min(uh, h), : min(uw, w)] = upscaled[: min(uh, h), : min(uw, w)]
         return result
 
