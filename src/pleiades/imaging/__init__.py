@@ -21,6 +21,7 @@ Example:
 
 from pleiades.imaging.aggregator import ResultsAggregator
 from pleiades.imaging.api import analyze_imaging
+from pleiades.imaging.degrader import DataDegrader
 from pleiades.imaging.generator import AbundanceMapGenerator
 from pleiades.imaging.loader import HyperspectralLoader
 from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
@@ -29,6 +30,7 @@ from pleiades.imaging.visualizer import AbundanceMapVisualizer
 __all__ = [
     "AbundanceMapGenerator",
     "AbundanceMapVisualizer",
+    "DataDegrader",
     "HyperspectralLoader",
     "HyperspectralData",
     "PixelSpectrum",
