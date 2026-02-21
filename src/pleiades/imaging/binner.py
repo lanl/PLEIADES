@@ -120,11 +120,10 @@ class SpatialBinner:
             raise ValueError(f"binned_map must be 2-D, got {binned_map.ndim}D")
 
         if self.bin_size == 1:
-            h, w = original_shape
-            return binned_map[:h, :w]
-
-        # Nearest-neighbour upscale via np.repeat
-        upscaled = np.repeat(np.repeat(binned_map, self.bin_size, axis=0), self.bin_size, axis=1)
+            upscaled = binned_map
+        else:
+            # Nearest-neighbour upscale via np.repeat
+            upscaled = np.repeat(np.repeat(binned_map, self.bin_size, axis=0), self.bin_size, axis=1)
 
         # Crop/pad to original_shape
         h, w = original_shape

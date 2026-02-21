@@ -69,7 +69,6 @@ def analyze_imaging(
     n_workers: int = 4,
     roi: tuple[int, int, int, int] | None = None,
     stride: int = 1,
-    bin_size: int = 1,
     resolution_file: Path | None = None,
     checkpoint_file: Path | None = None,
     checkpoint_interval: int = 10,
@@ -78,6 +77,8 @@ def analyze_imaging(
     max_retries: int = 0,
     temp_manager: TempFileManager | None = None,
     save_path: Path | None = None,
+    *,
+    bin_size: int = 1,
 ) -> Imaging2DResults:
     """Perform 2D resonance imaging analysis.
 
