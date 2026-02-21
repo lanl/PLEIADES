@@ -154,6 +154,12 @@ def analyze_imaging(
     _, height, width = hyperspectral.shape
     logger.info(f"Loaded image: {height}x{width} pixels, {hyperspectral.shape[0]} energy bins")
 
+    # Validate ROI against original image dimensions (before binning)
+    if roi is not None:
+        x1, y1, x2, y2 = roi
+        if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
+            raise ValueError(f"Invalid ROI {roi} for image shape (height={height}, width={width})")
+
     # --- 1b. Optional spatial binning ---
     binner: SpatialBinner | None = None
     if bin_size > 1:
@@ -188,8 +194,10 @@ def analyze_imaging(
         if binner is not None:
             # Remap ROI from original coordinates to binned coordinates.
             # Start coords use floor division; end coords use ceiling
-            # division (to include any binned pixel overlapping the ROI),
-            # clamped to the binned dimensions.
+            # division to include any binned pixel overlapping the ROI.
+            # End coords are capped at binned dimensions because incomplete
+            # edge blocks were discarded during cropping.
+            # ROI was already validated against the original image above.
             if roi is not None:
                 bs = bin_size
                 binned_roi: tuple[int, int, int, int] | None = (
