@@ -939,7 +939,7 @@ class TestRecoveryEdgeCases:
             recovery.recover_image(hs, reference_spectra=refs, roi=(0, 0, 10, 10))
 
     def test_invalid_roi_reversed_raises(self):
-        """ROI with x1 >= x2 should raise ValueError."""
+        """ROI with x1 > x2 should raise ValueError."""
         from pleiades.imaging.recovery import PhysicsRecovery
 
         recovery = PhysicsRecovery.__new__(PhysicsRecovery)
@@ -950,6 +950,21 @@ class TestRecoveryEdgeCases:
 
         with pytest.raises(ValueError, match="Invalid ROI"):
             recovery.recover_image(hs, reference_spectra=refs, roi=(3, 0, 1, 4))
+
+    def test_empty_roi_returns_all_nan(self):
+        """Empty ROI (x1==x2) from bin remapping should return all-NaN, not raise."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+        data = np.full((50, 4, 4), 0.7)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=0.01 * np.ones_like(data))
+
+        # x1 == x2 → empty selection, zero pixels processed
+        result = recovery.recover_image(hs, reference_spectra=refs, roi=(2, 0, 2, 4))
+        assert np.all(np.isnan(result.abundance_maps))
+        assert not np.any(result.success_mask)
 
     def test_nan_in_spectrum_skipped_not_crashed(self):
         """Pixels with NaN in transmission should be skipped, not crash."""
