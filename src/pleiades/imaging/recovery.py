@@ -303,6 +303,7 @@ class PhysicsRecovery:
             transmission: Observed transmission spectrum, shape ``(n_energy,)``.
             uncertainty: Transmission uncertainty, shape ``(n_energy,)``.
             dictionary: Reference absorption matrix, shape ``(n_energy, n_isotopes)``.
+                Must be 2-D.
 
         Returns:
             Tuple of ``(coefficients, chi_squared, success)`` where:
@@ -310,8 +311,18 @@ class PhysicsRecovery:
             - ``coefficients``: Recovered scaling coefficients, shape ``(n_isotopes,)``.
             - ``chi_squared``: Chi-squared value of the fit.
             - ``success``: ``True`` if NNLS converged, ``False`` on solver failure.
+
+        Raises:
+            ValueError: If ``dictionary`` is not 2-D or its first axis does not
+                match the length of ``transmission``.
         """
-        n_isotopes = dictionary.shape[1] if dictionary.ndim == 2 else 1
+        if dictionary.ndim != 2:
+            raise ValueError(f"dictionary must be 2-D (n_energy, n_isotopes), got {dictionary.ndim}-D")
+        if dictionary.shape[0] != transmission.shape[0]:
+            raise ValueError(
+                f"dictionary rows ({dictionary.shape[0]}) must match transmission length ({transmission.shape[0]})"
+            )
+        n_isotopes = dictionary.shape[1]
 
         # Clamp transmission to avoid log(0) or log(negative)
         t_clamped = np.clip(transmission, self.TRANSMISSION_FLOOR, self.TRANSMISSION_CEIL)
@@ -335,7 +346,16 @@ class PhysicsRecovery:
 
         try:
             coefficients, rnorm = nnls(WD, Wy)
-        except Exception:
+        except ValueError as exc:
+            logger.debug(
+                f"NNLS ValueError: {exc} (transmission shape={transmission.shape}, dictionary shape={dictionary.shape})"
+            )
+            return np.zeros(n_isotopes), float("nan"), False
+        except Exception as exc:
+            logger.warning(
+                f"Unexpected NNLS failure: {exc} "
+                f"(transmission shape={transmission.shape}, dictionary shape={dictionary.shape})"
+            )
             return np.zeros(n_isotopes), float("nan"), False
 
         # Compute chi-squared from residuals using clamped data (consistent

@@ -198,8 +198,13 @@ class TestRecoverPixel:
         coeffs, chi2, success = self.recovery.recover_pixel(transmission, uncertainty, dictionary)
         assert np.all(np.isfinite(coeffs))
 
-    def test_open_beam_pixel_skipped(self):
-        """Pixel where T~1 everywhere should be marked as not successful."""
+    def test_open_beam_returns_near_zero_coefficients(self):
+        """recover_pixel converges on open-beam (T~1) but yields near-zero coefficients.
+
+        Open-beam skipping is handled by recover_image, not recover_pixel.
+        At the pixel level, NNLS converges (success=True) with coefficients
+        close to zero since there is no absorption signal to fit.
+        """
         ref = _make_reference_spectrum("Ta-181", self.energy, peak_energy=50.0, peak_depth=1.0)
         dictionary = np.column_stack([ref.absorption])
 
@@ -208,8 +213,6 @@ class TestRecoverPixel:
         uncertainty = 0.01 * np.ones_like(transmission)
 
         coeffs, chi2, success = self.recovery.recover_pixel(transmission, uncertainty, dictionary)
-        # Open-beam pixel: NNLS gives near-zero coefficients
-        # success is still True (NNLS converged) but coefficients are ~0
         assert success is True
         assert np.all(coeffs < 0.01)  # Near-zero
 
