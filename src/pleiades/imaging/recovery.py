@@ -134,9 +134,9 @@ class PhysicsRecovery:
         from pleiades.sammy.backends.local import LocalSammyConfig, LocalSammyRunner
         from pleiades.sammy.fitting.options import FitOptions
         from pleiades.sammy.interface import SammyFilesMultiMode
+        from pleiades.sammy.io.data_manager import convert_csv_to_sammy_twenty
         from pleiades.sammy.io.inp_manager import InpManager
         from pleiades.sammy.io.json_manager import JsonManager
-        from pleiades.sammy.io.twenty_manager import convert_csv_to_sammy_twenty
         from pleiades.sammy.results.manager import ResultsManager
 
         cleanup_dir = False
