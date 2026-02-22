@@ -180,6 +180,19 @@ def analyze_imaging(
 
     # --- 2. Physics recovery or per-pixel SAMMY fitting ---
     if physics_recovery:
+        # Physics recovery solves a fast NNLS problem per pixel (seconds,
+        # not hours) so checkpointing is not applicable.  Reject checkpoint
+        # arguments explicitly so callers don't silently get a full
+        # recomputation when they expect a resumed run.
+        if resume:
+            raise ValueError(
+                "resume is not supported with physics_recovery=True (NNLS recovery does not use checkpoints)"
+            )
+        if checkpoint_file is not None:
+            raise ValueError(
+                "checkpoint_file is not supported with physics_recovery=True (NNLS recovery does not use checkpoints)"
+            )
+
         from pleiades.imaging.recovery import PhysicsRecovery
 
         logger.info("Using physics recovery (TRINIDI-style NNLS)")
