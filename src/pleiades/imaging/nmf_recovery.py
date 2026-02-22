@@ -22,6 +22,7 @@ where ``A`` has shape ``(n_pixels, n_energy)``, ``W`` has shape
 from __future__ import annotations
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from pleiades.imaging.models import HyperspectralData, Imaging2DResults
 from pleiades.utils.logger import loguru_logger
@@ -64,8 +65,6 @@ class NMFRecovery:
         self.n_components = n_components
         self.max_iter = max_iter
         self.random_state = random_state
-        self.spectral_basis_: np.ndarray | None = None
-        self.spatial_coefficients_: np.ndarray | None = None
 
     # ------------------------------------------------------------------
     # Core NMF
@@ -81,17 +80,26 @@ class NMFRecovery:
 
         Args:
             V: Non-negative data matrix, shape ``(n_samples, n_features)``.
+                Non-finite values are replaced with zero before factorisation.
 
         Returns:
             ``(W, H)`` where ``W`` is ``(n_samples, n_components)`` and
             ``H`` is ``(n_components, n_features)``.
         """
+        # Replace non-finite values with zero so they don't poison the
+        # mean-based initialisation or the multiplicative updates.
+        finite_mask = np.isfinite(V)
+        if not np.all(finite_mask):
+            n_bad = np.sum(~finite_mask)
+            logger.debug(f"NMF: replacing {n_bad} non-finite values with 0")
+            V = np.where(finite_mask, V, 0.0)
+
         n_samples, n_features = V.shape
         k = self.n_components
         rng = np.random.default_rng(self.random_state)
 
         # NNDSVD-like initialisation: small positive random values
-        avg = np.sqrt(V.mean() / k)
+        avg = np.sqrt(np.nanmean(V) / k) if np.nanmean(V) > 0 else 1.0
         W = np.abs(rng.normal(0, avg, (n_samples, k))) + 1e-10
         H = np.abs(rng.normal(0, avg, (k, n_features))) + 1e-10
 
@@ -138,17 +146,16 @@ class NMFRecovery:
             :class:`Imaging2DResults` with ``n_components`` abundance maps.
             The ``isotope_names`` field contains generic labels
             ``["NMF-0", "NMF-1", ...]``; use :meth:`label_components`
-            to assign isotope names from reference spectra.
+            to assign isotope names from reference spectra.  The returned
+            result stores the learned spectral basis in
+            ``metadata["spectral_basis"]`` so that :meth:`label_components`
+            does not depend on mutable instance state.
         """
         n_e, height, width = hyperspectral.shape
         logger.info(f"NMF decomposition: {height}x{width} pixels, {n_e} energy bins, {self.n_components} components")
 
         V = self._to_attenuation_matrix(hyperspectral)
         W, H = self._nmf_multiplicative_updates(V)
-
-        # Store learned basis for denoise() and label_components()
-        self.spectral_basis_ = H  # (n_components, n_energy)
-        self.spatial_coefficients_ = W  # (n_pixels, n_components)
 
         # Reshape to spatial maps
         spatial_maps = W.T.reshape(self.n_components, height, width)
@@ -182,6 +189,7 @@ class NMFRecovery:
                 "method": "nmf_recovery",
                 "n_components": self.n_components,
                 "max_iter": self.max_iter,
+                "spectral_basis": H,
             },
         )
 
@@ -204,9 +212,6 @@ class NMFRecovery:
         V = self._to_attenuation_matrix(hyperspectral)
         W, H = self._nmf_multiplicative_updates(V)
 
-        self.spectral_basis_ = H
-        self.spatial_coefficients_ = W
-
         # Reconstruct and convert back to transmission
         recon_A = W @ H  # (n_pixels, n_energy)
         recon_T = np.exp(-recon_A)  # back to transmission
@@ -221,19 +226,21 @@ class NMFRecovery:
             metadata={**hyperspectral.metadata, "nmf_denoised": True},
         )
 
+    @staticmethod
     def label_components(
-        self,
         result: Imaging2DResults,
         reference_spectra: list,
     ) -> Imaging2DResults:
         """Assign isotope names to NMF components by matching reference spectra.
 
         Computes the correlation between each NMF spectral basis vector and
-        each reference absorption profile, then assigns isotope names via
-        the Hungarian algorithm (best overall matching).
+        each reference absorption profile, then finds the globally optimal
+        assignment via the Hungarian algorithm (``scipy.optimize.linear_sum_assignment``).
 
         Args:
-            result: :class:`Imaging2DResults` from :meth:`decompose`.
+            result: :class:`Imaging2DResults` from :meth:`decompose`.  Must
+                have ``metadata["spectral_basis"]`` set (populated automatically
+                by :meth:`decompose`).
             reference_spectra: List of :class:`ReferenceSpectrum` with
                 known isotope names and absorption profiles.
 
@@ -241,46 +248,43 @@ class NMFRecovery:
             New :class:`Imaging2DResults` with reordered abundance maps
             and correct ``isotope_names``.
         """
-        if self.spectral_basis_ is None:
-            raise RuntimeError("Must call decompose() before label_components()")
+        spectral_basis = result.metadata.get("spectral_basis")
+        if spectral_basis is None:
+            raise RuntimeError(
+                "result.metadata['spectral_basis'] is not set. Use a result returned by NMFRecovery.decompose()."
+            )
 
-        n_comp = self.spectral_basis_.shape[0]
+        n_comp = spectral_basis.shape[0]
         n_ref = len(reference_spectra)
 
-        # Build correlation matrix
+        # Build correlation matrix (higher = better match)
         corr = np.zeros((n_comp, n_ref))
         for i in range(n_comp):
             for j in range(n_ref):
-                corr[i, j] = np.corrcoef(self.spectral_basis_[i], reference_spectra[j].absorption)[0, 1]
+                corr[i, j] = np.corrcoef(spectral_basis[i], reference_spectra[j].absorption)[0, 1]
 
-        # Greedy assignment: for each reference, find the best-matching component
-        used_comps: set[int] = set()
-        assignments: list[tuple[int, int]] = []  # (component_idx, ref_idx)
-        for ref_idx in range(n_ref):
-            best_comp = -1
-            best_val = -1.0
-            for comp_idx in range(n_comp):
-                if comp_idx not in used_comps and corr[comp_idx, ref_idx] > best_val:
-                    best_val = corr[comp_idx, ref_idx]
-                    best_comp = comp_idx
-            if best_comp >= 0:
-                assignments.append((best_comp, ref_idx))
-                used_comps.add(best_comp)
+        # Optimal assignment via Hungarian algorithm (minimise cost = maximise correlation)
+        row_ind, col_ind = linear_sum_assignment(-corr)
 
-        # Reorder abundance maps and assign names
-        new_order = [a[0] for a in assignments]
-        # Add any unmatched components at the end
+        # Build reordered maps: matched components first, unmatched appended
+        matched_comps = set(row_ind)
+        new_order: list[int] = list(row_ind)
         for i in range(n_comp):
-            if i not in used_comps:
+            if i not in matched_comps:
                 new_order.append(i)
 
         reordered_maps = result.abundance_maps[new_order]
-        isotope_names = []
-        for comp_idx, ref_idx in assignments:
+
+        isotope_names: list[str] = []
+        for comp_idx, ref_idx in zip(row_ind, col_ind):
             isotope_names.append(reference_spectra[ref_idx].isotope_name)
         for i in range(n_comp):
-            if i not in used_comps:
+            if i not in matched_comps:
                 isotope_names.append(f"NMF-{i}")
+
+        # Preserve spectral_basis in metadata but drop the numpy array
+        # reference so the new result is self-contained
+        new_metadata = {**result.metadata, "labeled": True, "spectral_basis": spectral_basis[new_order]}
 
         return Imaging2DResults(
             abundance_maps=reordered_maps,
@@ -288,5 +292,5 @@ class NMFRecovery:
             chi_squared_map=result.chi_squared_map,
             success_mask=result.success_mask,
             source_hyperspectral=result.source_hyperspectral,
-            metadata={**result.metadata, "labeled": True},
+            metadata=new_metadata,
         )

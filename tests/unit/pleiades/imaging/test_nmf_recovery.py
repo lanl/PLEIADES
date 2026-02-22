@@ -157,7 +157,7 @@ class TestNMFDecomposition:
         hs = _make_hyperspectral(data, energy=energy)
         nmf = NMFRecovery(n_components=2)
         result = nmf.decompose(hs)
-        assert nmf.spectral_basis_.shape == (2, 50)
+        assert result.metadata["spectral_basis"].shape == (2, 50)
 
     def test_spectral_basis_non_negative(self):
         from pleiades.imaging.nmf_recovery import NMFRecovery
@@ -165,8 +165,8 @@ class TestNMFDecomposition:
         data, _, _, energy = _make_two_component_data()
         hs = _make_hyperspectral(data, energy=energy)
         nmf = NMFRecovery(n_components=2)
-        nmf.decompose(hs)
-        assert np.all(nmf.spectral_basis_ >= 0)
+        result = nmf.decompose(hs)
+        assert np.all(result.metadata["spectral_basis"] >= 0)
 
     def test_metadata_contains_method(self):
         from pleiades.imaging.nmf_recovery import NMFRecovery
@@ -244,7 +244,8 @@ class TestComponentLabeling:
             ReferenceSpectrum(isotope_name="Iso-A", energy=energy, transmission=np.exp(-basis[0]), absorption=basis[0]),
             ReferenceSpectrum(isotope_name="Iso-B", energy=energy, transmission=np.exp(-basis[1]), absorption=basis[1]),
         ]
-        labeled = nmf.label_components(result, refs)
+        # label_components is a static method that reads basis from result.metadata
+        labeled = NMFRecovery.label_components(result, refs)
         assert labeled.isotope_names == ["Iso-A", "Iso-B"]
 
 
