@@ -944,6 +944,7 @@ class InpManager:
         title: str = None,
         dataset_metadata: Optional[InpDatasetMetadata] = None,
         resolution_file_path: Path = None,
+        fit_options: Optional[FitOptions] = None,
     ) -> Path:
         """
         Create input file for multi-isotope JSON mode fitting.
@@ -955,9 +956,12 @@ class InpManager:
             output_path: Path to write the input file
             fit_config: Typed fit configuration used as the source of INP values
             title: Optional title for the inp file
-            raise ValueError("fit_config is required and must be an instance of FitConfig")
-                values (for example, Card 2 overrides or THICK derivation inputs)
+            dataset_metadata: Optional dataset metadata for material/energy overrides
             resolution_file_path: Optional absolute path to resolution function file
+            fit_options: Optional FitOptions to override the default multi-isotope
+                config.  When ``None``, uses ``FitOptions.from_multi_isotope_config()``.
+                Pass a custom instance to change SAMMY behaviour (e.g. forward-model
+                mode with ``DO NOT SOLVE BAYES EQUATIONS``).
 
         Returns:
             Path: Path to the created file
@@ -965,7 +969,7 @@ class InpManager:
         if fit_config is None or not isinstance(fit_config, FitConfig):
             raise ValueError("fit_config must be an instance of FitConfig")
 
-        options = FitOptions.from_multi_isotope_config()
+        options = fit_options if fit_options is not None else FitOptions.from_multi_isotope_config()
         manager = cls(
             options=options,
             fit_config=fit_config,
