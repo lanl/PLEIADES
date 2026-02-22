@@ -257,11 +257,16 @@ class NMFRecovery:
         n_comp = spectral_basis.shape[0]
         n_ref = len(reference_spectra)
 
-        # Build correlation matrix (higher = better match)
+        # Build correlation matrix (higher = better match).
+        # corrcoef returns NaN when either vector has zero variance
+        # (e.g. flat/open-beam basis or unused components).  Replace
+        # NaN with -1 (worst possible correlation) so that
+        # linear_sum_assignment does not crash.
         corr = np.zeros((n_comp, n_ref))
         for i in range(n_comp):
             for j in range(n_ref):
-                corr[i, j] = np.corrcoef(spectral_basis[i], reference_spectra[j].absorption)[0, 1]
+                c = np.corrcoef(spectral_basis[i], reference_spectra[j].absorption)[0, 1]
+                corr[i, j] = c if np.isfinite(c) else -1.0
 
         # Optimal assignment via Hungarian algorithm (minimise cost = maximise correlation)
         row_ind, col_ind = linear_sum_assignment(-corr)

@@ -332,6 +332,8 @@ class Imaging2DResults(BaseModel):
             for key, value in self.metadata.items():
                 if isinstance(value, (str, int, float, bool)):
                     meta_group.attrs[key] = value
+                elif isinstance(value, np.ndarray):
+                    meta_group.create_dataset(key, data=value, compression="gzip")
 
     @classmethod
     def load_hdf5(cls, filepath: Path, source_hyperspectral: "HyperspectralData") -> "Imaging2DResults":
@@ -375,7 +377,9 @@ class Imaging2DResults(BaseModel):
             # Metadata
             metadata: Dict[str, Any] = {}
             if "metadata" in f:
-                for key, value in f["metadata"].attrs.items():
+                meta_group = f["metadata"]
+                # Load scalar attributes
+                for key, value in meta_group.attrs.items():
                     # Convert numpy scalars to Python types and decode bytes to str
                     if isinstance(value, (bytes, np.bytes_)):
                         metadata[key] = value.decode("utf-8")
@@ -387,6 +391,10 @@ class Imaging2DResults(BaseModel):
                             metadata[key] = scalar
                     else:
                         metadata[key] = value
+                # Load array datasets (e.g. spectral_basis from NMF)
+                for key in meta_group:
+                    if isinstance(meta_group[key], h5py.Dataset):
+                        metadata[key] = np.array(meta_group[key])
 
         return cls(
             abundance_maps=abundance_maps,
