@@ -442,11 +442,11 @@ class TestStallBailout:
     """Tests for the stall-rounds bailout in _collect_results_with_timeout.
 
     The bailout cancels all pending futures after 2 consecutive timeout
-    windows without progress, but ONLY when at least one future is running.
-    If all futures are still queued (not started), the stall counter must
-    NOT advance — otherwise slow ProcessPoolExecutor startup or transient
-    scheduling delays cause pixels to be marked failed without ever being
-    attempted.
+    windows without progress.  The stall counter advances when workers
+    are known to have started (futures currently running, or workers
+    previously observed running but now occupied by zombie timed-out
+    tasks).  It must NOT advance when no worker has ever been observed
+    running (genuine slow pool startup).
     """
 
     @patch("pleiades.imaging.orchestrator.time")
@@ -558,6 +558,98 @@ class TestStallBailout:
         assert len(results) == 1
         assert results[0].success is False
         assert "cancelled" in results[0].error_message.lower() or "timed out" in results[0].error_message.lower()
+
+    @patch("pleiades.imaging.orchestrator.time")
+    @patch("pleiades.imaging.orchestrator.wait")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_stall_bailout_fires_when_zombie_workers_block_queue(
+        self, mock_executor_cls, mock_json_mgr, mock_wait, mock_time, imaging_config, mock_sammy_executable
+    ):
+        """Bailout must fire when timed-out zombie workers prevent queued futures from starting.
+
+        Scenario: 2 pixels, n_workers=1.
+        - Pixel (0,0) starts running, times out, is removed from pending.
+          Its worker process keeps running (ProcessPoolExecutor cannot kill it).
+        - Pixel (1,0) is submitted to refill the slot but stays queued because
+          the zombie worker occupies the only pool slot.
+        - No pending future is running(), but workers_have_started is True.
+        - The stall counter should advance and eventually bail out pixel (1,0)
+          rather than waiting forever.
+        """
+        pixels = [_make_pixel(0, 0), _make_pixel(1, 0)]
+
+        mock_json_instance = MagicMock()
+        mock_json_instance.create_json_config.side_effect = _mock_json_manager_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+
+        # First future: starts running, will time out
+        future_zombie = MagicMock()
+        future_zombie.done.return_value = False
+        future_zombie.cancelled.return_value = False
+        future_zombie.running.return_value = True
+
+        # Second future: submitted after timeout, stays queued forever
+        future_queued = MagicMock()
+        future_queued.done.return_value = False
+        future_queued.cancelled.return_value = False
+        future_queued.running.return_value = False  # can never start
+
+        submit_call_count = 0
+
+        def submit_side_effect(fn, *args, **kwargs):
+            nonlocal submit_call_count
+            submit_call_count += 1
+            if submit_call_count == 1:
+                return future_zombie
+            else:
+                return future_queued
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        wait_call_count = 0
+
+        def mock_wait_side_effect(fs, timeout=None, return_when=None):
+            nonlocal wait_call_count
+            wait_call_count += 1
+            fs_set = set(fs) if not isinstance(fs, set) else fs
+            # Every round: nothing completes, all pending returned as-is
+            return (set(), fs_set)
+
+        mock_wait.side_effect = mock_wait_side_effect
+
+        # Timeline:
+        #   t=0: init — future_zombie recorded as running (start_time=0)
+        #   t=15: round 1 — future_zombie running for 15s >= 10s → timed out,
+        #         future_queued submitted as replacement. stall_rounds resets to 0.
+        #   t=25: round 2 — future_queued not running. workers_have_started=True
+        #         → stall_rounds=1
+        #   t=35: round 3 — same → stall_rounds=2 → bailout
+        mock_time.monotonic.side_effect = [0.0, 15.0, 25.0, 35.0, 45.0]
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        results = orchestrator.fit_pixels(pixels, timeout_per_job=10.0)
+
+        assert len(results) == 2
+
+        result_00 = next(r for r in results if r.row == 0 and r.col == 0)
+        result_10 = next(r for r in results if r.row == 1 and r.col == 0)
+
+        # Pixel (0,0): timed out normally
+        assert result_00.success is False
+        assert "timed out" in result_00.error_message.lower()
+
+        # Pixel (1,0): must be cancelled by stall bailout, NOT hang forever
+        assert result_10.success is False
+        assert "cancelled" in result_10.error_message.lower(), (
+            f"Pixel (1,0) should have been cancelled by stall bailout, got: '{result_10.error_message}'"
+        )
 
 
 # ===========================================================================

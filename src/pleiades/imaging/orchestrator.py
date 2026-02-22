@@ -1120,18 +1120,20 @@ class BatchFittingOrchestrator:
         seconds, regardless of whether other futures are completing concurrently.
 
         Queued futures that have not started yet are left alone -- they will run
-        once a worker becomes available. If no progress is made (no futures
-        complete and no running futures time out) for two consecutive timeout
-        windows *while at least one future is running*, all remaining pending
-        futures are cancelled as a safety net to prevent infinite loops.  When
-        no futures have started running yet (e.g. slow pool startup), the stall
-        counter does not advance, avoiding spurious cancellation of jobs that
-        were never attempted.
+        once a worker becomes available.  If no progress is made for two
+        consecutive timeout windows, all remaining pending futures are cancelled
+        as a safety net.  The stall counter advances when workers are known to
+        have started (either futures are currently running, or workers were
+        previously observed running but are now occupied by zombie timed-out
+        tasks).  It does **not** advance when no worker has ever been observed
+        running (genuine slow pool startup), avoiding spurious cancellation of
+        jobs that were never attempted.
         """
         pending: Set[Future] = set(future_to_coord.keys())
         running_start_times: Dict[Future, float] = {}
         iterations_since_checkpoint = 0
         stall_rounds = 0
+        workers_have_started = False
         now = time.monotonic()
 
         # Record start times for futures that are already running before
@@ -1140,6 +1142,7 @@ class BatchFittingOrchestrator:
         for f in pending:
             if f.running():
                 running_start_times[f] = now
+                workers_have_started = True
 
         progress_total = batch_size if batch_size is not None else len(future_to_coord)
         with ProgressReporter(total_pixels=progress_total) as progress:
@@ -1192,6 +1195,7 @@ class BatchFittingOrchestrator:
                 for f in pending:
                     if f not in running_start_times and f.running():
                         running_start_times[f] = now
+                        workers_have_started = True
 
                 # Check for per-job timeout: any running future that has exceeded the deadline
                 timed_out_futures = [
@@ -1236,12 +1240,19 @@ class BatchFittingOrchestrator:
 
                 # No completions and no timeouts. Remaining futures are either queued
                 # (not started) or running but not yet past their deadline.
-                # Only count as a stall round when at least one future is running —
-                # if all futures are still queued, the workers simply haven't started
-                # yet (slow ProcessPoolExecutor startup, busy machine, etc.) and
-                # cancelling them would fail pixels that were never attempted.
+                #
+                # Advance the stall counter when either:
+                #   (a) some pending future is currently running (should complete
+                #       or hit its deadline soon), OR
+                #   (b) workers have been observed running before but none are now
+                #       — the workers are occupied by zombie timed-out tasks that
+                #       ProcessPoolExecutor cannot kill, so queued futures will
+                #       never start.
+                #
+                # Do NOT advance when workers have never started (genuine slow
+                # pool startup) — those futures haven't been attempted yet.
                 any_running = any(f in running_start_times for f in pending)
-                if any_running:
+                if any_running or workers_have_started:
                     stall_rounds += 1
                 if stall_rounds >= 2:
                     logger.warning(
