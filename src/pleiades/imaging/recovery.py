@@ -393,6 +393,7 @@ class PhysicsRecovery:
         reference_spectra: list[ReferenceSpectrum] | None = None,
         roi: tuple[int, int, int, int] | None = None,
         stride: int = 1,
+        denoise_nmf: int = 0,
     ) -> Imaging2DResults:
         """Recover isotopic abundances for an entire image via NNLS.
 
@@ -410,17 +411,34 @@ class PhysicsRecovery:
             stride: Spatial stride for pixel iteration.  ``stride=4`` processes
                 every 4th pixel in both directions.  Unprocessed positions
                 remain NaN.  Default is 1 (every pixel).
+            denoise_nmf: Number of NMF components for denoising preprocessing.
+                When > 0, applies NMF low-rank denoising to the hyperspectral
+                data before the per-pixel NNLS solve.  This exploits spatial
+                redundancy across all pixels to filter spectral noise while
+                preserving resonance structure.  Set to the number of expected
+                isotopes (e.g. 2).  Default is 0 (no denoising).
 
         Returns:
             :class:`Imaging2DResults` with recovered abundance maps.
 
         Raises:
             ValueError: If no reference spectra are provided and no
-                imaging_config is available, or if energy grids mismatch.
+                imaging_config is available, if energy grids mismatch,
+                or if ``denoise_nmf`` is negative.
             RuntimeError: If reference spectrum generation fails.
         """
+        if denoise_nmf < 0:
+            raise ValueError(f"denoise_nmf must be >= 0, got {denoise_nmf}")
         if stride < 1:
             raise ValueError(f"stride must be >= 1, got {stride}")
+
+        # Optional NMF denoising preprocessing
+        if denoise_nmf > 0:
+            from pleiades.imaging.nmf_recovery import NMFRecovery
+
+            logger.info(f"Applying NMF denoising with {denoise_nmf} components before NNLS recovery")
+            nmf = NMFRecovery(n_components=denoise_nmf)
+            hyperspectral = nmf.denoise(hyperspectral)
 
         if reference_spectra is None:
             if not hasattr(self, "imaging_config"):
@@ -526,8 +544,9 @@ class PhysicsRecovery:
             success_mask=success_mask,
             source_hyperspectral=hyperspectral,
             metadata={
-                "method": "physics_recovery",
+                "method": "hybrid_nmf_nnls" if denoise_nmf > 0 else "physics_recovery",
                 "n_isotopes": n_isotopes,
+                **({"denoise_nmf": denoise_nmf} if denoise_nmf > 0 else {}),
             },
         )
 
