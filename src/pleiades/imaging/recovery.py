@@ -237,11 +237,28 @@ class PhysicsRecovery:
             results_manager = ResultsManager(lpt_file_path=lpt_file, lst_file_path=lst_file)
 
             sammy_data = results_manager.run_results.data
-            if sammy_data is None or sammy_data.theoretical_transmission is None:
-                raise RuntimeError(f"No theoretical transmission found in SAMMY output for {isotope_name}")
+            if sammy_data is None or sammy_data.data is None:
+                raise RuntimeError(f"No SAMMY output data found for {isotope_name}")
 
-            theo_trans = np.array(sammy_data.theoretical_transmission)
-            theo_energy = np.array(sammy_data.energy)
+            # In forward-model mode (DO NOT SOLVE BAYES EQUATIONS), the
+            # "Final theoretical transmission" column is all zeros because
+            # SAMMY did not solve.  The model prediction lives in the
+            # "Zeroth-order theoretical transmission" column instead.
+            zeroth_col = "Zeroth-order theoretical transmission as evaluated by SAMMY (dimensionless)"
+            final_col = "Final theoretical transmission as evaluated by SAMMY (dimensionless)"
+
+            if zeroth_col in sammy_data.data.columns:
+                theo_series = sammy_data.data[zeroth_col]
+            elif final_col in sammy_data.data.columns:
+                theo_series = sammy_data.data[final_col]
+            else:
+                raise RuntimeError(
+                    f"No theoretical transmission column found in SAMMY output for {isotope_name}. "
+                    f"Available columns: {list(sammy_data.data.columns)}"
+                )
+
+            theo_trans = np.array(theo_series, dtype=np.float64)
+            theo_energy = np.array(sammy_data.energy, dtype=np.float64)
 
             # Interpolate to requested energy grid if SAMMY energy differs.
             # Use constant edge extrapolation (not linear extrapolation) to
