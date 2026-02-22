@@ -1121,9 +1121,12 @@ class BatchFittingOrchestrator:
 
         Queued futures that have not started yet are left alone -- they will run
         once a worker becomes available. If no progress is made (no futures
-        complete and no running futures remain to time out) for two consecutive
-        timeout windows, all remaining pending futures are cancelled as a safety
-        net to prevent infinite loops.
+        complete and no running futures time out) for two consecutive timeout
+        windows *while at least one future is running*, all remaining pending
+        futures are cancelled as a safety net to prevent infinite loops.  When
+        no futures have started running yet (e.g. slow pool startup), the stall
+        counter does not advance, avoiding spurious cancellation of jobs that
+        were never attempted.
         """
         pending: Set[Future] = set(future_to_coord.keys())
         running_start_times: Dict[Future, float] = {}
@@ -1212,6 +1215,16 @@ class BatchFittingOrchestrator:
                     running_start_times.pop(future, None)
                     progress.update(1)
                     progress.record_failure()
+
+                    # Bounded submission: refill the slot freed by the timed-out
+                    # future so that remaining unsubmitted pixels get a chance to
+                    # run.  Without this, timed-out slots are lost permanently and
+                    # the batch stops early when pending drains to empty.
+                    if submit_fn is not None:
+                        new_future = submit_fn()
+                        if new_future is not None:
+                            pending.add(new_future)
+
                     iterations_since_checkpoint += 1
                     iterations_since_checkpoint = self._maybe_checkpoint(
                         checkpoint_file, iterations_since_checkpoint, checkpoint_interval, completed, total_pixels
@@ -1223,8 +1236,13 @@ class BatchFittingOrchestrator:
 
                 # No completions and no timeouts. Remaining futures are either queued
                 # (not started) or running but not yet past their deadline.
-                # Allow a grace period before bailing out.
-                stall_rounds += 1
+                # Only count as a stall round when at least one future is running —
+                # if all futures are still queued, the workers simply haven't started
+                # yet (slow ProcessPoolExecutor startup, busy machine, etc.) and
+                # cancelling them would fail pixels that were never attempted.
+                any_running = any(f in running_start_times for f in pending)
+                if any_running:
+                    stall_rounds += 1
                 if stall_rounds >= 2:
                     logger.warning(
                         f"No progress for {stall_rounds} timeout windows. "

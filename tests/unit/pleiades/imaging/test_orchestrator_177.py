@@ -323,6 +323,244 @@ class TestPerJobTimeout:
 
 
 # ===========================================================================
+# TestTimeoutRefill: timed-out slots must be refilled by bounded submission
+# ===========================================================================
+
+
+class TestTimeoutRefill:
+    """Tests that timed-out futures refill their bounded-submission slot.
+
+    When using bounded submission (submit_fn), each timed-out future must
+    trigger a submit_fn() call to replace the lost slot.  Otherwise the
+    in-flight window shrinks with each timeout and remaining pixels are
+    never submitted.
+    """
+
+    @patch("pleiades.imaging.orchestrator.time")
+    @patch("pleiades.imaging.orchestrator.wait")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_timeout_refills_bounded_submission_slot(
+        self, mock_executor_cls, mock_json_mgr, mock_wait, mock_time, imaging_config, mock_sammy_executable
+    ):
+        """After a future times out, submit_fn must be called to replace it.
+
+        Scenario: 2 pixels, n_workers=1, max_in_flight=1.
+        - Pixel (0,0) is submitted initially, starts running, times out.
+        - Pixel (1,0) must be submitted to replace the timed-out slot.
+        - Pixel (1,0) completes successfully.
+
+        Without the fix, pixel (1,0) is never submitted because submit_fn
+        is only called for completed futures, not timed-out ones.
+        """
+        pixels = [_make_pixel(0, 0), _make_pixel(1, 0)]
+
+        mock_json_instance = MagicMock()
+        mock_json_instance.create_json_config.side_effect = _mock_json_manager_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+
+        # Two futures: first one times out, second one completes
+        future_timeout = MagicMock()
+        future_timeout.done.return_value = False
+        future_timeout.cancelled.return_value = False
+        future_timeout.running.return_value = True
+
+        future_success = MagicMock()
+        future_success.done.return_value = False
+        future_success.cancelled.return_value = False
+        future_success.running.return_value = False
+
+        submit_call_count = 0
+
+        def submit_side_effect(fn, *args, **kwargs):
+            nonlocal submit_call_count
+            submit_call_count += 1
+            if submit_call_count == 1:
+                return future_timeout
+            else:
+                return future_success
+
+        mock_executor.submit.side_effect = submit_side_effect
+
+        wait_call_count = 0
+
+        def mock_wait_side_effect(fs, timeout=None, return_when=None):
+            nonlocal wait_call_count
+            wait_call_count += 1
+            fs_set = set(fs) if not isinstance(fs, set) else fs
+
+            if wait_call_count == 1:
+                # Round 1: no completions → future_timeout will be timed out
+                return (set(), fs_set)
+            elif wait_call_count == 2:
+                # Round 2: future_success completes
+                future_success.done.return_value = True
+                future_success.running.return_value = False
+                future_success.result.return_value = _make_success_result(1, 0, chi_squared=2.0)
+                return ({future_success}, set())
+            else:
+                return (set(), set())
+
+        mock_wait.side_effect = mock_wait_side_effect
+
+        # Time: t=0 (init), t=5 (after round 1, triggers timeout for future_timeout),
+        #        t=6 (after round 2, future_success completes)
+        mock_time.monotonic.side_effect = [0.0, 5.0, 6.0, 7.0]
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        results = orchestrator.fit_pixels(pixels, timeout_per_job=3.0)
+
+        assert len(results) == 2
+
+        result_00 = next(r for r in results if r.row == 0 and r.col == 0)
+        result_10 = next(r for r in results if r.row == 1 and r.col == 0)
+
+        # Pixel (0,0) should have timed out
+        assert result_00.success is False
+        assert "timed out" in result_00.error_message.lower()
+
+        # Pixel (1,0) must have been submitted and completed successfully —
+        # this is the core assertion.  Without the refill fix, pixel (1,0)
+        # would never be submitted and would be missing from results entirely.
+        assert result_10.success is True, (
+            f"Pixel (1,0) was never submitted after timeout freed a slot. Error: {result_10.error_message}"
+        )
+
+
+# ===========================================================================
+# TestStallBailout: stall detection must not cancel queued-but-not-started futures
+# ===========================================================================
+
+
+class TestStallBailout:
+    """Tests for the stall-rounds bailout in _collect_results_with_timeout.
+
+    The bailout cancels all pending futures after 2 consecutive timeout
+    windows without progress, but ONLY when at least one future is running.
+    If all futures are still queued (not started), the stall counter must
+    NOT advance — otherwise slow ProcessPoolExecutor startup or transient
+    scheduling delays cause pixels to be marked failed without ever being
+    attempted.
+    """
+
+    @patch("pleiades.imaging.orchestrator.time")
+    @patch("pleiades.imaging.orchestrator.wait")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_queued_futures_not_cancelled_on_slow_startup(
+        self, mock_executor_cls, mock_json_mgr, mock_wait, mock_time, imaging_config, mock_sammy_executable
+    ):
+        """Futures that never started running must not be cancelled by stall bailout."""
+        pixels = [_make_pixel(0, 0)]
+
+        mock_json_instance = MagicMock()
+        mock_json_instance.create_json_config.side_effect = _mock_json_manager_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+
+        # Create a mock future that stays QUEUED (not running) for the first
+        # 3 wait() rounds, then completes successfully on the 4th.
+        mock_future = MagicMock()
+        mock_future.cancelled.return_value = False
+        mock_future.done.return_value = False
+        mock_future.running.return_value = False  # starts queued, not running
+
+        wait_call_count = 0
+
+        def mock_wait_side_effect(fs, timeout=None, return_when=None):
+            nonlocal wait_call_count
+            wait_call_count += 1
+            fs_set = set(fs) if not isinstance(fs, set) else fs
+
+            if wait_call_count <= 3:
+                # Rounds 1-3: nothing completes, future is still queued (not running)
+                mock_future.done.return_value = False
+                mock_future.running.return_value = False
+                return (set(), fs_set)
+            else:
+                # Round 4: future finally completes (worker started and finished)
+                mock_future.done.return_value = True
+                mock_future.running.return_value = False
+                mock_future.result.return_value = _make_success_result(0, 0, chi_squared=1.0)
+                return ({mock_future}, set())
+
+        mock_wait.side_effect = mock_wait_side_effect
+
+        # Time advances by timeout_per_job each round
+        mock_time.monotonic.side_effect = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]
+
+        mock_executor.submit.return_value = mock_future
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        results = orchestrator.fit_pixels(pixels, timeout_per_job=10.0)
+
+        assert len(results) == 1
+        # The pixel must succeed — it was never attempted, so the stall
+        # bailout should NOT have cancelled it.
+        assert results[0].success is True, (
+            f"Queued future was cancelled by stall bailout before any worker started. Error: {results[0].error_message}"
+        )
+
+    @patch("pleiades.imaging.orchestrator.time")
+    @patch("pleiades.imaging.orchestrator.wait")
+    @patch("pleiades.imaging.orchestrator.JsonManager")
+    @patch("pleiades.imaging.orchestrator.ProcessPoolExecutor")
+    def test_stall_bailout_still_fires_when_futures_are_running(
+        self, mock_executor_cls, mock_json_mgr, mock_wait, mock_time, imaging_config, mock_sammy_executable
+    ):
+        """When futures ARE running but making no progress, stall bailout should still fire."""
+        pixels = [_make_pixel(0, 0)]
+
+        mock_json_instance = MagicMock()
+        mock_json_instance.create_json_config.side_effect = _mock_json_manager_side_effect
+        mock_json_mgr.return_value = mock_json_instance
+
+        mock_executor = MagicMock()
+        mock_executor_cls.return_value = mock_executor
+
+        # Future is running but never completes and doesn't exceed per-job timeout
+        # (because we control time precisely)
+        mock_future = MagicMock()
+        mock_future.done.return_value = False
+        mock_future.cancelled.return_value = False
+        mock_future.running.return_value = True
+
+        # wait() always returns no completions
+        mock_wait.return_value = (set(), {mock_future})
+
+        # Time progresses: the future starts running at t=0 but the per-job
+        # timeout check uses (now - start_time) >= timeout_per_job.
+        # We need 3 rounds:
+        #   t=0: initial (before loop) — records running start
+        #   t=5: round 1 — running for 5s < 10s timeout, stall_rounds=1
+        #   t=9: round 2 — running for 9s < 10s timeout, stall_rounds=2 → bailout
+        mock_time.monotonic.side_effect = [0.0, 5.0, 9.0]
+
+        mock_executor.submit.return_value = mock_future
+
+        orchestrator = BatchFittingOrchestrator(
+            imaging_config=imaging_config, sammy_executable=mock_sammy_executable, n_workers=1
+        )
+
+        results = orchestrator.fit_pixels(pixels, timeout_per_job=10.0)
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert "cancelled" in results[0].error_message.lower() or "timed out" in results[0].error_message.lower()
+
+
+# ===========================================================================
 # TestRetryLogic: tests for max_retries parameter on fit_pixels()
 # ===========================================================================
 
