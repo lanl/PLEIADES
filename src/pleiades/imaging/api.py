@@ -80,6 +80,7 @@ def analyze_imaging(
     save_path: Path | None = None,
     *,
     bin_size: int = 1,
+    physics_recovery: bool = False,
 ) -> Imaging2DResults:
     """Perform 2D resonance imaging analysis.
 
@@ -111,6 +112,11 @@ def analyze_imaging(
             averages 2×2 blocks of pixels before fitting and upscales results
             back to the original resolution afterwards. Must be >= 1. Default
             is 1 (no binning, fully backward-compatible).
+        physics_recovery: If ``True``, use TRINIDI-style NNLS recovery instead
+            of per-pixel SAMMY fitting.  This generates reference spectra via
+            SAMMY forward-model (one call per isotope) and solves a convex
+            NNLS problem at each pixel.  Much faster and more robust for
+            noisy/sparse data (L3–L4).  Default is ``False``.
         resolution_file: Optional path to instrument resolution function file.
             Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.
@@ -172,7 +178,43 @@ def analyze_imaging(
         _, height, width = hyperspectral.shape
         logger.info(f"Binned image (bin_size={bin_size}): {height}x{width} pixels")
 
-    # --- Create default TempFileManager if none provided ---
+    # --- 2. Physics recovery or per-pixel SAMMY fitting ---
+    if physics_recovery:
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        logger.info("Using physics recovery (TRINIDI-style NNLS)")
+        recovery = PhysicsRecovery(
+            imaging_config=imaging_config,
+            sammy_executable=sammy_executable,
+            resolution_file=resolution_file,
+        )
+        results = recovery.recover_image(hyperspectral)
+
+        # Unbin results to original resolution
+        if binner is not None:
+            results = binner.unbin_results(results, original_hyperspectral)
+
+            if roi is not None:
+                rx1, ry1, rx2, ry2 = roi
+                _, orig_h, orig_w = original_hyperspectral.shape
+                roi_mask = np.zeros((orig_h, orig_w), dtype=bool)
+                roi_mask[ry1:ry2, rx1:rx2] = True
+                outside = ~roi_mask
+
+                results.abundance_maps[:, outside] = np.nan
+                results.chi_squared_map[outside] = np.nan
+                results.success_mask[outside] = False
+                if results.fitted_energy_maps is not None:
+                    results.fitted_energy_maps[:, outside] = np.nan
+
+        if save_path is not None:
+            logger.info(f"Saving results to {save_path}")
+            results.save_hdf5(save_path)
+
+        return results
+
+    # --- Standard per-pixel SAMMY fitting path ---
+    # Create default TempFileManager if none provided.
     # Deferred until after loading succeeds so that early failures (missing
     # TIFF, bad config, etc.) don't leave an orphaned temp directory on disk.
     # Wrapped in try/finally so the temp directory is removed if any
@@ -183,7 +225,7 @@ def analyze_imaging(
         temp_manager = TempFileManager()
 
     try:
-        # --- 2. Fit pixels (streamed from loader to orchestrator) ---
+        # --- 2b. Fit pixels (streamed from loader to orchestrator) ---
         orchestrator = BatchFittingOrchestrator(
             imaging_config=imaging_config,
             sammy_executable=sammy_executable,
