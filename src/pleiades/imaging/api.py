@@ -188,24 +188,40 @@ def analyze_imaging(
             sammy_executable=sammy_executable,
             resolution_file=resolution_file,
         )
-        results = recovery.recover_image(hyperspectral)
+
+        # When binning is active, remap ROI to binned coordinates
+        recovery_roi = roi
+        if binner is not None and roi is not None:
+            bs = bin_size
+            recovery_roi = (
+                roi[0] // bs,
+                roi[1] // bs,
+                min(-(-roi[2] // bs), width),
+                min(-(-roi[3] // bs), height),
+            )
+
+        results = recovery.recover_image(hyperspectral, roi=recovery_roi, stride=stride)
 
         # Unbin results to original resolution
         if binner is not None:
             results = binner.unbin_results(results, original_hyperspectral)
 
-            if roi is not None:
-                rx1, ry1, rx2, ry2 = roi
-                _, orig_h, orig_w = original_hyperspectral.shape
-                roi_mask = np.zeros((orig_h, orig_w), dtype=bool)
-                roi_mask[ry1:ry2, rx1:rx2] = True
-                outside = ~roi_mask
+        # Apply ROI mask at original resolution (regardless of binning).
+        # When binning is active, the binned ROI may be slightly expanded
+        # due to ceiling division, so we mask against the original ROI
+        # to prevent fitted values from leaking outside it.
+        if roi is not None:
+            rx1, ry1, rx2, ry2 = roi
+            _, orig_h, orig_w = original_hyperspectral.shape
+            roi_mask = np.zeros((orig_h, orig_w), dtype=bool)
+            roi_mask[ry1:ry2, rx1:rx2] = True
+            outside = ~roi_mask
 
-                results.abundance_maps[:, outside] = np.nan
-                results.chi_squared_map[outside] = np.nan
-                results.success_mask[outside] = False
-                if results.fitted_energy_maps is not None:
-                    results.fitted_energy_maps[:, outside] = np.nan
+            results.abundance_maps[:, outside] = np.nan
+            results.chi_squared_map[outside] = np.nan
+            results.success_mask[outside] = False
+            if results.fitted_energy_maps is not None:
+                results.fitted_energy_maps[:, outside] = np.nan
 
         if save_path is not None:
             logger.info(f"Saving results to {save_path}")

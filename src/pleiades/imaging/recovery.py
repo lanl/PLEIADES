@@ -336,6 +336,8 @@ class PhysicsRecovery:
         self,
         hyperspectral: HyperspectralData,
         reference_spectra: list[ReferenceSpectrum] | None = None,
+        roi: tuple[int, int, int, int] | None = None,
+        stride: int = 1,
     ) -> Imaging2DResults:
         """Recover isotopic abundances for an entire image via NNLS.
 
@@ -347,13 +349,19 @@ class PhysicsRecovery:
             hyperspectral: Input hyperspectral data.
             reference_spectra: Pre-computed reference spectra.  If ``None``,
                 :meth:`generate_reference_spectra` is called (requires SAMMY).
+            roi: Region of interest as ``(x1, y1, x2, y2)``.  Only pixels
+                within this box are processed; the rest remain NaN.  If
+                ``None``, all pixels are processed.
+            stride: Spatial stride for pixel iteration.  ``stride=4`` processes
+                every 4th pixel in both directions.  Unprocessed positions
+                remain NaN.  Default is 1 (every pixel).
 
         Returns:
             :class:`Imaging2DResults` with recovered abundance maps.
 
         Raises:
             ValueError: If no reference spectra are provided and no
-                imaging_config is available.
+                imaging_config is available, or if energy grids mismatch.
             RuntimeError: If reference spectrum generation fails.
         """
         if reference_spectra is None:
@@ -373,6 +381,17 @@ class PhysicsRecovery:
                     f"Reference spectrum '{ref.isotope_name}' has {len(ref.absorption)} energy bins "
                     f"but hyperspectral data has {n_energy}. Energy grids must match."
                 )
+            if not np.allclose(ref.energy, hyperspectral.energy, rtol=1e-6):
+                raise ValueError(
+                    f"Reference spectrum '{ref.isotope_name}' energy grid does not match "
+                    f"hyperspectral energy grid. Values differ beyond rtol=1e-6."
+                )
+
+        # Determine pixel iteration bounds from ROI
+        if roi is not None:
+            x1, y1, x2, y2 = roi
+        else:
+            x1, y1, x2, y2 = 0, 0, width, height
 
         # Build dictionary matrix (n_energy, n_isotopes)
         dictionary = np.column_stack([ref.absorption for ref in reference_spectra])
@@ -388,11 +407,13 @@ class PhysicsRecovery:
         logger.info(
             f"Starting physics recovery: {height}x{width} pixels ({n_pixels} total), "
             f"{n_isotopes} isotopes, {n_energy} energy bins"
+            + (f", stride={stride}" if stride > 1 else "")
+            + (f", roi=({x1},{y1},{x2},{y2})" if roi is not None else "")
         )
 
         completed = 0
-        for row in range(height):
-            for col in range(width):
+        for row in range(y1, y2, stride):
+            for col in range(x1, x2, stride):
                 transmission = hyperspectral.data[:, row, col]
 
                 if hyperspectral.uncertainty is not None:
@@ -418,8 +439,8 @@ class PhysicsRecovery:
                 completed += 1
 
             # Log progress per row
-            if (row + 1) % max(1, height // 10) == 0:
-                logger.debug(f"Physics recovery progress: row {row + 1}/{height} ({completed}/{n_pixels} pixels)")
+            if (row - y1 + 1) % max(1, (y2 - y1) // 10) == 0:
+                logger.debug(f"Physics recovery progress: row {row + 1}/{y2} ({completed} pixels processed)")
 
         logger.info(
             f"Physics recovery complete: {np.sum(success_mask)} succeeded, {np.sum(~success_mask)} failed/skipped"

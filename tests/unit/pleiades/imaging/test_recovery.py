@@ -798,8 +798,8 @@ class TestRecoveryEdgeCases:
         assert result.abundance_maps.shape == (n_isotopes, 2, 2)
         assert np.all(result.success_mask)
 
-    def test_energy_grid_mismatch_raises(self):
-        """Reference spectra with different energy grid should raise ValueError."""
+    def test_energy_grid_length_mismatch_raises(self):
+        """Reference spectra with different bin count should raise ValueError."""
         from pleiades.imaging.recovery import PhysicsRecovery, ReferenceSpectrum
 
         recovery = PhysicsRecovery.__new__(PhysicsRecovery)
@@ -816,6 +816,26 @@ class TestRecoveryEdgeCases:
         )
 
         with pytest.raises(ValueError, match="energy bins"):
+            recovery.recover_image(hs, reference_spectra=[bad_ref])
+
+    def test_energy_grid_values_mismatch_raises(self):
+        """Reference spectra with same length but shifted energy values should raise."""
+        from pleiades.imaging.recovery import PhysicsRecovery, ReferenceSpectrum
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 100)
+        data = np.full((100, 2, 2), 0.7)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=0.01 * np.ones_like(data))
+
+        # Same length but shifted energy values
+        bad_ref = ReferenceSpectrum(
+            isotope_name="Ta-181",
+            energy=np.linspace(10, 200, 100),  # Different range
+            transmission=np.ones(100) * 0.5,
+            absorption=-np.log(np.ones(100) * 0.5),
+        )
+
+        with pytest.raises(ValueError, match="energy grid does not match"):
             recovery.recover_image(hs, reference_spectra=[bad_ref])
 
     def test_recover_image_uncertainty_none_uses_fallback(self):
@@ -842,3 +862,52 @@ class TestRecoveryEdgeCases:
         result = recovery.recover_image(hs, reference_spectra=refs)
         assert isinstance(result, Imaging2DResults)
         assert np.all(result.success_mask)
+
+    def test_recover_image_with_roi(self):
+        """ROI should restrict which pixels are processed."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 100)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+
+        # 6x6 image with absorption
+        data = np.full((100, 6, 6), 0.7)
+        uncertainty = 0.01 * np.ones_like(data)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=uncertainty)
+
+        # ROI = (x1=1, y1=1, x2=4, y2=4) → only inner 3×3 should be fitted
+        result = recovery.recover_image(hs, reference_spectra=refs, roi=(1, 1, 4, 4))
+        assert result.abundance_maps.shape == (1, 6, 6)
+        # Pixels outside ROI should be NaN
+        assert np.isnan(result.abundance_maps[0, 0, 0])
+        assert np.isnan(result.abundance_maps[0, 5, 5])
+        # Pixels inside ROI should be fitted (success_mask True)
+        assert result.success_mask[2, 2]
+        assert result.success_mask[1, 1]
+
+    def test_recover_image_with_stride(self):
+        """Stride should skip pixels, leaving unprocessed positions as NaN."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 100)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+
+        # 8x8 image with absorption
+        data = np.full((100, 8, 8), 0.7)
+        uncertainty = 0.01 * np.ones_like(data)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=uncertainty)
+
+        result = recovery.recover_image(hs, reference_spectra=refs, stride=2)
+
+        # Stride=2: only pixels at (0,0), (0,2), (0,4), (0,6), (2,0), ... should be fitted
+        assert result.success_mask[0, 0]
+        assert result.success_mask[0, 2]
+        assert result.success_mask[2, 0]
+        # Odd-indexed pixels should NOT be fitted
+        assert not result.success_mask[0, 1]
+        assert not result.success_mask[1, 0]
+        assert not result.success_mask[1, 1]
+        # Total fitted = 4*4 = 16 out of 64
+        assert np.sum(result.success_mask) == 16
