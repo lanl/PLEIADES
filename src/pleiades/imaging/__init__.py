@@ -27,6 +27,7 @@ from pleiades.imaging.degrader import DataDegrader
 from pleiades.imaging.generator import AbundanceMapGenerator
 from pleiades.imaging.loader import HyperspectralLoader
 from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
+from pleiades.imaging.nmf_recovery import NMFRecovery
 from pleiades.imaging.recovery import PhysicsRecovery, ReferenceSpectrum
 from pleiades.imaging.visualizer import AbundanceMapVisualizer
 
@@ -35,6 +36,7 @@ __all__ = [
     "AbundanceMapVisualizer",
     "DataDegrader",
     "HyperspectralLoader",
+    "NMFRecovery",
     "PhysicsRecovery",
     "ReferenceSpectrum",
     "SparsityAssessor",
