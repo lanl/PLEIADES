@@ -390,6 +390,11 @@ class PhysicsRecovery:
         # Determine pixel iteration bounds from ROI
         if roi is not None:
             x1, y1, x2, y2 = roi
+            if not (0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height):
+                raise ValueError(
+                    f"Invalid ROI {roi} for image shape (height={height}, width={width}). "
+                    f"Must satisfy 0 <= x1 < x2 <= width and 0 <= y1 < y2 <= height."
+                )
         else:
             x1, y1, x2, y2 = 0, 0, width, height
 
@@ -421,6 +426,11 @@ class PhysicsRecovery:
                 else:
                     uncertainty = 0.01 * np.abs(transmission)
                     uncertainty = np.maximum(uncertainty, 1e-10)
+
+                # Skip pixels with non-finite transmission or uncertainty
+                if not np.all(np.isfinite(transmission)) or not np.all(np.isfinite(uncertainty)):
+                    completed += 1
+                    continue
 
                 # Skip open-beam pixels (T~1 everywhere → no absorption signal)
                 max_absorption = np.max(-np.log(np.clip(transmission, self.TRANSMISSION_FLOOR, 1.0)))

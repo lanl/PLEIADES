@@ -911,3 +911,82 @@ class TestRecoveryEdgeCases:
         assert not result.success_mask[1, 1]
         # Total fitted = 4*4 = 16 out of 64
         assert np.sum(result.success_mask) == 16
+
+    def test_invalid_roi_negative_raises(self):
+        """Negative ROI coordinates should raise ValueError."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+        data = np.full((50, 4, 4), 0.7)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=0.01 * np.ones_like(data))
+
+        with pytest.raises(ValueError, match="Invalid ROI"):
+            recovery.recover_image(hs, reference_spectra=refs, roi=(-1, 0, 2, 2))
+
+    def test_invalid_roi_out_of_bounds_raises(self):
+        """ROI exceeding image dimensions should raise ValueError."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+        data = np.full((50, 4, 4), 0.7)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=0.01 * np.ones_like(data))
+
+        with pytest.raises(ValueError, match="Invalid ROI"):
+            recovery.recover_image(hs, reference_spectra=refs, roi=(0, 0, 10, 10))
+
+    def test_invalid_roi_reversed_raises(self):
+        """ROI with x1 >= x2 should raise ValueError."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+        data = np.full((50, 4, 4), 0.7)
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=0.01 * np.ones_like(data))
+
+        with pytest.raises(ValueError, match="Invalid ROI"):
+            recovery.recover_image(hs, reference_spectra=refs, roi=(3, 0, 1, 4))
+
+    def test_nan_in_spectrum_skipped_not_crashed(self):
+        """Pixels with NaN in transmission should be skipped, not crash."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+
+        data = np.full((50, 3, 3), 0.7)
+        uncertainty = 0.01 * np.ones_like(data)
+        # Inject NaN into one pixel
+        data[:, 1, 1] = np.nan
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=uncertainty)
+
+        # Should not raise — the NaN pixel is skipped
+        result = recovery.recover_image(hs, reference_spectra=refs)
+        assert not result.success_mask[1, 1]
+        assert np.isnan(result.abundance_maps[0, 1, 1])
+        # Other pixels should still be fitted
+        assert result.success_mask[0, 0]
+
+    def test_inf_in_uncertainty_skipped_not_crashed(self):
+        """Pixels with Inf in uncertainty should be skipped, not crash."""
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+        energy = np.linspace(1, 100, 50)
+        refs = _build_synthetic_dictionary(energy, n_isotopes=1)
+
+        data = np.full((50, 3, 3), 0.7)
+        uncertainty = 0.01 * np.ones_like(data)
+        # Inject Inf into one pixel's uncertainty
+        uncertainty[:, 2, 0] = np.inf
+        hs = _make_hyperspectral(data, energy=energy, uncertainty=uncertainty)
+
+        result = recovery.recover_image(hs, reference_spectra=refs)
+        assert not result.success_mask[2, 0]
+        # Other pixels should still be fitted
+        assert result.success_mask[0, 0]
