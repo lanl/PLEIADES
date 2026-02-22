@@ -422,7 +422,7 @@ class TestRecoverImage:
         result = self.recovery.recover_image(hs, reference_spectra=self.refs)
         # Open beam pixel: coefficients ~0, NaN abundances
         assert np.isnan(result.abundance_maps[0, 0, 0])
-        assert result.success_mask[0, 0] is np.bool_(False)
+        assert not bool(result.success_mask[0, 0])
 
     def test_chi_squared_non_negative(self):
         """All chi-squared values should be non-negative."""
