@@ -147,3 +147,77 @@ class TestImagingConfig:
                 natural_abundances=True,
             )
             config.get_abundances()
+
+    def test_vary_flags_default_true(self):
+        """Test that vary_* flags default to True (appropriate for real data)."""
+        config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+        )
+        assert config.vary_normalization is True
+        assert config.vary_background is True
+        assert config.vary_tzero is True
+        assert config.vary_thickness is True
+
+    def test_vary_flags_can_be_set_false(self):
+        """Test that vary_* flags can be overridden to False (e.g. for clean synthetic data)."""
+        config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+            vary_normalization=False,
+            vary_background=False,
+            vary_tzero=False,
+            vary_thickness=False,
+        )
+        assert config.vary_normalization is False
+        assert config.vary_background is False
+        assert config.vary_tzero is False
+        assert config.vary_thickness is False
+
+    def test_to_dataset_metadata_populates_vary_flags(self):
+        """Test that to_dataset_metadata() passes vary_* flags through."""
+        config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+            vary_normalization=False,
+            vary_background=False,
+            vary_tzero=False,
+            vary_thickness=False,
+        )
+        meta = config.to_dataset_metadata()
+        assert meta.vary_normalization is False
+        assert meta.vary_background is False
+        assert meta.vary_tzero is False
+        assert meta.vary_thickness is False
+
+    def test_to_dataset_metadata_populates_vary_flags_true(self):
+        """Test that to_dataset_metadata() passes True vary_* flags through."""
+        config = ImagingConfig(
+            isotopes=["Ta-181"],
+            element="Ta",
+            mass_number=181,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+            vary_normalization=True,
+            vary_background=True,
+            vary_tzero=True,
+            vary_thickness=True,
+        )
+        meta = config.to_dataset_metadata()
+        assert meta.vary_normalization is True
+        assert meta.vary_background is True
+        assert meta.vary_tzero is True
+        assert meta.vary_thickness is True

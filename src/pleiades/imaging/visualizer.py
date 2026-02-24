@@ -8,6 +8,7 @@ quality overlay visualizations.
 from __future__ import annotations
 
 import math
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,6 +17,16 @@ from matplotlib.figure import Figure
 
 from pleiades.imaging.generator import AbundanceMapGenerator
 from pleiades.imaging.models import Imaging2DResults
+
+#: Supported abundance display units.
+AbundanceUnits = Literal["fraction", "percent", "ppm"]
+
+#: Scale factors and colorbar labels for each unit.
+_UNIT_CONFIG: dict[str, tuple[float, str]] = {
+    "fraction": (1.0, "Abundance (fraction)"),
+    "percent": (100.0, "Abundance (%)"),
+    "ppm": (1e6, "Abundance (ppm)"),
+}
 
 
 class AbundanceMapVisualizer:
@@ -49,6 +60,7 @@ class AbundanceMapVisualizer:
         vmin: float | None = None,
         vmax: float | None = None,
         show_colorbar: bool = True,
+        units: AbundanceUnits = "fraction",
     ) -> tuple[Figure, Axes]:
         """Plot the abundance map for a single isotope.
 
@@ -61,14 +73,21 @@ class AbundanceMapVisualizer:
             vmin: Minimum value for color scale. Auto-scaled if None.
             vmax: Maximum value for color scale. Auto-scaled if None.
             show_colorbar: Whether to add a colorbar.
+            units: Display units for the abundance values.
+                ``"fraction"`` (default, 0-1), ``"percent"`` (0-100),
+                or ``"ppm"`` (0-1e6).
 
         Returns:
             Tuple of (Figure, Axes).
 
         Raises:
-            ValueError: If isotope is not found in the results.
+            ValueError: If isotope is not found in the results or units is invalid.
         """
-        abundance_map = self._generator.generate_map(isotope)
+        scale, label = _UNIT_CONFIG.get(units, (None, None))
+        if scale is None:
+            raise ValueError(f"Unknown units {units!r}. Choose from: {list(_UNIT_CONFIG)}")
+
+        abundance_map = self._generator.generate_map(isotope) * scale
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -79,7 +98,7 @@ class AbundanceMapVisualizer:
         ax.set_title(isotope)
 
         if show_colorbar:
-            fig.colorbar(im, ax=ax)
+            fig.colorbar(im, ax=ax, label=label)
 
         return fig, ax
 
@@ -88,6 +107,7 @@ class AbundanceMapVisualizer:
         isotopes: list[str] | None = None,
         ncols: int = 3,
         figsize: tuple[float, float] | None = None,
+        units: AbundanceUnits = "fraction",
     ) -> tuple[Figure, np.ndarray]:
         """Plot abundance maps for multiple isotopes in a grid.
 
@@ -95,14 +115,21 @@ class AbundanceMapVisualizer:
             isotopes: List of isotope names to plot. If None, plots all.
             ncols: Number of columns in the grid. Must be >= 1.
             figsize: Figure size as (width, height). Auto-calculated if None.
+            units: Display units for the abundance values.
+                ``"fraction"`` (default, 0-1), ``"percent"`` (0-100),
+                or ``"ppm"`` (0-1e6).
 
         Returns:
             Tuple of (Figure, ndarray of Axes).
 
         Raises:
             ValueError: If any isotope in the list is not found, or if
-                isotopes list is empty, or if ncols < 1.
+                isotopes list is empty, or if ncols < 1, or if units is invalid.
         """
+        scale, label = _UNIT_CONFIG.get(units, (None, None))
+        if scale is None:
+            raise ValueError(f"Unknown units {units!r}. Choose from: {list(_UNIT_CONFIG)}")
+
         if ncols < 1:
             raise ValueError(f"ncols must be >= 1, got {ncols}")
 
@@ -128,9 +155,10 @@ class AbundanceMapVisualizer:
 
         for i, iso in enumerate(isotopes):
             row, col = divmod(i, ncols)
-            abundance_map = self._generator.generate_map(iso)
-            axes[row, col].imshow(abundance_map, cmap="viridis", origin="upper")
+            abundance_map = self._generator.generate_map(iso) * scale
+            im = axes[row, col].imshow(abundance_map, cmap="viridis", origin="upper")
             axes[row, col].set_title(iso)
+            fig.colorbar(im, ax=axes[row, col], label=label, shrink=0.8)
 
         # Hide unused axes
         for i in range(n, nrows * ncols):
@@ -145,6 +173,7 @@ class AbundanceMapVisualizer:
         isotope: str,
         quality_metric: str = "chi_squared",
         alpha: float = 0.5,
+        units: AbundanceUnits = "fraction",
     ) -> tuple[Figure, Axes]:
         """Plot an abundance map with a quality metric overlay.
 
@@ -157,18 +186,25 @@ class AbundanceMapVisualizer:
                 or ``"success"``).
             alpha: Transparency of the overlay (0 = transparent, 1 = opaque).
                 Must be in [0, 1].
+            units: Display units for the abundance base layer.
+                ``"fraction"`` (default, 0-1), ``"percent"`` (0-100),
+                or ``"ppm"`` (0-1e6).
 
         Returns:
             Tuple of (Figure, Axes).
 
         Raises:
-            ValueError: If isotope or quality_metric is invalid, or if
-                alpha is outside [0, 1].
+            ValueError: If isotope or quality_metric is invalid, if
+                alpha is outside [0, 1], or if units is invalid.
         """
+        scale, _ = _UNIT_CONFIG.get(units, (None, None))
+        if scale is None:
+            raise ValueError(f"Unknown units {units!r}. Choose from: {list(_UNIT_CONFIG)}")
+
         if not 0.0 <= alpha <= 1.0:
             raise ValueError(f"alpha must be in [0, 1], got {alpha}")
 
-        abundance_map = self._generator.generate_map(isotope)
+        abundance_map = self._generator.generate_map(isotope) * scale
         quality_map = self._generator.generate_quality_map(metric=quality_metric)
 
         fig, ax = plt.subplots()

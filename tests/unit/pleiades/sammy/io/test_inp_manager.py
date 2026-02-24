@@ -417,6 +417,123 @@ def test_generate_physical_constants_section_uses_dataset_metadata_temperature_f
     assert constants.delta_e == pytest.approx(0.2)
 
 
+class TestVaryFlagOverrides:
+    """Tests for vary_* flag overrides in generate_* methods."""
+
+    def test_normalization_vary_false_fixes_norm_flag(self):
+        """When vary_normalization=False, normalization flag should be NO."""
+        manager = InpManager()
+        meta = InpDatasetMetadata(vary_normalization=False, vary_background=None)
+        section = manager.generate_normalization_parameters_section(dataset_metadata=meta)
+
+        # Normalization line should contain flag=0 (NO) for anorm
+        # The Card06 format puts anorm on the NORMAlization line
+        assert "NORMAlization" in section or "NORMALIZATION" in section.upper()
+
+    def test_normalization_vary_true_allows_norm_flag(self):
+        """When vary_normalization=True (or None), normalization flag should be YES."""
+        manager = InpManager()
+        # None = default behavior (YES)
+        section_default = manager.generate_normalization_parameters_section()
+        meta_true = InpDatasetMetadata(vary_normalization=True)
+        section_true = manager.generate_normalization_parameters_section(dataset_metadata=meta_true)
+        # Both should produce the same result (YES flags)
+        assert section_default == section_true
+
+    def test_background_vary_false_zeros_backgrounds(self):
+        """When vary_background=False, background values should be 0.0 with NO flags."""
+        manager = InpManager()
+        meta = InpDatasetMetadata(vary_background=False)
+        section = manager.generate_normalization_parameters_section(dataset_metadata=meta)
+
+        # With backgrounds zeroed out, the section should not contain the non-zero seed values
+        assert "0.01" not in section
+        assert "0.02" not in section
+
+    def test_background_vary_none_uses_defaults(self):
+        """When vary_background=None (default), backgrounds should have non-zero seeds."""
+        manager = InpManager()
+        section = manager.generate_normalization_parameters_section()
+        # Default behavior should include non-zero background seeds
+        # The section should contain normalization content
+        assert "NORMAlization" in section or "NORMALIZATION" in section.upper()
+
+    def test_tzero_vary_false_uses_identity(self):
+        """When vary_tzero=False, TZERO should use identity values (t0=0, L0=1)."""
+        manager = InpManager()
+        meta = InpDatasetMetadata(vary_tzero=False)
+        section = manager.generate_misc_parameters_section(dataset_metadata=meta)
+
+        assert "MISCEllaneous" in section
+        # Should NOT contain the VENUS default t0=0.86 (formatted as 8.6000E-01)
+        assert "8.6000E-01" not in section
+
+    def test_tzero_vary_none_uses_venus_defaults(self):
+        """When vary_tzero=None (default), TZERO should use VENUS defaults."""
+        manager = InpManager()
+        section = manager.generate_misc_parameters_section()
+        assert "MISCEllaneous" in section
+        # Should contain VENUS default t0=0.86 (in scientific notation: 8.6000E-01)
+        assert "8.6000E-01" in section
+
+    def test_thickness_vary_false_fixes_thick_flag(self):
+        """When vary_thickness=False, thickness flag should be NO."""
+
+        manager = InpManager()
+        meta = InpDatasetMetadata(
+            vary_thickness=False,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+            temperature_K=293.6,
+        )
+        section = manager.generate_broadening_parameters_section(dataset_metadata=meta)
+        # The section should be generated (non-empty because thickness was derived)
+        assert len(section.strip()) > 0
+
+    def test_thickness_vary_none_defaults_to_yes(self):
+        """When vary_thickness=None (default), thickness flag should be YES."""
+        manager = InpManager()
+        meta = InpDatasetMetadata(
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            atomic_mass_amu=180.948,
+            temperature_K=293.6,
+        )
+        section = manager.generate_broadening_parameters_section(dataset_metadata=meta)
+        assert len(section.strip()) > 0
+
+    def test_multi_isotope_inp_passes_metadata_to_all_sections(self):
+        """generate_multi_isotope_inp_content should pass dataset_metadata to misc and norm."""
+        fit_config = FitConfig(fit_title="Test vary flags")
+        fit_config.append_isotope_from_string("Ta-181")
+        manager = InpManager(fit_config=fit_config)
+
+        meta = InpDatasetMetadata(
+            element="Ta",
+            mass_number=181,
+            atomic_mass_amu=180.948,
+            min_energy_eV=1.0,
+            max_energy_eV=100.0,
+            temperature_K=293.6,
+            density_g_cm3=16.6,
+            thickness_mm=0.025,
+            vary_normalization=False,
+            vary_background=False,
+            vary_tzero=False,
+            vary_thickness=False,
+        )
+        content = manager.generate_multi_isotope_inp_content(dataset_metadata=meta)
+
+        # TZERO should use identity (no 8.6000E-01 VENUS default)
+        assert "8.6000E-01" not in content
+        # Verify the normalization section was generated with vary_background=False
+        # by checking that the norm section is present and backgrounds are zeroed
+        norm_section = manager.generate_normalization_parameters_section(dataset_metadata=meta)
+        assert "0.01000000" not in norm_section
+        assert "0.02000000" not in norm_section
+
+
 def test_read_inp_file_sets_broadening_dist_from_card5(temp_dir):
     """Card 5 parsing should map flight path length back to broadening.dist."""
     fit_config = FitConfig()

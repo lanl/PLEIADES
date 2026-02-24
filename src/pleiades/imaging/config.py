@@ -66,6 +66,24 @@ class ImagingConfig(BaseModel):
         ),
     )
 
+    # Parameter vary-flag overrides
+    vary_normalization: bool = Field(
+        True,
+        description="If True, SAMMY varies the normalization factor. False fixes it at 1.0.",
+    )
+    vary_background: bool = Field(
+        True,
+        description="If True, SAMMY varies background parameters. False sets backgrounds to 0.0 and fixes them.",
+    )
+    vary_tzero: bool = Field(
+        True,
+        description="If True, SAMMY varies TZERO (t0, L0). False uses identity values (t0=0, L0=1).",
+    )
+    vary_thickness: bool = Field(
+        True,
+        description="If True, SAMMY varies thickness during fitting. False holds thickness fixed.",
+    )
+
     @model_validator(mode="after")
     def validate_energy_range(self) -> "ImagingConfig":
         """Ensure min_energy_eV < max_energy_eV."""
@@ -113,6 +131,10 @@ class ImagingConfig(BaseModel):
             temperature_K=self.temperature_K,
             density_g_cm3=self.density_g_cm3,
             thickness_mm=self.thickness_mm,
+            vary_normalization=self.vary_normalization,
+            vary_background=self.vary_background,
+            vary_tzero=self.vary_tzero,
+            vary_thickness=self.vary_thickness,
         )
 
     def get_abundances(self) -> List[float]:
