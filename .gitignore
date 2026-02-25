@@ -217,3 +217,6 @@ _version.py
 
 # Ignore local Claude Code instructions (user-specific)
 CLAUDE.md
+
+# Ignore debug images
+_debug_images/
