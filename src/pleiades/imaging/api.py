@@ -81,6 +81,7 @@ def analyze_imaging(
     *,
     bin_size: int = 1,
     physics_recovery: bool = False,
+    denoise_nmf: int = 0,
 ) -> Imaging2DResults:
     """Perform 2D resonance imaging analysis.
 
@@ -117,6 +118,11 @@ def analyze_imaging(
             SAMMY forward-model (one call per isotope) and solves a convex
             NNLS problem at each pixel.  Much faster and more robust for
             noisy/sparse data (L3–L4).  Default is ``False``.
+        denoise_nmf: Number of NMF components for denoising preprocessing
+            before NNLS recovery.  When > 0, applies NMF low-rank denoising
+            to exploit spatial redundancy before per-pixel NNLS.  Requires
+            ``physics_recovery=True``.  Set to the number of expected isotopes
+            (e.g. 2).  Default is 0 (no denoising).
         resolution_file: Optional path to instrument resolution function file.
             Forwarded to the SAMMY backend for broadening calculations.
         checkpoint_file: Path to save/load checkpoint data.
@@ -149,6 +155,12 @@ def analyze_imaging(
         raise ValueError(f"roi must have exactly 4 elements (x1, y1, x2, y2), got {len(roi)}")
     if resume and checkpoint_file is None:
         raise ValueError("resume=True requires checkpoint_file to be set")
+    if denoise_nmf < 0:
+        raise ValueError(f"denoise_nmf must be >= 0, got {denoise_nmf}")
+    if denoise_nmf > 0 and not physics_recovery:
+        raise ValueError(
+            "denoise_nmf > 0 requires physics_recovery=True (NMF denoising is a preprocessing step for NNLS recovery)"
+        )
 
     source = Path(source)
 
@@ -213,7 +225,7 @@ def analyze_imaging(
                 min(-(-roi[3] // bs), height),
             )
 
-        results = recovery.recover_image(hyperspectral, roi=recovery_roi, stride=stride)
+        results = recovery.recover_image(hyperspectral, roi=recovery_roi, stride=stride, denoise_nmf=denoise_nmf)
 
         # Unbin results to original resolution
         if binner is not None:

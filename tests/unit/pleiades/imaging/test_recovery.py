@@ -1008,3 +1008,99 @@ class TestRecoveryEdgeCases:
         assert not result.success_mask[2, 0]
         # Other pixels should still be fitted
         assert result.success_mask[0, 0]
+
+
+# ---------------------------------------------------------------------------
+# TestDenoiseNMF
+# ---------------------------------------------------------------------------
+
+
+class TestDenoiseNMF:
+    """Tests for the denoise_nmf parameter of PhysicsRecovery.recover_image."""
+
+    def setup_method(self):
+        from pleiades.imaging.recovery import PhysicsRecovery
+
+        self.energy = np.linspace(1.0, 100.0, 100)
+        self.height, self.width = 4, 4
+        self.n_isotopes = 2
+        self.refs = _build_synthetic_dictionary(self.energy, self.n_isotopes)
+        self.recovery = PhysicsRecovery.__new__(PhysicsRecovery)
+
+    def _make_synthetic_image(self, ground_truth_maps: np.ndarray, noise_level: float = 0.0) -> HyperspectralData:
+        """Create synthetic hyperspectral data, optionally with multiplicative noise."""
+        n_e = len(self.energy)
+        h, w = ground_truth_maps.shape[1], ground_truth_maps.shape[2]
+        data = np.zeros((n_e, h, w))
+        for row in range(h):
+            for col in range(w):
+                total_abs = np.zeros(n_e)
+                for iso_idx in range(ground_truth_maps.shape[0]):
+                    total_abs += ground_truth_maps[iso_idx, row, col] * self.refs[iso_idx].absorption
+                data[:, row, col] = np.exp(-total_abs)
+
+        if noise_level > 0.0:
+            rng = np.random.default_rng(42)
+            noise = rng.normal(0, noise_level, data.shape)
+            data = np.clip(data + noise, 1e-6, 1.0 - 1e-6)
+
+        uncertainty = 0.01 * np.ones_like(data)
+        return _make_hyperspectral(data, energy=self.energy, uncertainty=uncertainty)
+
+    def test_denoise_nmf_zero_is_noop(self):
+        """denoise_nmf=0 should produce identical results to the default call."""
+        gt = np.full((self.n_isotopes, self.height, self.width), 0.5)
+        hs = self._make_synthetic_image(gt)
+
+        result_default = self.recovery.recover_image(hs, reference_spectra=self.refs)
+        result_zero = self.recovery.recover_image(hs, reference_spectra=self.refs, denoise_nmf=0)
+
+        np.testing.assert_array_equal(result_default.abundance_maps, result_zero.abundance_maps)
+        np.testing.assert_array_equal(result_default.chi_squared_map, result_zero.chi_squared_map)
+        np.testing.assert_array_equal(result_default.success_mask, result_zero.success_mask)
+        assert result_default.metadata["method"] == "physics_recovery"
+        assert result_zero.metadata["method"] == "physics_recovery"
+
+    def test_denoise_nmf_negative_raises(self):
+        """denoise_nmf < 0 should raise ValueError."""
+        gt = np.full((self.n_isotopes, self.height, self.width), 0.5)
+        hs = self._make_synthetic_image(gt)
+
+        with pytest.raises(ValueError, match="denoise_nmf must be >= 0"):
+            self.recovery.recover_image(hs, reference_spectra=self.refs, denoise_nmf=-1)
+
+    def test_denoise_nmf_denoises_before_nnls(self):
+        """Hybrid NMF+NNLS on noisy data should be closer to ground truth than raw NNLS."""
+        gt = np.zeros((self.n_isotopes, self.height, self.width))
+        # Create a spatially structured pattern
+        gt[0, :2, :] = 0.7  # Isotope 0 dominant in top half
+        gt[0, 2:, :] = 0.3
+        gt[1, :2, :] = 0.3  # Isotope 1 dominant in bottom half
+        gt[1, 2:, :] = 0.7
+
+        # Normalize to fractional abundances (sum=1 per pixel)
+        gt_sum = gt.sum(axis=0, keepdims=True)
+        gt_norm = gt / gt_sum
+
+        # Build noisy image
+        hs_noisy = self._make_synthetic_image(gt, noise_level=0.08)
+
+        # Raw NNLS on noisy data
+        result_raw = self.recovery.recover_image(hs_noisy, reference_spectra=self.refs)
+
+        # Hybrid NMF+NNLS on noisy data
+        result_hybrid = self.recovery.recover_image(hs_noisy, reference_spectra=self.refs, denoise_nmf=2)
+
+        # Compute mean absolute error over successful pixels
+        mask = result_raw.success_mask & result_hybrid.success_mask
+        mae_raw = np.mean(np.abs(result_raw.abundance_maps[:, mask] - gt_norm[:, mask]))
+        mae_hybrid = np.mean(np.abs(result_hybrid.abundance_maps[:, mask] - gt_norm[:, mask]))
+
+        # Hybrid should be at least as good as raw (typically much better)
+        assert mae_hybrid <= mae_raw + 0.01, (
+            f"Hybrid NMF+NNLS (MAE={mae_hybrid:.4f}) should be no worse than raw NNLS (MAE={mae_raw:.4f}) on noisy data"
+        )
+
+        # Verify metadata indicates hybrid method
+        assert result_hybrid.metadata["method"] == "hybrid_nmf_nnls"
+        assert result_hybrid.metadata["denoise_nmf"] == 2

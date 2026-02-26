@@ -53,6 +53,18 @@ class InpDatasetMetadata(BaseModel):
     density_g_cm3: Optional[float] = Field(default=None, description="Material density (g/cm^3)")
     thickness_mm: Optional[float] = Field(default=None, description="Sample thickness (mm)")
 
+    # Vary-flag overrides (None = use current default behavior)
+    vary_normalization: Optional[bool] = Field(
+        default=None, description="Override normalization vary flag (False=fix at 1.0)"
+    )
+    vary_background: Optional[bool] = Field(
+        default=None, description="Override background vary flags (False=set to 0.0 and fix)"
+    )
+    vary_tzero: Optional[bool] = Field(
+        default=None, description="Override TZERO vary flags (False=identity t0=0, L0=1)"
+    )
+    vary_thickness: Optional[bool] = Field(default=None, description="Override thickness vary flag")
+
 
 class InpManager:
     """
@@ -500,6 +512,10 @@ class InpManager:
                 broadening_params.thick = derived_thick
                 broadening_params.flag_thick = VaryFlag.YES
 
+        # Override thickness vary flag if explicitly set in dataset_metadata
+        if dataset_metadata is not None and dataset_metadata.vary_thickness is False:
+            broadening_params.flag_thick = VaryFlag.NO
+
         # Skip Card 4 generation when no primary broadening values exist.
         has_primary_broadening_values = any(
             value is not None
@@ -520,12 +536,18 @@ class InpManager:
         lines = [""] + Card04.to_lines(fit_config)
         return "\n".join(lines)
 
-    def generate_misc_parameters_section(self, flight_path_m: float = 25.0) -> str:
+    def generate_misc_parameters_section(
+        self,
+        flight_path_m: float = 25.0,
+        dataset_metadata: Optional[InpDatasetMetadata] = None,
+    ) -> str:
         """
         Generate miscellaneous parameters (TZERO) section.
 
         Args:
             flight_path_m: Flight path length in meters (default 25.0 for VENUS)
+            dataset_metadata: Optional metadata; if vary_tzero is False, uses identity
+                values (t0=0, L0=1) with flags set to NO.
 
         Returns:
             str: Miscellaneous parameters section
@@ -533,17 +555,30 @@ class InpManager:
         from pleiades.sammy.parameters.misc import TzeroParameters
         from pleiades.utils.helper import VaryFlag
 
-        # Create TzeroParameters with proper values
-        # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty)
-        tzero_params = TzeroParameters(
-            t0_value=DEFAULT_T0_VALUE,  # Time offset t₀ (μs)
-            t0_uncertainty=DEFAULT_T0_UNCERTAINTY,  # Uncertainty on t₀ (μs)
-            l0_value=DEFAULT_L0_VALUE,  # L₀ value (dimensionless)
-            l0_uncertainty=DEFAULT_L0_UNCERTAINTY,  # Uncertainty on L₀
-            flight_path_length=flight_path_m,  # Flight path (m)
-            t0_flag=VaryFlag.YES,  # Allow SAMMY to vary t₀
-            l0_flag=VaryFlag.YES,  # Allow SAMMY to vary L₀
-        )
+        # Determine TZERO values based on dataset_metadata override
+        if dataset_metadata is not None and dataset_metadata.vary_tzero is False:
+            # Identity values: no time offset, no flight-path correction
+            tzero_params = TzeroParameters(
+                t0_value=0.0,
+                t0_uncertainty=0.0,
+                l0_value=1.0,
+                l0_uncertainty=0.0,
+                flight_path_length=flight_path_m,
+                t0_flag=VaryFlag.NO,
+                l0_flag=VaryFlag.NO,
+            )
+        else:
+            # Default VENUS instrument values
+            # TZERO values (rounded uncertainties required - SAMMY cannot use zero uncertainty)
+            tzero_params = TzeroParameters(
+                t0_value=DEFAULT_T0_VALUE,  # Time offset t₀ (μs)
+                t0_uncertainty=DEFAULT_T0_UNCERTAINTY,  # Uncertainty on t₀ (μs)
+                l0_value=DEFAULT_L0_VALUE,  # L₀ value (dimensionless)
+                l0_uncertainty=DEFAULT_L0_UNCERTAINTY,  # Uncertainty on L₀
+                flight_path_length=flight_path_m,  # Flight path (m)
+                t0_flag=VaryFlag.YES,  # Allow SAMMY to vary t₀
+                l0_flag=VaryFlag.YES,  # Allow SAMMY to vary L₀
+            )
 
         # Generate proper TZERO output with header
         lines = [
@@ -553,9 +588,17 @@ class InpManager:
 
         return "\n".join(lines)
 
-    def generate_normalization_parameters_section(self) -> str:
+    def generate_normalization_parameters_section(
+        self,
+        dataset_metadata: Optional[InpDatasetMetadata] = None,
+    ) -> str:
         """
         Generate normalization parameters section.
+
+        Args:
+            dataset_metadata: Optional metadata; if vary_normalization is False, fixes
+                normalization at 1.0. If vary_background is False, sets all backgrounds
+                to 0.0 with NO flags.
 
         Returns:
             str: Normalization parameters section with required blank line before it
@@ -565,24 +608,42 @@ class InpManager:
         from pleiades.sammy.io.card_formats.par06_normalization import Card06
         from pleiades.utils.helper import VaryFlag
 
+        # Determine normalization flag
+        flag_anorm = VaryFlag.YES
+        if dataset_metadata is not None and dataset_metadata.vary_normalization is False:
+            flag_anorm = VaryFlag.NO
+
+        # Determine background values and flags
+        if dataset_metadata is not None and dataset_metadata.vary_background is False:
+            # No background: set values to 0.0 and fix all flags
+            backa, backb, backc = 0.0, 0.0, 0.0
+            flag_backa = VaryFlag.NO
+            flag_backb = VaryFlag.NO
+            flag_backc = VaryFlag.NO
+        else:
+            # Default: non-zero seed backgrounds with YES flags
+            backa, backb, backc = 0.01000000, 0.02000000, 0.00100000
+            flag_backa = VaryFlag.YES
+            flag_backb = VaryFlag.YES
+            flag_backc = VaryFlag.YES
+
         # Create FitConfig with normalization parameters using proper Card06
         fit_config = FitConfig()
 
         # Create NormalizationParameters object
-        # NORM values (non-zero uncertainties required - SAMMY cannot fit parameters with zero uncertainty)
         norm_params = NormalizationParameters(
             anorm=1.0,  # Normalization factor
-            backa=0.01000000,  # Constant background
-            backb=0.02000000,  # Background ∝ 1/E
-            backc=0.00100000,  # Background ∝ √E
+            backa=backa,  # Constant background
+            backb=backb,  # Background ∝ 1/E
+            backc=backc,  # Background ∝ √E
             backd=0.0,  # Exponential background coefficient
             backf=0.0,  # Exponential decay constant
-            flag_anorm=VaryFlag.YES,  # Allow SAMMY to vary normalization
-            flag_backa=VaryFlag.YES,  # Allow SAMMY to vary constant background
-            flag_backb=VaryFlag.YES,  # Allow SAMMY to vary 1/E background
-            flag_backc=VaryFlag.YES,  # Allow SAMMY to vary √E background
-            flag_backd=VaryFlag.NO,  # Don't vary exponential coefficient
-            flag_backf=VaryFlag.NO,  # Don't vary exponential constant
+            flag_anorm=flag_anorm,
+            flag_backa=flag_backa,
+            flag_backb=flag_backb,
+            flag_backc=flag_backc,
+            flag_backd=VaryFlag.NO,
+            flag_backf=VaryFlag.NO,
         )
 
         # Add to fit_config
@@ -638,8 +699,8 @@ class InpManager:
             self.generate_card_7_section(dataset_metadata),
             self.generate_reaction_type_section(),
             self.generate_broadening_parameters_section(dataset_metadata),
-            self.generate_misc_parameters_section(flight_path_m=flight_path_m),
-            self.generate_normalization_parameters_section(),
+            self.generate_misc_parameters_section(flight_path_m=flight_path_m, dataset_metadata=dataset_metadata),
+            self.generate_normalization_parameters_section(dataset_metadata=dataset_metadata),
             self.generate_resolution_function_section(
                 str(resolution_file_path.resolve()) if resolution_file_path else None
             ),

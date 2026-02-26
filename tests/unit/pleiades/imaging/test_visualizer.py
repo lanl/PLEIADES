@@ -504,3 +504,55 @@ class TestResourceManagement:
 
         # They should be different figure objects
         assert fig1 is not fig2
+
+
+class TestUnitsParameter:
+    """Tests for the units parameter (fraction, percent, ppm)."""
+
+    def test_single_isotope_ppm_scales_values(self, two_isotope_results: Imaging2DResults) -> None:
+        """PPM units should scale abundance values by 1e6."""
+        viz = AbundanceMapVisualizer(two_isotope_results)
+        fig_frac, ax_frac = viz.plot_single_isotope("Ta-181", units="fraction")
+        fig_ppm, ax_ppm = viz.plot_single_isotope("Ta-181", units="ppm")
+
+        # Get image data from both plots
+        data_frac = ax_frac.images[0].get_array()
+        data_ppm = ax_ppm.images[0].get_array()
+
+        np.testing.assert_allclose(data_ppm, data_frac * 1e6, rtol=1e-6)
+        plt.close(fig_frac)
+        plt.close(fig_ppm)
+
+    def test_single_isotope_percent_scales_values(self, two_isotope_results: Imaging2DResults) -> None:
+        """Percent units should scale abundance values by 100."""
+        viz = AbundanceMapVisualizer(two_isotope_results)
+        fig_frac, ax_frac = viz.plot_single_isotope("Ta-181", units="fraction")
+        fig_pct, ax_pct = viz.plot_single_isotope("Ta-181", units="percent")
+
+        data_frac = ax_frac.images[0].get_array()
+        data_pct = ax_pct.images[0].get_array()
+
+        np.testing.assert_allclose(data_pct, data_frac * 100, rtol=1e-6)
+        plt.close(fig_frac)
+        plt.close(fig_pct)
+
+    def test_single_isotope_invalid_units_raises(self, two_isotope_results: Imaging2DResults) -> None:
+        """Invalid units should raise ValueError."""
+        viz = AbundanceMapVisualizer(two_isotope_results)
+        with pytest.raises(ValueError, match="Unknown units"):
+            viz.plot_single_isotope("Ta-181", units="invalid")
+
+    def test_multi_isotope_ppm(self, two_isotope_results: Imaging2DResults) -> None:
+        """Multi-isotope plot should accept units parameter."""
+        viz = AbundanceMapVisualizer(two_isotope_results)
+        fig, axes = viz.plot_multi_isotope(units="ppm")
+        # Just verify it runs without error and produces a figure
+        assert fig is not None
+        plt.close(fig)
+
+    def test_quality_overlay_ppm(self, two_isotope_results: Imaging2DResults) -> None:
+        """Quality overlay should accept units parameter."""
+        viz = AbundanceMapVisualizer(two_isotope_results)
+        fig, ax = viz.plot_quality_overlay("Ta-181", units="ppm")
+        assert fig is not None
+        plt.close(fig)

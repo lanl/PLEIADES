@@ -288,6 +288,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-json-logger-2.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-8_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pywavelets-1.9.0-py314hc02f841_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py314h67df5f8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyzmq-27.1.0-py312hfb55c3c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qhull-2020.2-h434a139_5.conda
@@ -645,6 +646,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-json-logger-2.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-8_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pywavelets-1.9.0-py314hdcf55e8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyyaml-6.0.3-py314h6e9b3f0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyzmq-27.1.0-py312hd65ceae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/qhull-2020.2-h420ef59_5.conda
@@ -1007,6 +1009,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-json-logger-2.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-8_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pywavelets-1.9.0-py314hc02f841_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py314h67df5f8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyzmq-27.1.0-py312hfb55c3c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/qhull-2020.2-h434a139_5.conda
@@ -1327,6 +1330,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-json-logger-2.0.7-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python_abi-3.14-8_cp314.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pywavelets-1.9.0-py314hdcf55e8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyyaml-6.0.3-py314h6e9b3f0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyzmq-27.1.0-py312hd65ceae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/qhull-2020.2-h420ef59_5.conda
@@ -6628,8 +6632,8 @@ packages:
   timestamp: 1756227402815
 - pypi: ./
   name: pleiades-neutron
-  version: 2.1.0.dev83+d202602201951
-  sha256: bb3ae09ee45302a154dbac3f39d0c552716124c6624d3140595258c6f898b164
+  version: 2.1.0.dev164+d202602251537
+  sha256: f88ab92716deb97a86f030543745b646ee59673fccbe419a287969eed826bf9c
   requires_dist:
   - numpy
   - scipy
@@ -7205,6 +7209,38 @@ packages:
   - pkg:pypi/pytz?source=hash-mapping
   size: 189015
   timestamp: 1742920947249
+- conda: https://conda.anaconda.org/conda-forge/linux-64/pywavelets-1.9.0-py314hc02f841_2.conda
+  sha256: df4a7c8da55c64443ee0d23199e77f77e4d45a34bf2565ffcef1fb2a57ccca6b
+  md5: 5be92985870940eac3f3b8cda57002cc
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  - numpy >=1.23,<3
+  - numpy >=1.25,<3
+  - python >=3.14,<3.15.0a0
+  - python_abi 3.14.* *_cp314
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/pywavelets?source=hash-mapping
+  size: 3694152
+  timestamp: 1762595072736
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/pywavelets-1.9.0-py314hdcf55e8_2.conda
+  sha256: 462afc9a600603bb0128ebbb23e0628bef5feb75b49f95f47bd8a7c489016851
+  md5: cee9ba4ac48fe6405f6c3b098f441129
+  depends:
+  - __osx >=11.0
+  - numpy >=1.23,<3
+  - numpy >=1.25,<3
+  - python >=3.14,<3.15.0a0
+  - python >=3.14,<3.15.0a0 *_cp314
+  - python_abi 3.14.* *_cp314
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/pywavelets?source=hash-mapping
+  size: 3618379
+  timestamp: 1762595928794
 - conda: https://conda.anaconda.org/conda-forge/linux-64/pyyaml-6.0.3-py314h67df5f8_1.conda
   sha256: b318fb070c7a1f89980ef124b80a0b5ccf3928143708a85e0053cde0169c699d
   md5: 2035f68f96be30dc60a5dfd7452c7941

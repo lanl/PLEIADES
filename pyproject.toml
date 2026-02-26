@@ -151,6 +151,7 @@ pydantic = ">=2.12.5,<3"
 loguru = ">=0.7.3,<0.8"
 dxchange = ">=0.1.8,<0.2"
 h5py = ">=3.15.1,<4"
+pywavelets = ">=1.9.0,<2"
 
 [tool.pixi.tasks]
 # PyPi packaging tasks
