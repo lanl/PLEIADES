@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 import subprocess
-import warnings
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional, Union
@@ -14,10 +13,16 @@ import yaml
 
 from pleiades.sammy.backends.docker import DockerSammyRunner
 from pleiades.sammy.backends.local import LocalSammyRunner
-from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
 from pleiades.sammy.config import DockerSammyConfig, LocalSammyConfig, NovaSammyConfig
 from pleiades.sammy.interface import SammyFiles, SammyRunner
 from pleiades.utils.logger import loguru_logger
+
+# NOVA backend is disabled - nova-galaxy package is unstable and not a development priority
+# See GitHub issue #202 for details. The code remains for future use when nova stabilizes.
+# To re-enable: uncomment the import and set _NOVA_AVAILABLE = True
+# from pleiades.sammy.backends.nova_ornl import NovaSammyRunner
+_NOVA_AVAILABLE = False
+NovaSammyRunner = None  # type: ignore[misc]
 
 logger = loguru_logger.bind(name=__name__)
 
@@ -93,15 +98,17 @@ class SammyFactory:
             logger.debug(f"Error checking docker backend: {str(e)}")
             available[BackendType.DOCKER] = False
 
-        # Check NOVA backend
-        try:
-            nova_available = all(k in os.environ for k in ["NOVA_URL", "NOVA_API_KEY"])
-            available[BackendType.NOVA] = nova_available
-            if nova_available:
-                logger.debug("NOVA credentials found")
-        except Exception as e:
-            logger.debug(f"Error checking NOVA backend: {str(e)}")
-            available[BackendType.NOVA] = False
+        # Check NOVA backend (currently disabled - see _NOVA_AVAILABLE flag)
+        available[BackendType.NOVA] = False
+        if _NOVA_AVAILABLE:
+            try:
+                nova_available = all(k in os.environ for k in ["NOVA_URL", "NOVA_API_KEY"])
+                available[BackendType.NOVA] = nova_available
+                if nova_available:
+                    logger.debug("NOVA credentials found")
+            except Exception as e:
+                logger.debug(f"Error checking NOVA backend: {str(e)}")
+                available[BackendType.NOVA] = False
 
         return available
 
@@ -189,13 +196,9 @@ class SammyFactory:
                 runner = DockerSammyRunner(config)
 
             elif backend == BackendType.NOVA:
-                # Warn users that NOVA backend is paused
-                warnings.warn(
-                    "NOVA backend support is currently paused. The NOVA API is under "
-                    "active development. Use local or docker backends for production work.",
-                    UserWarning,
-                    stacklevel=2,
-                )
+                # NOVA backend is currently disabled
+                if not _NOVA_AVAILABLE or NovaSammyRunner is None:
+                    raise BackendNotAvailableError("NOVA backend is disabled - nova-galaxy package is unstable")
                 # For NOVA, try environment variables if not in kwargs
                 url = kwargs.get("url") or os.environ.get("NOVA_URL")
                 api_key = kwargs.get("api_key") or os.environ.get("NOVA_API_KEY")
