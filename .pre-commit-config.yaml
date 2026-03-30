@@ -13,7 +13,7 @@ repos:
     - id: trailing-whitespace
       exclude: "(tests/data/.*|legacy/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.15.2
+  rev: v0.15.8
   hooks:
     - id: ruff
       args: [--fix, --exit-non-zero-on-fix]
@@ -21,7 +21,7 @@ repos:
     - id: ruff-format
       exclude: "(tests/data/.*|legacy/.*|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*)"
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.4.1
+  rev: v2.4.2
   hooks:
     - id: codespell
       exclude: "(tests/data/.*|legacy/.*|.*\\.ipynb|pixi.lock|src/pleiades/nuclear/isotopes/files/.*|src/pleiades/nuclear/isotope/files/.*|src/pleiades/nuclear/resonances/.*|src/pleiades/sammy/alphanumerics/.*\\.(md|yaml|yml))"

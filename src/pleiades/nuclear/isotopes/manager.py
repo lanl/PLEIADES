@@ -344,3 +344,128 @@ class IsotopeManager:
         except Exception as e:
             logger.error(f"Error getting isotope parameters for {isotope_str}: {str(e)}")
             raise
+
+    def get_isotopes_by_element(self, element: str) -> List[str]:
+        """
+        Get all naturally occurring isotopes for a given element.
+
+        Reads isotopes.info to find all isotopes of the specified element
+        that have non-zero natural abundance.
+
+        Args:
+            element: Element symbol (e.g., "Hf", "U", "Au"). Case-insensitive.
+
+        Returns:
+            List of isotope strings sorted by mass number (e.g., ["Hf-174", "Hf-176", ...]).
+            Returns empty list if element not found or has no natural isotopes.
+        """
+        # Normalize element symbol for comparison (first letter upper, rest lower)
+        element_normalized = element.capitalize()
+
+        isotopes: List[str] = []
+
+        try:
+            with self.get_file_path(FileCategory.ISOTOPES, "isotopes.info").open() as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip comments and empty lines
+                    if not line or line.startswith("%"):
+                        continue
+                    # Data lines start with a digit (atomic number)
+                    if line[0].isdigit():
+                        data = line.split()
+                        # Format: atomic_num mass_num stable/radio element name spin g_factor abundance quadrupole
+                        # Index:     0          1        2         3      4     5      6         7         8
+                        if len(data) >= 8:
+                            file_element = data[3]
+                            mass_number = int(data[1])
+                            abundance = float(data[7])
+
+                            # Match element and check for non-zero natural abundance
+                            if file_element == element_normalized and abundance > 0:
+                                isotopes.append(f"{file_element}-{mass_number}")
+        except Exception as e:
+            logger.warning(f"Error reading isotopes for element {element}: {e}")
+            return []
+
+        # Sort by mass number
+        isotopes.sort(key=lambda iso: int(iso.split("-")[1]))
+
+        return isotopes
+
+    def get_natural_composition(self, element: str) -> Dict[str, float]:
+        """
+        Get natural isotopic composition for a given element.
+
+        Reads isotopes.info to get all naturally occurring isotopes and their
+        abundances, returned as fractions (0-1) rather than percentages.
+
+        Note: The isotopes.info file stores abundances as PERCENTAGES (0-100).
+        This method converts them to fractions (0-1) and validates that
+        the sum is approximately 1.0 (within 1% tolerance).
+
+        Args:
+            element: Element symbol (e.g., "Hf", "U", "Au"). Case-insensitive.
+
+        Returns:
+            Dict mapping isotope strings to abundance fractions.
+            E.g., {"Hf-174": 0.0016, "Hf-176": 0.0526, ...}
+            Returns empty dict if element not found or has no natural isotopes.
+        """
+        # Normalize element symbol for comparison (first letter upper, rest lower)
+        element_normalized = element.capitalize()
+
+        composition: Dict[str, float] = {}
+
+        try:
+            with self.get_file_path(FileCategory.ISOTOPES, "isotopes.info").open() as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip comments and empty lines
+                    if not line or line.startswith("%"):
+                        continue
+                    # Data lines start with a digit (atomic number)
+                    if line[0].isdigit():
+                        data = line.split()
+                        # Format: atomic_num mass_num stable/radio element name spin g_factor abundance quadrupole
+                        # Index:     0          1        2         3      4     5      6         7         8
+                        if len(data) >= 8:
+                            file_element = data[3]
+                            mass_number = int(data[1])
+                            abundance_percent = float(data[7])
+
+                            # Match element and check for non-zero natural abundance
+                            # Use tolerance for floating point comparison
+                            if file_element == element_normalized and abundance_percent > 1e-10:
+                                isotope_str = f"{file_element}-{mass_number}"
+                                # Convert percentage to fraction
+                                abundance_fraction = abundance_percent / 100.0
+
+                                # Validate converted value is in valid range
+                                if abundance_fraction > 1.0:
+                                    logger.error(
+                                        f"Abundance {abundance_percent}% for {isotope_str} exceeds 100%. "
+                                        f"Check isotopes.info file format."
+                                    )
+                                    # Still include but cap at 1.0
+                                    abundance_fraction = min(abundance_fraction, 1.0)
+
+                                composition[isotope_str] = abundance_fraction
+
+        except (IOError, FileNotFoundError, PermissionError) as e:
+            logger.error(f"Failed to read isotopes.info for element {element}: {e}")
+            return {}
+        except Exception as e:
+            logger.warning(f"Error reading composition for element {element}: {e}")
+            return {}
+
+        # Validate that abundances sum to approximately 1.0 (within 1% tolerance)
+        if composition:
+            total = sum(composition.values())
+            if abs(total - 1.0) > 0.01:
+                logger.warning(
+                    f"Natural abundances for {element} sum to {total:.4f}, expected ~1.0. "
+                    f"This may indicate data quality issues in isotopes.info."
+                )
+
+        return composition
