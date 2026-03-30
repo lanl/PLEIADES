@@ -166,6 +166,11 @@ class SammyFilesMultiMode:
     data_file: Path  # .twenty/.dat data file
     endf_directory: Path  # Directory containing ENDF files
 
+    # Two-pass abundance fitting: if True, a second SAMMY pass is run in
+    # traditional mode with Card-10 IFLISO flags set to 1 (vary abundance).
+    # The two passes are transparent to the caller.
+    fit_abundances: bool = False
+
     # Store original paths for cleanup
     _original_input_file: Optional[Path] = None
     _original_json_config_file: Optional[Path] = None

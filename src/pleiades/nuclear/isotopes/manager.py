@@ -174,6 +174,12 @@ class IsotopeManager:
         # check if the isotope is a stable isotope with known abundance and spin
         self.check_and_set_abundance_and_spins(isotope)
 
+        # For radioactive isotopes not in isotopes.info, atomic_number may
+        # still be None.  Fall back to extracting Z from the mass.mas20 file
+        # (AME2020 column 10-12).
+        if isotope.atomic_number is None:
+            isotope.atomic_number = self._get_atomic_number_from_mass_file(isotope.element, isotope.mass_number)
+
         # get the material number
         isotope.material_number = self.get_mat_number(isotope)
 
@@ -244,6 +250,42 @@ class IsotopeManager:
                         isotope_info.abundance = float(data[7])
                         isotope_info.spin = float(data[5])
                         return
+
+    def _get_atomic_number_from_mass_file(self, element: str, mass_number: int) -> Optional[int]:
+        """Extract atomic number (Z) from mass.mas20 for isotopes not in isotopes.info.
+
+        The AME2020 mass table stores Z in columns 10-12 of each data line.
+        This is used as a fallback for radioactive isotopes (e.g. Pu-241)
+        whose atomic number cannot be obtained from isotopes.info.
+
+        Args:
+            element: Element symbol (e.g. "Pu")
+            mass_number: Mass number (e.g. 241)
+
+        Returns:
+            Atomic number if found, None otherwise
+        """
+        try:
+            with self.get_file_path(FileCategory.ISOTOPES, "mass.mas20").open() as f:
+                for _ in range(36):
+                    next(f)
+                for line in f:
+                    # AME2020 format (whitespace-separated fields in first ~25 chars):
+                    #   parts[0] = page/index, parts[1] = N, parts[2] = Z,
+                    #   parts[3] = A (mass number), parts[4] = element symbol
+                    parts = line[:25].split()
+                    if len(parts) < 5:
+                        continue
+                    try:
+                        a_field = int(parts[3])
+                    except ValueError:
+                        continue
+                    symbol_field = parts[4]
+                    if symbol_field == element and a_field == mass_number:
+                        return int(parts[2])
+        except Exception as e:
+            logger.warning(f"Could not extract atomic number for {element}-{mass_number}: {e}")
+        return None
 
     def get_mat_number(self, isotope: IsotopeInfo) -> Optional[int]:
         """

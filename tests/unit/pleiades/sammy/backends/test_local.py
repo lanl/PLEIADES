@@ -7,7 +7,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pleiades.sammy.backends.local import LocalSammyRunner
+from pleiades.sammy.backends.local import (
+    LocalSammyRunner,
+    _enable_abundance_fitting_in_par,
+    _move_broadening_inp_to_par,
+)
 from pleiades.sammy.config import LocalSammyConfig
 from pleiades.sammy.interface import EnvironmentPreparationError, SammyExecutionError, SammyFiles, SammyFilesMultiMode
 
@@ -284,6 +288,244 @@ class TestLocalSammyRunnerJsonMode:
         assert files.input_file.parent == local_config.working_dir
         assert files.json_config_file.parent == local_config.working_dir
         assert files.data_file.parent == local_config.working_dir
+
+
+class TestEnableAbundanceFittingInPar:
+    """Tests for the _enable_abundance_fitting_in_par helper function."""
+
+    def test_modifies_ifliso_flags(self, tmp_path):
+        """Should change IFLISO from 0 to 1 for all isotopes in Card 10."""
+        par_content = (
+            "ISOTOpic abundances and masses\n"
+            "180.94788   0.50000   0.02000 0 1 2 3 4 5\n"
+            "235.04393   0.50000   0.02000 0 6 7 8 9\n"
+            "\n"
+        )
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        # Header unchanged
+        assert lines[0] == "ISOTOpic abundances and masses"
+        # IFLISO changed from 0 to 1 (columns 31-32)
+        assert lines[1][30:32] == " 1"
+        assert lines[2][30:32] == " 1"
+
+    def test_preserves_other_content(self, tmp_path):
+        """Should not modify content outside Card 10."""
+        par_content = (
+            "KEY-WORD PARTICLE-PAIR definitions are given\n"
+            "some particle pair data\n"
+            "\n"
+            "ISOTOpic abundances and masses\n"
+            "180.94788   0.50000   0.02000 0 1 2 3\n"
+            "\n"
+            "NORMAlization and background are next\n"
+            " 1.000000  0.000000  0.000000\n"
+        )
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        # Non-Card-10 lines unchanged
+        assert lines[0] == "KEY-WORD PARTICLE-PAIR definitions are given"
+        assert lines[1] == "some particle pair data"
+        assert lines[6] == "NORMAlization and background are next"
+        assert lines[7] == " 1.000000  0.000000  0.000000"
+        # Card 10 isotope line modified
+        assert lines[4][30:32] == " 1"
+
+    def test_handles_nuclide_header(self, tmp_path):
+        """Should also recognize NUCLIde header variant."""
+        par_content = "NUCLIde abundances and masses\n180.94788   0.50000   0.02000 0 1 2 3\n\n"
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        assert lines[1][30:32] == " 1"
+
+    def test_skips_continuation_markers(self, tmp_path):
+        """Should not modify -1 continuation lines."""
+        par_content = (
+            "ISOTOpic abundances and masses\n"
+            "180.94788   0.50000   0.02000 0 1 2 3 4 5 6 7 8 9101112131415161718192021222324\n"
+            "-1\n"
+            "   25   26   27\n"
+            "\n"
+        )
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        assert lines[1][30:32] == " 1"
+        assert lines[2].strip() == "-1"
+
+    def test_does_not_mutate_long_continuation_lines(self, tmp_path):
+        """Continuation lines after -1 must not have columns 31-32 overwritten.
+
+        Regression test: previously any non-blank line of length >= 32 inside
+        Card 10 had cols 31-32 set to ' 1', corrupting spin-group continuation
+        data that happened to be long enough.
+        """
+        # Build a continuation line that is >= 32 chars (spin groups 25-40)
+        continuation_data = "   25   26   27   28   29   30   31   32   33   34   35   36   37   38   39   40"
+        par_content = (
+            "ISOTOpic abundances and masses\n"
+            "180.94788   0.50000   0.02000 0 1 2 3 4 5 6 7 8 9101112131415161718192021222324\n"
+            "-1\n"
+            f"{continuation_data}\n"
+            "235.04393   0.50000   0.02000 0 41 42 43\n"
+            "\n"
+        )
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        lines = result.splitlines()
+        # Isotope lines should have IFLISO set
+        assert lines[1][30:32] == " 1"
+        assert lines[4][30:32] == " 1"
+        # Continuation line must be UNCHANGED
+        assert lines[3] == continuation_data
+        # Only 2 isotopes modified, not the continuation line
+        assert result.count(" 1") >= 2  # at least the two IFLISO flags
+
+    def test_no_card10_is_noop(self, tmp_path):
+        """Should not crash when par file has no Card 10."""
+        par_content = "NORMAlization and background are next\n 1.000000  0.000000  0.000000\n"
+        par_file = tmp_path / "test.par"
+        par_file.write_text(par_content)
+
+        _enable_abundance_fitting_in_par(par_file)
+
+        result = par_file.read_text()
+        assert result == par_content
+
+
+class TestMoveBroadeningInpToPar:
+    """Tests for the _move_broadening_inp_to_par helper function."""
+
+    def test_moves_fitted_broadening_to_par(self, tmp_path):
+        """Should extract last broadening section from INP and append to PAR."""
+        inp_content = (
+            "Title line\n"
+            "BROADENING IS WANTED\n"
+            "SOLVE BAYES EQUATIONS\n"
+            "\n"
+            "    293.6     25.0000\n"
+            "transmission\n"
+            "BROADENING PARAMETERS FOLLOW\n"
+            "  8.000000293.600000  0.000139 0 0 1 0 0\n"
+            "\n"
+            "BROADENING PARAMETERS FOLLOW\n"
+            "7.86000000 293.60000 2.80939-5 0 0 1 0 0 0\n"
+            " 0.        0.        1.41723-5\n"
+            " \n"
+            "MISCEllaneous parameters follow\n"
+        )
+        par_content = (
+            "ISOTOPIC ABUNDANCES\n   180.948       0.5         1 0 1 2\n   235.044       0.5         1 0 3 4\n"
+        )
+        inp_file = tmp_path / "SAMNDF.INP"
+        par_file = tmp_path / "SAMNDF.PAR"
+        inp_file.write_text(inp_content)
+        par_file.write_text(par_content)
+
+        _move_broadening_inp_to_par(inp_file, par_file)
+
+        # INP: broadening command and data removed
+        inp_result = inp_file.read_text()
+        assert "BROADENING" not in inp_result.upper()
+        assert "SOLVE BAYES EQUATIONS" in inp_result
+        assert "MISCEllaneous" in inp_result
+
+        # PAR: fitted broadening appended (last section)
+        par_result = par_file.read_text()
+        assert "BROADENING PARAMETERS FOLLOW" in par_result
+        assert "2.80939-5" in par_result  # fitted thickness, not original
+        assert "ISOTOPIC ABUNDANCES" in par_result  # original content preserved
+
+    def test_single_broadening_section(self, tmp_path):
+        """Should handle INP with only one broadening section."""
+        inp_content = (
+            "Title\n"
+            "BROADENING IS WANTED\n"
+            "\n"
+            "BROADENING PARAMETERS FOLLOW\n"
+            "  8.000000293.600000  0.000139 0 0 1 0 0\n"
+            "\n"
+            "NORMAlization\n"
+        )
+        par_content = "ISOTOPIC ABUNDANCES\n"
+        inp_file = tmp_path / "test.inp"
+        par_file = tmp_path / "test.par"
+        inp_file.write_text(inp_content)
+        par_file.write_text(par_content)
+
+        _move_broadening_inp_to_par(inp_file, par_file)
+
+        inp_result = inp_file.read_text()
+        assert "BROADENING" not in inp_result.upper()
+
+        par_result = par_file.read_text()
+        assert "BROADENING PARAMETERS FOLLOW" in par_result
+
+    def test_broadening_block_at_eof(self, tmp_path):
+        """Should capture broadening block that terminates at EOF without trailing blank line.
+
+        Regression test: previously the parser only recorded a broadening
+        section when it saw a blank terminator line.  If SAMNDF.INP ended
+        immediately after the broadening data, the block was silently dropped.
+        """
+        inp_content = (
+            "Title\nBROADENING IS WANTED\nBROADENING PARAMETERS FOLLOW\n  8.000000293.600000  0.000139 0 0 1 0 0\n"
+        )
+        par_content = "ISOTOPIC ABUNDANCES\n"
+        inp_file = tmp_path / "test.inp"
+        par_file = tmp_path / "test.par"
+        inp_file.write_text(inp_content)
+        par_file.write_text(par_content)
+
+        _move_broadening_inp_to_par(inp_file, par_file)
+
+        # INP: broadening removed
+        inp_result = inp_file.read_text()
+        assert "BROADENING" not in inp_result.upper()
+        assert inp_result.strip() == "Title"
+
+        # PAR: broadening data appended
+        par_result = par_file.read_text()
+        assert "BROADENING PARAMETERS FOLLOW" in par_result
+        assert "8.000000293.600000" in par_result
+
+    def test_no_broadening_is_noop(self, tmp_path):
+        """Should not crash when no broadening in INP."""
+        inp_content = "Title\nSOLVE BAYES\n\ntransmission\n"
+        par_content = "ISOTOPIC ABUNDANCES\n"
+        inp_file = tmp_path / "test.inp"
+        par_file = tmp_path / "test.par"
+        inp_file.write_text(inp_content)
+        par_file.write_text(par_content)
+
+        _move_broadening_inp_to_par(inp_file, par_file)
+
+        assert inp_file.read_text() == inp_content
+        # PAR unchanged (no broadening to move)
+        assert par_file.read_text() == par_content
 
 
 if __name__ == "__main__":

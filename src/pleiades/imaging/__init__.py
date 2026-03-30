@@ -1,0 +1,51 @@
+"""
+2D resonance imaging module for PLEIADES.
+
+This module provides tools for spatially-resolved neutron resonance fitting
+from hyperspectral imaging data. It orchestrates batch SAMMY fitting across
+detector pixels to generate isotope abundance maps.
+
+Main components:
+- HyperspectralLoader: Load and manage hyperspectral TIFF data
+- BatchFittingOrchestrator: Parallel SAMMY fitting across pixels
+- ResultsAggregator: Build 2D abundance maps from pixel results
+
+Example:
+    >>> from pleiades.imaging import HyperspectralLoader
+    >>> loader = HyperspectralLoader("data.tif", energy=energy_array)
+    >>> hyperspectral = loader.load()
+    >>> for pixel in loader.iter_pixels():
+    ...     # Process each PixelSpectrum
+    ...     pass
+"""
+
+from pleiades.imaging.aggregator import ResultsAggregator
+from pleiades.imaging.api import analyze_imaging
+from pleiades.imaging.assessor import SparsityAssessor, SparsityMetrics
+from pleiades.imaging.binner import SpatialBinner
+from pleiades.imaging.degrader import DataDegrader
+from pleiades.imaging.generator import AbundanceMapGenerator
+from pleiades.imaging.loader import HyperspectralLoader
+from pleiades.imaging.models import HyperspectralData, Imaging2DResults, PixelFitResult, PixelSpectrum
+from pleiades.imaging.nmf_recovery import NMFRecovery
+from pleiades.imaging.recovery import PhysicsRecovery, ReferenceSpectrum
+from pleiades.imaging.visualizer import AbundanceMapVisualizer
+
+__all__ = [
+    "AbundanceMapGenerator",
+    "AbundanceMapVisualizer",
+    "DataDegrader",
+    "HyperspectralLoader",
+    "NMFRecovery",
+    "PhysicsRecovery",
+    "ReferenceSpectrum",
+    "SparsityAssessor",
+    "SparsityMetrics",
+    "HyperspectralData",
+    "Imaging2DResults",
+    "PixelFitResult",
+    "PixelSpectrum",
+    "ResultsAggregator",
+    "SpatialBinner",
+    "analyze_imaging",
+]
