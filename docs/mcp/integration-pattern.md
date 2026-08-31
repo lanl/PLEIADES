@@ -47,6 +47,7 @@ from fastmcp import FastMCP
 
 server = FastMCP("my-server")
 
+
 @server.tool()
 def my_function(path: str) -> dict:
     """This function is automatically exposed as an MCP tool."""
@@ -61,6 +62,7 @@ PLEIADES uses a custom `@mcp_tool` decorator with a registry abstraction:
 
 ```python
 from pleiades.mcp.decorators import mcp_tool
+
 
 @mcp_tool(description="Analyze data")
 def analyze(path: str) -> dict:
@@ -90,10 +92,12 @@ Create high-level functions that orchestrate your domain logic. These should:
 from pathlib import Path
 from pydantic import BaseModel
 
+
 class AnalysisResult(BaseModel):
     success: bool
     metric: float | None
     error_message: str | None
+
 
 def run_analysis(data_path: Path, method: str = "default") -> AnalysisResult:
     """High-level analysis function.
@@ -103,17 +107,9 @@ def run_analysis(data_path: Path, method: str = "default") -> AnalysisResult:
     try:
         # Call your core library functions
         result = core_library.analyze(data_path, method)
-        return AnalysisResult(
-            success=True,
-            metric=result.metric,
-            error_message=None
-        )
+        return AnalysisResult(success=True, metric=result.metric, error_message=None)
     except Exception as e:
-        return AnalysisResult(
-            success=False,
-            metric=None,
-            error_message=str(e)
-        )
+        return AnalysisResult(success=False, metric=None, error_message=str(e))
 ```
 
 ### Step 2: Create Decorator Module
@@ -129,6 +125,7 @@ from copy import deepcopy
 F = TypeVar("F", bound=Callable[..., Any])
 
 _mcp_registry: dict[str, dict[str, Any]] = {}
+
 
 def mcp_tool(
     func: F | None = None,
@@ -158,9 +155,11 @@ def mcp_tool(
         return decorator(func)
     return decorator
 
+
 def get_registered_tools() -> dict[str, dict[str, Any]]:
     """Return deep copy of tool registry."""
     return deepcopy(_mcp_registry)
+
 
 def clear_registry() -> None:
     """Clear all registered tools (for testing)."""
@@ -185,6 +184,7 @@ from typing import Any
 from yourpackage.mcp.decorators import mcp_tool
 from yourpackage.workflows import analysis
 
+
 def _to_json(obj: Any) -> Any:
     """Convert objects to JSON-serializable format."""
     if obj is None or isinstance(obj, (str, int, float, bool)):
@@ -198,6 +198,7 @@ def _to_json(obj: Any) -> Any:
     if isinstance(obj, (list, tuple)):
         return [_to_json(item) for item in obj]
     return str(obj)
+
 
 # Note: Use domain-specific parameter names for your package
 # PLEIADES uses: dataset_path, backend, isotopes
@@ -226,10 +227,13 @@ Set up FastMCP with auto-discovery:
 # src/yourpackage/mcp/server.py
 from typing import Any
 
+
 def discover_tools() -> dict[str, dict[str, Any]]:
     """Discover all registered MCP tools."""
     from yourpackage.mcp.decorators import get_registered_tools
+
     return get_registered_tools()
+
 
 def register_tools(server: Any) -> None:
     """Register discovered tools with FastMCP server."""
@@ -237,10 +241,13 @@ def register_tools(server: Any) -> None:
     for name, info in tools.items():
         server.tool(name=name, description=info["description"])(info["func"])
 
+
 def get_server() -> Any:
     """Get FastMCP server instance."""
     from fastmcp import FastMCP
+
     return FastMCP("yourpackage-mcp")
+
 
 def main() -> None:
     """Start the MCP server."""
@@ -260,18 +267,18 @@ Handle optional dependency gracefully:
 # src/yourpackage/mcp/__init__.py
 try:
     from fastmcp import FastMCP
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
     FastMCP = None
 
+
 def check_mcp_available() -> None:
     """Raise ImportError if MCP dependencies not installed."""
     if not MCP_AVAILABLE:
-        raise ImportError(
-            "MCP dependencies not installed.\n"
-            "Install with: pip install yourpackage[mcp]"
-        )
+        raise ImportError("MCP dependencies not installed.\nInstall with: pip install yourpackage[mcp]")
+
 
 __all__ = ["MCP_AVAILABLE", "check_mcp_available"]
 if MCP_AVAILABLE:
@@ -284,10 +291,12 @@ if MCP_AVAILABLE:
 # src/yourpackage/mcp/__main__.py
 import sys
 
+
 def run() -> None:
     """Entry point for python -m yourpackage.mcp"""
     try:
         from yourpackage.mcp.server import main
+
         main()
     except ImportError as e:
         print(f"Error: {e}")
@@ -295,6 +304,7 @@ def run() -> None:
     except KeyboardInterrupt:
         print("\nServer stopped.")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     run()
@@ -378,8 +388,7 @@ Use type hints everywhere:
         "method": "Analysis method",
     },
 )
-def analyze(path: str, method: str = "default") -> dict:
-    ...
+def analyze(path: str, method: str = "default") -> dict: ...
 ```
 
 ### 5. Documentation via Decorators
@@ -441,12 +450,15 @@ Import tools module inside `main()`, not at module level. This ensures decorator
 # Good: Import inside main() triggers registration before server starts
 def main():
     import yourpackage.mcp.tools  # Triggers @mcp_tool decorator registration
+
     ...
+
 
 # Bad: Module-level import may run before registry is ready
 import yourpackage.mcp.tools
-def main():
-    ...
+
+
+def main(): ...
 ```
 
 ### 2. Non-Serializable Returns

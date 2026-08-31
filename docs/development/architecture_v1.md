@@ -68,6 +68,7 @@ The following example demonstrates a typical workflow using PLEIADES for SAMMY a
 ```python
 # 1. Configuration Setup
 from pleiades import sammyUtils, sammyPlotter
+
 config = sammyUtils.SammyFitConfig("uranium.ini")
 
 # 2. Generate Parameter Files
@@ -81,9 +82,7 @@ sammyUtils.run_sammy(config, verbose_level=1)
 
 # 5. Analyze Results
 sammyPlotter.process_and_plot_lst_file(
-    f"{config.params['directories']['sammy_fit_dir']}/results/SAMMY.LST",
-    residual=True,
-    quantity="transmission"
+    f"{config.params['directories']['sammy_fit_dir']}/results/SAMMY.LST", residual=True, quantity="transmission"
 )
 
 # Optional: Iterative Refinement

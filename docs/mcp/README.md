@@ -270,11 +270,7 @@ if manifest["status"] == "success":
     print(f"Isotopes list: {data.get('isotopes')}")  # May be None
 
 # Run analysis
-analysis = analyze_resonance(
-    "/path/to/dataset",
-    backend="docker",
-    isotopes=["Hf-177", "Hf-178"]
-)
+analysis = analyze_resonance("/path/to/dataset", backend="docker", isotopes=["Hf-177", "Hf-178"])
 if analysis["status"] == "success":
     data = analysis["data"]
     print(f"Success: {data['success']}")
@@ -293,6 +289,7 @@ from pleiades.mcp import MCP_AVAILABLE, check_mcp_available
 
 if MCP_AVAILABLE:
     from pleiades.mcp.server import get_server
+
     server = get_server()
 else:
     print("MCP not installed. Run: pip install pleiades-neutron[mcp]")

@@ -17,6 +17,7 @@ PLEIADES has migrated from Python's native logging to [Loguru](https://github.co
 
 ```python
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Log messages
@@ -48,10 +49,12 @@ If you previously used `logging.basicConfig()`, you can replace it with our `con
 ```python
 # Before
 import logging
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # After
 from pleiades.utils.logger import configure_logger
+
 configure_logger(console_level="INFO")
 ```
 
@@ -61,6 +64,7 @@ For backward compatibility, we maintain the original `Logger` class which now wr
 
 ```python
 from pleiades.utils.logger import Logger
+
 logger = Logger(name=__name__, level="DEBUG")
 
 logger.debug("Debug message")
@@ -76,12 +80,12 @@ You can customize the logger behavior:
 from pleiades.utils.logger import configure_logger
 
 configure_logger(
-    console_level="INFO",                         # Console output level
-    file_level="DEBUG",                           # File output level
-    log_file="my_custom_logfile.log",             # Custom log filename
-    rotation="1 day",                             # Rotate logs daily
-    retention="1 week",                           # Keep logs for 1 week
-    format_string="{time} | {message}"            # Custom format
+    console_level="INFO",  # Console output level
+    file_level="DEBUG",  # File output level
+    log_file="my_custom_logfile.log",  # Custom log filename
+    rotation="1 day",  # Rotate logs daily
+    retention="1 week",  # Keep logs for 1 week
+    format_string="{time} | {message}",  # Custom format
 )
 ```
 
